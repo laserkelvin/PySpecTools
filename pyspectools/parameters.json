@@ -1,0 +1,51 @@
+{
+	"name": "Molecule name",
+	"tag": 0,
+	"parameters": {
+		"A": {
+			"value": 1.0,
+			"uncertainty": 1E-35,
+			"fit": false
+		},
+		"B": {
+			"value": 1.0,
+			"uncertainty": 1E-35
+		},
+		"C": {
+			"value": 1.0
+		},
+		"bF": {
+			"nuclei": 1,
+			"value": 2.0
+		}
+	},
+	"linear": false,
+	"dipole": {
+		"A": 0,
+		"B": 0,
+		"C": 0
+	},
+	"reduction": "A",
+	"spin": 1,
+	"spin degeneracy": 0,
+	"units": "MHz",
+	"temperature": 5.0,
+	"intensity threshold": [-8.0, -3.0],
+	"K range": [0, 0],
+	"partition function": 1E3,
+	"interactions": 0,
+	"quantum number range": [0.0, 99.0],
+	"odd state weight": 1,
+	"even state weight": 1,
+	"frequency limit": 100.0,
+	"vibration limit": 10.0,
+	"vsym": 1,
+	"number of parameters": 100,
+	"number of lines": 0,
+	"number of iterations": 10,
+	"number of skipped lines": 0,
+	"marquadrt-levenburg": 0.0000E+00,
+	"maximum error": 1E+13,
+	"fractional importance": 1.0000E+00,
+	"IR scaling": 1.0
+}
