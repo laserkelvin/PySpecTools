@@ -2,8 +2,10 @@
 import os
 from glob import glob
 import pickle
+import shutil
 import numpy as np
 import pandas as pd
+import stat
 from .routines import *
 from .parsecat import *
 from .parsefit import *
@@ -348,6 +350,34 @@ class molecule:
         for parameter in self.properties["parameters"]:
             param_dict[parameter] = self.properties["parameters"]["value"]
         return param_dict
+
+    def finalize(self, iteration=None):
+        """ Been hard to keep track which iteration was the final one
+            sometimes, and so this function will "finalize" the fits by
+            creating a separate folder for the final fits.
+        """
+        if iteration is None:
+            # If no iteration is specified, the last iteration is used
+            iteration = self.iteration_count
+            print("No iteration specified, using the last iteration.")
+        if os.path.isdir(self.top_dir + "/final") is True:
+            confirmation = input("Final folder exists. Confirm deletion? Y/N").lower()
+            if confirmation == "y":
+                shutil.rmtree(self.top_dir + "/final")
+            else:
+                raise ValueError("Final folder exists, and not deleting.")
+        # Copy the folder and files of the target iteration to final
+        else:
+            os.mkdir(self.top_dir + "/final")
+        shutil.copytree(
+            self.top_dir + "/" + str(iteration),
+            self.top_dir + "/final",
+            copy_function=copy2
+            )
+        for file in glob(self.top_dir + "/final/*"):
+            # Make the final files read-only
+            os.chmod(file, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
+
 
     def parameter_scan(self, parameter, values, relaxed=False):
         """ A method for automatically scanning parameter space to see

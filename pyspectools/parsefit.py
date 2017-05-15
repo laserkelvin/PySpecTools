@@ -46,24 +46,42 @@ class fit_output:
                 if iteration_flag is True:
                     split_line = line.split()
                     if len(split_line) > 7:
-                        iteration_dict[str(fit_line_count)] = {
-                            "line number": fit_line_count,
-                            "exp freq": float(split_line[7]),
-                            "calc freq": float(split_line[8]),
-                            "diff": float(split_line[9]),
-                            "lower state": [
-                                int(split_line[4]),
-                                int(split_line[5]),
-                                int(split_line[6])
-                            ],
-                            "upper state": [
-                                int(split_line[1]),
-                                int(split_line[2]),
-                                int(split_line[3])
-                            ],
-                            "uncertainty": float(split_line[10]),
-                            "bad line": bad_line
-                        }
+                        if len(split_line) == 8:
+                            # Linear molecule with no hyperfine
+                            iteration_dict[str(fit_line_count)] = {
+                                "line number": fit_line_count,
+                                "exp freq": float(split_line[3]),
+                                "calc freq": float(split_line[4]),
+                                "diff": float(split_line[5]),
+                                "lower state": [
+                                    int(split_line[2]),
+                                ],
+                                "upper state": [
+                                    int(split_line[1])
+                                ],
+                                "uncertainty": float(split_line[6]),
+                                "bad line": bad_line
+                            }
+                        else:
+                            # Works for linear molecule with hyperfine
+                            iteration_dict[str(fit_line_count)] = {
+                                "line number": fit_line_count,
+                                "exp freq": float(split_line[7]),
+                                "calc freq": float(split_line[8]),
+                                "diff": float(split_line[9]),
+                                "lower state": [
+                                    int(split_line[4]),
+                                    int(split_line[5]),
+                                    int(split_line[6])
+                                ],
+                                "upper state": [
+                                    int(split_line[1]),
+                                    int(split_line[2]),
+                                    int(split_line[3])
+                                ],
+                                "uncertainty": float(split_line[10]),
+                                "bad line": bad_line
+                            }
                         fit_line_count += 1
                         bad_line = False
                 if "EXP.FREQ." in line:
