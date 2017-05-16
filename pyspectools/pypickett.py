@@ -74,6 +74,10 @@ class molecule:
 
         # Convert human input of parameters to parameter objects
         self.generate_parameter_objects()
+
+        if self.properties["K range"][1] == 0 and self.properties["linear"] is False:
+            print("Warning: You have specified a non-linear molecule and the")
+            print("         maximum K value is unset. You may not see lines!")
         # Write the .int and .par files to disk
         self.setup_int()
         self.setup_par()
@@ -84,6 +88,7 @@ class molecule:
                 param_key,
                 self.properties["parameters"][param_key],
                 self.properties["reduction"],
+                linear=self.properties["linear"],
                 verbose=verbose
             )
 

@@ -78,15 +78,15 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
         "C": 30000,                    # C rotational constant
         "D": 200,                      # quartic centrifugal, linear
         "H": 300,                      # sextic centrifugal, linear
-        "centrifugal J": {             # centrifugal, J
+        "D_J": {             # centrifugal, J
             "A": 200,
             "S": 200,
         },
-        "centrifugal K": {             # centrifugal, K
+        "D_K": {             # centrifugal, K
             "A": 2000,
             "S": 2000,
         },
-        "centrifugal JK": {            # centrifugal, JK
+        "D_JK": {            # centrifugal, JK
             "A": 1100,
             "S": 1100,
         },
@@ -114,7 +114,16 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
     elif name is "B" and linear is False:
         identifier = 20000
     else:
-        identifier = str(pickett_parameters[name]).format(nuclei)
+        # Hyperfine terms
+        if name in ["eQq", "eQq/2"]:
+            identifier = str(pickett_parameters[name]).format(nuclei)
+        elif "D_" in name or "del" in name:
+            identifier = str(pickett_parameters[name][reduction])
+        else:
+            try:
+                identifier = pickett_parameters[name]
+            except KeyError:
+                print("Parameter name unknown!")
     return identifier
 
 
