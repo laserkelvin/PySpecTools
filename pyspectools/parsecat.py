@@ -9,7 +9,7 @@ def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.i
     are optional, and will default to effectively not filter.
     """
     clean_cat(simulation_path)
-    simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None)
+    simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
     thresholded_df = simulation_df.loc[
             (simulation_df[0].astype(float) >= low_freq) &         # threshold the simulation output
             (simulation_df[0].astype(float) <= high_freq) &        # based on user specified values
