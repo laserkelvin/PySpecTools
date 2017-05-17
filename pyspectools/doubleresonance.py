@@ -17,7 +17,7 @@ def parse_data(filepath):
     df = pd.read_csv(filepath, delimiter="\t", index_col=0, header=None, skiprows=1)
     if len(df.keys()) > 1:
         # co-average spectra if there are more than one columns
-        df["average"] = np.average([df[column].values for column in list(df.keys())] axis=0)
+        df["average"] = np.average([df[column].values for column in list(df.keys())], axis=0)
     return df
 
 def clean_data(dataframe, column=1, baseline=False, freqrange=[0., np.inf]):
