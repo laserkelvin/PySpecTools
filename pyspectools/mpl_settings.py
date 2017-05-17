@@ -6,7 +6,6 @@ from matplotlib import pyplot as plt
 mpl.style.use("seaborn")
 
 params = {
-    "backend": "qt5agg",
     "xtick.labelsize": "x-large",
     "ytick.labelsize": "x-large",
     "axes.labelsize": "x-large",

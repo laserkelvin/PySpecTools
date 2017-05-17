@@ -6,7 +6,6 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 import peakutils
-from pyspectools import mpl_settings
 from matplotlib import pyplot as plt
 
 def parse_data(filepath):
@@ -47,6 +46,9 @@ def plot_data(dataframe, frequency=None):
     ax.set_xlabel("Frequency (MHz)")
     ax.set_ylabel("Intensity")
     ax.set_ylim([dataframe.min().min() - 0.03, dataframe.max().max()]) # Set the ylimits
+    min_freq = dataframe.index.min()
+    max_freq = dataframe.index.max()
+    ax.set_xticks(np.arange(min_freq, max_freq, (max_freq - min_freq) / 4.))
 
     if "average" in list(dataframe.keys()):
     # If the DR has co-averaging, we'll plot that too

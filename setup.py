@@ -2,11 +2,19 @@ from setuptools import setup
 from setuptools.command.install import install
 from glob import glob
 import os
+from distutils.spawn import find_executable
 import stat
 import sys
 
 class PostInstallCommand(install):
+    def check_pickett(self):
+        for executable in ["spcat", "spfit", "calbak"]:
+            if find_executable(executable) is None:
+                print(executable + " not found in PATH.")
+                print("Make sure SPFIT/SPCAT is in your path.")
+
     def run(self):
+        self.check_pickett()
         format_dict = {"python_path": sys.executable}
         if os.path.isdir(os.path.expanduser("~") + "/bin") is False:
             os.mkdir(os.path.expanduser("~") + "/bin")
