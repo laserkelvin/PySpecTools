@@ -377,7 +377,6 @@ class molecule:
         shutil.copytree(
             self.top_dir + "/" + str(iteration),
             self.top_dir + "/final",
-            copy_function=copy2
             )
         for file in glob(self.top_dir + "/final/*"):
             # Make the final files read-only
