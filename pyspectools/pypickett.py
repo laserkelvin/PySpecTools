@@ -363,7 +363,7 @@ class molecule:
         """
         if iteration is None:
             # If no iteration is specified, the last iteration is used
-            iteration = self.iteration_count
+            iteration = self.iteration_count - 1
             print("No iteration specified, using the last iteration.")
         if os.path.isdir(self.top_dir + "/final") is True:
             confirmation = input("Final folder exists. Confirm deletion? Y/N").lower()
