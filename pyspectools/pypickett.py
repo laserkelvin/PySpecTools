@@ -74,6 +74,10 @@ class molecule:
 
         # Convert human input of parameters to parameter objects
         self.generate_parameter_objects()
+
+        if self.properties["K range"][1] == 0 and self.properties["linear"] is False:
+            print("Warning: You have specified a non-linear molecule and the")
+            print("         maximum K value is unset. You may not see lines!")
         # Write the .int and .par files to disk
         self.setup_int()
         self.setup_par()
@@ -84,6 +88,7 @@ class molecule:
                 param_key,
                 self.properties["parameters"][param_key],
                 self.properties["reduction"],
+                linear=self.properties["linear"],
                 verbose=verbose
             )
 
@@ -237,7 +242,8 @@ class molecule:
 
         print("Current parameters (MHz)")
         for parameter in current_params:
-            print(parameter + "\t" + str(current_params[parameter]["value"]))
+            print(parameter + "\t" + str(current_params[parameter]["value"]) + \
+                  "(" + str(current_params[parameter]["uncertainty"] + ")"))
 
     def calbak(self):
         """ Run calbak to generate a .lin file from .cat """
@@ -358,7 +364,7 @@ class molecule:
         """
         if iteration is None:
             # If no iteration is specified, the last iteration is used
-            iteration = self.iteration_count
+            iteration = self.iteration_count - 1
             print("No iteration specified, using the last iteration.")
         if os.path.isdir(self.top_dir + "/final") is True:
             confirmation = input("Final folder exists. Confirm deletion? Y/N").lower()
@@ -366,14 +372,19 @@ class molecule:
                 shutil.rmtree(self.top_dir + "/final")
             else:
                 raise ValueError("Final folder exists, and not deleting.")
-        # Copy the folder and files of the target iteration to final
-        else:
-            os.mkdir(self.top_dir + "/final")
+        # Copy the files over from designated iteration
         shutil.copytree(
             self.top_dir + "/" + str(iteration),
             self.top_dir + "/final",
-            copy_function=copy2
             )
+        # Generate a report for the final fits
+        for parameter in self.properties["parameters"]:
+            self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
+                                     "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
+                                     ")"
+        report_df = pd.DataFrame.from_dict(self.properties["parameters"])
+        with open(self.top_dir + "/final/parameter_report.html", "w+") as write_file:
+            write_file.write(report_df.to_html())
         for file in glob(self.top_dir + "/final/*"):
             # Make the final files read-only
             os.chmod(file, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)

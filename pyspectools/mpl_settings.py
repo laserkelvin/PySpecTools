@@ -1,17 +1,18 @@
 
 import matplotlib as mpl
+from cycler import cycler
 from matplotlib import pyplot as plt
 
 mpl.style.use("seaborn")
 
-params = params = {
-    "backend": "qt5agg",
+params = {
     "xtick.labelsize": "x-large",
     "ytick.labelsize": "x-large",
     "axes.labelsize": "x-large",
     "axes.titlesize": "x-large",
     "legend.fontsize": "x-large",
     "figure.figsize": (12, 5.5),
+    "axes.prop_cycle": cycler("color", ["#d53e4f", "#fc8d59", "#fee08b", "#e6f598", "#99d594", "#3288bd"])
 }
 mpl.rcParams.update(params)
 

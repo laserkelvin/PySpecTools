@@ -96,20 +96,23 @@ class fit_output:
                 if "MICROWAVE RMS" in line:
                     self.fit_properties["rms errors"].append(float(split_line[3]))
                 if parameter_flag is True:
+                    # Remove the brackets
                     for bracket in ['''(''',''')''']:
-                        line = line.replace(bracket, "")
+                        line = line.replace(bracket, " ")
                     split_line = line.split()
-                    if len(split_line) == 5:
+                    if len(split_line) == 6:
                         parameter_dict[split_line[2]] = {
                             "value": str(split_line[3]),
-                            "change": float(split_line[4])
+                            "uncertainty": str(split_line[4]),
+                            "change": float(split_line[5])
                         }
                     else:
                         # Sometimes the exponent is truncated, and this case
                         # will extract the exponent as well
                         parameter_dict[split_line[2]] = {
-                            "value": float(split_line[3] + split_line[4]),
-                            "change": float(split_line[5])
+                            "value": float(split_line[3] + split_line[5]),
+                            "uncertainty": split_line[4],
+                            "change": float(split_line[6])
                         }
                 if "NEW PARAMETER" in line:
                     parameter_dict = dict()
@@ -129,7 +132,7 @@ class fit_output:
         if verbose is True:
             # In manual mode, we'll plot the errors and changes in the parameters
             self.plot_error(iteration)
-            self.parameter_changes()
+            #self.parameter_changes()           # Not useful, so not plotting
         self.data[iteration].sort_values("line number", inplace=True)
         self.data[iteration].to_csv("exp-calc.csv")
         niterations = len(self.fit_properties["rms errors"])

@@ -53,9 +53,19 @@ def run_spfit(filename):
     process.wait()
 
 
-def pickett_molecule(json_filepath):
+def pickett_molecule(json_filepath=None):
     # Provide a JSON file with all the Pickett settings, and generate an
     # instance of the molecule class
+    if json_filepath is None:
+        print("No JSON input file specified.")
+        print("A template file will be created in your directory; please rerun \
+               after setting up the parameters.")
+        install_path = os.path.dirname(os.path.realpath(__file__))
+        work_path = os.getcwd()
+        shutil.copy2(install_path + "/parameters.json",
+                     work_path + "/parameters.json"
+                     )
+        raise FileNotFoundError("No input file specified.")
     json_data = read_json(json_filepath)
     molecule_object = pp.molecule(json_data)
     return molecule_object
@@ -78,15 +88,15 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
         "C": 30000,                    # C rotational constant
         "D": 200,                      # quartic centrifugal, linear
         "H": 300,                      # sextic centrifugal, linear
-        "centrifugal J": {             # centrifugal, J
+        "D_J": {             # centrifugal, J
             "A": 200,
             "S": 200,
         },
-        "centrifugal K": {             # centrifugal, K
+        "D_K": {             # centrifugal, K
             "A": 2000,
             "S": 2000,
         },
-        "centrifugal JK": {            # centrifugal, JK
+        "D_JK": {            # centrifugal, JK
             "A": 1100,
             "S": 1100,
         },
@@ -114,7 +124,16 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
     elif name is "B" and linear is False:
         identifier = 20000
     else:
-        identifier = str(pickett_parameters[name]).format(nuclei)
+        # Hyperfine terms
+        if name in ["eQq", "eQq/2"]:
+            identifier = str(pickett_parameters[name]).format(nuclei)
+        elif "D_" in name or "del" in name:
+            identifier = str(pickett_parameters[name][reduction])
+        else:
+            try:
+                identifier = pickett_parameters[name]
+            except KeyError:
+                print("Parameter name unknown!")
     return identifier
 
 
@@ -148,6 +167,31 @@ def generate_folder():
     #lastcalc = len(folderlist)
     os.mkdir(str(lastcalc + 1))
     return lastcalc + 1
+
+
+def format_uncertainty(value, uncertainty):
+    """ Function to determine the number of decimal places to
+        format the uncertainty. Probably not the most elegant way of doing this.
+    """
+    # Convert the value into a string, then determine the length by
+    # splitting at the decimal point
+    decimal_places = decimal_length(value)
+    uncertainty = float(uncertainty)           # make sure we're dealing floats
+    uncertainty_places = decimal_length(uncertainty)
+    # Force the uncertainty into decimals
+    uncertainty = uncertainty * 10**-uncertainty_places[1]
+    # Work out how many places we've moved now
+    uncertainty_places = decimal_length(uncertainty)
+    # Move the precision of the uncertainty to match the precision of the value
+    uncertainty = uncertainty * 10**(uncertainty_places[1] - decimal_places[1])
+    return uncertainty
+
+
+def decimal_length(value):
+    # Function that determines the decimal length of a float; convert the value
+    # into a string, then work out the length by splitting at the decimal point
+    decimal_split = str(value).split(".")
+    return [len(position) for position in decimal_split]
 
 
 def list_directories():
