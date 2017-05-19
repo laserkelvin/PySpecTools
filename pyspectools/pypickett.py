@@ -242,7 +242,8 @@ class molecule:
 
         print("Current parameters (MHz)")
         for parameter in current_params:
-            print(parameter + "\t" + str(current_params[parameter]["value"]))
+            print(parameter + "\t" + str(current_params[parameter]["value"]) + \
+                  "(" + str(current_params[parameter]["uncertainty"] + ")")
 
     def calbak(self):
         """ Run calbak to generate a .lin file from .cat """

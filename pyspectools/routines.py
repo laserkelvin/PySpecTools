@@ -169,6 +169,31 @@ def generate_folder():
     return lastcalc + 1
 
 
+def format_uncertainty(value, uncertainty):
+    """ Function to determine the number of decimal places to
+        format the uncertainty. Probably not the most elegant way of doing this.
+    """
+    # Convert the value into a string, then determine the length by
+    # splitting at the decimal point
+    decimal_places = decimal_length(value)
+    uncertainty = float(uncertainty)           # make sure we're dealing floats
+    uncertainty_places = decimal_length(uncertainty)
+    # Force the uncertainty into decimals
+    uncertainty = uncertainty * 10**-uncertainty_places[1]
+    # Work out how many places we've moved now
+    uncertainty_places = decimal_length(uncertainty)
+    # Move the precision of the uncertainty to match the precision of the value
+    uncertainty = uncertainty * 10**(uncertainty_places[1] - decimal_places[1])
+    return uncertainty
+
+
+def decimal_length(value):
+    # Function that determines the decimal length of a float; convert the value
+    # into a string, then work out the length by splitting at the decimal point
+    decimal_split = str(value).split(".")
+    return [len(position) for position in decimal_split]
+
+
 def list_directories():
     return [directory for directory in os.listdir() if os.path.isdir(directory)]
 
