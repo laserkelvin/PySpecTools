@@ -132,7 +132,7 @@ class fit_output:
         if verbose is True:
             # In manual mode, we'll plot the errors and changes in the parameters
             self.plot_error(iteration)
-            self.parameter_changes()
+            #self.parameter_changes()           # Not useful, so not plotting
         self.data[iteration].sort_values("line number", inplace=True)
         self.data[iteration].to_csv("exp-calc.csv")
         niterations = len(self.fit_properties["rms errors"])
