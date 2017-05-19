@@ -243,7 +243,7 @@ class molecule:
         print("Current parameters (MHz)")
         for parameter in current_params:
             print(parameter + "\t" + str(current_params[parameter]["value"]) + \
-                  "(" + str(current_params[parameter]["uncertainty"] + ")")
+                  "(" + str(current_params[parameter]["uncertainty"] + ")"))
 
     def calbak(self):
         """ Run calbak to generate a .lin file from .cat """
@@ -372,13 +372,19 @@ class molecule:
                 shutil.rmtree(self.top_dir + "/final")
             else:
                 raise ValueError("Final folder exists, and not deleting.")
-        # Copy the folder and files of the target iteration to final
-        else:
-            os.mkdir(self.top_dir + "/final")
+        # Copy the files over from designated iteration
         shutil.copytree(
             self.top_dir + "/" + str(iteration),
             self.top_dir + "/final",
             )
+        # Generate a report for the final fits
+        for parameter in self.properties["parameters"]:
+            self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
+                                     "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
+                                     ")"
+        report_df = pd.DataFrame.from_dict(self.properties["parameters"])
+        with open(self.top_dir + "/final/parameter_report.html", "w+") as write_file:
+            write_file.write(report_df.to_html())
         for file in glob(self.top_dir + "/final/*"):
             # Make the final files read-only
             os.chmod(file, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
