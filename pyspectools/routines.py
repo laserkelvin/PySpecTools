@@ -113,7 +113,7 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
         "gammaH": "10000200",          # spin-rotation, sextic distortion
         "bF": "120000000",             # Fermi contact interaction
         "c": "120010000",       # electron spin/nuclear spin, diagonal
-        "eQq": "{0}20010000",     # quadrupole, diagonal
+        "eQq": "{0}20010000",     # quadrupole, diagonal; note this is 1.5x!
         "eQq/2": "-{0}20010000",  # quadrupole, off-diagonal
         "C_I": "20000000",             # nuclear spin-rotation, diagonal
         "C_I_prime": "0"                    # off-diagonal

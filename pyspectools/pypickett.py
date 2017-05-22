@@ -318,13 +318,20 @@ class molecule:
                 pass
 
     def copy_settings(self, iteration=0):
-        # Copy settings used in a previous iteration
-        # If none specified, we'll take the settings from before the first fit
+        """ Copy settings used in a previous iteration
+            If none specified, we'll take the settings from before the first fit
+        """
         if iteration == 0:
             iteration = "initial"
-        current_params = self.iterations[iteration].export_parameters()
-        self.update_parameters(current_params, False)
-        print("Settings copied from iteration " + str(iteration))
+        #current_params = self.iterations[iteration].export_parameters()
+        iteration_folder = str(iteration + "/" + self.properties["name"])
+        if os.path.isfile(iteration_folder + ".fit.json") is True:
+            iteration_file = iteration_folder + ".fit.json"
+        else:
+            iteration_file = iteration_folder + ".json"
+        iteration_params = read_json(iteration_file)
+        self.update_parameters(iteration_params, False)
+        print("Settings copied from " + iteration_file)
 
     def update_parameters(self, parameters, verbose=True):
         """ Update the simulation parameters
