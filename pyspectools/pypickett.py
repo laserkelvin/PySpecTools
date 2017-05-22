@@ -12,6 +12,8 @@ from .parsefit import *
 from matplotlib import pyplot as plt
 from .mpl_settings import *
 import pprint
+from plotly.tools import mpl_to_plotly
+from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
 
 class molecule:
     """ Class for handling the top level of a Pickett simulation.
@@ -81,6 +83,7 @@ class molecule:
         # Write the .int and .par files to disk
         self.setup_int()
         self.setup_par()
+        self.interactive = False              # Interactive plotting option
 
     def generate_parameter_objects(self, verbose=True):
         for param_key in self.properties["parameters"]:
@@ -110,6 +113,16 @@ class molecule:
                     pass
         else:
             raise EnvironmentError("Please provide a True value to confirm deletion!")
+
+
+    def toggle_interactive(self, connected=False):
+        """ Method to toggle interactive plots on and off """
+        self.interactive = not self.interactive
+        init_notebook_mode(connected=connected)
+        if self.interactive is False:
+            # Pseudo-disconnect interactivity by removing JS injections
+            init_notebook_mode(connected=True)
+
 
     def setup_par(self):
         opt_line = ""
@@ -226,7 +239,8 @@ class molecule:
         # Create an instance of a fit object, and add it to the pile
         self.iterations[self.iteration_count] = fit_output(
                 self.properties["name"] + ".fit",
-                verbose=verbose
+                verbose=verbose,
+                interactive=self.interactive
             )
         # Run SPCAT to get the predicted spectrum
         self.predict_lines()
@@ -289,7 +303,17 @@ class molecule:
 
             os.chdir(self.top_dir)
             if isnotebook() is True:
-                plt.show()
+                if self.interactive is True:
+                    plt.close(fig)
+                    pltly_fig = mpl_to_plotly(fig)
+                    try:
+                        iplot(pltly_fig)
+                    except PlotlyEmptyDataError:
+                        # Ignore plotly errors for now - bad conversion between
+                        # matplotlib and plotly
+                        pass
+                else:
+                    plt.show(fig)
             else:
                 pass
 

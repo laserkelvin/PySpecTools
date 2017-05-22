@@ -3,9 +3,11 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
+from plotly.tools import mpl_to_plotly
+from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
 
 class fit_output:
-    def __init__(self, fit_file, verbose=True):
+    def __init__(self, fit_file, verbose=True, interactive=False):
         # Check if the .fit file exists
         if os.path.isfile(fit_file) is False:
             raise FileNotFoundError(fit_file + " does not exist. No .fit file!")
@@ -23,6 +25,7 @@ class fit_output:
             "fit file": fit_file,
             "linear": False
         }
+        self.interactive = interactive
         self.data = dict()
         self.parsefit()
         self.analyze_parse(verbose)
@@ -215,3 +218,11 @@ class fit_output:
         axarray[1].set_ylabel("Microwave RMS error (MHz)")
 
         fig.savefig("rms_plot_" + str(iteration) + ".pdf", format="pdf")
+
+        if self.interactive is True:
+            plt.close(fig)
+            pltly_fig = mpl_to_plotly(fig)
+            try:
+                iplot(pltly_fig)
+            except PlotlyEmptyDataError:
+                pass
