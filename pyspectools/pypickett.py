@@ -324,13 +324,13 @@ class molecule:
         if iteration == 0:
             iteration = "initial"
         #current_params = self.iterations[iteration].export_parameters()
-        iteration_folder = str(iteration + "/" + self.properties["name"])
+        iteration_folder = str(iteration) + "/" + self.properties["name"]
         if os.path.isfile(iteration_folder + ".fit.json") is True:
             iteration_file = iteration_folder + ".fit.json"
         else:
             iteration_file = iteration_folder + ".json"
         iteration_params = read_json(iteration_file)
-        self.update_parameters(iteration_params, False)
+        self.properties.update(iteration_params)
         print("Settings copied from " + iteration_file)
 
     def update_parameters(self, parameters, verbose=True):
