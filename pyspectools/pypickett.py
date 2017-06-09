@@ -10,6 +10,8 @@ from .routines import *
 from .parsecat import *
 from .parsefit import *
 from matplotlib import pyplot as plt
+from matplotlib import cm
+from matplotlib import colors
 from .mpl_settings import *
 import pprint
 from plotly.tools import mpl_to_plotly
@@ -299,18 +301,31 @@ class molecule:
         # Save the current lines to a dataframe object
         self.cat_lines = cat_df
 
+        # Define a colour map for the lower state energy
+        cnorm = colors.Normalize(vmin=self.cat_lines["Lower state energy"].min(),
+                                 vmax=self.cat_lines["Lower state energy"].max()
+                                 )
+        colormap = cm.ScalarMappable(cmap="YlOrRd_r")
+        colormap.set_array(self.cat_lines["Lower state energy"].astype(float))
+
         # Plot the predicted spectrum if in manual mode
         if verbose is True:
-            fig, ax = plt.subplots(figsize=(14,5.5))
-            ax.vlines(cat_df["Frequency"],
+            fig, ax = plt.subplots(figsize=(14,6.5))
+            lineplot = ax.vlines(cat_df["Frequency"],
                       ymin=-10.,                    # set the minimum as arb. value
                       ymax=cat_df["Intensity"],     # set the height as predicted value
-                      color="#fec44f"
+                      #color="#fec44f"
+                      colors=colormap.to_rgba(self.cat_lines["Lower state energy"].astype(float))   # color mapped to energy
                       )
 
             ax.set_xlabel("Frequency (MHz)")
             ax.set_ylabel("Intensity")
             ax.set_ylim([cat_df["Intensity"].min() * 1.1, 0.])
+
+            colorbar = plt.colorbar(colormap, orientation='horizontal')
+            colorbar.ax.set_title("Lower state energy (cm$^{-1}$)")
+
+            fig.tight_layout()
 
             fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
 
