@@ -58,13 +58,9 @@ def pickett_molecule(json_filepath=None):
     # instance of the molecule class
     if json_filepath is None:
         print("No JSON input file specified.")
-        print("A template file will be created in your directory; please rerun \
+        print("A template file will be created in your directory; please rerun\
                after setting up the parameters.")
-        install_path = os.path.dirname(os.path.realpath(__file__))
-        work_path = os.getcwd()
-        shutil.copy2(install_path + "/parameters.json",
-                     work_path + "/parameters.json"
-                     )
+        copy_template()
         raise FileNotFoundError("No input file specified.")
     json_data = read_json(json_filepath)
     molecule_object = pp.molecule(json_data)
@@ -192,6 +188,24 @@ def decimal_length(value):
     # into a string, then work out the length by splitting at the decimal point
     decimal_split = str(value).split(".")
     return [len(position) for position in decimal_split]
+
+
+def copy_template():
+    script_location = os.path.dirname(os.path.realpath(__file__))
+    templates_folder = script_location + "/templates/"
+    available_templates = glob(templates_folder + "*.json")
+    available_templates = [template.split("/")[-1] for template in available_templates]
+    print("The templates available are:")
+    for template in available_templates:
+        print(template)
+    target = input("Please specify which template to copy:      ")
+    if target not in available_templates:
+        print("Not a template; probably a typo.")
+        print("Please re-run the script.")
+    else:
+        shutil.copy2(templates_folder + target, os.getcwd() + "/parameters.json")
+        print("Copied template " + target + " to your folder as parameters.json.")
+        print("Edit the .json input file and re-run the script.")
 
 
 def list_directories():

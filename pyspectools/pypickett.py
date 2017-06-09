@@ -30,6 +30,8 @@ class molecule:
             "tag": 0,
             "parameters": dict(),            # human input of parameters
             "linear": False,
+            "symmetric": False,
+            "prolate": False,
             "dipole": {
                 "A": 0.,
                 "B": 0.,
@@ -49,7 +51,7 @@ class molecule:
             "odd state weight": 1,
             "even state weight": 1,
             "frequency limit": 100.,
-            "vibration limit": 10,
+            "vibration limit": 1,
             "vsym": 1,
             "number of parameters": 100,
             "number of lines": 0,
@@ -123,7 +125,6 @@ class molecule:
             # Pseudo-disconnect interactivity by removing JS injections
             init_notebook_mode(connected=True)
 
-
     def setup_par(self):
         opt_line = ""
         opt_line += str(self.properties["number of parameters"]).rjust(4) + " "
@@ -136,9 +137,21 @@ class molecule:
         opt_line += str(self.properties["IR scaling"]).rjust(13) + " "
 
         prop_line = ""
-        prop_line += str("'" + self.properties["reduction"] + "'").rjust(4)
-        prop_line += str(self.properties["spin degeneracy"]).rjust(5) + " "
-        prop_line += str(self.properties["vibration limit"]).rjust(3) + " "
+        prop_line += str("'" + self.properties["reduction"] + "'").rjust(3)
+        # Format the spin degeneracy sign - if it's positive, we use asym top
+        # quantum numbers. If negative use symmetric top.
+        if self.properties["symmetric"] is True and self.properties["linear"] is False:
+            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(5) + " "
+        elif self.properties["symmetric"] is False and self.properties["linear"] is False:
+            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(5) + " "
+        else:
+            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(5) + " "
+        # Format the sign of vibration limit; negative treats top as oblate case
+        # while positive treats the prolate case
+        if self.properties["prolate"] is True and self.properties["linear"] is False:
+            prop_line += str(np.absolute(self.properties["vibration limit"])).rjust(4) + " "
+        elif self.properties["prolate"] is False and self.properties["linear"] is False:
+            prop_line += str(np.negative(self.properties["vibration limit"])).rjust(4) + " "
         prop_line += str(self.properties["K range"][0]).rjust(4) + " "
         prop_line += str(self.properties["K range"][1]).rjust(4) + " "
         prop_line += str(self.properties["interactions"]).rjust(4) + " "
@@ -410,10 +423,13 @@ class molecule:
             )
         # Generate a report for the final fits
         for parameter in self.properties["parameters"]:
-            self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
-                                     "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
-                                     ")"
-        report_df = pd.DataFrame.from_dict(self.properties["parameters"])
+            if "uncertainty" in list(self.properties["parameters"][parameter].keys()):
+                self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
+                                         "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
+                                         ")"
+            else:
+                self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"])
+        report_df = pd.DataFrame.from_dict(self.properties["parameters"]).T
         with open(self.top_dir + "/final/parameter_report.html", "w+") as write_file:
             write_file.write(report_df.to_html())
         for file in glob(self.top_dir + "/final/*"):

@@ -1,1 +1,2 @@
 include pyspectools/parameters.json
+include pyspectools/templates/*.json
