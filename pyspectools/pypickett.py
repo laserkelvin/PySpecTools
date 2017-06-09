@@ -55,6 +55,8 @@ class molecule:
             "frequency limit": 100.,
             "vibration limit": 1,
             "vsym": 1,
+            "ewt": 0,
+            "statistical axis": 1,
             "number of parameters": 100,
             "number of lines": 0,
             "number of iterations": 10,
@@ -143,25 +145,27 @@ class molecule:
         # Format the spin degeneracy sign - if it's positive, we use asym top
         # quantum numbers. If negative use symmetric top.
         if self.properties["symmetric"] is True and self.properties["linear"] is False:
-            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(5) + " "
+            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
         elif self.properties["symmetric"] is False and self.properties["linear"] is False:
-            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(5) + " "
+            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
         else:
-            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(5) + " "
+            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
         # Format the sign of vibration limit; negative treats top as oblate case
         # while positive treats the prolate case
         if self.properties["prolate"] is True and self.properties["linear"] is False:
-            prop_line += str(np.absolute(self.properties["vibration limit"])).rjust(4) + " "
+            prop_line += str(np.absolute(self.properties["vibration limit"])).rjust(3) + " "
         elif self.properties["prolate"] is False and self.properties["linear"] is False:
-            prop_line += str(np.negative(self.properties["vibration limit"])).rjust(4) + " "
-        prop_line += str(self.properties["K range"][0]).rjust(4) + " "
-        prop_line += str(self.properties["K range"][1]).rjust(4) + " "
-        prop_line += str(self.properties["interactions"]).rjust(4) + " "
-        prop_line += str(self.properties["even state weight"]).rjust(4) + " "
-        prop_line += str(self.properties["odd state weight"]).rjust(4) + " "
-        prop_line += str(self.properties["vsym"]).rjust(4)
-        prop_line += str(self.properties["diagonalization"]).rjust(10)
-        prop_line += str(self.properties["xopt"]).rjust(5)
+            prop_line += str(np.negative(self.properties["vibration limit"])).rjust(3) + " "
+        prop_line += str(self.properties["K range"][0]).rjust(3) + " "
+        prop_line += str(self.properties["K range"][1]).rjust(3) + " "
+        prop_line += str(self.properties["interactions"]).rjust(3) + " "
+        prop_line += str(self.properties["statistical axis"]).rjust(3) + " "
+        prop_line += str(self.properties["even state weight"]).rjust(3) + " "
+        prop_line += str(self.properties["odd state weight"]).rjust(3) + " "
+        prop_line += str(self.properties["vsym"]).rjust(3)
+        prop_line += str(self.properties["ewt"]).rjust(3)
+        prop_line += str(self.properties["diagonalization"]).rjust(3)
+        prop_line += str(self.properties["xopt"]).rjust(3)
         # may be missing EWT
 
         with open(self.properties["name"] + ".par", "w+") as write_file:

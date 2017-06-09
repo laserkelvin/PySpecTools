@@ -29,6 +29,7 @@
 		"A": 5.0
 	},
 	"reduction": "A",
+	"vsym": 0,
 	"spin": 1,
 	"spin degeneracy": 1,
 	"units": "MHz",
@@ -38,7 +39,6 @@
     "odd state weight": 0,
 	"even state weight": 1,
 	"partition function": 1E3,
-	"quantum number range": [0, 99],
 	"frequency limit": 300.0,
 	"maximum error": 1E+13
 }
