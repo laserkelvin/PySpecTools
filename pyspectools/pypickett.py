@@ -148,14 +148,16 @@ class molecule:
             prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
         elif self.properties["symmetric"] is False and self.properties["linear"] is False:
             prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
-        else:
-            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
+        elif self.properties["symmetric"] is False and self.properties["linear"] is True:
+            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
         # Format the sign of vibration limit; negative treats top as oblate case
         # while positive treats the prolate case
         if self.properties["prolate"] is True and self.properties["linear"] is False:
             prop_line += str(np.absolute(self.properties["vibration limit"])).rjust(3) + " "
         elif self.properties["prolate"] is False and self.properties["linear"] is False:
             prop_line += str(np.negative(self.properties["vibration limit"])).rjust(3) + " "
+        else:
+            prop_line += str(self.properties["vibration limit"]).rjust(3) + " "
         prop_line += str(self.properties["K range"][0]).rjust(3) + " "
         prop_line += str(self.properties["K range"][1]).rjust(3) + " "
         prop_line += str(self.properties["interactions"]).rjust(3) + " "

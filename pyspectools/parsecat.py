@@ -9,34 +9,16 @@ def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.i
     are optional, and will default to effectively not filter.
     """
     clean_cat(simulation_path)
-    simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
+    #simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
+    simulation_df = pd.read_fwf(simulation_path, widths=[13,8,8,2,10,3,7,4,12,12], header=None)
+    simulation_df.columns = ["Frequency", "Uncertainty", "Intensity", "DoF",
+                             "Lower state energy", "Degeneracy", "ID", "Coding",
+                             "Lower quantum numbers", "Upper quantum numbers"]
     thresholded_df = simulation_df.loc[
-            (simulation_df[0].astype(float) >= low_freq) &         # threshold the simulation output
-            (simulation_df[0].astype(float) <= high_freq) &        # based on user specified values
-            (simulation_df[2].astype(float) >= threshold)          # or lack thereof
+            (simulation_df["Frequency"].astype(float) >= low_freq) &         # threshold the simulation output
+            (simulation_df["Frequency"].astype(float) <= high_freq) &        # based on user specified values
+            (simulation_df["Intensity"].astype(float) >= threshold)          # or lack thereof
             ]
-    thresholded_df.rename(
-            columns={
-                0: "Frequency",
-                1: "Uncertainty",
-                2: "Intensity",
-                3: "DoF",
-                4: "Lower state energy",
-                5: "Degerency",
-                6: "Quantum number coding",       # trying to label the columns
-                },
-            inplace=True
-            )
-# This bit combines the three columns which are meant to be for the quantum numbers
-# The output from Pickett does not format the quantum numbers well for parsing, sometimes
-# the numbers merge (i.e. if '2 4 10' might be written as '2 410'
-    if len(thresholded_df.keys()) >= 12:
-        thresholded_df["Lower quantum numbers"] = thresholded_df[[8, 9, 10]].apply(lambda x: " ".join(map(str,x)), axis=1)
-        thresholded_df["Upper quantum numbers"] = thresholded_df[[11, 12, 13]].apply(lambda x: " ".join(map(str,x)), axis=1)
-        #thresholded_df["Lower quantum numbers"] = thresholded_df.loc[:, [8, 9, 10]]#.apply(join_function)
-        #thresholded_df["Upper quantum numbers"] = thresholded_df.loc[:, [11, 12, 13]]#.apply(join_function)
-    else:
-        pass
     return thresholded_df
 
 
