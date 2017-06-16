@@ -307,49 +307,8 @@ class molecule:
         # Save the current lines to a dataframe object
         self.cat_lines = cat_df
 
-        # Define a colour map for the lower state energy
-        cnorm = colors.Normalize(vmin=self.cat_lines["Lower state energy"].min(),
-                                 vmax=self.cat_lines["Lower state energy"].max()
-                                 )
-        colormap = cm.ScalarMappable(cmap="YlOrRd_r")
-        colormap.set_array(self.cat_lines["Lower state energy"].astype(float))
-
-        # Plot the predicted spectrum if in manual mode
-        if verbose is True:
-            fig, ax = plt.subplots(figsize=(14,6.5))
-            lineplot = ax.vlines(cat_df["Frequency"],
-                      ymin=-10.,                    # set the minimum as arb. value
-                      ymax=cat_df["Intensity"],     # set the height as predicted value
-                      #color="#fec44f"
-                      colors=colormap.to_rgba(self.cat_lines["Lower state energy"].astype(float))   # color mapped to energy
-                      )
-
-            ax.set_xlabel("Frequency (MHz)")
-            ax.set_ylabel("Intensity")
-            ax.set_ylim([cat_df["Intensity"].min() * 1.1, 0.])
-
-            colorbar = plt.colorbar(colormap, orientation='horizontal')
-            colorbar.ax.set_title("Lower state energy (cm$^{-1}$)")
-
-            fig.tight_layout()
-
-            fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
-
-            os.chdir(self.top_dir)
-            if isnotebook() is True:
-                if self.interactive is True:
-                    plt.close(fig)
-                    pltly_fig = mpl_to_plotly(fig)
-                    try:
-                        iplot(pltly_fig)
-                    except PlotlyEmptyDataError:
-                        # Ignore plotly errors for now - bad conversion between
-                        # matplotlib and plotly
-                        pass
-                else:
-                    plt.show(fig)
-            else:
-                pass
+        # Plot the .cat file up
+        plot_pickett(self.cat_lines)
 
     def copy_settings(self, iteration=0):
         """ Copy settings used in a previous iteration
