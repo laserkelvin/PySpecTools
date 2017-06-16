@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from matplotlib import colors
+from matplotlib import cm
+from matplotlib import pyplot as plt
 import sys
 
 def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
@@ -96,6 +99,40 @@ def peak2cat(peaks_df, outputname="generated_batch.ftb", sortby="Intensity", asc
 def join_function(x):
     # function to join quantum numbers together
     return " ".join(str(x))
+
+
+def plot_pickett(cat_dataframe):
+    """ Plotting function that will make a plot of the .cat file spectrum """
+    # Define a colour map for the lower state energy
+    cnorm = colors.Normalize(vmin=cat_dataframe["Lower state energy"].min(),
+                             vmax=cat_dataframe["Lower state energy"].max()
+                             )
+    colormap = cm.ScalarMappable(cmap="YlOrRd_r")
+    colormap.set_array(cat_dataframe["Lower state energy"].astype(float))
+
+    # Plot the predicted spectrum if in manual mode
+    if verbose is True:
+        fig, ax = plt.subplots(figsize=(14,6.5))
+        lineplot = ax.vlines(
+            cat_dataframe["Frequency"],
+            ymin=-10.,                    # set the minimum as arb. value
+            ymax=cat_dataframe["Intensity"],     # set the height as predicted value
+            colors=colormap.to_rgba(cat_dataframe["Lower state energy"].astype(float))   # color mapped to energy
+                  )
+
+        ax.set_xlabel("Frequency (MHz)")
+        ax.set_ylabel("Intensity")
+        ax.set_ylim([cat_dataframe["Intensity"].min() * 1.1, 0.])
+
+        colorbar = plt.colorbar(colormap, orientation='horizontal')
+        colorbar.ax.set_title("Lower state energy (cm$^{-1}$)")
+
+        fig.tight_layout()
+
+        fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
+
+        os.chdir(self.top_dir)
+        plt.show(fig)
 
 
 if __name__ == "__main__":
