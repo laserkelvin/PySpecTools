@@ -34,7 +34,7 @@ def center_cavity(dataframe, thres=0.3, verbose=True):
         print("Center frequency at " + str(center))
     dataframe["Offset Frequency"] = dataframe["Frequency"] - center
 
-def plot_chirp(chirpdf, catfiles=None):
+def plot_chirp(chirpdf, catfiles=None, output="chirp_interactive.html"):
     """ Function to perform interactive analysis with a chirp spectrum, as well
         as any reference .cat files you may want to provide.
         This is not designed to replace SPECData analysis, but simply to perform
@@ -78,7 +78,7 @@ def plot_chirp(chirpdf, catfiles=None):
         yaxis2={"title": "", "side": "right", "overlaying": "y", "range": [0., 1.]}
     )
     fig = go.Figure(data=plots, layout=layout)
-    plot(fig)
+    plot(fig, filename=output)
 
 def configure_colors(dataframe):
     """ Generates color palettes for plotting arbitrary number of SPECData
@@ -121,11 +121,12 @@ def plot_specdata_mpl(dataframe):
     assign_ax.set_yticks([])
     assign_ax.legend(loc=9, ncol=4, bbox_to_anchor=(0.5, -0.1), frameon=True)
 
-def plot_specdata_plotly(dataframe):
+def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     """ Interactive SPECData result plotting using plotly.
         The function will automatically swap between spectra and peaks by
         inspecting the number of data points we have.
     """
+    init_notebook_mode(connected=False)
     if len(dataframe) >= 10000:
         exp_plot_function = go.Scatter
     else:
@@ -164,4 +165,4 @@ def plot_specdata_plotly(dataframe):
         xaxis={"title": "Frequency (MHz)"}
     )
     fig = go.Figure(data=plots, layout=layout)
-    plot(fig)
+    plot(fig, filename=output)
