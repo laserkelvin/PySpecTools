@@ -308,7 +308,9 @@ class molecule:
         self.cat_lines = cat_df
 
         # Plot the .cat file up
-        plot_pickett(self.cat_lines)
+        fig, ax = plot_pickett(self.cat_lines, verbose=verbose)
+        os.chdir(self.top_dir)
+        fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
 
     def copy_settings(self, iteration=0):
         """ Copy settings used in a previous iteration

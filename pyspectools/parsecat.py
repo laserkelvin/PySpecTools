@@ -101,7 +101,7 @@ def join_function(x):
     return " ".join(str(x))
 
 
-def plot_pickett(cat_dataframe):
+def plot_pickett(cat_dataframe, verbose=True):
     """ Plotting function that will make a plot of the .cat file spectrum """
     # Define a colour map for the lower state energy
     cnorm = colors.Normalize(vmin=cat_dataframe["Lower state energy"].min(),
@@ -129,10 +129,8 @@ def plot_pickett(cat_dataframe):
 
         fig.tight_layout()
 
-        fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
-
-        os.chdir(self.top_dir)
         plt.show(fig)
+        return fig, ax
 
 
 if __name__ == "__main__":
