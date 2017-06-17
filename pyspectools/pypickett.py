@@ -10,8 +10,12 @@ from .routines import *
 from .parsecat import *
 from .parsefit import *
 from matplotlib import pyplot as plt
+from matplotlib import cm
+from matplotlib import colors
 from .mpl_settings import *
 import pprint
+from plotly.tools import mpl_to_plotly
+from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
 
 class molecule:
     """ Class for handling the top level of a Pickett simulation.
@@ -28,6 +32,8 @@ class molecule:
             "tag": 0,
             "parameters": dict(),            # human input of parameters
             "linear": False,
+            "symmetric": False,
+            "prolate": False,
             "dipole": {
                 "A": 0.,
                 "B": 0.,
@@ -47,8 +53,10 @@ class molecule:
             "odd state weight": 1,
             "even state weight": 1,
             "frequency limit": 100.,
-            "vibration limit": 10,
+            "vibration limit": 1,
             "vsym": 1,
+            "ewt": 0,
+            "statistical axis": 1,
             "number of parameters": 100,
             "number of lines": 0,
             "number of iterations": 10,
@@ -81,6 +89,7 @@ class molecule:
         # Write the .int and .par files to disk
         self.setup_int()
         self.setup_par()
+        self.interactive = False              # Interactive plotting option
 
     def generate_parameter_objects(self, verbose=True):
         for param_key in self.properties["parameters"]:
@@ -111,6 +120,15 @@ class molecule:
         else:
             raise EnvironmentError("Please provide a True value to confirm deletion!")
 
+
+    def toggle_interactive(self, connected=False):
+        """ Method to toggle interactive plots on and off """
+        self.interactive = not self.interactive
+        init_notebook_mode(connected=connected)
+        if self.interactive is False:
+            # Pseudo-disconnect interactivity by removing JS injections
+            init_notebook_mode(connected=True)
+
     def setup_par(self):
         opt_line = ""
         opt_line += str(self.properties["number of parameters"]).rjust(4) + " "
@@ -123,17 +141,33 @@ class molecule:
         opt_line += str(self.properties["IR scaling"]).rjust(13) + " "
 
         prop_line = ""
-        prop_line += str("'" + self.properties["reduction"] + "'").rjust(4)
-        prop_line += str(self.properties["spin degeneracy"]).rjust(5) + " "
-        prop_line += str(self.properties["vibration limit"]).rjust(3) + " "
-        prop_line += str(self.properties["K range"][0]).rjust(4) + " "
-        prop_line += str(self.properties["K range"][1]).rjust(4) + " "
-        prop_line += str(self.properties["interactions"]).rjust(4) + " "
-        prop_line += str(self.properties["even state weight"]).rjust(4) + " "
-        prop_line += str(self.properties["odd state weight"]).rjust(4) + " "
-        prop_line += str(self.properties["vsym"]).rjust(4)
-        prop_line += str(self.properties["diagonalization"]).rjust(10)
-        prop_line += str(self.properties["xopt"]).rjust(5)
+        prop_line += str("'" + self.properties["reduction"] + "'").rjust(3)
+        # Format the spin degeneracy sign - if it's positive, we use asym top
+        # quantum numbers. If negative use symmetric top.
+        if self.properties["symmetric"] is True and self.properties["linear"] is False:
+            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
+        elif self.properties["symmetric"] is False and self.properties["linear"] is False:
+            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
+        elif self.properties["symmetric"] is False and self.properties["linear"] is True:
+            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
+        # Format the sign of vibration limit; negative treats top as oblate case
+        # while positive treats the prolate case
+        if self.properties["prolate"] is True and self.properties["linear"] is False:
+            prop_line += str(np.absolute(self.properties["vibration limit"])).rjust(3) + " "
+        elif self.properties["prolate"] is False and self.properties["linear"] is False:
+            prop_line += str(np.negative(self.properties["vibration limit"])).rjust(3) + " "
+        else:
+            prop_line += str(self.properties["vibration limit"]).rjust(3) + " "
+        prop_line += str(self.properties["K range"][0]).rjust(3) + " "
+        prop_line += str(self.properties["K range"][1]).rjust(3) + " "
+        prop_line += str(self.properties["interactions"]).rjust(3) + " "
+        prop_line += str(self.properties["statistical axis"]).rjust(3) + " "
+        prop_line += str(self.properties["even state weight"]).rjust(3) + " "
+        prop_line += str(self.properties["odd state weight"]).rjust(3) + " "
+        prop_line += str(self.properties["vsym"]).rjust(3)
+        prop_line += str(self.properties["ewt"]).rjust(3)
+        prop_line += str(self.properties["diagonalization"]).rjust(3)
+        prop_line += str(self.properties["xopt"]).rjust(3)
         # may be missing EWT
 
         with open(self.properties["name"] + ".par", "w+") as write_file:
@@ -226,7 +260,8 @@ class molecule:
         # Create an instance of a fit object, and add it to the pile
         self.iterations[self.iteration_count] = fit_output(
                 self.properties["name"] + ".fit",
-                verbose=verbose
+                verbose=verbose,
+                interactive=self.interactive
             )
         # Run SPCAT to get the predicted spectrum
         self.predict_lines()
@@ -272,35 +307,26 @@ class molecule:
         # Save the current lines to a dataframe object
         self.cat_lines = cat_df
 
-        # Plot the predicted spectrum if in manual mode
-        if verbose is True:
-            fig, ax = plt.subplots(figsize=(14,5.5))
-            ax.vlines(cat_df["Frequency"],
-                      ymin=-10.,                    # set the minimum as arb. value
-                      ymax=cat_df["Intensity"],     # set the height as predicted value
-                      color="#fec44f"
-                      )
-
-            ax.set_xlabel("Frequency (MHz)")
-            ax.set_ylabel("Intensity")
-            ax.set_ylim([cat_df["Intensity"].min() * 1.1, 0.])
-
-            fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
-
-            os.chdir(self.top_dir)
-            if isnotebook() is True:
-                plt.show()
-            else:
-                pass
+        # Plot the .cat file up
+        fig, ax = plot_pickett(self.cat_lines, verbose=verbose)
+        os.chdir(self.top_dir)
+        fig.savefig(self.properties["name"] + "_spectrum.pdf", format="pdf")
 
     def copy_settings(self, iteration=0):
-        # Copy settings used in a previous iteration
-        # If none specified, we'll take the settings from before the first fit
+        """ Copy settings used in a previous iteration
+            If none specified, we'll take the settings from before the first fit
+        """
         if iteration == 0:
             iteration = "initial"
-        current_params = self.iterations[iteration].export_parameters()
-        self.update_parameters(current_params, False)
-        print("Settings copied from iteration " + str(iteration))
+        #current_params = self.iterations[iteration].export_parameters()
+        iteration_folder = str(iteration) + "/" + self.properties["name"]
+        if os.path.isfile(iteration_folder + ".fit.json") is True:
+            iteration_file = iteration_folder + ".fit.json"
+        else:
+            iteration_file = iteration_folder + ".json"
+        iteration_params = read_json(iteration_file)
+        self.properties.update(iteration_params)
+        print("Settings copied from " + iteration_file)
 
     def update_parameters(self, parameters, verbose=True):
         """ Update the simulation parameters
@@ -379,10 +405,13 @@ class molecule:
             )
         # Generate a report for the final fits
         for parameter in self.properties["parameters"]:
-            self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
-                                     "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
-                                     ")"
-        report_df = pd.DataFrame.from_dict(self.properties["parameters"])
+            if "uncertainty" in list(self.properties["parameters"][parameter].keys()):
+                self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
+                                         "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
+                                         ")"
+            else:
+                self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"])
+        report_df = pd.DataFrame.from_dict(self.properties["parameters"]).T
         with open(self.top_dir + "/final/parameter_report.html", "w+") as write_file:
             write_file.write(report_df.to_html())
         for file in glob(self.top_dir + "/final/*"):

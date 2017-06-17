@@ -1,5 +1,8 @@
 import pandas as pd
 import numpy as np
+from matplotlib import colors
+from matplotlib import cm
+from matplotlib import pyplot as plt
 import sys
 
 def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
@@ -9,34 +12,16 @@ def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.i
     are optional, and will default to effectively not filter.
     """
     clean_cat(simulation_path)
-    simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
+    #simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
+    simulation_df = pd.read_fwf(simulation_path, widths=[13,8,8,2,10,3,7,4,12,12], header=None)
+    simulation_df.columns = ["Frequency", "Uncertainty", "Intensity", "DoF",
+                             "Lower state energy", "Degeneracy", "ID", "Coding",
+                             "Lower quantum numbers", "Upper quantum numbers"]
     thresholded_df = simulation_df.loc[
-            (simulation_df[0].astype(float) >= low_freq) &         # threshold the simulation output
-            (simulation_df[0].astype(float) <= high_freq) &        # based on user specified values
-            (simulation_df[2].astype(float) >= threshold)          # or lack thereof
+            (simulation_df["Frequency"].astype(float) >= low_freq) &         # threshold the simulation output
+            (simulation_df["Frequency"].astype(float) <= high_freq) &        # based on user specified values
+            (simulation_df["Intensity"].astype(float) >= threshold)          # or lack thereof
             ]
-    thresholded_df.rename(
-            columns={
-                0: "Frequency",
-                1: "Uncertainty",
-                2: "Intensity",
-                3: "DoF",
-                4: "Lower state energy",
-                5: "Degerency",
-                6: "Quantum number coding",       # trying to label the columns
-                },
-            inplace=True
-            )
-# This bit combines the three columns which are meant to be for the quantum numbers
-# The output from Pickett does not format the quantum numbers well for parsing, sometimes
-# the numbers merge (i.e. if '2 4 10' might be written as '2 410'
-    if len(thresholded_df.keys()) >= 12:
-        thresholded_df["Lower quantum numbers"] = thresholded_df[[8, 9, 10]].apply(lambda x: " ".join(map(str,x)), axis=1)
-        thresholded_df["Upper quantum numbers"] = thresholded_df[[11, 12, 13]].apply(lambda x: " ".join(map(str,x)), axis=1)
-        #thresholded_df["Lower quantum numbers"] = thresholded_df.loc[:, [8, 9, 10]]#.apply(join_function)
-        #thresholded_df["Upper quantum numbers"] = thresholded_df.loc[:, [11, 12, 13]]#.apply(join_function)
-    else:
-        pass
     return thresholded_df
 
 
@@ -114,6 +99,38 @@ def peak2cat(peaks_df, outputname="generated_batch.ftb", sortby="Intensity", asc
 def join_function(x):
     # function to join quantum numbers together
     return " ".join(str(x))
+
+
+def plot_pickett(cat_dataframe, verbose=True):
+    """ Plotting function that will make a plot of the .cat file spectrum """
+    # Define a colour map for the lower state energy
+    cnorm = colors.Normalize(vmin=cat_dataframe["Lower state energy"].min(),
+                             vmax=cat_dataframe["Lower state energy"].max()
+                             )
+    colormap = cm.ScalarMappable(cmap="YlOrRd_r")
+    colormap.set_array(cat_dataframe["Lower state energy"].astype(float))
+
+    # Plot the predicted spectrum if in manual mode
+    if verbose is True:
+        fig, ax = plt.subplots(figsize=(14,6.5))
+        lineplot = ax.vlines(
+            cat_dataframe["Frequency"],
+            ymin=-10.,                    # set the minimum as arb. value
+            ymax=cat_dataframe["Intensity"],     # set the height as predicted value
+            colors=colormap.to_rgba(cat_dataframe["Lower state energy"].astype(float))   # color mapped to energy
+                  )
+
+        ax.set_xlabel("Frequency (MHz)")
+        ax.set_ylabel("Intensity")
+        ax.set_ylim([cat_dataframe["Intensity"].min() * 1.1, 0.])
+
+        colorbar = plt.colorbar(colormap, orientation='horizontal')
+        colorbar.ax.set_title("Lower state energy (cm$^{-1}$)")
+
+        fig.tight_layout()
+
+        plt.show(fig)
+        return fig, ax
 
 
 if __name__ == "__main__":
