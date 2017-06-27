@@ -67,7 +67,7 @@ def plot_chirp(chirpdf, catfiles=None, output="chirp_interactive.html"):
                     marker = {
                         # Convert the matplotlib rgb color to hex code
                         "color": colors.rgb2hex(color)
-                    }
+                    },
                     width = 1.,
                     opacity = 0.6,
                     yaxis = "y2"
