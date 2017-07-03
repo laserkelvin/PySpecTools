@@ -25,10 +25,10 @@ class molecule:
 
         All of the information is bundled into a dictionary called `properties`.
     """
-    def __init__(self, options):
+    def __init__(self, options=None):
         # Initialize the default properties of a diatomic molecule
         self.properties = {
-            "name": None,
+            "name": "Molecule",
             "tag": 0,
             "parameters": dict(),            # human input of parameters
             "linear": False,
@@ -78,18 +78,27 @@ class molecule:
 
         self.experimental_lines = dict() # experimental lines that go to a .lin
 
-        self.properties.update(options)
+        # Function that updates parameters, and re-writes the .par and .int
+        # files.
+        self.initialize(options)
+        self.interactive = False              # Interactive plotting option
 
-        # Convert human input of parameters to parameter objects
+##########################################
+############# Class methods ##############
+##########################################
+
+    def initialize(self, options=None):
+        if options is not None:
+            self.properties.update(options)
+
         self.generate_parameter_objects()
 
         if self.properties["K range"][1] == 0 and self.properties["linear"] is False:
             print("Warning: You have specified a non-linear molecule and the")
             print("         maximum K value is unset. You may not see lines!")
-        # Write the .int and .par files to disk
+
         self.setup_int()
         self.setup_par()
-        self.interactive = False              # Interactive plotting option
 
     def generate_parameter_objects(self, verbose=True):
         for param_key in self.properties["parameters"]:
@@ -102,20 +111,16 @@ class molecule:
             )
 
     def nuclear(self, delete=False):
-        files = [self.properties["name"] + value for value in [".cat",
-                                                               ".var",
-                                                               ".par",
-                                                               ".int",
-                                                               "_parsedlines.csv",
-                                                               "_spectrum.pdf",
-                                                               ".fit",
-                                                               ".out"
-                                                               ]]
+        """ Function that cleans up Pickett files in a folder """
+        filelist = [".cat", ".var", ".par", ".int", "_parsedlines.csv",
+                    "_spectrum.pdf", ".fit", ".out"]
+        files = [self.properties["name"] + name for name in filelist]
         if delete is True:
             for file in files:
                 try:
                     os.system("rm " + file)
                 except FileNotFoundError:
+                    # Ignore files that aren't in the folder
                     pass
         else:
             raise EnvironmentError("Please provide a True value to confirm deletion!")
@@ -130,6 +135,7 @@ class molecule:
             init_notebook_mode(connected=True)
 
     def setup_par(self):
+        """ Function that provides the correct formatting for a .par file """
         opt_line = ""
         opt_line += str(self.properties["number of parameters"]).rjust(4) + " "
         opt_line += str(self.properties["number of lines"]).rjust(5) + " "
@@ -263,7 +269,6 @@ class molecule:
                 verbose=verbose,
                 interactive=self.interactive
             )
-        # Run SPCAT to get the predicted spectrum
         self.predict_lines()
         os.chdir(self.top_dir)
 
@@ -293,19 +298,25 @@ class molecule:
 
             The predicted lines are also parsed into a .csv file, and plot up
             into: (A) a notebook inline plot, and (B) a PDF output.
-        """
-        print("Running SPCAT.")
-        run_spcat(self.properties["name"])       # run the predictions
 
-        print("Parsing the .cat file for lines.")
-        cat_df = pick_pickett(
+            SPCAT is run twice - first to get the partition function, and second
+            to get the correct intensities.
+        """
+        # First pass of SPCAT; get the partition function
+        self.properties["partition function"] = run_spcat(
+            self.properties["name"],
+            temperature="{:.3f}".format(self.properties["temperature"])
+            )
+        # Make sure the int file has the correct partition function
+        self.setup_int()
+        # Second pass of SPCAT with correct intensities
+        run_spcat(self.properties["name"])
+        # Parse the output of SPCAT
+        self.cat_lines = pick_pickett(
             self.properties["name"] + ".cat",
         )
         print("Saving the parsed lines to " + self.properties["name"] + "_parsedlines.csv")
-        cat_df.to_csv(self.properties["name"] + "_parsedlines.csv")
-
-        # Save the current lines to a dataframe object
-        self.cat_lines = cat_df
+        self.cat_lines.to_csv(self.properties["name"] + "_parsedlines.csv")
 
         # Plot the .cat file up
         fig, ax = plot_pickett(self.cat_lines, verbose=verbose)

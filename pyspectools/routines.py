@@ -11,7 +11,7 @@ from pyspectools import pypickett as pp
 from pyspectools import parsecat as pc
 from glob import glob
 
-def run_spcat(filename):
+def run_spcat(filename, temperature=None):
     # Run SPCAT
     parameter_file = filename + ".var"
     if os.path.isfile(filename + ".var") is False:
@@ -21,9 +21,19 @@ def run_spcat(filename):
         else:
             shutil.copy2(filename + ".par", parameter_file)
     process = subprocess.Popen(["spcat", filename + ".int", parameter_file],
-                     stdout=subprocess.DEVNULL            # suppress stdout
+                     stdout=subprocess.PIPE            # suppress stdout
                      )
     process.wait()
+    # Extract the partition function at the specified temperature
+    if temperature is not None:
+        # Read in the piped standard output, and format into a list
+        stdout = str(process.communicate()[0]).split("\\n")
+        for line in stdout:
+            if temperature in line:
+                # If the specified temperature is found, get the partition
+                # function
+                Q = float(line.split()[1])
+        return Q
 
 
 def run_calbak(filename):
