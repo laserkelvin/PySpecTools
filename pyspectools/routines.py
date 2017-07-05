@@ -7,11 +7,12 @@ import os
 import subprocess
 import shutil
 import json
+import yaml
 from pyspectools import pypickett as pp
 from pyspectools import parsecat as pc
 from glob import glob
 
-def run_spcat(filename):
+def run_spcat(filename, temperature=None):
     # Run SPCAT
     parameter_file = filename + ".var"
     if os.path.isfile(filename + ".var") is False:
@@ -21,9 +22,19 @@ def run_spcat(filename):
         else:
             shutil.copy2(filename + ".par", parameter_file)
     process = subprocess.Popen(["spcat", filename + ".int", parameter_file],
-                     stdout=subprocess.DEVNULL            # suppress stdout
+                     stdout=subprocess.PIPE            # suppress stdout
                      )
     process.wait()
+    # Extract the partition function at the specified temperature
+    if temperature is not None:
+        # Read in the piped standard output, and format into a list
+        stdout = str(process.communicate()[0]).split("\\n")
+        for line in stdout:
+            if temperature in line:
+                # If the specified temperature is found, get the partition
+                # function
+                Q = float(line.split()[1])
+        return Q
 
 
 def run_calbak(filename):
@@ -56,6 +67,11 @@ def run_spfit(filename):
 def pickett_molecule(json_filepath=None):
     # Provide a JSON file with all the Pickett settings, and generate an
     # instance of the molecule class
+    # This method is superceded by serializing using classmethods for each
+    # file format
+    raise UserWarning("pickett_molecule is now outdated. Please use the class \
+                       methods from_yaml or from_json.
+                      ")
     if json_filepath is None:
         print("No JSON input file specified.")
         print("A template file will be created in your directory; please rerun\
@@ -142,6 +158,12 @@ def read_json(json_filepath):
 def dump_json(json_filepath, json_dict):
     with open(json_filepath, "w+") as write_file:
         json.dump(json_dict, write_file, indent=4, sort_keys=True)
+
+
+def read_yaml(yaml_filepath):
+    with open(yaml_filepath) as read_file:
+        yaml_data = yaml.load(read_file)
+    return yaml_data
 
 
 def generate_folder():
