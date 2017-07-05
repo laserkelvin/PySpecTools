@@ -24,7 +24,26 @@ class molecule:
         to fit, temperature, etc.
 
         All of the information is bundled into a dictionary called `properties`.
+
+        There are two methods right now that will generate a `molecule` object;
+        `from_json` and `from_yaml`, which will interpret JSON and YAML input
+        files respectively.
     """
+
+    @classmethod
+    def from_json(cls, json_filepath):
+        # Generate a molecule from a specified JSON file
+        json_data = read_json(json_filepath)
+        species = molecule(json_data)
+        return species
+
+    @classmethod
+    def from_yaml(cls, yaml_filepath):
+        # Generate a molecule object from a YAML file
+        yaml_data = read_yaml(yaml_filepath)
+        species = molecule(yaml_data)
+        return species
+
     def __init__(self, options=None):
         # Initialize the default properties of a diatomic molecule
         self.properties = {
@@ -88,17 +107,38 @@ class molecule:
 ##########################################
 
     def initialize(self, options=None):
+        """ Method that will rewrite the .par and .int files, after updating
+            the properties dictionary.
+
+            Any warnings regarding common mistakes in input files should also be
+            flagged here.
+        """
         if options is not None:
             self.properties.update(options)
 
-        self.generate_parameter_objects()
-
-        if self.properties["K range"][1] == 0 and self.properties["linear"] is False:
-            print("Warning: You have specified a non-linear molecule and the")
-            print("         maximum K value is unset. You may not see lines!")
+        self.generate_parameter_objects(verbose=False)
+        self.check_input()
 
         self.setup_int()
         self.setup_par()
+
+        print("Initialized settings for molecule " + self.properties["name"])
+
+    def check_input(self):
+        """ Method for going through the input settings and flagging common
+            mistakes.
+        """
+        # If the K range is set to 0, but the molecule is not linear
+        if self.properties["K range"][1] == 0 and self.properties["linear"] is False:
+            raise UserWarning("Warning: You have specified a non-linear molecule \
+                               and the maximum K value is unset. Result cat file \
+                               may be empty!")
+
+        # If A and C constants are given and molecule is supposed to be linear
+        if ["A", "C"] in list(self.properties["parameters"].keys()):
+            if self.properties["linear"] is True:
+                raise UserWarning("Molecule flagged as linear, \
+                                   but A and C constants specified.")
 
     def generate_parameter_objects(self, verbose=True):
         for param_key in self.properties["parameters"]:
@@ -124,7 +164,6 @@ class molecule:
                     pass
         else:
             raise EnvironmentError("Please provide a True value to confirm deletion!")
-
 
     def toggle_interactive(self, connected=False):
         """ Method to toggle interactive plots on and off """

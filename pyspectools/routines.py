@@ -7,6 +7,7 @@ import os
 import subprocess
 import shutil
 import json
+import yaml
 from pyspectools import pypickett as pp
 from pyspectools import parsecat as pc
 from glob import glob
@@ -66,6 +67,11 @@ def run_spfit(filename):
 def pickett_molecule(json_filepath=None):
     # Provide a JSON file with all the Pickett settings, and generate an
     # instance of the molecule class
+    # This method is superceded by serializing using classmethods for each
+    # file format
+    raise UserWarning("pickett_molecule is now outdated. Please use the class \
+                       methods from_yaml or from_json.
+                      ")
     if json_filepath is None:
         print("No JSON input file specified.")
         print("A template file will be created in your directory; please rerun\
@@ -152,6 +158,12 @@ def read_json(json_filepath):
 def dump_json(json_filepath, json_dict):
     with open(json_filepath, "w+") as write_file:
         json.dump(json_dict, write_file, indent=4, sort_keys=True)
+
+
+def read_yaml(yaml_filepath):
+    with open(yaml_filepath) as read_file:
+        yaml_data = yaml.load(read_file)
+    return yaml_data
 
 
 def generate_folder():
