@@ -70,8 +70,7 @@ def pickett_molecule(json_filepath=None):
     # This method is superceded by serializing using classmethods for each
     # file format
     raise UserWarning("pickett_molecule is now outdated. Please use the class \
-                       methods from_yaml or from_json.
-                      ")
+                       methods from_yaml or from_json.")
     if json_filepath is None:
         print("No JSON input file specified.")
         print("A template file will be created in your directory; please rerun\

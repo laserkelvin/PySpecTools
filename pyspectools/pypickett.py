@@ -243,8 +243,8 @@ class molecule:
             settings_line += "0"
         else:
             settings_line += "0"
-        settings_line += " " + str(self.properties["tag"]).rjust(10)
-        settings_line += str(self.properties["partition function"]).rjust(8)
+        settings_line += " " + str(self.properties["tag"]).rjust(6)
+        settings_line += str(self.properties["partition function"]).rjust(10)
         for value in self.properties["quantum number range"]:
             settings_line += str(value).rjust(5)
         for value in self.properties["intensity threshold"]:
