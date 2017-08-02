@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 import peakutils
+from uncertainties import ufloat
 from matplotlib import pyplot as plt
 
 def parse_data(filepath):
@@ -64,11 +65,15 @@ def plot_data(dataframe, frequency=None):
     if frequency is not None:
     # If we managed to find a center frequency, fit a straight line through
     # and annotate the graph with the peak frequency
-        ax.text(frequency + 0.1, dataframe.min().min() - 0.02, "Center: %5.3f" % frequency, size="x-large")
-        ax.vlines(frequency, *ax.get_ylim())
+        if type(frequency) == type(ufloat(1., 2.)):
+            freq = frequency.n
+            form_freq = "{:.3uS}".format(frequency)
+        ax.text(freq + 0.1, dataframe.min().min() - 0.02, "Center: " + form_freq, size="x-large")
+        ax.vlines(freq, *ax.get_ylim())
 
+    ax.get_xaxis().get_major_formatter().set_useOffset(False)
     ax.legend()
-    plt.tight_layout()
+    fig.tight_layout()
     return fig, ax
 
 def fit_dr(dataframe, column=1, bounds=None):
@@ -93,9 +98,8 @@ def fit_dr(dataframe, column=1, bounds=None):
     except RuntimeError:
         print("No optimal solution found. Try narrowing the frequency range of the data.")
         optimized = [None] * 4
-    print(optimized)
     dataframe["fit"] = gaussian(dataframe.index, *optimized)
-    return dataframe, optimized
+    return dataframe, optimized, covariance
 
 def analyze_dr(filepath, baseline=False, freqrange=[0., np.inf]):
     """ Main driver function that will perform all of the operations for
@@ -122,11 +126,26 @@ def analyze_dr(filepath, baseline=False, freqrange=[0., np.inf]):
     else:
         column = 1
     print("Using column " + str(column))
-    dataframe, optimized = fit_dr(dataframe, column)
+    # Perform the curve fitting
+    dataframe, optimized, covariance = fit_dr(dataframe, column)
+    # Calculate the standard deviation; this is based on the diagonal elements
+    # of the covariance matrix. If the off-diagonal elements are large, there
+    # is significant correlation between variables and the answers will be
+    # quite uncertain...
+    stdev = np.sqrt(np.diag(covariance))
+    results = list()
 
-    fig, ax = plot_data(dataframe, frequency=optimized[1])
+    # Print the results - short-hand notation is used
+    print("Final fitting results for " + filename)
+    for index, name in enumerate(["Amplitude", "Center", "Width", "Offset"]):
+        result = ufloat(optimized[index], stdev[index])
+        print(name + ":    " + "{:.3uS}".format(result))
+        results.append(result)
+
+    # Plot the resulting DR fit for physical printing
+    fig, ax = plot_data(dataframe, frequency=results[1])
 
     ax.set_title(filename)
 
     dataframe.to_csv(filename + "_fit.csv")
-    fig.savefig(filename + "_fit.pdf", format="pdf")
+    fig.savefig(filename + "_fit.pdf", format="pdf", dpi=300)

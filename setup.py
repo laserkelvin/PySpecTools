@@ -35,7 +35,7 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="0.6.3",
+    version="0.6.4",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=["pyspectools"],
@@ -47,7 +47,8 @@ setup(
             "scipy",
             "matplotlib",
             "peakutils",
-            "plotly"
+            "plotly",
+            "uncertainties"
     ],
     cmdclass={
         "develop": PostInstallCommand,
