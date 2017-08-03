@@ -41,9 +41,11 @@ def gaussian(x, A, c, w, offset):
     # is flipped upside down.
     return -A * np.exp(-(c - x)**2. / 2. * w**2.) + offset
 
-def plot_data(dataframe, frequency=None):
+def plot_data(dataframe, fitresults=None):
     """ Function to plot the DR data, and the fitted Gaussian peak. """
-    fig, ax = plt.subplots(figsize=(10, 5.5))
+    fig, ax = plt.subplots(figsize=(10, 6.5))
+
+    fig.subplots_adjust(top=0.55)
     ax.set_xlabel("Frequency (MHz)")
     ax.set_ylabel("Intensity")
     ax.set_ylim([dataframe.min().min() - 0.03, dataframe.max().max()]) # Set the ylimits
@@ -62,14 +64,25 @@ def plot_data(dataframe, frequency=None):
     if "fit" in list(dataframe.keys()):
     # Plot the fit result
         ax.plot(dataframe.index, dataframe["fit"], label="Fit", lw=2.)
-    if frequency is not None:
-    # If we managed to find a center frequency, fit a straight line through
-    # and annotate the graph with the peak frequency
-        if type(frequency) == type(ufloat(1., 2.)):
-            freq = frequency.n
-            form_freq = "{:.3uS}".format(frequency)
-        ax.text(freq + 0.1, dataframe.min().min() - 0.02, "Center: " + form_freq, size="x-large")
-        ax.vlines(freq, *ax.get_ylim())
+        if fitresults is not None:
+        # If we managed to find a center frequency, fit a straight line through
+        # and annotate the graph with the peak frequency
+            text_to_write = ""
+            for index, name in enumerate(["Amplitude", "Center", "Width", "Offset"]):
+                text_to_write+= name + ": " + "{:.3uS}".format(fitresults[index]) + "\n"
+                #if type(frequency) == type(ufloat(1., 2.)):
+                #    freq = frequency.n
+                #    form_freq = "{:.3uS}".format(frequency)
+                #ax.text(freq + 0.1, dataframe.min().min() - 0.02, "Center: " + form_freq, size="x-large")
+            ax.text(0.8, 0.2, text_to_write, size="x-large", ha="center", va="center", transform=ax.transAxes)
+            ax.vlines(fitresults[1].n, *ax.get_ylim())
+            if fitresults[1].s <= 0.5:
+                ax.fill_between([fitresults[1].n - fitresults[1].s, fitresults[1].n + fitresults[1].s],
+                                y1=dataframe["fit"].min(),
+                                y2=dataframe["fit"].max(),
+                                facecolor="#2b8cbe",
+                                alpha=0.5
+                                )
 
     ax.get_xaxis().get_major_formatter().set_useOffset(False)
     ax.legend()
@@ -77,14 +90,15 @@ def plot_data(dataframe, frequency=None):
     return fig, ax
 
 def fit_dr(dataframe, column=1, bounds=None):
-    # Determine an estimate for the peak depletion
+    # Determine an estimate for the peak depletion; uses the minimum value in
+    # intensity as an initial guess for the fit.
 
     peak_guess = dataframe[column].idxmin()
     print("Guess for center frequency: " + str(peak_guess))
 
     if bounds is None:
-        bounds = ([0., peak_guess - 0.1, 1., 0.,],
-                  [np.inf, peak_guess + 0.1, 20., np.inf]
+        bounds = ([0., peak_guess - 1., 1., 0.,],
+                  [np.inf, peak_guess + 1., 20., np.inf]
                  )
 
     try:
@@ -143,9 +157,9 @@ def analyze_dr(filepath, baseline=False, freqrange=[0., np.inf]):
         results.append(result)
 
     # Plot the resulting DR fit for physical printing
-    fig, ax = plot_data(dataframe, frequency=results[1])
+    fig, ax = plot_data(dataframe, fitresults=results)
 
     ax.set_title(filename)
 
     dataframe.to_csv(filename + "_fit.csv")
-    fig.savefig(filename + "_fit.pdf", format="pdf", dpi=300)
+    fig.savefig(filename + "_fit.pdf", format="pdf", dpi=300, bbox_inches='tight')
