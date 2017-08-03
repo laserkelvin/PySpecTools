@@ -53,6 +53,8 @@ def plot_data(dataframe, fitresults=None):
     max_freq = dataframe.index.max()
     ax.set_xticks(np.arange(min_freq, max_freq, (max_freq - min_freq) / 4.))
 
+    if "average" not in list(dataframe.keys()):
+        ax.plot(dataframe.index, dataframe[1], label="Data")
     if "average" in list(dataframe.keys()):
     # If the DR has co-averaging, we'll plot that too
         for column in [columns for columns in list(dataframe.keys()) if columns not in ["average", "baseline subtracted", "fit"]]:
@@ -98,7 +100,7 @@ def fit_dr(dataframe, column=1, bounds=None):
 
     if bounds is None:
         bounds = ([0., peak_guess - 1., 1., 0.,],
-                  [np.inf, peak_guess + 1., 20., np.inf]
+                  [np.inf, peak_guess + 1., 5., np.inf]
                  )
 
     try:

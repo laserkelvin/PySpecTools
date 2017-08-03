@@ -44,6 +44,13 @@ class molecule:
         species = molecule(yaml_data)
         return species
 
+    @classmethod
+    def from_pickle(cls, picklepath):
+        # Generate a molecule object from a pickle instance
+        with open(picklepath) as pickle_read:
+            species = pickle.load(pickle_read)
+        return species
+
     def __init__(self, options=None):
         # Initialize the default properties of a diatomic molecule
         self.properties = {
@@ -278,7 +285,7 @@ class molecule:
         # attribute as a list, but can potentially be used to do more...
         with open(self.properties["name"] + ".lin") as read_file:
             self.lin_file = read_file.readlines()
-            self.properties["number of lines"] = len(self.lin_file)
+            #self.properties["number of lines"] = len(self.lin_file)
 
         # Figure out what the next iteration is
         folder_number = generate_folder()
@@ -420,17 +427,34 @@ class molecule:
         with open("instances/" + self.properties["name"] + "." + str(counter) + ".pickle", "wb") as write_file:
             pickle.dump(self, write_file, pickle.HIGHEST_PROTOCOL)
 
-    def set_fit(self, fit=True, verbose=False):
-        """ Function to flip all parameters to fit or not to fit """
-        for parameter in self.properties["parameters"]:
-            self.properties["parameters"][parameter]["fit"] = fit
+    def set_fit(self, fit=True, params=None, verbose=False):
+        """ Function to flip all parameters to fit or not to fit.
+            The default behaviour, if nothing is provided, is to fit all the
+            parameters.
+
+            A list of parameters can be supplied to the params argument, which
+            will specifically fit or not fit those parameters.
+        """
+        if params is None:
+            params = list(self.properties["parameters"].keys())
+        if type(params) is str:
+            if params not in list(self.properties["parameters"].keys()):
+                raise KeyError("Parameter " + parameter + " is not in your parameter list!")
+            else:
+                self.properties["parameters"][parameter]["fit"] = fit
+        elif type(params) is list:
+            for parameter in params:
+                if parameter not in list(self.properties["parameters"].keys()):
+                    raise KeyError("Parameter " + parameter + " is not in your parameter list!")
+                else:
+                    self.properties["parameters"][parameter]["fit"] = fit
         self.generate_parameter_objects(verbose=verbose)
 
     def report_parameters(self):
         """ Method to return a dictionary of only the parameter values """
         param_dict = dict()
         for parameter in self.properties["parameters"]:
-            param_dict[parameter] = self.properties["parameters"]["value"]
+            param_dict[parameter] = self.properties["parameters"][parameter]["value"]
         return param_dict
 
     def finalize(self, iteration=None):
@@ -501,7 +525,8 @@ class molecule:
             self.fit_lines(verbose=False)
             # Record the final RMS error for this parameter
             current_params = self.report_parameters()
-            current_params["rms"] = self.iterations[-1].fit_properties["final rms"]
+            last_key = max(list(self.iterations.keys()))
+            current_params["rms"] = self.iterations[last_key].fit_properties["final rms"]
             parameter_values.append(current_params)
         scan_report = pd.DataFrame(parameter_values)
 
@@ -517,7 +542,7 @@ class molecule:
         ax.set_xticklabels(values)
         ax.set_title("Parameter scan for " + parameter)
 
-        fig.savefig("scan_" + parameter + "_" + str(value[0]) + "-" + str(value[-1]) + ".pdf",
+        fig.savefig("scan_" + parameter + "_" + str(values[0]) + "-" + str(values[-1]) + ".pdf",
                     format="pdf"
                 )
         if isnotebook() is True:
