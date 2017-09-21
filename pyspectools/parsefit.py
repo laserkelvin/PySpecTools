@@ -132,14 +132,15 @@ class fit_output:
             self.data[iteration] = pd.DataFrame.from_dict(
                 self.fit_properties["line progress"][iteration]
             ).T
-        if "line number" in list(self.data[iteration].keys()):
+            it = iteration
+        if "line number" in list(self.data[it].keys()):
             # This check will make sure there are lines in our parsed data
             if verbose is True:
                 # In manual mode, we'll plot the errors and changes in the parameters
-                self.plot_error(iteration)
+                self.plot_error(it)
                 #self.parameter_changes()           # Not useful, so not plotting
-            self.data[iteration].sort_values("line number", inplace=True)
-            self.data[iteration].to_csv("exp-calc.csv")
+            self.data[it].sort_values("line number", inplace=True)
+            self.data[it].to_csv("exp-calc.csv")
             niterations = len(self.fit_properties["rms errors"])
             self.fit_properties["final rms"] = self.fit_properties["fit rms"][niterations - 1]
             print("Final RMS error:\t" + str(self.fit_properties["final rms"]))

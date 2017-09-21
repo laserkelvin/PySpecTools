@@ -15,7 +15,7 @@ def parse_data(filepath):
         monitor during the DR experiment. In this case, we do the analysis on
         the co-average of these columns.
     """
-    df = pd.read_csv(filepath, delimiter="\t", index_col=0, header=None, skiprows=1)
+    df = pd.read_csv(filepath, delimiter="\t", index_col=0, header=None, skiprows=1, comment="#")
     if len(df.keys()) > 1:
         # co-average spectra if there are more than one columns
         df["average"] = np.average([df[column].values for column in list(df.keys())], axis=0)
@@ -99,8 +99,8 @@ def fit_dr(dataframe, column=1, bounds=None):
     print("Guess for center frequency: " + str(peak_guess))
 
     if bounds is None:
-        bounds = ([0., peak_guess - 1., 1., 0.,],
-                  [np.inf, peak_guess + 1., 5., np.inf]
+        bounds = ([0., peak_guess - 1., 0.2, 0.,],
+                  [np.inf, peak_guess + 1., 10., np.inf]
                  )
 
     try:
@@ -108,7 +108,7 @@ def fit_dr(dataframe, column=1, bounds=None):
             gaussian,
             dataframe.index,
             dataframe[column].astype(float),
-            p0=[1., peak_guess, 1.0, 0.0],
+            p0=[1., peak_guess, 0.5, 0.0],
             bounds=bounds
         )
     except RuntimeError:
