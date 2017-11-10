@@ -43,3 +43,15 @@ def mpl_plot(x, y, yerr=None, width=1., color="feb24c", alpha=0.9, label=None):
     label = label
     )
     return plot_object
+
+
+def strip_spines(spines, axis):
+    # Function for removing the spines from an axis.
+    for spine in spines:
+        axis.spines[spine].set_visible(False)
+
+
+def no_scientific(axis):
+    # Turns off scientific notation for the axes
+    axis.get_xaxis().get_major_formatter().set_useOffset(False)
+    axis.get_yaxis().get_major_formatter().set_useOffset(False)
