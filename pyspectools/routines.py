@@ -7,7 +7,7 @@ import os
 import subprocess
 import shutil
 import json
-import yaml
+import ruamel_yaml as yaml
 from pyspectools import pypickett as pp
 from pyspectools import parsecat as pc
 from glob import glob
@@ -90,45 +90,9 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
         generate the Pickett identifiers, and just use format string
         to output the identifier.
     """
-    pickett_parameters = {
-        "B": {                         # B rotational constant for
-            "linear": 100,             # linear molecule
-            "top": 20000,              # top molecule
-        },
-        "A": 10000,                    # A rotational constant
-        "C": 30000,                    # C rotational constant
-        "D": 200,                      # quartic centrifugal, linear
-        "H": 300,                      # sextic centrifugal, linear
-        "D_J": {             # centrifugal, J
-            "A": 200,
-            "S": 200,
-        },
-        "D_K": {             # centrifugal, K
-            "A": 2000,
-            "S": 2000,
-        },
-        "D_JK": {            # centrifugal, JK
-            "A": 1100,
-            "S": 1100,
-        },
-        "del J": {
-            "A": 40100,
-            "S": 40100,
-        },
-        "del K": {
-            "A": 41000,
-            "S": 50000,
-        },
-        "gamma": "10000000",           # spin-rotation
-        "gammaD": "10000100",          # spin-rotation, quadratic distortion
-        "gammaH": "10000200",          # spin-rotation, sextic distortion
-        "bF": "120000000",             # Fermi contact interaction
-        "c": "120010000",       # electron spin/nuclear spin, diagonal
-        "eQq": "{0}20010000",     # quadrupole, diagonal; note this is 1.5x!
-        "eQq/2": "-{0}20010000",  # quadrupole, off-diagonal
-        "C_I": "20000000",             # nuclear spin-rotation, diagonal
-        "C_I_prime": "0"                    # off-diagonal
-    }
+    pickett_parameters = read_yaml(
+        os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
+    )
     if name is "B" and linear is True:
         # Haven't thought of a clever way of doing this yet...
         identifier = 100
@@ -165,8 +129,14 @@ def read_yaml(yaml_filepath):
     return yaml_data
 
 
+def dump_yaml(yaml_filepath, yaml_dict):
+    with open(yaml_filepath, "w+") as write_file:
+        yaml.dump(yaml_dict, write_file)
+
+
 def generate_folder():
-    """ Generates the folder for the next calculation
+    """
+    Generates the folder for the next calculation
     and returns the next calculation number
     """
     folderlist = list_directories()      # get every file/folder in directory

@@ -19,16 +19,19 @@ class PostInstallCommand(install):
         if os.path.isdir(os.path.expanduser("~") + "/.pyspectools") is False:
             os.mkdir(os.path.expanduser("~") + "/.pyspectools")
 
-        # Copy over YAML file containing the parameter coding
-        shutil.copy2(
-            "./pyspectools/pickett_terms.yml",
-            os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
-        )
-        # Copy over templates for molecule types
-        shutil.copytree(
-            "./pyspectools/templates",
-            os.path.expanduser("~") + "/.pyspectools/templates"
-        )
+        try:
+            # Copy over YAML file containing the parameter coding
+            shutil.copy2(
+                "./pyspectools/pickett_terms.yml",
+                os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
+            )
+            # Copy over templates for molecule types
+            shutil.copytree(
+                "./pyspectools/templates",
+                os.path.expanduser("~") + "/.pyspectools/templates"
+            )
+        except FileExistsError:
+            pass
 
     def setup_scripts(self):
         # Set up the scripts and make them executable.

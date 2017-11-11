@@ -299,7 +299,7 @@ class molecule:
         backup_files(self.properties["name"], self.cwd)
 
         # write the settings used for the current simulation to disk
-        dump_json(str(folder_number) + "/" + self.properties["name"] + ".json",
+        dump_yaml(str(folder_number) + "/" + self.properties["name"] + ".yml",
                   self.properties
                   )
         # change directory to the new working directory
@@ -324,7 +324,7 @@ class molecule:
         self.update_parameters(current_params, verbose=False)
 
         # Save the updated parameters to disk
-        dump_json(self.cwd + self.properties["name"] + ".fit.json", self.properties)
+        dump_yaml(self.cwd + self.properties["name"] + ".fit.yml", self.properties)
 
         print("Current parameters (MHz)")
         for parameter in current_params:
@@ -358,7 +358,7 @@ class molecule:
         # Second pass of SPCAT with correct intensities
         run_spcat(self.properties["name"])
         # Parse the output of SPCAT
-        self.cat_lines = pick_pickett(
+        self.cat_lines = read_cat(
             self.properties["name"] + ".cat",
         )
         print("Saving the parsed lines to " + self.properties["name"] + "_parsedlines.csv")
@@ -377,11 +377,11 @@ class molecule:
             iteration = "initial"
         #current_params = self.iterations[iteration].export_parameters()
         iteration_folder = str(iteration) + "/" + self.properties["name"]
-        if os.path.isfile(iteration_folder + ".fit.json") is True:
-            iteration_file = iteration_folder + ".fit.json"
+        if os.path.isfile(iteration_folder + ".fit.yml") is True:
+            iteration_file = iteration_folder + ".fit.yml"
         else:
-            iteration_file = iteration_folder + ".json"
-        iteration_params = read_json(iteration_file)
+            iteration_file = iteration_folder + ".yml"
+        iteration_params = read_yaml(iteration_file)
         self.properties.update(iteration_params)
         print("Settings copied from " + iteration_file)
 
@@ -584,7 +584,7 @@ class molecule:
             and self.variables["name"] in ["eQq", "eQq/2"]:
                 # warning message issued if no nucleus specified
                 print("You have specificed a hyperfine parameter, but")
-                print("did not specify a nucleus in your JSON file.")
+                print("did not specify a nucleus in your input file.")
                 raise ValueError("Hyperfine parameter with no nuclei ID!")
 
             # Convert the human parameter name to a Pickett identifier
