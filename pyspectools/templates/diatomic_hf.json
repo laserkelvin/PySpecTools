@@ -45,5 +45,5 @@
 	"partition function": 1E3,
 	"quantum number range": [0, 99],
 	"frequency limit": 300.0,
-	"maximum error": 1E+13,
+	"maximum error": 1E+13
 }
