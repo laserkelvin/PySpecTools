@@ -109,11 +109,13 @@ def plot_chirp(chirpdf, catfiles=None):
     return fig
 
 
-def stacked_plot(dataframe, frequencies, maxrange=100.):
+def stacked_plot(dataframe, frequencies, freq_range=0.01):
     # Function for generating an interactive stacked plot.
     # This form of plotting helps with searching for vibrational satellites.
     # Input is the full dataframe containing the frequency/intensity data,
     # and frequencies is a list containing the centering frequencies.
+    # The frequency range is specified as a percentage of frequency, so it
+    # will change the range depending on what the centered frequency is.
     nplots = len(frequencies)
 
     plot_func = go.Scatter
@@ -127,10 +129,14 @@ def stacked_plot(dataframe, frequencies, maxrange=100.):
         subplot_titles=tuple("{:.2f} MHz".format(frequency) for frequency in frequencies),
     )
 
+    frequencies = np.sort(frequencies)[::-1]
+    print(frequencies)
+
     for index, frequency in enumerate(frequencies):
         dataframe["Offset " + str(index)] = dataframe["Frequency"] - frequency
+        freq_cutoff = freq_range * frequency
         sliced_df = dataframe.loc[
-            (dataframe["Offset " + str(index)] > -maxrange) & (dataframe["Offset " + str(index)] < maxrange)
+            (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
         ]
         trace = plot_func(
             x=sliced_df["Offset " + str(index)],
@@ -140,7 +146,7 @@ def stacked_plot(dataframe, frequencies, maxrange=100.):
         )
         # Plotly indexes from one because they're stupid
         fig.append_trace(trace, index + 1, 1)
-        fig["layout"]["xaxis1"].update(range=[-maxrange,maxrange], title="Offset frequency (MHz)", showgrid=True)
+        fig["layout"]["xaxis1"].update(range=[-freq_cutoff,freq_cutoff], title="Offset frequency (MHz)", showgrid=True)
         fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
     fig["layout"].update(
         autosize=False,
