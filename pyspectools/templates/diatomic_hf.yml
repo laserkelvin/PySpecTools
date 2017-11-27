@@ -1,0 +1,40 @@
+dipole:
+  A: 5.0
+frequency limit: 300.0
+intensity threshold:
+  - -19.0
+  - -19.0
+linear: true
+maximum error: 10000000000000.0
+name: "diatomic-w-hyperfine"
+parameters:
+  B:
+    value: 8368.54434582041
+  C_I:
+    value: 0.006557654850200213
+  D:
+    value: -0.00694165348295644
+  bF:
+    value: 819.499819933225
+  c:
+    value: 169.2069863352326
+  eQq:
+    nuclei: 1
+    value: -24.05389994075884
+  eQq/2:
+    nuclei: 1
+    value: -7.062227683998148
+  gamma:
+    value: 66.04758474172894
+  gammaD:
+    value: -0.002198941128708368
+partition function: 1000.0
+quantum number range:
+  - 0
+  - 99
+reduction: A
+spin: 1
+spin degeneracy: 0
+tag: '123456'
+temperature: 5.0
+units: MHz
