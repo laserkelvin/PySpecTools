@@ -120,6 +120,9 @@ def stacked_plot(dataframe, frequencies, freq_range=0.01):
 
     plot_func = go.Scatter
 
+    # Want the frequencies in ascending order, going upwards in the plot
+    frequencies = np.sort(frequencies)[::-1]
+
     fig = tools.make_subplots(
         rows=nplots,
         cols=1,
@@ -129,15 +132,15 @@ def stacked_plot(dataframe, frequencies, freq_range=0.01):
         subplot_titles=tuple("{:.2f} MHz".format(frequency) for frequency in frequencies),
     )
 
-    frequencies = np.sort(frequencies)[::-1]
-    print(frequencies)
-
     for index, frequency in enumerate(frequencies):
+        # Calculate the offset frequency
         dataframe["Offset " + str(index)] = dataframe["Frequency"] - frequency
+        # Range as a fraction of the center frequency
         freq_cutoff = freq_range * frequency
         sliced_df = dataframe.loc[
             (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
         ]
+        # Plot the data
         trace = plot_func(
             x=sliced_df["Offset " + str(index)],
             y=sliced_df["Intensity"],
