@@ -10,13 +10,12 @@ import plotly.graph_objs as go
 from scipy import signal as spsig
 from scipy import constants
 
-init_notebook_mode(connected=False)
-
 
 def dop2freq(velocity, frequency):
     # Frequency given in MHz, Doppler_shift given in km/s
     # Returns the expected Doppler shift in frequency (MHz)
     return ((velocity * 1000. * frequency) / constants.c)
+
 
 def freq2vel(frequency, offset):
     # Takes the expected Doppler contribution to frequency and the rest
@@ -253,6 +252,7 @@ def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     )
     fig = go.Figure(data=plots, layout=layout)
     plot(fig, filename=output)
+
 
 class scan:
     """ Object for analyzing raw FIDs from QtFTM.
