@@ -9,6 +9,8 @@ from plotly import tools
 import plotly.graph_objs as go
 from scipy import signal as spsig
 from scipy import constants
+from scipy.optimize import curve_fit
+from uncertainties import ufloat
 
 
 def dop2freq(velocity, frequency):
@@ -254,6 +256,26 @@ def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     plot(fig, filename=output)
 
 
+<<<<<<< HEAD
+=======
+def fit_profiles(spectrum_df, frequencies, line_function, guess):
+    """
+        Function for mass-fitting a spectrum with specified
+        line positions, and line shape function.
+
+        The input is a dataframe containing Frequency and Intensity
+        columns, a list frequencies, and a line shape
+        function (e.g. Gaussian, Lorentizian).
+    """
+    initial = list()
+    for index, frequency in enumerate(frequencies):
+        initial.append(frequency)
+        initial.extend(
+            [guess[key] for key in guess]
+        )
+
+
+>>>>>>> cd02b33ed720623c8a05cf5090f8a5bd66697ece
 class scan:
     """ Object for analyzing raw FIDs from QtFTM.
         The goal is to be able to retrieve a scan file from QtFTM, perform the
