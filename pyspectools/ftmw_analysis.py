@@ -11,6 +11,7 @@ from scipy import signal as spsig
 from scipy import constants
 from scipy.optimize import curve_fit
 from uncertainties import ufloat
+from lineshapes import *
 
 
 def dop2freq(velocity, frequency):
@@ -255,27 +256,81 @@ def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     fig = go.Figure(data=plots, layout=layout)
     plot(fig, filename=output)
 
+class FitModel:
+    def __init__(self, spectrum_df, line_function, independent_variable="x",
+                 xcol="Frequency", ycol="Intensity"):
+        """
+            Class for handling the fitting of spectra.
 
-<<<<<<< HEAD
-=======
-def fit_profiles(spectrum_df, frequencies, line_function, guess):
-    """
-        Function for mass-fitting a spectrum with specified
-        line positions, and line shape function.
+            Required arguments for initializing are:
+                - spectrum_df: pandas dataframe holding x,y values (at least)
+                - line_function: objective function used for fitting
+            Optional arguments:
+                - independent_variable: str denoting the variable not for
+                                        fitting. Defaults to "x"
+                - xcol: column name referenced in spectrum_df for the x data
+                - ycol: column name referenced in spectrum_df for the y data
+        """
+        self.spectrum = spectrum_df
+        self.xcol = xcol
+        self.ycol = ycol
+        self.line_function = line_function
+        params = line_function.__code__.co_varnames
+        self.params = [param for param in params if param != independent_variable]
+        print("Remember to provide an initial guess!")
+        print("Parameters:")
+        print(self.params)
+        self.guess = None
 
-        The input is a dataframe containing Frequency and Intensity
-        columns, a list frequencies, and a line shape
-        function (e.g. Gaussian, Lorentizian).
-    """
-    initial = list()
-    for index, frequency in enumerate(frequencies):
-        initial.append(frequency)
-        initial.extend(
-            [guess[key] for key in guess]
+    def fit(xdata, ydata, line_function, guess, bounds):
+        """
+            Low level wrapper for manually fitting a single lineshape
+            to data. fit_model should be called instead to make sure things
+            are formatted correctly.
+        """
+        opt, cov = curve_fit(
+            self.line_function,
+            self.xdata,
+            self.ydata,
+            self.guess,
+            bounds=self.bounds
         )
 
+    def func_wrapper(self):
+        """
+            Object function that wraps the
+        """
+        # Initialize an array for holding y values at the length of
+        # the data we're trying to fit
+        y = np.zeros(len(self.spectrum[self.xcol]))
+        nparams = len(self.params)
+        # Loop over each line shape function
+        for i in range(0, self.nfunc * nparams, nparams):
+            last_pos = i + nparams
+            y+=self.line_function(
+                self.spectrum[self.xcol],
+                *params[i:last_post]
+            )
+        return y
 
->>>>>>> cd02b33ed720623c8a05cf5090f8a5bd66697ece
+    def fit_model(self, frequencies):
+        """
+            Function for mass-fitting a spectrum with specified
+            line positions, and line shape function.
+        """
+        initial_guess = list()
+
+        # Generate the number of functions we want to fit
+        self.nfunc = len(frequencies)
+        self.fit_func = func_wrapper()
+
+        for index, frequency in enumerate(frequencies):
+            initial.append(frequency)
+            initial.extend(
+                [guess[arg] for arg in arg_names]
+            )
+
+
 class scan:
     """ Object for analyzing raw FIDs from QtFTM.
         The goal is to be able to retrieve a scan file from QtFTM, perform the

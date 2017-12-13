@@ -6,34 +6,12 @@ from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 
 mpl.style.use("seaborn")
 
-def mpl_annotation(x, y, axis, text="Text"):
-    return axis.text(x, y, text, size="x-large")
+"""
+    Commonly used formatting options
 
-
-def mpl_scatter(x, y, yerr=None, facecolors="none", edgecolors="#feb24c", alpha=0.9, label=None):
-    scatter_object = plt.scatter(
-    x = x,
-    y = y,
-    facecolors = facecolors,
-    edgecolors = edgecolors,
-    alpha = alpha,
-    label = label
-    )
-    return scatter_object
-
-
-def mpl_plot(x, y, yerr=None, width=1., color="feb24c", alpha=0.9, label=None):
-    plot_object = plt.plot(
-    x = x,
-    y = y,
-    yerr = yerr,
-    width = width,
-    color = color,
-    alpha = alpha,
-    label = label
-    )
-    return plot_object
-
+    These are generally parts of Matplotlib that I commonly change,
+    but always have to look up stack overflow to find out how to do...
+"""
 
 def strip_spines(spines, axis):
     # Function for removing the spines from an axis.
@@ -45,6 +23,20 @@ def no_scientific(axis):
     # Turns off scientific notation for the axes
     axis.get_xaxis().get_major_formatter().set_useOffset(False)
     axis.get_yaxis().get_major_formatter().set_useOffset(False)
+
+
+"""
+    Specific figure types
+
+    These include recipes/routines to generate commonly used
+    figures, providing the data is provided in a digestable
+    way for the scripts.
+
+    These include:
+        - Polyad diagrams
+        - Generic energy diagrams
+        - Adding images to a matplotlib figure
+"""
 
 
 def calc_vibE(quant_nums, vibrations):
@@ -85,13 +77,15 @@ def generate_x_coord(quant_nums, energies):
 def make_elevel_plot(cat_dict, axis, color, maxE, alpha=1.):
     """
         make_elevel_plot is used to create energy level diagrams
-        with Matplotlib axis objects.
+        with Matplotlib axis objects. This is considered slightly
+        lower level: you should call the higher level wrapper functions
+        like vib_energy_diagram instead!
 
         The function will loop over every transition that has
         been categorized/binned into an x-axis index, and sub-
         sequently plot each x-bin individually.
 
-        The input arguments are
+        The input arguments are:
 
         cat_dict: dict-like with keys as the x-axis values, and
         the items are dictionaries containing the energy and
@@ -157,6 +151,8 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
                        useFull=True, image=None, imagesize=0.1):
     """
         Function that will generate a vibrational energy diagram.
+
+        This function wraps the make_elevel_plot function!
 
         Input arguments are
 
