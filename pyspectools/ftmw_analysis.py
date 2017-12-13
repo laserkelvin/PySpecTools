@@ -9,6 +9,8 @@ from plotly import tools
 import plotly.graph_objs as go
 from scipy import signal as spsig
 from scipy import constants
+from scipy.optimize import curve_fit
+from uncertainties import ufloat
 
 init_notebook_mode(connected=False)
 
@@ -253,6 +255,24 @@ def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     )
     fig = go.Figure(data=plots, layout=layout)
     plot(fig, filename=output)
+
+
+def fit_profiles(spectrum_df, frequencies, line_function, guess):
+    """
+        Function for mass-fitting a spectrum with specified
+        line positions, and line shape function.
+
+        The input is a dataframe containing Frequency and Intensity
+        columns, a list frequencies, and a line shape
+        function (e.g. Gaussian, Lorentizian).
+    """
+    initial = list()
+    for index, frequency in enumerate(frequencies):
+        initial.append(frequency)
+        initial.extend(
+            [guess[key] for key in guess]
+        )
+
 
 class scan:
     """ Object for analyzing raw FIDs from QtFTM.
