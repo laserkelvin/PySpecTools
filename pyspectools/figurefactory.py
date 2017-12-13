@@ -46,6 +46,7 @@ def no_scientific(axis):
     axis.get_xaxis().get_major_formatter().set_useOffset(False)
     axis.get_yaxis().get_major_formatter().set_useOffset(False)
 
+
 def calc_vibE(quant_nums, vibrations):
     """
         Function that will calculate a 1D array of
