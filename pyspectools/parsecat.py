@@ -16,7 +16,6 @@ def read_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
     The quantum numbers are read in assuming hyperfine structure, and thus
     might not be accurate descriptions of what they actually are.
     """
-    clean_cat(simulation_path)
     simulation_df = pd.read_fwf(
         simulation_path,
         widths=[13,8,8,2,10,3,7,4,2,2,2,8,2,2],
