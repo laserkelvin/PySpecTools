@@ -12,7 +12,7 @@
 import numpy as np
 import lmfit
 
-from lineshapes import first_deriv_lorentzian, sec_deriv_lorentzian
+from pyspectools.lineshapes import first_deriv_lorentzian, sec_deriv_lorentzian
 
 
 def construct_lineshape_mod(func_name="gaussian", n=1):
@@ -58,17 +58,12 @@ def construct_lineshape_mod(func_name="gaussian", n=1):
         else:
             variable_names = [name + "_{index}".format_map(index) for name in variable_names]
         current_params = current_model.make_params()
-            # First case will initialize
-            if index == 0:
-                model = current_model
-                parameters = current_params
-            # All others will tack onto the model
-            else:
-                model+=current_model
-                parameters+=current_params
+        # First case will initialize
+        if index == 0:
+            model = current_model
+            parameters = current_params
+        # All others will tack onto the model
+        else:
+            model+=current_model
+            parameters+=current_params
 
-
-def fit_lineshape(x, y, frequencies, lineshape_func):
-    """
-        Function for fitting individual lineshape to a spectrum using lmfit.
-    """

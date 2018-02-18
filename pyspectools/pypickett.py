@@ -12,7 +12,6 @@ from .parsefit import *
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from matplotlib import colors
-from .mpl_settings import *
 import pprint
 from plotly.tools import mpl_to_plotly
 from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline

@@ -4,9 +4,9 @@ import lmfit
 import pandas as pd
 import os
 
-from fft_routines import *
-from interpolation import *
-from plotting_func import *
+from .fft_routines import *
+from .interpolation import *
+from .plotting_func import *
 
 """
     Miscellanous routines for parsing and batch processing

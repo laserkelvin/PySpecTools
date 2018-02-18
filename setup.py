@@ -1,5 +1,5 @@
-from setuptools import setup
-from setuptools.command.install import install
+from setuptools import setup, find_packages
+from setuptools.command.install import install 
 from glob import glob
 import os
 from distutils.spawn import find_executable
@@ -67,7 +67,7 @@ setup(
     version="0.7.4",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
-    packages=["pyspectools"],
+    packages=find_packages(),
     include_package_data=True,
     author_email="kin_long_kelvin.lee@cfa.harvard.edu",
     install_requires=[
