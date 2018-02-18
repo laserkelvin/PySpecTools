@@ -1,0 +1,11 @@
+axes.titlesize : 12
+axes.labelsize : 12
+lines.linewidth : 1
+lines.markersize : 10
+xtick.labelsize : 12
+ytick.labelsize : 12
+figure.figsize : 6, 3.5
+figure.dpi : 150
+font.family : Roboto
+legend.frameon : False
+

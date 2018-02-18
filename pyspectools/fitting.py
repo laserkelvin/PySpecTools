@@ -1,4 +1,14 @@
 
+
+"""
+    Wrapper functions for lmfit.
+
+    Each module of PySpectools should use these functions
+    when fitting is required, rather than rewrite for each
+    purpose.
+"""
+
+
 import numpy as np
 import lmfit
 
@@ -44,7 +54,9 @@ def construct_lineshape_mod(func_name="gaussian", n=1):
             current_model = func(
                 prefix=prefix
             )
-        
+        # For hard-coded functions
+        else:
+            variable_names = [name + "_{index}".format_map(index) for name in variable_names]
         current_params = current_model.make_params()
             # First case will initialize
             if index == 0:
@@ -54,12 +66,6 @@ def construct_lineshape_mod(func_name="gaussian", n=1):
             else:
                 model+=current_model
                 parameters+=current_params
-    # For hard-coded functions
-    else:
-        variable_names = func.func_code.co_varnames
-        # Create a formattable index
-        variable_names = [name + "_{index}" for name in variable_names]
-        for index in range(n):
 
 
 def fit_lineshape(x, y, frequencies, lineshape_func):
