@@ -5,8 +5,6 @@ from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 import numpy as np
 
-mpl.style.use("seaborn")
-
 """
     Commonly used formatting options
 
