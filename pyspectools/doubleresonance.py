@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import curve_fit
 import peakutils
+from uncertainties import ufloat
 from matplotlib import pyplot as plt
 
 def parse_data(filepath):
@@ -14,7 +15,7 @@ def parse_data(filepath):
         monitor during the DR experiment. In this case, we do the analysis on
         the co-average of these columns.
     """
-    df = pd.read_csv(filepath, delimiter="\t", index_col=0, header=None, skiprows=1)
+    df = pd.read_csv(filepath, delimiter="\t", index_col=0, header=None, skiprows=1, comment="#")
     if len(df.keys()) > 1:
         # co-average spectra if there are more than one columns
         df["average"] = np.average([df[column].values for column in list(df.keys())], axis=0)
@@ -40,9 +41,11 @@ def gaussian(x, A, c, w, offset):
     # is flipped upside down.
     return -A * np.exp(-(c - x)**2. / 2. * w**2.) + offset
 
-def plot_data(dataframe, frequency=None):
+def plot_data(dataframe, fitresults=None):
     """ Function to plot the DR data, and the fitted Gaussian peak. """
-    fig, ax = plt.subplots(figsize=(10, 5.5))
+    fig, ax = plt.subplots(figsize=(10, 6.5))
+
+    fig.subplots_adjust(top=0.55)
     ax.set_xlabel("Frequency (MHz)")
     ax.set_ylabel("Intensity")
     ax.set_ylim([dataframe.min().min() - 0.03, dataframe.max().max()]) # Set the ylimits
@@ -50,6 +53,8 @@ def plot_data(dataframe, frequency=None):
     max_freq = dataframe.index.max()
     ax.set_xticks(np.arange(min_freq, max_freq, (max_freq - min_freq) / 4.))
 
+    if "average" not in list(dataframe.keys()):
+        ax.plot(dataframe.index, dataframe[1], label="Data")
     if "average" in list(dataframe.keys()):
     # If the DR has co-averaging, we'll plot that too
         for column in [columns for columns in list(dataframe.keys()) if columns not in ["average", "baseline subtracted", "fit"]]:
@@ -61,25 +66,41 @@ def plot_data(dataframe, frequency=None):
     if "fit" in list(dataframe.keys()):
     # Plot the fit result
         ax.plot(dataframe.index, dataframe["fit"], label="Fit", lw=2.)
-    if frequency is not None:
-    # If we managed to find a center frequency, fit a straight line through
-    # and annotate the graph with the peak frequency
-        ax.text(frequency + 0.1, dataframe.min().min() - 0.02, "Center: %5.3f" % frequency, size="x-large")
-        ax.vlines(frequency, *ax.get_ylim())
+        if fitresults is not None:
+        # If we managed to find a center frequency, fit a straight line through
+        # and annotate the graph with the peak frequency
+            text_to_write = ""
+            for index, name in enumerate(["Amplitude", "Center", "Width", "Offset"]):
+                text_to_write+= name + ": " + "{:.3uS}".format(fitresults[index]) + "\n"
+                #if type(frequency) == type(ufloat(1., 2.)):
+                #    freq = frequency.n
+                #    form_freq = "{:.3uS}".format(frequency)
+                #ax.text(freq + 0.1, dataframe.min().min() - 0.02, "Center: " + form_freq, size="x-large")
+            ax.text(0.8, 0.2, text_to_write, size="x-large", ha="center", va="center", transform=ax.transAxes)
+            ax.vlines(fitresults[1].n, *ax.get_ylim())
+            if fitresults[1].s <= 0.5:
+                ax.fill_between([fitresults[1].n - fitresults[1].s, fitresults[1].n + fitresults[1].s],
+                                y1=dataframe["fit"].min(),
+                                y2=dataframe["fit"].max(),
+                                facecolor="#2b8cbe",
+                                alpha=0.5
+                                )
 
+    ax.get_xaxis().get_major_formatter().set_useOffset(False)
     ax.legend()
-    plt.tight_layout()
+    fig.tight_layout()
     return fig, ax
 
 def fit_dr(dataframe, column=1, bounds=None):
-    # Determine an estimate for the peak depletion
+    # Determine an estimate for the peak depletion; uses the minimum value in
+    # intensity as an initial guess for the fit.
 
     peak_guess = dataframe[column].idxmin()
     print("Guess for center frequency: " + str(peak_guess))
 
     if bounds is None:
-        bounds = ([0., peak_guess - 0.1, 1., 0.,],
-                  [np.inf, peak_guess + 0.1, 20., np.inf]
+        bounds = ([0., peak_guess - 1., 0.2, 0.,],
+                  [np.inf, peak_guess + 1., 10., np.inf]
                  )
 
     try:
@@ -87,15 +108,14 @@ def fit_dr(dataframe, column=1, bounds=None):
             gaussian,
             dataframe.index,
             dataframe[column].astype(float),
-            p0=[1., peak_guess, 1.0, 0.0],
+            p0=[1., peak_guess, 0.5, 0.0],
             bounds=bounds
         )
     except RuntimeError:
         print("No optimal solution found. Try narrowing the frequency range of the data.")
         optimized = [None] * 4
-    print(optimized)
     dataframe["fit"] = gaussian(dataframe.index, *optimized)
-    return dataframe, optimized
+    return dataframe, optimized, covariance
 
 def analyze_dr(filepath, baseline=False, freqrange=[0., np.inf]):
     """ Main driver function that will perform all of the operations for
@@ -122,11 +142,26 @@ def analyze_dr(filepath, baseline=False, freqrange=[0., np.inf]):
     else:
         column = 1
     print("Using column " + str(column))
-    dataframe, optimized = fit_dr(dataframe, column)
+    # Perform the curve fitting
+    dataframe, optimized, covariance = fit_dr(dataframe, column)
+    # Calculate the standard deviation; this is based on the diagonal elements
+    # of the covariance matrix. If the off-diagonal elements are large, there
+    # is significant correlation between variables and the answers will be
+    # quite uncertain...
+    stdev = np.sqrt(np.diag(covariance))
+    results = list()
 
-    fig, ax = plot_data(dataframe, frequency=optimized[1])
+    # Print the results - short-hand notation is used
+    print("Final fitting results for " + filename)
+    for index, name in enumerate(["Amplitude", "Center", "Width", "Offset"]):
+        result = ufloat(optimized[index], stdev[index])
+        print(name + ":    " + "{:.3uS}".format(result))
+        results.append(result)
+
+    # Plot the resulting DR fit for physical printing
+    fig, ax = plot_data(dataframe, fitresults=results)
 
     ax.set_title(filename)
 
     dataframe.to_csv(filename + "_fit.csv")
-    fig.savefig(filename + "_fit.pdf", format="pdf")
+    fig.savefig(filename + "_fit.pdf", format="pdf", dpi=300, bbox_inches='tight')

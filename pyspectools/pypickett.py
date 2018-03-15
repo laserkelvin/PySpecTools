@@ -12,7 +12,6 @@ from .parsefit import *
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from matplotlib import colors
-from .mpl_settings import *
 import pprint
 from plotly.tools import mpl_to_plotly
 from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
@@ -42,6 +41,13 @@ class molecule:
         # Generate a molecule object from a YAML file
         yaml_data = read_yaml(yaml_filepath)
         species = molecule(yaml_data)
+        return species
+
+    @classmethod
+    def from_pickle(cls, picklepath):
+        # Generate a molecule object from a pickle instance
+        with open(picklepath) as pickle_read:
+            species = pickle.load(pickle_read)
         return species
 
     def __init__(self, options=None):
@@ -243,8 +249,8 @@ class molecule:
             settings_line += "0"
         else:
             settings_line += "0"
-        settings_line += " " + str(self.properties["tag"]).rjust(10)
-        settings_line += str(self.properties["partition function"]).rjust(8)
+        settings_line += " " + str(self.properties["tag"]).rjust(6)
+        settings_line += str(self.properties["partition function"]).rjust(10)
         for value in self.properties["quantum number range"]:
             settings_line += str(value).rjust(5)
         for value in self.properties["intensity threshold"]:
@@ -278,7 +284,7 @@ class molecule:
         # attribute as a list, but can potentially be used to do more...
         with open(self.properties["name"] + ".lin") as read_file:
             self.lin_file = read_file.readlines()
-            self.properties["number of lines"] = len(self.lin_file)
+            #self.properties["number of lines"] = len(self.lin_file)
 
         # Figure out what the next iteration is
         folder_number = generate_folder()
@@ -292,7 +298,7 @@ class molecule:
         backup_files(self.properties["name"], self.cwd)
 
         # write the settings used for the current simulation to disk
-        dump_json(str(folder_number) + "/" + self.properties["name"] + ".json",
+        dump_yaml(str(folder_number) + "/" + self.properties["name"] + ".yml",
                   self.properties
                   )
         # change directory to the new working directory
@@ -317,7 +323,7 @@ class molecule:
         self.update_parameters(current_params, verbose=False)
 
         # Save the updated parameters to disk
-        dump_json(self.cwd + self.properties["name"] + ".fit.json", self.properties)
+        dump_yaml(self.cwd + self.properties["name"] + ".fit.yml", self.properties)
 
         print("Current parameters (MHz)")
         for parameter in current_params:
@@ -351,7 +357,7 @@ class molecule:
         # Second pass of SPCAT with correct intensities
         run_spcat(self.properties["name"])
         # Parse the output of SPCAT
-        self.cat_lines = pick_pickett(
+        self.cat_lines = read_cat(
             self.properties["name"] + ".cat",
         )
         print("Saving the parsed lines to " + self.properties["name"] + "_parsedlines.csv")
@@ -370,11 +376,11 @@ class molecule:
             iteration = "initial"
         #current_params = self.iterations[iteration].export_parameters()
         iteration_folder = str(iteration) + "/" + self.properties["name"]
-        if os.path.isfile(iteration_folder + ".fit.json") is True:
-            iteration_file = iteration_folder + ".fit.json"
+        if os.path.isfile(iteration_folder + ".fit.yml") is True:
+            iteration_file = iteration_folder + ".fit.yml"
         else:
-            iteration_file = iteration_folder + ".json"
-        iteration_params = read_json(iteration_file)
+            iteration_file = iteration_folder + ".yml"
+        iteration_params = read_yaml(iteration_file)
         self.properties.update(iteration_params)
         print("Settings copied from " + iteration_file)
 
@@ -420,17 +426,34 @@ class molecule:
         with open("instances/" + self.properties["name"] + "." + str(counter) + ".pickle", "wb") as write_file:
             pickle.dump(self, write_file, pickle.HIGHEST_PROTOCOL)
 
-    def set_fit(self, fit=True, verbose=False):
-        """ Function to flip all parameters to fit or not to fit """
-        for parameter in self.properties["parameters"]:
-            self.properties["parameters"][parameter]["fit"] = fit
+    def set_fit(self, fit=True, params=None, verbose=False):
+        """ Function to flip all parameters to fit or not to fit.
+            The default behaviour, if nothing is provided, is to fit all the
+            parameters.
+
+            A list of parameters can be supplied to the params argument, which
+            will specifically fit or not fit those parameters.
+        """
+        if params is None:
+            params = list(self.properties["parameters"].keys())
+        if type(params) is str:
+            if params not in list(self.properties["parameters"].keys()):
+                raise KeyError("Parameter " + parameter + " is not in your parameter list!")
+            else:
+                self.properties["parameters"][parameter]["fit"] = fit
+        elif type(params) is list:
+            for parameter in params:
+                if parameter not in list(self.properties["parameters"].keys()):
+                    raise KeyError("Parameter " + parameter + " is not in your parameter list!")
+                else:
+                    self.properties["parameters"][parameter]["fit"] = fit
         self.generate_parameter_objects(verbose=verbose)
 
     def report_parameters(self):
         """ Method to return a dictionary of only the parameter values """
         param_dict = dict()
         for parameter in self.properties["parameters"]:
-            param_dict[parameter] = self.properties["parameters"]["value"]
+            param_dict[parameter] = self.properties["parameters"][parameter]["value"]
         return param_dict
 
     def finalize(self, iteration=None):
@@ -501,7 +524,8 @@ class molecule:
             self.fit_lines(verbose=False)
             # Record the final RMS error for this parameter
             current_params = self.report_parameters()
-            current_params["rms"] = self.iterations[-1].fit_properties["final rms"]
+            last_key = max(list(self.iterations.keys()))
+            current_params["rms"] = self.iterations[last_key].fit_properties["final rms"]
             parameter_values.append(current_params)
         scan_report = pd.DataFrame(parameter_values)
 
@@ -517,7 +541,7 @@ class molecule:
         ax.set_xticklabels(values)
         ax.set_title("Parameter scan for " + parameter)
 
-        fig.savefig("scan_" + parameter + "_" + str(value[0]) + "-" + str(value[-1]) + ".pdf",
+        fig.savefig("scan_" + parameter + "_" + str(values[0]) + "-" + str(values[-1]) + ".pdf",
                     format="pdf"
                 )
         if isnotebook() is True:
@@ -559,7 +583,7 @@ class molecule:
             and self.variables["name"] in ["eQq", "eQq/2"]:
                 # warning message issued if no nucleus specified
                 print("You have specificed a hyperfine parameter, but")
-                print("did not specify a nucleus in your JSON file.")
+                print("did not specify a nucleus in your input file.")
                 raise ValueError("Hyperfine parameter with no nuclei ID!")
 
             # Convert the human parameter name to a Pickett identifier

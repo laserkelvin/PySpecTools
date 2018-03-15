@@ -5,18 +5,38 @@ from matplotlib import cm
 from matplotlib import pyplot as plt
 import sys
 
-def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
-    """ Parses a simulation output, and filters the frequency and intensity to give
+def read_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
+    """
+    Parses a simulation output, and filters the frequency and intensity to give
     a specific set of lines.
+
     The only argument that is required is the path to the simulation output. Others
     are optional, and will default to effectively not filter.
+
+    The quantum numbers are read in assuming hyperfine structure, and thus
+    might not be accurate descriptions of what they actually are.
     """
-    clean_cat(simulation_path)
-    #simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
-    simulation_df = pd.read_fwf(simulation_path, widths=[13,8,8,2,10,3,7,4,12,12], header=None)
-    simulation_df.columns = ["Frequency", "Uncertainty", "Intensity", "DoF",
-                             "Lower state energy", "Degeneracy", "ID", "Coding",
-                             "Lower quantum numbers", "Upper quantum numbers"]
+    simulation_df = pd.read_fwf(
+        simulation_path,
+        widths=[13,8,8,2,10,3,7,4,2,2,2,8,2,2],
+        header=None
+    )
+    simulation_df.columns = [
+        "Frequency",
+        "Uncertainty",
+        "Intensity",
+        "DoF",
+        "Lower state energy",
+        "Degeneracy",
+        "ID",
+        "Coding",
+        "N'",
+        "F'",
+        "J'",
+        "N''",
+        "F''",
+        "J''",
+    ]
     thresholded_df = simulation_df.loc[
             (simulation_df["Frequency"].astype(float) >= low_freq) &         # threshold the simulation output
             (simulation_df["Frequency"].astype(float) <= high_freq) &        # based on user specified values
@@ -38,7 +58,6 @@ def clean_cat(filepath):
     with open(filepath, "w+") as write_file:
         write_file.write(cat_contents)
 
-    print("Cleaned up the .cat")
 
 def extract_experimental_lines(thresholded_df):
     """ Lines that are experimental are denoted by a negative sign. This
@@ -60,40 +79,29 @@ def peak2cat(peaks_df, outputname="generated_batch.ftb", sortby="Intensity", asc
             ascending=False,
             inplace=True
             )
-    frequencies = peaks_df["Frequency"].values
-    intensities = peaks_df["Intensity"].values
-    """ Now we convert the relative intensities into a number of shots """
-    intensities = (10.**intensities)
-    intensities = intensities / intensities.max()    # relative to the strongest
-    shotcounts = intensities * nshots                # scale shots
-    if "Lower quantum numbers" and "Upper quantum numbers" in peaks_df.keys():
-        lower_num = peaks_df["Lower quantum numbers"].values
-        upper_num = peaks_df["Upper quantum numbers"].values
-        fullarray = np.concatenate(
-                (
-                frequencies,
-                shotcounts,
-                lower_num,
-                upper_num
-                )
-             )
-    else:
-        """ If we can't read the quantum numbers, pad the columns with zeros """
-        fullarray = np.concatenate(
-                (
-                frequencies,
-                shotcounts,
-                np.zeros(frequencies.size),
-                np.zeros(frequencies.size)
-                )
-            )
-    fullarray = fullarray.reshape(4, frequencies.size)
-    fullarray = fullarray.T                              # transpose into colums
+    # Calculate the number of shots based on intensities, converted to real units
+    sorted_df["Norm Int"] = (10**sorted_df["Intensity"]) / (10**sorted_df["Intensity"].max())
+    # Take the strongest line as 10 shots
+    sorted_df["Shots"] = 10. / sorted_df["Norm Int"]**2.
+    output_array = sorted_df[
+        ["Frequency", "Shots", "N'", "F'", "J'", "N''", "F''", "J''"]
+    ].values
+    # If there are NaN values, set them to zero
+    output_array = np.nan_to_num(output_array, 0)
     np.savetxt(
-            fname=outputname,
-            X=fullarray,
-            fmt=("ftm:%5.3f", " shots:%1i", "# lower:%5s", " upper:%5s")
-            )
+        fname = outputname,
+        X = output_array,
+        fmt = (
+            "ftm:%5.3f",
+            " shots:%1i",
+            "# N':%2i",
+            " F':%2i",
+            " J':%2i",
+            " N'':%2i",
+            " F'':%2i",
+            " J'':%2i"
+        )
+    )
 
 
 def join_function(x):
@@ -143,7 +151,7 @@ if __name__ == "__main__":
     parameters = [float(value) for value in sys.argv[2:]]
     print(parameters)
     # threshold the simulation values
-    thresholded_df = pick_pickett(simulation_path, *parameters)
+    thresholded_df = read_cat(simulation_path, *parameters)
     # export the thresholded values to a cat file
     thresholded_df.to_csv(
             simulation_path.split(".")[0] + "_filtered.cat",

@@ -132,16 +132,24 @@ class fit_output:
             self.data[iteration] = pd.DataFrame.from_dict(
                 self.fit_properties["line progress"][iteration]
             ).T
-        if verbose is True:
-            # In manual mode, we'll plot the errors and changes in the parameters
-            self.plot_error(iteration)
-            #self.parameter_changes()           # Not useful, so not plotting
-        self.data[iteration].sort_values("line number", inplace=True)
-        self.data[iteration].to_csv("exp-calc.csv")
-        niterations = len(self.fit_properties["rms errors"])
-        self.fit_properties["final rms"] = self.fit_properties["fit rms"][niterations - 1]
-        print("Final RMS error:\t" + str(self.fit_properties["final rms"]))
-        print("Microwave frequency RMS error:\t" + str(self.fit_properties["rms errors"][-1]))
+            it = iteration
+        if "line number" in list(self.data[it].keys()):
+            # This check will make sure there are lines in our parsed data
+            if verbose is True:
+                # In manual mode, we'll plot the errors and changes in the parameters
+                self.plot_error(it)
+                #self.parameter_changes()           # Not useful, so not plotting
+            self.data[it].sort_values("line number", inplace=True)
+            self.data[it].to_csv("exp-calc.csv")
+            niterations = len(self.fit_properties["rms errors"])
+            self.fit_properties["final rms"] = self.fit_properties["fit rms"][niterations - 1]
+            print("Final RMS error:\t" + str(self.fit_properties["final rms"]))
+            print("Microwave frequency RMS error:\t" + str(self.fit_properties["rms errors"][-1]))
+        else:
+            # If there are no lines, this "exception" will make sure that the
+            # routine exits gracefully
+            print("There are no lines fit in the final iteration!")
+            print("No analysis was done on this iteration.")
 
     def export_parameters(self):
         last_iteration = self.fit_properties["iteration count"] - 1

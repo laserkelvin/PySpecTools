@@ -4,13 +4,31 @@ import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
 from matplotlib import colors
-from plotly.offline import plot, init_notebook_mode
+from plotly.offline import plot, init_notebook_mode, iplot
+from plotly import tools
 import plotly.graph_objs as go
 from scipy import signal as spsig
+from scipy import constants
+from scipy.optimize import curve_fit
+from uncertainties import ufloat
+
+
+def dop2freq(velocity, frequency):
+    # Frequency given in MHz, Doppler_shift given in km/s
+    # Returns the expected Doppler shift in frequency (MHz)
+    return ((velocity * 1000. * frequency) / constants.c)
+
+
+def freq2vel(frequency, offset):
+    # Takes the expected Doppler contribution to frequency and the rest
+    # frequency, and returns the Doppler shift in km/s
+    return ((constants.c * offset) / frequency) / 1000.
+
 
 def parse_specdata(filename):
     # For reading the output of a SPECData analysis
     return pd.read_csv(filename, skiprows=4)
+
 
 def parse_spectrum(filename, threshold=20.):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
@@ -18,6 +36,7 @@ def parse_spectrum(filename, threshold=20.):
         filename, delimiter="\t", names=["Frequency", "Intensity"], skiprows=1
     )
     return dataframe[dataframe["Intensity"] <= threshold]
+
 
 def center_cavity(dataframe, thres=0.3, verbose=True):
     """ Finds the center frequency of a Doppler pair in cavity FTM measurements
@@ -35,7 +54,8 @@ def center_cavity(dataframe, thres=0.3, verbose=True):
         print("Center frequency at " + str(center))
     dataframe["Offset Frequency"] = dataframe["Frequency"] - center
 
-def plot_chirp(chirpdf, catfiles=None, output="chirp_interactive.html"):
+
+def plot_chirp(chirpdf, catfiles=None):
     """ Function to perform interactive analysis with a chirp spectrum, as well
         as any reference .cat files you may want to provide.
         This is not designed to replace SPECData analysis, but simply to perform
@@ -75,11 +95,76 @@ def plot_chirp(chirpdf, catfiles=None, output="chirp_interactive.html"):
                 )
             )
     layout = go.Layout(
+        autosize=False,
+        height=600,
+        width=900,
+        xaxis={"title": "Frequency (MHz)"},
+        paper_bgcolor="#f0f0f0",
+        plot_bgcolor="#f0f0f0",
         yaxis={"title": ""},
         yaxis2={"title": "", "side": "right", "overlaying": "y", "range": [0., 1.]}
     )
     fig = go.Figure(data=plots, layout=layout)
-    plot(fig, filename=output)
+    iplot(fig)
+
+    return fig
+
+
+def stacked_plot(dataframe, frequencies, freq_range=0.01):
+    # Function for generating an interactive stacked plot.
+    # This form of plotting helps with searching for vibrational satellites.
+    # Input is the full dataframe containing the frequency/intensity data,
+    # and frequencies is a list containing the centering frequencies.
+    # The frequency range is specified as a percentage of frequency, so it
+    # will change the range depending on what the centered frequency is.
+    nplots = len(frequencies)
+
+    plot_func = go.Scatter
+
+    # Want the frequencies in ascending order, going upwards in the plot
+    frequencies = np.sort(frequencies)[::-1]
+
+    fig = tools.make_subplots(
+        rows=nplots,
+        cols=1,
+        specs=[[{}] for plot in range(nplots)],
+        shared_xaxes=True,
+        vertical_spacing=0.15,
+        subplot_titles=tuple("{:.2f} MHz".format(frequency) for frequency in frequencies),
+    )
+
+    for index, frequency in enumerate(frequencies):
+        # Calculate the offset frequency
+        dataframe["Offset " + str(index)] = dataframe["Frequency"] - frequency
+        # Range as a fraction of the center frequency
+        freq_cutoff = freq_range * frequency
+        sliced_df = dataframe.loc[
+            (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
+        ]
+        # Plot the data
+        trace = plot_func(
+            x=sliced_df["Offset " + str(index)],
+            y=sliced_df["Intensity"],
+            text=sliced_df["Frequency"],
+            mode="lines"
+        )
+        # Plotly indexes from one because they're stupid
+        fig.append_trace(trace, index + 1, 1)
+        fig["layout"]["xaxis1"].update(range=[-freq_cutoff,freq_cutoff], title="Offset frequency (MHz)", showgrid=True)
+        fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
+    fig["layout"].update(
+        autosize=False,
+        height=800,
+        width=1000,
+        paper_bgcolor="#f0f0f0",
+        plot_bgcolor="#f0f0f0",
+        showlegend=False
+    )
+
+    iplot(fig)
+
+    return fig
+
 
 def configure_colors(dataframe):
     """ Generates color palettes for plotting arbitrary number of SPECData
@@ -87,6 +172,7 @@ def configure_colors(dataframe):
     """
     num_unique = len(dataframe["Assignment"].unique())
     return plt.cm.spectral(np.linspace(0., 1., num_unique))
+
 
 def plot_specdata_mpl(dataframe):
     """ Function to display SPECData output using matplotlib.
@@ -121,6 +207,7 @@ def plot_specdata_mpl(dataframe):
 
     assign_ax.set_yticks([])
     assign_ax.legend(loc=9, ncol=4, bbox_to_anchor=(0.5, -0.1), frameon=True)
+
 
 def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     """ Interactive SPECData result plotting using plotly.
