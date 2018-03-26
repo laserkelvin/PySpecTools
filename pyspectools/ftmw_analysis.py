@@ -255,7 +255,7 @@ def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     fig = go.Figure(data=plots, layout=layout)
     plot(fig, filename=output)
 
-class scan:
+class Scan:
     """ Object for analyzing raw FIDs from QtFTM.
         The goal is to be able to retrieve a scan file from QtFTM, perform the
         FFT analysis and everything externally, without the need to open QtFTM.
