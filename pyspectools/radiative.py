@@ -106,4 +106,6 @@ def calc_einstein(str_filepath):
         str_df["TDM"],
         str_df["Frequency"]
         )
+    # Sort the dataframe by ascending frequency
+    str_df = str_df.sort_values(["Frequency"], ascending=True)
     return str_df
