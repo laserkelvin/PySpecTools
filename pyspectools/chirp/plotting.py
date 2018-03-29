@@ -149,14 +149,14 @@ def plot_df(dataframe, cols=None, **kwargs):
         the axis labels, or into the color map generation
     """
     if cols is None:
-        cols = [key for dataframe.keys() if key != "Frequency"]
-    if len(cols) < 3:
+        cols = [key for key in dataframe.keys() if key != "Frequency"]
+    if len(cols) < 4:
         colors = ["#66c2a5", "#fc8d62"]
     else:
         colors = generate_colors(len(cols), **kwargs)
     # Generate the plotly traces
     traces = [
-        plot_column(dataframe, col, color) for col, color in zip(cols, colors)
+        plot_column(dataframe, col, color=color) for col, color in zip(cols, colors)
     ]
     layout = define_layout(**kwargs)
     # Generate figure object
@@ -165,7 +165,7 @@ def plot_df(dataframe, cols=None, **kwargs):
     return figure
 
 
-def generate_colors(n, cmap=plt.cm.spectral):
+def generate_colors(n, cmap=plt.cm.Spectral):
     """ Simple function for generating a colour map """
     colors = [cl.rgb2hex(color) for color in cmap(0., 1., n)]
     return colors[:, :-1]
