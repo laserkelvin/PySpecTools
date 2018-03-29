@@ -1,0 +1,39 @@
+font.family: Roboto
+font.weight: 300
+legend.frameon : False
+
+axes.titlesize : 12
+axes.labelsize : 12
+
+lines.linewidth : 1
+lines.markersize : 5
+
+xtick.labelsize : 12
+ytick.labelsize : 12
+
+figure.figsize : 6, 3.5
+figure.dpi : 300
+figure.facecolor: white
+figure.edgecolor: white
+figure.autolayout: True
+
+lines.color: black 
+patch.edgecolor: black
+
+text.color: black
+
+axes.facecolor: black
+axes.edgecolor: black
+axes.labelcolor: black
+
+xtick.color: black
+ytick.color: black
+
+grid.color: black
+grid.alpha: 0.4
+
+savefig.facecolor: white
+savefig.edgecolor: white
+
+# Colors
+axes.prop_cycle: cycler('color', ['AA4639', '255C69', 'AA7139', '2A7F40'])

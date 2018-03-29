@@ -1,0 +1,49 @@
+{
+	"name": "diatomic_hf",
+	"tag": "123456",
+	"parameters": {
+		"B": {
+			"value": 8.368544345820410E+003
+		},
+		"D": {
+			"value": -6.941653482956440E-003
+		},
+		"gamma": {
+			"value": 6.604758474172894E+001
+		},
+		"gammaD": {
+			"value": -2.198941128708368E-003
+		},
+		"bF": {
+			"value": 8.194998199332250E+002
+		},
+		"c": {
+			"value": 1.692069863352326E+002
+		},
+		"eQq": {
+			"nuclei": 1,
+			"value": -2.405389994075884E+001
+		},
+		"eQq/2": {
+			"nuclei": 1,
+			"value": -7.062227683998148
+		},
+		"C_I": {
+			"value": 6.557654850200213E-003
+		}
+	},
+	"linear": true,
+	"dipole": {
+		"A": 5.0
+	},
+	"reduction": "A",
+	"spin": 1,
+	"spin degeneracy": 0,
+	"units": "MHz",
+	"temperature": 5.0,
+	"intensity threshold": [-8.0, -3.0],
+	"partition function": 1E3,
+	"quantum number range": [0, 99],
+	"frequency limit": 300.0,
+	"maximum error": 1E+13
+}

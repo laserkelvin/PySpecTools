@@ -3,9 +3,11 @@ import os
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
+from plotly.tools import mpl_to_plotly
+from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
 
 class fit_output:
-    def __init__(self, fit_file, verbose=True):
+    def __init__(self, fit_file, verbose=True, interactive=False):
         # Check if the .fit file exists
         if os.path.isfile(fit_file) is False:
             raise FileNotFoundError(fit_file + " does not exist. No .fit file!")
@@ -23,6 +25,7 @@ class fit_output:
             "fit file": fit_file,
             "linear": False
         }
+        self.interactive = interactive
         self.data = dict()
         self.parsefit()
         self.analyze_parse(verbose)
@@ -129,16 +132,24 @@ class fit_output:
             self.data[iteration] = pd.DataFrame.from_dict(
                 self.fit_properties["line progress"][iteration]
             ).T
-        if verbose is True:
-            # In manual mode, we'll plot the errors and changes in the parameters
-            self.plot_error(iteration)
-            #self.parameter_changes()           # Not useful, so not plotting
-        self.data[iteration].sort_values("line number", inplace=True)
-        self.data[iteration].to_csv("exp-calc.csv")
-        niterations = len(self.fit_properties["rms errors"])
-        self.fit_properties["final rms"] = self.fit_properties["fit rms"][niterations - 1]
-        print("Final RMS error:\t" + str(self.fit_properties["final rms"]))
-        print("Microwave frequency RMS error:\t" + str(self.fit_properties["rms errors"][-1]))
+            it = iteration
+        if "line number" in list(self.data[it].keys()):
+            # This check will make sure there are lines in our parsed data
+            if verbose is True:
+                # In manual mode, we'll plot the errors and changes in the parameters
+                self.plot_error(it)
+                #self.parameter_changes()           # Not useful, so not plotting
+            self.data[it].sort_values("line number", inplace=True)
+            self.data[it].to_csv("exp-calc.csv")
+            niterations = len(self.fit_properties["rms errors"])
+            self.fit_properties["final rms"] = self.fit_properties["fit rms"][niterations - 1]
+            print("Final RMS error:\t" + str(self.fit_properties["final rms"]))
+            print("Microwave frequency RMS error:\t" + str(self.fit_properties["rms errors"][-1]))
+        else:
+            # If there are no lines, this "exception" will make sure that the
+            # routine exits gracefully
+            print("There are no lines fit in the final iteration!")
+            print("No analysis was done on this iteration.")
 
     def export_parameters(self):
         last_iteration = self.fit_properties["iteration count"] - 1
@@ -215,3 +226,11 @@ class fit_output:
         axarray[1].set_ylabel("Microwave RMS error (MHz)")
 
         fig.savefig("rms_plot_" + str(iteration) + ".pdf", format="pdf")
+
+        if self.interactive is True:
+            plt.close(fig)
+            pltly_fig = mpl_to_plotly(fig)
+            try:
+                iplot(pltly_fig)
+            except PlotlyEmptyDataError:
+                pass

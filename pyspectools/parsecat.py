@@ -1,42 +1,47 @@
 import pandas as pd
 import numpy as np
+from matplotlib import colors
+from matplotlib import cm
+from matplotlib import pyplot as plt
 import sys
 
-def pick_pickett(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
-    """ Parses a simulation output, and filters the frequency and intensity to give
+def read_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
+    """
+    Parses a simulation output, and filters the frequency and intensity to give
     a specific set of lines.
+
     The only argument that is required is the path to the simulation output. Others
     are optional, and will default to effectively not filter.
+
+    The quantum numbers are read in assuming hyperfine structure, and thus
+    might not be accurate descriptions of what they actually are.
     """
-    clean_cat(simulation_path)
-    simulation_df = pd.read_csv(simulation_path, delim_whitespace=True, header=None, error_bad_lines=False)
+    simulation_df = pd.read_fwf(
+        simulation_path,
+        widths=[13,8,8,2,10,3,7,4,2,2,2,8,2,2],
+        header=None
+    )
+    simulation_df.columns = [
+        "Frequency",
+        "Uncertainty",
+        "Intensity",
+        "DoF",
+        "Lower state energy",
+        "Degeneracy",
+        "ID",
+        "Coding",
+        "N'",
+        "F'",
+        "J'",
+        "N''",
+        "F''",
+        "J''",
+    ]
     thresholded_df = simulation_df.loc[
-            (simulation_df[0].astype(float) >= low_freq) &         # threshold the simulation output
-            (simulation_df[0].astype(float) <= high_freq) &        # based on user specified values
-            (simulation_df[2].astype(float) >= threshold)          # or lack thereof
+            (simulation_df["Frequency"].astype(float) >= low_freq) &         # threshold the simulation output
+            (simulation_df["Frequency"].astype(float) <= high_freq) &        # based on user specified values
+            (simulation_df["Intensity"].astype(float) >= threshold)          # or lack thereof
             ]
-    thresholded_df.rename(
-            columns={
-                0: "Frequency",
-                1: "Uncertainty",
-                2: "Intensity",
-                3: "DoF",
-                4: "Lower state energy",
-                5: "Degerency",
-                6: "Quantum number coding",       # trying to label the columns
-                },
-            inplace=True
-            )
-# This bit combines the three columns which are meant to be for the quantum numbers
-# The output from Pickett does not format the quantum numbers well for parsing, sometimes
-# the numbers merge (i.e. if '2 4 10' might be written as '2 410'
-    if len(thresholded_df.keys()) >= 12:
-        thresholded_df["Lower quantum numbers"] = thresholded_df[[8, 9, 10]].apply(lambda x: " ".join(map(str,x)), axis=1)
-        thresholded_df["Upper quantum numbers"] = thresholded_df[[11, 12, 13]].apply(lambda x: " ".join(map(str,x)), axis=1)
-        #thresholded_df["Lower quantum numbers"] = thresholded_df.loc[:, [8, 9, 10]]#.apply(join_function)
-        #thresholded_df["Upper quantum numbers"] = thresholded_df.loc[:, [11, 12, 13]]#.apply(join_function)
-    else:
-        pass
     return thresholded_df
 
 
@@ -53,7 +58,6 @@ def clean_cat(filepath):
     with open(filepath, "w+") as write_file:
         write_file.write(cat_contents)
 
-    print("Cleaned up the .cat")
 
 def extract_experimental_lines(thresholded_df):
     """ Lines that are experimental are denoted by a negative sign. This
@@ -75,45 +79,66 @@ def peak2cat(peaks_df, outputname="generated_batch.ftb", sortby="Intensity", asc
             ascending=False,
             inplace=True
             )
-    frequencies = peaks_df["Frequency"].values
-    intensities = peaks_df["Intensity"].values
-    """ Now we convert the relative intensities into a number of shots """
-    intensities = (10.**intensities)
-    intensities = intensities / intensities.max()    # relative to the strongest
-    shotcounts = intensities * nshots                # scale shots
-    if "Lower quantum numbers" and "Upper quantum numbers" in peaks_df.keys():
-        lower_num = peaks_df["Lower quantum numbers"].values
-        upper_num = peaks_df["Upper quantum numbers"].values
-        fullarray = np.concatenate(
-                (
-                frequencies,
-                shotcounts,
-                lower_num,
-                upper_num
-                )
-             )
-    else:
-        """ If we can't read the quantum numbers, pad the columns with zeros """
-        fullarray = np.concatenate(
-                (
-                frequencies,
-                shotcounts,
-                np.zeros(frequencies.size),
-                np.zeros(frequencies.size)
-                )
-            )
-    fullarray = fullarray.reshape(4, frequencies.size)
-    fullarray = fullarray.T                              # transpose into colums
+    # Calculate the number of shots based on intensities, converted to real units
+    sorted_df["Norm Int"] = (10**sorted_df["Intensity"]) / (10**sorted_df["Intensity"].max())
+    # Take the strongest line as 10 shots
+    sorted_df["Shots"] = 10. / sorted_df["Norm Int"]**2.
+    output_array = sorted_df[
+        ["Frequency", "Shots", "N'", "F'", "J'", "N''", "F''", "J''"]
+    ].values
+    # If there are NaN values, set them to zero
+    output_array = np.nan_to_num(output_array, 0)
     np.savetxt(
-            fname=outputname,
-            X=fullarray,
-            fmt=("ftm:%5.3f", " shots:%1i", "# lower:%5s", " upper:%5s")
-            )
+        fname = outputname,
+        X = output_array,
+        fmt = (
+            "ftm:%5.3f",
+            " shots:%1i",
+            "# N':%2i",
+            " F':%2i",
+            " J':%2i",
+            " N'':%2i",
+            " F'':%2i",
+            " J'':%2i"
+        )
+    )
 
 
 def join_function(x):
     # function to join quantum numbers together
     return " ".join(str(x))
+
+
+def plot_pickett(cat_dataframe, verbose=True):
+    """ Plotting function that will make a plot of the .cat file spectrum """
+    # Define a colour map for the lower state energy
+    cnorm = colors.Normalize(vmin=cat_dataframe["Lower state energy"].min(),
+                             vmax=cat_dataframe["Lower state energy"].max()
+                             )
+    colormap = cm.ScalarMappable(cmap="YlOrRd_r")
+    colormap.set_array(cat_dataframe["Lower state energy"].astype(float))
+
+    # Plot the predicted spectrum if in manual mode
+    if verbose is True:
+        fig, ax = plt.subplots(figsize=(14,6.5))
+        lineplot = ax.vlines(
+            cat_dataframe["Frequency"],
+            ymin=-10.,                    # set the minimum as arb. value
+            ymax=cat_dataframe["Intensity"],     # set the height as predicted value
+            colors=colormap.to_rgba(cat_dataframe["Lower state energy"].astype(float))   # color mapped to energy
+                  )
+
+        ax.set_xlabel("Frequency (MHz)")
+        ax.set_ylabel("Intensity")
+        ax.set_ylim([cat_dataframe["Intensity"].min() * 1.1, 0.])
+
+        colorbar = plt.colorbar(colormap, orientation='horizontal')
+        colorbar.ax.set_title("Lower state energy (cm$^{-1}$)")
+
+        fig.tight_layout()
+
+        plt.show(fig)
+        return fig, ax
 
 
 if __name__ == "__main__":
@@ -126,7 +151,7 @@ if __name__ == "__main__":
     parameters = [float(value) for value in sys.argv[2:]]
     print(parameters)
     # threshold the simulation values
-    thresholded_df = pick_pickett(simulation_path, *parameters)
+    thresholded_df = read_cat(simulation_path, *parameters)
     # export the thresholded values to a cat file
     thresholded_df.to_csv(
             simulation_path.split(".")[0] + "_filtered.cat",

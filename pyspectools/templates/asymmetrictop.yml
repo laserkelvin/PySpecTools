@@ -1,0 +1,23 @@
+K range: [0, 10]
+dipole: {A: 5.0}
+even state weight: 1
+frequency limit: 300.0
+intensity threshold: [-8.0, -3.0]
+linear: false
+maximum error: 10000000000000.0
+name: asymmetrictop
+odd state weight: 1
+parameters:
+  A: {fit: false, uncertainty: 1.0e-35, value: 52314.539094618}
+  B: {uncertainty: 1.0e-35, value: 7535.7931838638}
+  C: {value: 6586.9566987841}
+  D_J: {value: 0.00487742}
+  D_JK: {value: 0.118338}
+  D_K: {value: 0.0776084}
+partition function: 1000.0
+reduction: A
+spin: 1
+spin degeneracy: 1
+tag: '123456'
+temperature: 5.0
+units: MHz
