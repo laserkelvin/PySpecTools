@@ -93,8 +93,11 @@ def open_mmw(filepath, window_function=None, pass_filter=None):
     sample_rate = 1. / settings["Frequency step"] * 1e6
     
     
-    fieldoff_intensities = fft_filter(fieldoff_intensities, window_function, pass_filter, sample_rate=sample_rate)
-    fieldon_intensities = fft_filter(fieldon_intensities, window_function, pass_filter, sample_rate=sample_rate)
+    try:
+        fieldoff_intensities = fft_filter(fieldoff_intensities, window_function, pass_filter, sample_rate=sample_rate)
+        fieldon_intensities = fft_filter(fieldon_intensities, window_function, pass_filter, sample_rate=sample_rate)
+    except IndexError:
+        print(filepath)
     
     try:
         intensity = fieldoff_intensities - fieldon_intensities

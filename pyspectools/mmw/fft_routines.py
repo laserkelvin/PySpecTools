@@ -50,6 +50,7 @@ def fft_filter(ydata, window_function=None, cutoff=None, sample_rate=None):
     # FFT the frequency spectrum to time domain
     time_domain = fft(ydata)
     # If no range is specified, take a prespecified chunk
+    
     if cutoff is None:
         cutoff = [50, 690]
     time_domain[:cutoff[0]] = 0
