@@ -8,21 +8,6 @@ from plotly.offline import plot, init_notebook_mode, iplot
 from plotly import tools
 import plotly.graph_objs as go
 from scipy import signal as spsig
-from scipy import constants
-from scipy.optimize import curve_fit
-from uncertainties import ufloat
-
-
-def dop2freq(velocity, frequency):
-    # Frequency given in MHz, Doppler_shift given in km/s
-    # Returns the expected Doppler shift in frequency (MHz)
-    return ((velocity * 1000. * frequency) / constants.c)
-
-
-def freq2vel(frequency, offset):
-    # Takes the expected Doppler contribution to frequency and the rest
-    # frequency, and returns the Doppler shift in km/s
-    return ((constants.c * offset) / frequency) / 1000.
 
 
 def parse_specdata(filename):
@@ -32,7 +17,7 @@ def parse_specdata(filename):
 
 def parse_spectrum(filename, threshold=20.):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
-    dataframe =  pd.read_csv(
+    dataframe = pd.read_csv(
         filename, delimiter="\t", names=["Frequency", "Intensity"], skiprows=1
     )
     return dataframe[dataframe["Intensity"] <= threshold]
@@ -53,117 +38,6 @@ def center_cavity(dataframe, thres=0.3, verbose=True):
     if verbose is True:
         print("Center frequency at " + str(center))
     dataframe["Offset Frequency"] = dataframe["Frequency"] - center
-
-
-def plot_chirp(chirpdf, catfiles=None):
-    """ Function to perform interactive analysis with a chirp spectrum, as well
-        as any reference .cat files you may want to provide.
-        This is not designed to replace SPECData analysis, but simply to perform
-        some interactive viewing of the data.
-
-        The argument `catfiles` is supplied as a dictionary; where the keys are
-        the names of the species, and the items are the paths to the .cat files
-    """
-
-    # Generate the experimental plot first
-    plots = list()
-    exp_trace = go.Scatter(
-        x = chirpdf["Frequency"],
-        y = chirpdf["Intensity"],
-        name = "Experiment"
-    )
-
-    plots.append(exp_trace)
-    if catfiles is not None:
-        # Generate the color palette, and remove the alpha value from RGBA
-        color_palette = plt.cm.spectral(np.linspace(0., 1., len(catfiles)))[:,:-1]
-        # Loop over each of the cat files
-        for color, species in zip(color_palette, catfiles):
-            species_df = pc.pick_pickett(catfiles[species])
-            plots.append(
-                go.Bar(
-                    x = species_df["Frequency"],
-                    y = species_df["Intensity"] / species_df["Intensity"].min(),
-                    name = species,
-                    marker = {
-                        # Convert the matplotlib rgb color to hex code
-                        "color": colors.rgb2hex(color)
-                    },
-                    width = 1.,
-                    opacity = 0.6,
-                    yaxis = "y2"
-                )
-            )
-    layout = go.Layout(
-        autosize=False,
-        height=600,
-        width=900,
-        xaxis={"title": "Frequency (MHz)"},
-        paper_bgcolor="#f0f0f0",
-        plot_bgcolor="#f0f0f0",
-        yaxis={"title": ""},
-        yaxis2={"title": "", "side": "right", "overlaying": "y", "range": [0., 1.]}
-    )
-    fig = go.Figure(data=plots, layout=layout)
-    iplot(fig)
-
-    return fig
-
-
-def stacked_plot(dataframe, frequencies, freq_range=0.01):
-    # Function for generating an interactive stacked plot.
-    # This form of plotting helps with searching for vibrational satellites.
-    # Input is the full dataframe containing the frequency/intensity data,
-    # and frequencies is a list containing the centering frequencies.
-    # The frequency range is specified as a percentage of frequency, so it
-    # will change the range depending on what the centered frequency is.
-    nplots = len(frequencies)
-
-    plot_func = go.Scatter
-
-    # Want the frequencies in ascending order, going upwards in the plot
-    frequencies = np.sort(frequencies)[::-1]
-
-    fig = tools.make_subplots(
-        rows=nplots,
-        cols=1,
-        specs=[[{}] for plot in range(nplots)],
-        shared_xaxes=True,
-        vertical_spacing=0.15,
-        subplot_titles=tuple("{:.2f} MHz".format(frequency) for frequency in frequencies),
-    )
-
-    for index, frequency in enumerate(frequencies):
-        # Calculate the offset frequency
-        dataframe["Offset " + str(index)] = dataframe["Frequency"] - frequency
-        # Range as a fraction of the center frequency
-        freq_cutoff = freq_range * frequency
-        sliced_df = dataframe.loc[
-            (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
-        ]
-        # Plot the data
-        trace = plot_func(
-            x=sliced_df["Offset " + str(index)],
-            y=sliced_df["Intensity"],
-            text=sliced_df["Frequency"],
-            mode="lines"
-        )
-        # Plotly indexes from one because they're stupid
-        fig.append_trace(trace, index + 1, 1)
-        fig["layout"]["xaxis1"].update(range=[-freq_cutoff,freq_cutoff], title="Offset frequency (MHz)", showgrid=True)
-        fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
-    fig["layout"].update(
-        autosize=False,
-        height=800,
-        width=1000,
-        paper_bgcolor="#f0f0f0",
-        plot_bgcolor="#f0f0f0",
-        showlegend=False
-    )
-
-    iplot(fig)
-
-    return fig
 
 
 def configure_colors(dataframe):
@@ -350,5 +224,3 @@ class Scan:
             data=list(zip([frequency, amplitude])),
             columns=["Frequency (MHz)", "Intensity (V)"]
         )
-
-

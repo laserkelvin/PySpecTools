@@ -27,3 +27,16 @@ def MHz2cm(frequency):
 def cm2MHz(wavenumber):
     # Convert wavenumbers to frequency in MHz
     return (wavenumber * (constants.c / 1e7)) * 1000.
+
+""" Astronomy units """
+
+def dop2freq(velocity, frequency):
+    # Frequency given in MHz, Doppler_shift given in km/s
+    # Returns the expected Doppler shift in frequency (MHz)
+    return ((velocity * 1000. * frequency) / constants.c)
+
+
+def freq2vel(frequency, offset):
+    # Takes the expected Doppler contribution to frequency and the rest
+    # frequency, and returns the Doppler shift in km/s
+    return ((constants.c * offset) / frequency) / 1000.
