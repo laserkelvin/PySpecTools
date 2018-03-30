@@ -165,10 +165,98 @@ def plot_df(dataframe, cols=None, **kwargs):
     return figure
 
 
+def plot_assignment(spec_df, assignments_df):
+    """ Function for plotting spectra with assignments. The assumption is that
+        the assignments routines are ran prior too this, and so the function
+        simply takes a dataframe of chosen molecules and plots them alongside
+        the experimental spectrum, color coded by the molecule
+
+        Input argument:
+        spec_df - dataframe holding the experimental data
+        assignments_df - dataframe produced from running assignments
+    """
+    # Get a list of unique molecules
+    molecules = assignments_df["Chemical Name"].unique()
+    # The ttal number of traces are the number of unique molecules, the traces
+    # in the experimental data minus the frequency column
+    nitems = len(molecules) + 1
+    colors = color_iterator(nitems)
+    traces = list()
+    # Loop over the experimental data
+    traces.append(
+        plot_column(
+            spec_df,
+            "Intensity",
+            color=next(colors)
+        )
+    )
+    # Loop over the assignments
+    for molecule in molecules:
+        sliced_df = assignments_df.loc[assignments_df["Chemical Name"] == molecule]
+        traces.append(
+            plot_bar_assignments(
+                sliced_df,
+                next(colors)
+            )
+        )
+    layout = define_layout()
+    layout["yaxis"] = {
+        "title": "Experimental Intensity"
+    }
+    # Specify a second y axis for the catalog intensity
+    layout["yaxis2"] = {
+        "title": "CDMS/JPL Intensity",
+        "overlaying": "y",
+        "side": "right"
+    }
+    figure = go.Figure(data=traces, layout=layout)
+    iplot(figure)
+    return figure
+
+
 def generate_colors(n, cmap=plt.cm.Spectral):
     """ Simple function for generating a colour map """
     colors = [cl.rgb2hex(color) for color in cmap(0., 1., n)]
     return colors[:, :-1]
+
+
+def color_iterator(n, **kwargs):
+    """ Simple generator that will yield a different color each time.
+        This is primarily designed when multiple plot types are expected.
+
+        Input arguements:
+        n - number of plots
+        Optional kwargs are passed into generate_colors
+    """
+    index = 0
+    colors = generate_colors(n, **kwargs)
+    while index < n:
+        yield colors[index]
+        index += 1
+
+
+def plot_bar_assignments(species_df, color="#fc8d62"):
+    """ Function to generate a bar plot trace for a chemical species.
+        These plots will be placed in the second y axis!
+
+        Input arguments:
+        species_df - a slice of an assignments dataframe, containing only
+        one unique species
+        Optional argument color is a hex code color; if nothing is given
+        it just defaults to whatever
+    """
+    molecule = species_df["Chemical Name"].unique()[0]
+    trace = go.Bar(
+        x=species_df["Freq-GHz"] * 1000.,
+        y=10**species_df["CDMS/JPL Intensity"],
+        name=molecule,
+        color=color,
+        text=species_df["Resolved QNs"],
+        width=0.5,
+        yaxis="y2",
+        opacity=0.8
+    )
+    return trace
 
 
 def plot_column(dataframe, col, name=None, color=None, layout=None):

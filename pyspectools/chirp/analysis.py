@@ -74,6 +74,7 @@ def search_center_frequency(frequency, width=0.5):
     # These are the columns wanted
     columns = [
         "Species",
+        "Chemical Name",
         "Meas Freq-GHz",
         "Freq-GHz",
         "Resolved QNs",
@@ -91,15 +92,23 @@ def assign_peaks(spec_df, frequencies, **kwargs):
         frequencies - iterable containing center frequencies of peaks
         Optional arguments are passed into the peak detection as well
         as in the plotting functions.
+
+        Returns a dataframe containing all the assignments, and a list
+        of unidentified peak frequencies.
     """
     unassigned = list()
+    dataframes = pd.DataFrame()
     for freq_index, frequency in enumerate(frequencies):
         splat_df = search_center_frequency(frequency)
         nitems = len(splat_df)
         # Only act if there's something found
         if nitems > 0:
-            splat_df["Dev. Measured"] = splat_df["Meas Freq-GHz"] - frequency
-            splat_df["Dev. Calc"] = splat_df["Freq-GHz"] - frequency
+            splat_df["Dev. Measured"] = np.abs(
+                (splat_df["Meas Freq-GHz"] * 1000.) - frequency
+                )
+            splat_df["Dev. Calc"] = np.abs(
+                (splat_df["Freq-GHz"] * 1000.) - frequency
+                )
             print(splat_df)
             try:
                 print("Peak frequency is " + str(frequency))
@@ -108,8 +117,18 @@ def assign_peaks(spec_df, frequencies, **kwargs):
                         "Please choose an assignment index: 0-" + str(nitems - 1)
                         )
                 )
-                # Take the assignment
-                assignment = splat_df.iloc[index]
+                assigned = True
+            except ValueError:
+                print("Deferring assignment")
+                unassigned.append(frequency)
+                assigned = False
+            # Take the assignment. Double brackets because otherwise
+            # a series is returned rather than a dataframe
+            if assigned is True:
+                assignment = splat_df.iloc[[index]].sort_values(
+                    ["Dev. Measured", "Dev. Calc"],
+                    ascending=True
+                )
                 ass_freq = assignment["Meas Freq-GHz"]
                 # If the measurement is not available, go for
                 # the predicted value
@@ -117,18 +136,10 @@ def assign_peaks(spec_df, frequencies, **kwargs):
                     ass_freq = assignment["Freq-GHz"]
                 ass_name = assignment["Species"] + "-" + assignment["Resolved QNs"]
                 # Clean the line and assign it
-                fit_line_profile(spec_df, frequency, name=ass_name)
+                #fit_line_profile(spec_df, frequency, name=ass_name)
                 # Keep track of the assignments in a dataframe
-                try: 
-                    full_assign = pd.concat([full_assign, assignment])
-                    print("----------------------------------------------------")
-                except NameError:
-                    full_assign = assignment
-            except ValueError:
-                print("Deferring assignment")
-                unassigned.append(frequency)
+                dataframes.append(assignment)
+            print("----------------------------------------------------")
         else:
             print("No species known for " + str(frequency))
-    # Plot up all of the assignments
-    plotting.plot_df(spec_df)
-    return full_assign
+    return dataframes, unassigned
