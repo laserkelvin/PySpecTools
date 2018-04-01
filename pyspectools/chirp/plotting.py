@@ -165,7 +165,7 @@ def plot_df(dataframe, cols=None, **kwargs):
     return figure
 
 
-def plot_assignment(spec_df, assignments_df):
+def plot_assignment(spec_df, assignments_df, col="Intensity"):
     """ Function for plotting spectra with assignments. The assumption is that
         the assignments routines are ran prior too this, and so the function
         simply takes a dataframe of chosen molecules and plots them alongside
@@ -186,7 +186,7 @@ def plot_assignment(spec_df, assignments_df):
     traces.append(
         plot_column(
             spec_df,
-            "Intensity",
+            col,
             color=next(colors)
         )
     )
@@ -207,7 +207,9 @@ def plot_assignment(spec_df, assignments_df):
     layout["yaxis2"] = {
         "title": "CDMS/JPL Intensity",
         "overlaying": "y",
-        "side": "right"
+        "side": "right",
+        "type": "log",
+        "autorange": True
     }
     figure = go.Figure(data=traces, layout=layout)
     iplot(figure)
@@ -216,8 +218,9 @@ def plot_assignment(spec_df, assignments_df):
 
 def generate_colors(n, cmap=plt.cm.Spectral):
     """ Simple function for generating a colour map """
-    colors = [cl.rgb2hex(color) for color in cmap(0., 1., n)]
-    return colors[:, :-1]
+    colormap = cmap(np.linspace(0., 1., n))
+    colors = [cl.rgb2hex(color) for color in colormap]
+    return colors#[:, :-1]
 
 
 def color_iterator(n, **kwargs):
@@ -245,16 +248,19 @@ def plot_bar_assignments(species_df, color="#fc8d62"):
         Optional argument color is a hex code color; if nothing is given
         it just defaults to whatever
     """
+    # We just want one of the molecules, not their life's story
     molecule = species_df["Chemical Name"].unique()[0]
     trace = go.Bar(
-        x=species_df["Freq-GHz"] * 1000.,
+        x=species_df["Combined"],
         y=10**species_df["CDMS/JPL Intensity"],
         name=molecule,
-        color=color,
         text=species_df["Resolved QNs"],
-        width=0.5,
+        marker={
+            "color": color
+            },
+        width=0.25,
         yaxis="y2",
-        opacity=0.8
+        opacity=0.9
     )
     return trace
 

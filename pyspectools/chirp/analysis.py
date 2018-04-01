@@ -80,7 +80,15 @@ def search_center_frequency(frequency, width=0.5):
         "Resolved QNs",
         "CDMS/JPL Intensity"
         ]
-    return splat_df[columns]
+    # Take only what we want
+    splat_df = splat_df[columns]
+    # Now we combine the frequency measurements
+    splat_df["Combined"] = splat_df["Meas Freq-GHz"].values
+    # Replace missing experimental data with calculated
+    splat_df["Combined"].fillna(splat_df["Freq-GHz"], inplace=True)
+    # Convert to MHz
+    splat_df["Combined"] *= 1000.
+    return splat_df
 
 
 def assign_peaks(spec_df, frequencies, **kwargs):
@@ -98,17 +106,14 @@ def assign_peaks(spec_df, frequencies, **kwargs):
     """
     unassigned = list()
     dataframes = pd.DataFrame()
-    for freq_index, frequency in enumerate(frequencies):
+    for frequency in frequencies:
         splat_df = search_center_frequency(frequency)
         nitems = len(splat_df)
         # Only act if there's something found
         if nitems > 0:
-            splat_df["Dev. Measured"] = np.abs(
-                (splat_df["Meas Freq-GHz"] * 1000.) - frequency
-                )
-            splat_df["Dev. Calc"] = np.abs(
-                (splat_df["Freq-GHz"] * 1000.) - frequency
-                )
+            splat_df["Deviation"] = np.abs(
+                    splat_df["Combined"] - frequency
+                    )
             print(splat_df)
             try:
                 print("Peak frequency is " + str(frequency))
@@ -126,19 +131,17 @@ def assign_peaks(spec_df, frequencies, **kwargs):
             # a series is returned rather than a dataframe
             if assigned is True:
                 assignment = splat_df.iloc[[index]].sort_values(
-                    ["Dev. Measured", "Dev. Calc"],
-                    ascending=True
+                    ["Deviation"],
+                    ascending=False
                 )
-                ass_freq = assignment["Meas Freq-GHz"]
+                ass_freq = assignment["Combined"]
                 # If the measurement is not available, go for
                 # the predicted value
-                if ass_freq is np.nan:
-                    ass_freq = assignment["Freq-GHz"]
                 ass_name = assignment["Species"] + "-" + assignment["Resolved QNs"]
-                # Clean the line and assign it
-                #fit_line_profile(spec_df, frequency, name=ass_name)
+                # Clean the line
+                fit_line_profile(spec_df, frequency)
                 # Keep track of the assignments in a dataframe
-                dataframes.append(assignment)
+                dataframes = dataframes.append(assignment)
             print("----------------------------------------------------")
         else:
             print("No species known for " + str(frequency))
