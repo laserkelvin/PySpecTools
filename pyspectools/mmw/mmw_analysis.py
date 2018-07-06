@@ -305,8 +305,7 @@ def fit_chunk(dataframe, min_freq, max_freq, frequencies, ycol="Field off"):
 
 
 def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off", off_dataframe=None):
-    """
-        Wrapper for the fit_chunk function, for when you want to
+    """ Wrapper for the fit_chunk function, for when you want to
         try and fit many lines in a catalog.
         
         The input arguments are the survey dataframe, a list of
@@ -336,30 +335,29 @@ def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off",
         min_freq = frequency - window_length
         max_freq = frequency + window_length
         # Attempt to fit the window
-        try:
-            fit, fig = fit_chunk(
-                dataframe,
-                min_freq,
-                max_freq,
-                [frequency],
-                ycol
-            )
-            fit_freq.append(
-                np.round(fit.best_values["center0"], decimals=4)
-            )
-            amplitudes.append(
-                np.round(fit.best_values["A0"], decimals=4)
-            )
-            uncertainties.append(
-                np.round(np.sqrt(np.diag(fit.covar))[-1], decimals=4)
-            )
-            successes.append(True)
-            save_plot(fig, foldername + "/peak" + str(index) + ".html")
-        except:
-            successes.append(False)
-            fit_freq.append(None)
-            amplitudes.append(0.)
-            uncertainties.append(None)
+        fit, fig = fit_chunk(
+            dataframe,
+            min_freq,
+            max_freq,
+            [frequency],
+            ycol
+        )
+        fit_freq.append(
+            np.round(fit.best_values["center0"], decimals=4)
+        )
+        amplitudes.append(
+            np.round(fit.best_values["A0"], decimals=4)
+        )
+        uncertainties.append(
+            np.round(np.sqrt(np.diag(fit.covar))[-1], decimals=4)
+        )
+        successes.append(True)
+        save_plot(fig, foldername + "/peak" + str(index) + ".html")
+        #except:
+        #    successes.append(False)
+        #    fit_freq.append(None)
+        #    amplitudes.append(0.)
+        #    uncertainties.append(None)
     package = list(zip(frequencies, successes, fit_freq, uncertainties, amplitudes))
     fit_df = pd.DataFrame(
         data=package, 
@@ -371,7 +369,7 @@ def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off",
     fit_df.to_csv(foldername + "/fit_results.csv")
     
     # Make the static comparison
-    if off_dataframe is not None:
+    if off_dataframe:
         fig, axarray = static_comparison(
             fit_df["Fitted frequency"].values,
             dataframe,

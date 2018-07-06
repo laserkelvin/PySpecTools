@@ -22,15 +22,20 @@ patch.edgecolor: black
 
 text.color: black
 
-axes.facecolor: black
+axes.facecolor: white
 axes.edgecolor: black
 axes.labelcolor: black
+axes.linewidth: 1.0
+axes.spines.left: True
+axes.spines.bottom: True
 
 xtick.color: black
 ytick.color: black
+xtick.bottom: True
+ytick.left: True
 
 grid.color: black
-grid.alpha: 0.4
+grid.alpha: 0.0
 
 savefig.facecolor: white
 savefig.edgecolor: white

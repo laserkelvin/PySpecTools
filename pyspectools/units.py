@@ -10,8 +10,15 @@ from scipy import constants
 """ Commonly used values
 
     kbcm - Boltzmann's constant in wavenumbers per Kelvin
+    The others are pretty self-explanatory
+
+    eha - Hartree energy in joules
 """
 kbcm = constants.value("Boltzmann constant in inverse meters per kelvin") / 100.
+avo = constants.Avogadro
+eha = constants.value("Hartree energy")
+harm = constants.value("hartree-inverse meter relationship")
+jm = constants.value("joule-inverse meter relationship")
 
 
 def kappa(A, B, C):
@@ -40,3 +47,21 @@ def freq2vel(frequency, offset):
     # Takes the expected Doppler contribution to frequency and the rest
     # frequency, and returns the Doppler shift in km/s
     return ((constants.c * offset) / frequency) / 1000.
+
+def hartree2kjmol(hartree):
+    # Convert Hartrees to kJ/mol
+    return hartree * (eha * avo / 1000.)
+
+
+def hartree2wavenumber(hartree):
+    """ Convert Hartrees to wavenumbers """
+    return hartree * (harm / 100.)
+
+
+def kjmol2wavenumber(kj):
+    # Convert kJ/mol to wavenumbers
+    return kj * (jm / 100.) / (avo * 1000.)
+
+
+def wavenumber2kjmol(wavenumber):
+    return wavenumber / (jm / 100.) / (avo * 1000.)
