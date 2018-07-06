@@ -52,17 +52,30 @@ def static_comparison(frequencies, sample_on_df, sample_off_df, window_size=0.00
 
 
 def plot_spectrum(dataframe):
+    """ Function used to plot a dataframe using Plotly.
+        
+        Uses colorlover to generate palettes.
+
+        Args: dataframe - pandas dataframe containing a frequency
+        column. Every other column is treated as an intensity column
+    """
     plots = list()
     keys = [key for key in dataframe.keys() if key != "Frequency"]
-    color_palette = cl.to_rgb(cl.scales[str(len(keys))]["qual"]["Set1"])
+    if len(keys) < 3:
+        # If there are fewer than 3 plots, colorlover doesn't have
+        # a coded case and so the colors are done manually
+        color_palette = ["#e41a1c", "#377eb8"]
+    else:
+        # Use color lover palettes
+        color_palette = cl.to_rgb(cl.scales[str(len(keys))]["qual"]["Set1"])
     for key, color in zip(keys, color_palette):
+        # Loop over all the dataframe columns and colors
         plots.append(
             go.Scatter(
                 x=dataframe["Frequency"],
                 y=dataframe[key],
                 name=key,
                 marker = {
-                   # Convert the matplotlib rgb color to hex code
                    "color": color
                },
             )

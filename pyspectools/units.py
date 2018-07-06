@@ -27,3 +27,18 @@ def MHz2cm(frequency):
 def cm2MHz(wavenumber):
     # Convert wavenumbers to frequency in MHz
     return (wavenumber * (constants.c / 1e7)) * 1000.
+
+
+def hartree2kjmol(hartree):
+    # Convert Hartrees to kJ/mol
+    return hartree * 2625.499638
+
+
+def kjmol2wavenumber(kj):
+    # Convert kJ/mol to wavenumbers
+    return kj * 83.593
+
+
+def wavenumber2kjmol(wavenumber):
+    return wavenumber / 83.59
+
