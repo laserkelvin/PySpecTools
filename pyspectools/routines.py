@@ -9,7 +9,6 @@ import shutil
 import json
 import ruamel_yaml as yaml
 from pyspectools import pypickett as pp
-from pyspectools import parsecat as pc
 from glob import glob
 
 def run_spcat(filename, temperature=None):
@@ -119,17 +118,24 @@ def read_json(json_filepath):
 
 
 def dump_json(json_filepath, json_dict):
+    """ Function for dumping a Python dictionary to JSON syntax.
+        Does so with some pretty formatting with indents and whatnot.
+    """
     with open(json_filepath, "w+") as write_file:
         json.dump(json_dict, write_file, indent=4, sort_keys=True)
 
 
 def read_yaml(yaml_filepath):
+    """ Function for reading a YAML file in as a Python dictionary """
     with open(yaml_filepath) as read_file:
         yaml_data = yaml.load(read_file)
     return yaml_data
 
 
 def dump_yaml(yaml_filepath, yaml_dict):
+    """ Function for dumping a python dictionary to
+        YAML syntax
+    """
     with open(yaml_filepath, "w+") as write_file:
         yaml.dump(yaml_dict, write_file)
 
