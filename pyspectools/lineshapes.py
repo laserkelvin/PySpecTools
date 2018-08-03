@@ -16,7 +16,7 @@ import numpy as np
 def gaussian(x, A, x0, w):
     # stock Gaussian distribution. The sign of A is such that the function
     # is flipped upside down.
-    return A * np.exp(-(x - x0)**2. / 2. * w**2.)
+    return A * np.exp(-(x - x0)**2. / (2. * w**2.))
 
 
 def lorentzian(x, x0, gamma, A):
