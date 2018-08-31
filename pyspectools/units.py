@@ -26,6 +26,42 @@ def kappa(A, B, C):
     return (2*B - A - C) / (A - C)
 
 
+def rotcon2pmi(rotational_constant):
+    """ Convert rotational constants in units of MHz to
+        Inertia, in units of amu A^2.
+
+        The conversion factor is adapted from:
+        Oka & Morino, JMS (1962) 8, 9-21
+        This factor comprises h / pi^2 c.
+    """
+    return 1 / (rotational_constant / 134.901)
+
+
+def inertial_defect(rotational_constants):
+    """ Calculates the inertial defect, given three
+        rotational constants in MHz. The ordering does not
+        matter because the values are sorted.
+
+        This value is I_c - I_a - I_b; a planar molecule
+        is strictly zero.
+    """
+    # Ensure the ordering is A,B,C
+    rotational_constants = np.sort(rotational_constants)[::-1]
+    # Convert to principal moments of inertia
+    pmi = rotcon2pmi(rotational_constants)
+    return pmi[2] - pmi[0] - pmi[1]
+
+
+def hartree2wavenumber(hartree):
+    """ Convert Hartrees to wavenumbers """
+    return hartree * (harm / 100.)
+
+
+def kjmol2wavenumber(kj):
+    # Convert kJ/mol to wavenumbers
+    return kj * (jm / 100.) / (avo * 1000.)
+
+
 def MHz2cm(frequency):
     # Convert frequency into wavenumbers
     return (frequency / 1000.) / (constants.c / 1e7)
@@ -48,19 +84,10 @@ def freq2vel(frequency, offset):
     # frequency, and returns the Doppler shift in km/s
     return ((constants.c * offset) / frequency) / 1000.
 
+
 def hartree2kjmol(hartree):
     # Convert Hartrees to kJ/mol
     return hartree * (eha * avo / 1000.)
-
-
-def hartree2wavenumber(hartree):
-    """ Convert Hartrees to wavenumbers """
-    return hartree * (harm / 100.)
-
-
-def kjmol2wavenumber(kj):
-    # Convert kJ/mol to wavenumbers
-    return kj * (jm / 100.) / (avo * 1000.)
 
 
 def wavenumber2kjmol(wavenumber):
