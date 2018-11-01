@@ -322,7 +322,7 @@ def define_layout(xlabel="", ylabel=""):
         width=1200.,
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
-        font=dict(family='Roboto', size=18, color='#7f7f77f7f7'),
+        font=dict(family='Roboto', size=18, color='#000000'),
         annotations=list()
     )
     return layout

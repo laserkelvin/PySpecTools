@@ -76,7 +76,7 @@ setup(
             "scipy",
             "matplotlib",
             "peakutils",
-            "plotly",
+            "plotly>=3.0.0",
             "uncertainties"
     ],
     cmdclass={
