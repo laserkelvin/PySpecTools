@@ -1,13 +1,12 @@
 
 """ Routines for fitting double resonance data """
 
-import os
 import numpy as np
 import pandas as pd
-from scipy.optimize import curve_fit
-import peakutils
-from uncertainties import ufloat
-from matplotlib import pyplot as plt
+from scipy.interpolate import interp1d
+from lmfit import Model
+from lmfit.models import GaussianModel, LinearModel
+
 
 def parse_data(filepath):
     """ Function to read in a DR file. When there are multiple columns present
@@ -15,153 +14,120 @@ def parse_data(filepath):
         monitor during the DR experiment. In this case, we do the analysis on
         the co-average of these columns.
     """
-    df = pd.read_csv(filepath, delimiter="\t", index_col=0, header=None, skiprows=1, comment="#")
-    if len(df.keys()) > 1:
-        # co-average spectra if there are more than one columns
-        df["average"] = np.average([df[column].values for column in list(df.keys())], axis=0)
+    # Skip reading the header - we're doing it ourselves
+    df = pd.read_csv(filepath, sep="\t", header=None, skiprows=1, comment="#")
+    # Columns denoted by number
+    cols = list(np.arange(1, len(df.columns)))
+    full_cols = ["Frequency"]
+    full_cols.extend(cols)
+    # Rename to generalize
+    df.columns = full_cols
+    # Create composite average - this may or may not be used
+    df["Average"] = np.average(df[cols], axis=1)
     return df
 
-def clean_data(dataframe, column=1, baseline=False, freqrange=[0., np.inf]):
-    """ Routine for pre-processing the DR fits.
-        1. Option to remove baseline
-        2. Option to truncate the detection range
+
+def init_dr_model(baseline=False, guess=None):
+    """ Function to serialize a Model object for DR fits.
+        Defaults to a Gaussian line shape, but the option to include
+        a linear offset is available.
+
+        Additionally, if a guess is provided in the
+        lmfit convention then it will be incorporated.
+
+        args:
+        -----------------
+        baseline - boolean indicating if linear offset is included
+        guess - nested dict with keys corresponding to parameter name
+                and values corresponding to dicts with key/value
+                indicating the parameter value, range, and constraints
     """
-    # If true, we perform baseline subtraction
-    if baseline is True:
-        bline = peakutils.baseline(dataframe[column].astype(float), deg=2)
-        dataframe["baseline subtracted"] = dataframe[column].astype(float) - bline
-    # Find nearest indices for values
-    lower_index = dataframe.index.searchsorted(freqrange[0])
-    upper_index = dataframe.index.searchsorted(freqrange[1])
-    # Return the truncated dataframe
-    return dataframe.loc[dataframe.index[lower_index:upper_index]]
+    model = GaussianModel()
+    if baseline:
+        model+=LinearModel()
+    params = model.make_params()
+    if guess:
+        params.update(guess)
+    # Constrain amplitude to always be negative
+    # since we're measuring depletion.
+    params["amplitude"].set(max=0.)
+    return model, params
 
-def gaussian(x, A, c, w, offset):
-    # stock Gaussian distribution. The sign of A is such that the function
-    # is flipped upside down.
-    return -A * np.exp(-(c - x)**2. / 2. * w**2.) + offset
 
-def plot_data(dataframe, fitresults=None):
-    """ Function to plot the DR data, and the fitted Gaussian peak. """
-    fig, ax = plt.subplots(figsize=(10, 6.5))
+def peak_detect(dataframe, col="Average", interpolate=True):
+    """ Routine for peak detection to provide an initial
+        guess for the center frequency.
 
-    fig.subplots_adjust(top=0.55)
-    ax.set_xlabel("Frequency (MHz)")
-    ax.set_ylabel("Intensity")
-    ax.set_ylim([dataframe.min().min() - 0.03, dataframe.max().max()]) # Set the ylimits
-    min_freq = dataframe.index.min()
-    max_freq = dataframe.index.max()
-    ax.set_xticks(np.arange(min_freq, max_freq, (max_freq - min_freq) / 4.))
+        The algorithm assumes that the ten smallest intensities
+        corresponds to where the depletion approximately is.
 
-    if "average" not in list(dataframe.keys()):
-        ax.plot(dataframe.index, dataframe[1], label="Data")
-    if "average" in list(dataframe.keys()):
-    # If the DR has co-averaging, we'll plot that too
-        for column in [columns for columns in list(dataframe.keys()) if columns not in ["average", "baseline subtracted", "fit"]]:
-            ax.plot(dataframe.index, dataframe[column], label="channel " + str(column), alpha=0.3)
-        ax.plot(dataframe.index, dataframe["average"], label="Co-averaged")
-    if "baseline subtracted" in list(dataframe.keys()):
-    # If the DR has a baseline subtracted, plot the outcome of that too
-        ax.plot(dataframe.index, dataframe["baseline subtracted"], label="Baseline subtracted")
-    if "fit" in list(dataframe.keys()):
-    # Plot the fit result
-        ax.plot(dataframe.index, dataframe["fit"], label="Fit", lw=2.)
-        if fitresults is not None:
-        # If we managed to find a center frequency, fit a straight line through
-        # and annotate the graph with the peak frequency
-            text_to_write = ""
-            for index, name in enumerate(["Amplitude", "Center", "Width", "Offset"]):
-                text_to_write+= name + ": " + "{:.3uS}".format(fitresults[index]) + "\n"
-                #if type(frequency) == type(ufloat(1., 2.)):
-                #    freq = frequency.n
-                #    form_freq = "{:.3uS}".format(frequency)
-                #ax.text(freq + 0.1, dataframe.min().min() - 0.02, "Center: " + form_freq, size="x-large")
-            ax.text(0.8, 0.2, text_to_write, size="x-large", ha="center", va="center", transform=ax.transAxes)
-            ax.vlines(fitresults[1].n, *ax.get_ylim())
-            if fitresults[1].s <= 0.5:
-                ax.fill_between([fitresults[1].n - fitresults[1].s, fitresults[1].n + fitresults[1].s],
-                                y1=dataframe["fit"].min(),
-                                y2=dataframe["fit"].max(),
-                                facecolor="#2b8cbe",
-                                alpha=0.5
-                                )
-
-    ax.get_xaxis().get_major_formatter().set_useOffset(False)
-    ax.legend()
-    fig.tight_layout()
-    return fig, ax
-
-def fit_dr(dataframe, column=1, bounds=None):
-    # Determine an estimate for the peak depletion; uses the minimum value in
-    # intensity as an initial guess for the fit.
-
-    peak_guess = dataframe[column].idxmin()
-    print("Guess for center frequency: " + str(peak_guess))
-
-    if bounds is None:
-        bounds = ([0., peak_guess - 1., 0.2, 0.,],
-                  [np.inf, peak_guess + 1., 10., np.inf]
-                 )
-
-    try:
-        optimized, covariance = curve_fit(
-            gaussian,
-            dataframe.index,
-            dataframe[column].astype(float),
-            p0=[1., peak_guess, 0.5, 0.0],
-            bounds=bounds
-        )
-    except RuntimeError:
-        print("No optimal solution found. Try narrowing the frequency range of the data.")
-        optimized = [None] * 4
-    dataframe["fit"] = gaussian(dataframe.index, *optimized)
-    return dataframe, optimized, covariance
-
-def analyze_dr(filepath, baseline=False, freqrange=[0., np.inf]):
-    """ Main driver function that will perform all of the operations for
-        analyzing a DR spectrum.
-
-        What will normally need to be fiddled with is the frequency range to
-        analyze. Preferably, we chop off parts of the spectrum that will inter-
-        fere with the detection of the depletion maximum, but enough to get
-        a sense of dynamic range in the spectrum.
+        By default, a cubic spline is performed on the intensities
+        so that a finer grid of points gives a better determination
+        of the center frequency.
     """
-    filename = os.path.splitext(filepath)[0]
-
-    dataframe = parse_data(filepath)
-    if "average" in list(dataframe.keys()):
-        column = "average"      # if we co-averaged, work on that
+    if interpolate:
+        interpolant = interp1d(dataframe["Frequency"], dataframe[col],"cubic")
+        # Interpolate between the min and max with 10 times more
+        # points than measured
+        new_x = np.linspace(
+            dataframe["Frequency"].min(),
+            dataframe["Frequency"].max(),
+            len(dataframe["Frequency"]) * 20)
+        new_y = interpolant(new_x)
+        # Set up dataframe for detection
+        detect_df = pd.DataFrame(
+            data=list(zip(new_x, new_y)),
+            columns=["Frequency", col])
     else:
-        column = 1              # Default to first column
-    dataframe = clean_data(dataframe, column, baseline=baseline, freqrange=freqrange)
+        # Use the experimental data
+        detect_df = dataframe
+    # Use pandas to find the 10 smallest values
+    trunc_df = detect_df.nsmallest(10,[col],"first")
+    avg_freq = trunc_df["Frequency"].mean()
+    # Guess amplitude given by negative value
+    guess_ampl = trunc_df[col].min() - trunc_df[col].mean()
+    return avg_freq, guess_ampl
 
-    if baseline is True and column == "average":
-        column = "baseline subtracted"
-    elif baseline is False and column == "average":
-        column = "average"
-    else:
-        column = 1
-    print("Using column " + str(column))
-    # Perform the curve fitting
-    dataframe, optimized, covariance = fit_dr(dataframe, column)
-    # Calculate the standard deviation; this is based on the diagonal elements
-    # of the covariance matrix. If the off-diagonal elements are large, there
-    # is significant correlation between variables and the answers will be
-    # quite uncertain...
-    stdev = np.sqrt(np.diag(covariance))
-    results = list()
 
-    # Print the results - short-hand notation is used
-    print("Final fitting results for " + filename)
-    for index, name in enumerate(["Amplitude", "Center", "Width", "Offset"]):
-        result = ufloat(optimized[index], stdev[index])
-        print(name + ":    " + "{:.3uS}".format(result))
-        results.append(result)
+def fit_dr(dataframe, col="Average", baseline=True, guess=None):
+    """ Function for fitting double resonance data.
+        
+        Required input:
+        -----------------
+        dataframe - pandas dataframe containing
 
-    # Plot the resulting DR fit for physical printing
-    fig, ax = plot_data(dataframe, fitresults=results)
+        args:
+        -----------------
+        col - str denoting which column to use for fitting.
+        baseline - boolean denoting whether a linear baseline is fit
+        guess - dict for fitting parameters; this is passed into
+                the fit directly and so must match the lmfit convention.
+    """
+    model, params = init_dr_model(baseline, guess)
+    if guess is None:
+        center, guess_ampl = peak_detect(dataframe, col)
+        # Center guess is constrained to 500 kHz
+        params["center"].set(center, min=center-0.5, max=center+0.5)
+        params["amplitude"].set(guess_ampl, max=0., min=-10.)
+        params["sigma"].set(min=0., max=10.)
+        if baseline:
+            pass
+            #params["intercept"].set(min=-., max=5.)
+            #params["slope"].set(min=-5., max=5.)
 
-    ax.set_title(filename)
+    result = model.fit(
+        dataframe[col],
+        x=dataframe["Frequency"],
+        params=params)
 
-    dataframe.to_csv(filename + "_fit.csv")
-    fig.savefig(filename + "_fit.pdf", format="pdf", dpi=300, bbox_inches='tight')
+    dataframe["Fit"] = result.best_fit
+    dataframe.fit_result = result
+    # Do some extra stuff like figure out the "baseline"
+    # for plotting; expressing it in terms of percent
+    # depletion
+    zero = dataframe["Fit"].max()
+    dataframe["Base Signal"] = 100 * (dataframe[col].values / zero)
+    dataframe["Base Fit"] = 100 * (dataframe["Fit"].values / zero)
+    dataframe["Offset Frequency"] = dataframe["Frequency"].values - result.best_values["center"]
+    print(result.fit_report())
+
