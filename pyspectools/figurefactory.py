@@ -1,7 +1,7 @@
 
 import matplotlib as mpl
-from cycler import cycler
 from matplotlib import pyplot as plt
+from matplotlib.ticker import FuncFormatter
 from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 import numpy as np
 
@@ -23,6 +23,15 @@ def no_scientific(axis):
     axis.get_xaxis().get_major_formatter().set_useOffset(False)
     axis.get_yaxis().get_major_formatter().set_useOffset(False)
 
+
+def format_ticklabels(axis):
+    # Adds commas to denote thousands - quite useful for
+    # publications
+    axis.get_xaxis().set_major_formatter(
+            matplotlib.ticker.FuncFormatter(
+                lambda x, p: format(int(x), ',')
+                )
+            )
 
 """
     Specific figure types
@@ -247,3 +256,4 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
     fig.tight_layout()
 
     return fig, ax
+
