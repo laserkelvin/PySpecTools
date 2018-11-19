@@ -24,6 +24,14 @@ def parse_data(filepath):
     full_cols.extend(cols)
     # Rename to generalize
     df.columns = full_cols
+    for column in df:
+        if "Frequency" not in str(column):
+            # Make sure the baseline is the same for all of the
+            # spectra - subtract off the "noise average"
+            # and offset by 1 to make it easily convertible into
+            # a percentage
+            df[column]-=df[column].mean()
+            df[column]+=1.
     # Create composite average - this may or may not be used
     df["Average"] = np.average(df[cols], axis=1)
     return df
