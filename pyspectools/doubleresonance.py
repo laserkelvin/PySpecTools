@@ -24,15 +24,27 @@ def parse_data(filepath):
     full_cols.extend(cols)
     # Rename to generalize
     df.columns = full_cols
-    for column in df:
-        if "Frequency" not in str(column):
+    stats = list()
+    # Set up vector for performing averages
+    average = np.zeros(len(df["Frequency"]))
+    for index, column in enumerate(df):
+        if "Frequency" not in str(column) and "BS" not in str(column):
+            dr[str(column) + "-N"] = df[column]
             # Make sure the baseline is the same for all of the
             # spectra - subtract off the "noise average"
             # and offset by 1 to make it easily convertible into
             # a percentage
-            df[column]-=df[column].mean()
-            df[column]+=1.
+            df[str(column)+"-BS"]-=df[column].mean()
+            df[str(column)+"-BS"]+=1.
+            # for weighting the averages 
+            weight = df[column].std()
+            # Calculate the weighted average
+            average+=(df[column] * weight) / weight
     # Create composite average - this may or may not be used
+    average/=(index + 1)
+    average-=np.mean(average)
+    average+=1
+    df["Average-BS"] = average
     df["Average"] = np.average(df[cols], axis=1)
     return df
 
