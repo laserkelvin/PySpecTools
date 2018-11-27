@@ -4,6 +4,8 @@
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d
+from scipy import sparse
+from scipy.sparse.linalg import spsolve
 from lmfit import Model
 from lmfit.models import GaussianModel, LinearModel
 
@@ -22,7 +24,27 @@ def parse_data(filepath):
     full_cols.extend(cols)
     # Rename to generalize
     df.columns = full_cols
+    stats = list()
+    # Set up vector for performing averages
+    average = np.zeros(len(df["Frequency"]))
+    for index, column in enumerate(df):
+        if "Frequency" not in str(column) and "BS" not in str(column):
+            dr[str(column) + "-N"] = df[column]
+            # Make sure the baseline is the same for all of the
+            # spectra - subtract off the "noise average"
+            # and offset by 1 to make it easily convertible into
+            # a percentage
+            df[str(column)+"-BS"]-=df[column].mean()
+            df[str(column)+"-BS"]+=1.
+            # for weighting the averages 
+            weight = df[column].std()
+            # Calculate the weighted average
+            average+=(df[column] * weight) / weight
     # Create composite average - this may or may not be used
+    average/=(index + 1)
+    average-=np.mean(average)
+    average+=1
+    df["Average-BS"] = average
     df["Average"] = np.average(df[cols], axis=1)
     return df
 
@@ -130,4 +152,50 @@ def fit_dr(dataframe, col="Average", baseline=True, guess=None):
     dataframe["Base Fit"] = 100 * (dataframe["Fit"].values / zero)
     dataframe["Offset Frequency"] = dataframe["Frequency"].values - result.best_values["center"]
     print(result.fit_report())
+
+
+def baseline_als(y, lam=1e9, p=0.1, niter=10, **kwargs):
+    """
+        Function for performing an iterative baseline
+        fitting using the asymmetric least squares algorithm.
+        
+        This refers to the paper:
+        "Baseline Correction with Asymmetric Least Squares Smoothing"
+        by Eilers and Boelens (2005).
+        
+        The code is taken from a Stack Overflow question:
+        https://stackoverflow.com/a/29185844
+
+        According to the paper, the tested values are:
+        0.001 <= p <= 0.1 for positive peaks
+        1e2 <= lam <= 1e9
+        
+        Parameters:
+        --------------
+        y - data used to fit the baseline
+        lam - tuning factor for penalty function that offsets
+              the difference cost function
+        p - weighting factor for the cost function
+        
+        Returns:
+        --------------
+        z - array containing the baseline values
+    """
+    L = len(y)
+    D = sparse.diags([1,-2,1],[0,-1,-2], shape=(L,L-2))
+    # Initialize a set of weights
+    w = np.ones(L)
+    # Iterate for a set number of times to fit baseline
+    for i in range(niter):
+        # w is a sparse matrix of 1's with shape the
+        # length of the number of datapoints
+        W = sparse.spdiags(w, 0, L, L)
+        Z = W + lam * D.dot(D.transpose())
+        # Solve the linear equation Ax = b
+        z = spsolve(Z, w*y)
+        # Update the weight function
+        # p where y > z and (1 - p) where y < z
+        w = p * (y > z) + (1-p) * (y < z)
+    return z
+
 
