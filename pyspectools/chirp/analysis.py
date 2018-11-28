@@ -45,6 +45,7 @@ def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=Fals
         spec_df[name] = yfit
     # Subtract the peak contribution
     spec_df["Cleaned"] -= yfit
+    return fit_results
 
 
 def peak_find(spec_df, col="Intensity", thres=0.015):
@@ -139,7 +140,7 @@ def assign_peaks(spec_df, frequencies, **kwargs):
                 # the predicted value
                 ass_name = assignment["Species"] + "-" + assignment["Resolved QNs"]
                 # Clean the line
-                fit_line_profile(spec_df, frequency)
+                _ = fit_line_profile(spec_df, frequency)
                 # Keep track of the assignments in a dataframe
                 dataframes = dataframes.append(assignment)
             print("----------------------------------------------------")
