@@ -231,11 +231,36 @@ class AssignmentSession:
             ---------------
             peaks_df - dataframe containing peaks
         """
+        if "Cleaned" in self.data:
+            col = "Cleaned"
+        else:
+            col = self.int_col
         peaks_df = analysis.peak_find(
             self.data,
-            col=self.int_col,
+            col=col,
             thres=threshold
            )
+        # Reindex the peaks
+        peaks_df.index = np.arange(len(peaks_df))
+        if hasattr(self, "peaks") is True:
+            # If we've looked for peaks previously
+            # we don't have to re-add the U-line to
+            # the list
+            peaks_df = pd.concat([peaks_df, self.peaks])
+            peaks_df.drop_duplicates(inplace=True)
+        # Generate U-lines
+        selected_session = {
+            key: self.session.__dict__[key] for key in self.session.__dict__ if key != "temperature"
+            }
+        for index, row in peaks_df.iterrows():
+            ass_obj = Assignment(
+                frequency=row[self.freq_col],
+                intensity=row[col],
+                peak_id=index,
+                **selected_session
+                )
+            self.ulines.append(ass_obj)
+        # Assign attribute
         self.peaks = peaks_df
         return peaks_df
 
@@ -255,22 +280,10 @@ class AssignmentSession:
             print("Peak detection not run; running with default settings.")
             self.find_peaks()
 
-        selected_session = {
-            key: self.session.__dict__[key] for key in self.session.__dict__ if key != "temperature"
-            }
-        for index, row in self.peaks.iterrows():
-            frequency = row[self.freq_col]
+        for index, uline in enumerate(self.ulines):
+            frequency = uline.frequency
             # Call splatalogue API to search for frequency
             splat_df = analysis.search_center_frequency(frequency)
-            # Set up a Assignment object, taking on the
-            # specific details about the line as well as
-            # inheriting the experimental details
-            ass_obj = Assignment(
-                frequency=frequency,
-                intensity=row[self.int_col],
-                peak_id=index,
-                **selected_session
-                )
             # Filter out lines that are way too unlikely on grounds of temperature
             splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.t_threshold]
             # Filter out quack elemental compositions
@@ -328,14 +341,17 @@ class AssignmentSession:
                     splat_df.to_csv(
                         "queries/{0}-{1}.csv".format(self.session.experiment, index), index=False
                         )
-                    ass_obj.assigned = True
-                    ass_obj.name = ass_df["Chemical Name"][0]
-                    ass_obj.catalog_frequency = ass_df["Combined"][0]
-                    ass_obj.formula = ass_df["Species"][0]
-                    ass_obj.r_qnos = ass_df["Resolved QNs"][0]
-                    ass_obj.ustate_energy = ass_df["E_U (K)"][0]
-                    ass_obj.weighting = ass_df["Weighting"][0]
-                    print(ass_obj.name + " was assigned.")
+                    ass_dict = {
+                       "uline": False,
+                       "index": index,
+                       "frequency": frequency,
+                       "name": ass_df["Chemical Name"][0],
+                       "catalog_frequency": ass_df["Combined"][0],
+                       "formula": ass_df["Species"][0],
+                       "r_qnos": ass_df["Resolved QNs"][0],
+                       "ustate_energy": ass_df["E_U (K)"][0],
+                       "weighting": ass_df["Weighting"][0]
+                       }
                     # Perform a Voigt profile fit
                     print("Attempting to fit line profile...")
                     fit_results = analysis.fit_line_profile(
@@ -343,19 +359,16 @@ class AssignmentSession:
                         frequency
                         )
                     # Pass the fitted parameters into Assignment object
-                    ass_obj.fit.update(fit_results.best_values)
+                    ass_dict["fit"] = fit_results.best_values
                     # Need support to convert common name to SMILES
-                    self.assignments.append(ass_obj)
+                    self.assign_line(**ass_dict)
                 except ValueError:
-                    # If nothing matches, throw it into the U-line
+                    # If nothing matches, keep in the U-line
                     # pile.
                     print("Deferring assignment")
-                    line_dict.uline = True
-                    self.ulines.append(ass_obj)
             else:
                 # Throw into U-line pile if no matches at all
                 print("No species known for {:,.3f}".format(frequency))
-                self.ulines.append(ass_obj)
             display(HTML("<hr>"))
 
     def process_catalog(self, name, formula, catalogpath, auto=True, **kwargs):
@@ -471,9 +484,9 @@ class AssignmentSession:
             ass_obj.uline = False
             # Unpack anything else
             ass_obj.__dict__.update(**kwargs)
-            self.assignments.append(ass_obj)
-            print("{:,.4f} assigned {}".format(frequency, name))
+            print("{:,.4f} assigned to {}".format(frequency, name))
             self.ulines.pop(index)
+            self.assignments.append(ass_obj)
         else:
             raise Exception("Peak not found! Try providing an index.")
 
@@ -509,6 +522,7 @@ class AssignmentSession:
             )
         self.table = ass_df
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
+        self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
         tally = self.get_assigned_names()
         combined_dict = {
             "assigned_lines": len(self.assignments),
