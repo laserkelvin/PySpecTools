@@ -12,6 +12,8 @@ def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=Fals
     """ Low level function wrapper to to fit line profiles
         in chirp spectra.
     """
+    if "Cleaned" not in spec_df.columns:
+        spec_df["Cleaned"] = spec_df["Intensity"].values
     model = models.VoigtModel()
     params = model.make_params()
     # Set up boundary conditions for the fit
@@ -76,13 +78,23 @@ def search_center_frequency(frequency, width=0.5):
     columns = [
         "Species",
         "Chemical Name",
-        "Meas Freq-GHz",
-        "Freq-GHz",
+        "Meas Freq-GHz(rest frame,redshifted)",
+        "Freq-GHz(rest frame,redshifted)",
         "Resolved QNs",
-        "CDMS/JPL Intensity"
+        "CDMS/JPL Intensity",
+        "E_U (K)"
         ]
     # Take only what we want
     splat_df = splat_df[columns]
+    splat_df.columns = [
+        "Species",
+        "Chemical Name",
+        "Meas Freq-GHz",
+        "Freq-GHz",
+        "Resolved QNs",
+        "CDMS/JPL Intensity",
+        "E_U (K)"
+        ]
     # Now we combine the frequency measurements
     splat_df["Combined"] = splat_df["Meas Freq-GHz"].values
     # Replace missing experimental data with calculated
