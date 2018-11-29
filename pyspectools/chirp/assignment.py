@@ -12,7 +12,9 @@ from IPython.display import display, HTML
 import numpy as np
 import pandas as pd
 import os
-from pprint import pprint
+from shutil import rmtree
+from periodictable import formula
+from plotly import graph_objs as go
 
 from . import analysis
 from pyspectools import routines
@@ -29,6 +31,7 @@ class Assignment:
         parameters:
         ------------------
         name - str representing IUPAC/common name
+        formula - str representing chemical formula
         smiles - str representing SMILES code (specific!)
         frequency - float for observed frequency
         intensity - float for observed intensity
@@ -44,15 +47,18 @@ class Assignment:
     """
     name: str = ""
     smiles: str = ""
+    formula: str = ""
     frequency: float = 0.0
     intensity: float = 0.0
     peak_id: int = 0
     experiment: int = 0
-    uline: False
+    uline: bool = False
     composition: List[str] = field(default_factory = list)
     v_qnos: List[int] = field(default_factory = list)
-    r_qnos: str
+    r_qnos: str = ""
     fit: Dict = field(default_factory = dict)
+    ustate_energy: float = 0.0
+    weighting: float = 0.0
 
     def __eq__(self, other):
         """ Dunder method for comparing molecules.
@@ -65,7 +71,7 @@ class Assignment:
     def __str__(self):
         return f"{self.name}, {self.frequency}"
 
-    def to_file(filepath, format="yaml"):
+    def to_file(self, filepath, format="yaml"):
         """ Method to dump data to YAML format.
             Extensions are automatically decided, but
             can also be supplied.
@@ -78,13 +84,13 @@ class Assignment:
         """
         if "." not in filepath:
             if format == "json":
-                filepath = os.path.join(filepath, ".json")
+                filepath+=".json"
             else:
-                filepath = os.path.join(filepath, ".yml")
+                filepath+=".yml"
         if format == "json":
             writer = routines.dump_json
         else:
-            writer = rotuines.dump_yaml
+            writer = routines.dump_yaml
         writer(filepath, self.__dict__)
 
     def get_spectrum(self, x):
@@ -162,10 +168,11 @@ class Assignment:
 @dataclass
 class Session:
     """ DataClass for a Session, which simply holds the
-        experiment ID and composition.
+        experiment ID, composition, and guess temperature
     """
     experiment: int
     composition: List[str] = field(default_factory = list)
+    temperature: float = 4.0
 
 
 class AssignmentSession:
@@ -177,14 +184,18 @@ class AssignmentSession:
         notebook.
     """
     def __init__(
-            self, exp_dataframe, experiment, composition,
+            self, exp_dataframe, experiment, composition, temperature=4.0,
             freq_col="Frequency", int_col="Intensity"):
         """ Initialize a AssignmentSession with a pandas dataframe
             corresponding to a spectrum.
 
             description of data:
             -------------------------
-            data - pandas dataframe with observational data in frequency/intensity
+            exp_dataframe - pandas dataframe with observational data in frequency/intensity
+            experiment - int ID for the experiment
+            composition - list of str corresponding to experiment composition
+            freq_col - optional arg specifying the name for the frequency column
+            int_col - optional arg specifying the name of the intensity column
         """
         # Make folders for organizing output
         folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
@@ -192,7 +203,7 @@ class AssignmentSession:
             if os.path.isdir(folder) is False:
                 os.mkdir(folder)
         # Initialize a Session dataclass
-        self.session = Session(experiment, composition)
+        self.session = Session(experiment, composition, temperature)
         self.data = exp_dataframe
         self.assignments = list()
         self.ulines = list()
@@ -241,11 +252,13 @@ class AssignmentSession:
             print("Peak detection not run; running with default settings.")
             self.find_peaks()
 
+        selected_session = {
+            key: self.session.__dict__[key] for key in self.session.__dict__ if key != "temperature"
+            }
         for index, row in self.peaks.iterrows():
             frequency = row[self.freq_col]
             # Call splatalogue API to search for frequency
             splat_df = analysis.search_center_frequency(frequency)
-            nitems = len(splat_df)
             # Set up a Assignment object, taking on the
             # specific details about the line as well as
             # inheriting the experimental details
@@ -253,24 +266,52 @@ class AssignmentSession:
                 frequency=frequency,
                 intensity=row[self.int_col],
                 peak_id=index,
-                **self.session__dict__
+                **selected_session
                 )
+            # Filter out lines that are way too unlikely on grounds of temperature
+            splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.session.temperature * 2.]
+            # Filter out quack elemental compositions
+            for index, row in splat_df.iterrows():
+                # Convert the string into a chemical formula object
+                try:
+                    clean_formula = row["Species"].split("v=")[0]
+                    for prefix in ["l-", "c-"]:
+                        clean_formula = clean_formula.replace(prefix, "")
+                    formula_obj = formula(clean_formula)
+                    # Check if proposed molecule contains atoms not
+                    # expected in composition
+                    comp_check = all(
+                        str(atom) in self.session.composition for atom in formula_obj.atoms
+                        )
+                    if comp_check is False:
+                        # If there are crazy things in the mix, forget about it
+                        print("Molecule " + clean_formula + " rejected.")
+                        splat_df.drop(index, inplace=True)
+                except:
+                    print("Could not parse molecule " + clean_formula + " rejected.")
+                    splat_df.drop(index, inplace=True)
+            nitems = len(splat_df)
 
             if nitems > 0:
                 # if there are splatalogue entries that have turned up
                 splat_df["Deviation"] = np.abs(
                         splat_df["Combined"] - frequency
                         )
+                # Weight by the deviation and state temperature - higher
+                # weight is most likely.
+                # Higher temperature lines and larger deviation mean the
+                splat_df["Weighting"] = (1. / splat_df["Deviation"]) * (10**splat_df["CDMS/JPL Intensity"])
+                splat_df["Weighting"]/=splat_df["Weighting"].max()
                 # Sort by obs-calc
-                splat_df.sort_values(["Deviation"], ascending=False)
+                splat_df.sort_values(["Weighting"], ascending=True)
                 # Reindex based on distance from prediction
                 splat_df.index = np.arange(len(splat_df))
+                display(HTML(splat_df.to_html()))
                 try:
                     print("Observed frequency is {:,.4f}".format(frequency))
                     if auto is False:
                         # If not automated, we need a human to look at frequencies
                         # Print the dataframe for notebook viewing
-                        display(HTML(splat_df.to_html()))
                         splat_index = int(
                             input(
                                 "Please choose an assignment index: 0 - " + str(nitems - 1)
@@ -280,16 +321,17 @@ class AssignmentSession:
                         # If automated, choose closest frequency
                         splat_index = 0
 
-                    ass_df = splat_df.iloc[[splat_index]].sort_values(
-                        ["Deviation"],
-                        ascending=False
+                    ass_df = splat_df.iloc[[splat_index]]
+                    splat_df.to_csv(
+                        "queries/{0}-{1}.csv".format(self.session.experiment, index), index=False
                         )
-                    ass_df.to_csv(
-                        "queries/{0}-{1}".format(self.experiment, index), index=False)
-                    )
                     ass_obj.assigned = True
-                    ass_obj.name = ass_df["Species"]
-                    ass_obj.r_qnos = ass_df["Resolved QNs"]
+                    ass_obj.name = ass_df["Chemical Name"][0]
+                    ass_obj.formula = ass_df["Species"][0]
+                    ass_obj.r_qnos = ass_df["Resolved QNs"][0]
+                    ass_obj.ustate_energy = ass_df["E_U (K)"][0]
+                    ass_obj.weighting = ass_df["Weighting"][0]
+                    print(ass_obj.name + " was assigned.")
                     # Perform a Voigt profile fit
                     print("Attempting to fit line profile...")
                     fit_results = analysis.fit_line_profile(
@@ -315,23 +357,44 @@ class AssignmentSession:
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
             the assignments list attribute.
+
+            The two methods for doing this is to supply either:
+                1. U-line index
+                2. U-line frequency
+            One way or the other, the U-line Assignment object
+            will be updated to signify the new assignment.
+            Optional kwargs will also be passed to the Assignment
+            object to update any other details.
+
+            parameters:
+            -----------------
+            name - str denoting the name of the molecule
+            index - optional arg specifying U-line index
+            frequency - optional float specifying frequency to assign
+            **kwargs - passed to update Assignment object
         """
+        if index == frequency:
+            raise Exception("Index/Frequency not specified!")
+        ass_obj = None
         if index:
             # If an index is supplied, pull up from uline list
             ass_obj = self.ulines[index]
         elif frequency:
-            for index, ass_obj in enumerate(self.ulines):
-                deviation = np.abs(frequency - ass_obj.frequency)
+            for index, obj in enumerate(self.ulines):
+                deviation = np.abs(frequency - obj.frequency)
                 # Check that the deviation is sufficiently small
                 if deviation <= (frequency * 1e-4):
                     # Remove from uline list
                     self.ulines.pop(index)
-                    break
-        ass_obj.name = name
-        ass_obj.assigned = True
-        # Unpack anything else
-        ass_obj.__dict__.update(**kwargs)
-        self.assignments.append(ass_obj)
+                    ass_obj = obj
+        if ass_obj:
+            ass_obj.name = name
+            ass_obj.assigned = True
+            # Unpack anything else
+            ass_obj.__dict__.update(**kwargs)
+            self.assignments.append(ass_obj)
+        else:
+            raise Exception("Peak not found! Try providing an index.")
 
     def get_assigned_names(self):
         """ Method for getting all the unique molecules out
@@ -341,10 +404,10 @@ class AssignmentSession:
         # Get unique names
         seen = set()
         seen_add = seen.add
-        self.names = [name for name in names if not (name in see or seen_add(name))]
+        self.names = [name for name in names if not (name in seen or seen_add(name))]
         # Tally up the molecules
         self.identifications = {
-            name: self.assignments.count(name) for name in self.names
+            name: names.count(name) for name in self.names
             }
         return self.identifications
 
@@ -356,10 +419,7 @@ class AssignmentSession:
         for ass_obj in self.assignments:
             # Dump all the assignments into YAML format
             ass_obj.to_file(
-                "assignment_objs/{0}-{1}".format(
-                    ass_obj.experiment,
-                    ass_obj.peak_id
-                    ),
+                "assignment_objs/{}-{}".format(ass_obj.experiment,ass_obj.peak_id),
                 "yaml"
                 )
         # Convert all of the assignment data into a CSV file
@@ -367,11 +427,12 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
             )
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
+        self.table = ass_df
         tally = self.get_assigned_names()
         combined_dict = {
             "assigned_lines": len(self.assignments),
             "ulines": len(self.ulines),
-            "peaks": self.peaks[self.freq_col],
+            "peaks": self.peaks[self.freq_col].values,
             "num_peaks": len(self.peaks[self.freq_col]),
             "tally": tally,
             "unique_molecules": self.names,
@@ -380,9 +441,51 @@ class AssignmentSession:
         # Combine Session information
         combined_dict.update(self.session.__dict__)
         # Dump to disk
-        routines.to_yaml(
-            "sessions/{0}".format(self.session.experiment),
+        routines.dump_yaml(
+            "sessions/{0}.yml".format(self.session.experiment),
             "yaml"
             )
         # Dump data to notebook output
-        pprint(combined_dict)
+        for key, value in combined_dict.items():
+            print(key + ":   " + str(value))
+
+    def clean_folder(self, action=False):
+        """ Method for cleaning up all of the directories used by this routine.
+            Use with caution!!!
+
+            Requires passing a True statement to actually clean up.
+        """
+        folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
+        if action is True:
+            for folder in folders:
+                rmtree(folder)
+
+
+    def plot_assigned(self):
+        """
+            Generates a Plotly figure with the assignments overlaid
+            on the experimental spectrum.
+        """
+        fig = go.FigureWidget()
+
+        fig = go.FigureWidget()
+
+        fig.add_scatter(
+            x=assignmentsession.data["Frequency"],
+            y=assignmentsession.data["Intensity"],
+            name="Experiment",
+            opacity=0.4
+        )
+
+        fig.add_bar(
+            x=assignmentsession.table["frequency"],
+            y=assignmentsession.table["intensity"],
+            hoverinfo="text",
+            text=assignmentsession.table["formula"] + "-" + assignmentsession.table["r_qnos"],
+            name="Assignments"
+        )
+        # Store as attribute
+        self.plot = fig
+
+        return fig
+
