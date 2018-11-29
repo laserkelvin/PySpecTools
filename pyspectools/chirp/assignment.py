@@ -66,9 +66,17 @@ class Assignment:
         """ Dunder method for comparing molecules.
             This method is simply a shortcut to see if
             two molecules are the same based on their
-            SMILES code.
+            SMILES code, the chemical name, and frequency.
         """
-        return self.smiles == other
+        if type(self) == type(other):
+            comparisons = [
+                self.smiles == other.smiles,
+                self.name == other.name,
+                self.frequency == other.frequency
+                ]
+            return all(comparisons)
+        else:
+            return False
 
     def __str__(self):
         return f"{self.name}, {self.frequency}"
@@ -231,13 +239,9 @@ class AssignmentSession:
             ---------------
             peaks_df - dataframe containing peaks
         """
-        if "Cleaned" in self.data:
-            col = "Cleaned"
-        else:
-            col = self.int_col
         peaks_df = analysis.peak_find(
             self.data,
-            col=col,
+            col=self.int_col,
             thres=threshold
            )
         # Reindex the peaks
@@ -247,7 +251,8 @@ class AssignmentSession:
             # we don't have to re-add the U-line to
             # the list
             peaks_df = pd.concat([peaks_df, self.peaks])
-            peaks_df.drop_duplicates(inplace=True)
+            # drop repeated frequencies
+            peaks_df.drop_duplicates(["Frequency"],inplace=True)
         # Generate U-lines
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key != "temperature"
@@ -255,11 +260,12 @@ class AssignmentSession:
         for index, row in peaks_df.iterrows():
             ass_obj = Assignment(
                 frequency=row[self.freq_col],
-                intensity=row[col],
+                intensity=row[self.int_col],
                 peak_id=index,
                 **selected_session
                 )
-            self.ulines.append(ass_obj)
+            if ass_obj not in self.ulines:
+                self.ulines.append(ass_obj)
         # Assign attribute
         self.peaks = peaks_df
         return peaks_df
