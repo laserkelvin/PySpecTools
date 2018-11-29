@@ -18,6 +18,7 @@ from plotly import graph_objs as go
 
 from . import analysis
 from pyspectools import routines
+from pyspectools.parsecat import read_cat
 
 
 @dataclass
@@ -49,6 +50,7 @@ class Assignment:
     smiles: str = ""
     formula: str = ""
     frequency: float = 0.0
+    catalog_frequency: float = 0.0
     intensity: float = 0.0
     peak_id: int = 0
     experiment: int = 0
@@ -205,6 +207,7 @@ class AssignmentSession:
         # Initialize a Session dataclass
         self.session = Session(experiment, composition, temperature)
         self.data = exp_dataframe
+        self.t_threshold = self.session.temperature * 3.
         self.assignments = list()
         self.ulines = list()
         # Default settings for columns
@@ -269,7 +272,7 @@ class AssignmentSession:
                 **selected_session
                 )
             # Filter out lines that are way too unlikely on grounds of temperature
-            splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.session.temperature * 2.]
+            splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.t_threshold]
             # Filter out quack elemental compositions
             for index, row in splat_df.iterrows():
                 # Convert the string into a chemical formula object
@@ -327,6 +330,7 @@ class AssignmentSession:
                         )
                     ass_obj.assigned = True
                     ass_obj.name = ass_df["Chemical Name"][0]
+                    ass_obj.catalog_frequency = ass_df["Combined"][0]
                     ass_obj.formula = ass_df["Species"][0]
                     ass_obj.r_qnos = ass_df["Resolved QNs"][0]
                     ass_obj.ustate_energy = ass_df["E_U (K)"][0]
@@ -346,13 +350,86 @@ class AssignmentSession:
                     # If nothing matches, throw it into the U-line
                     # pile.
                     print("Deferring assignment")
-                    line_dict.assigned = False
+                    line_dict.uline = True
                     self.ulines.append(ass_obj)
             else:
                 # Throw into U-line pile if no matches at all
                 print("No species known for {:,.3f}".format(frequency))
                 self.ulines.append(ass_obj)
             display(HTML("<hr>"))
+
+    def process_catalog(self, name, formula, catalogpath, auto=True, **kwargs):
+        """
+            Reads in a catalog (SPCAT) file and sweeps through the
+            U-line list for this experiment finding coincidences.
+
+            Similar to the splatalogue interface, lines are rejected
+            on state energy from the t_threshold attribute.
+
+            Each catalog entry will be weighted according to their
+            theoretical intensity and deviation from observation. In
+            automatic mode, the highest weighted transition is assigned.
+
+            parameters:
+            ----------------
+            name - str corresponding to common name of molecule
+            formula - str corresponding to chemical formula
+        """
+        catalog_df = read_cat(
+                catalogpath,
+                self.data[self.freq_col].min(),
+                self.data[self.freq_col].max()
+            )
+        # Filter out the states with high energy
+        catalog_df = catalog_df.loc[
+            catalog_df["Lower state energy"] <= self.session.t_threshold
+            ]
+        # Loop over the uline list
+        for uindex, uline in enumerate(self.ulines):
+            # 0.1% of frequency
+            lower_freq = uline.frequency * 0.9999
+            higher_freq = uline.frequency * 1.0001
+            sliced_catalog = catalog_df.loc[
+                (catalog_df["Frequency"] >= lower_freq) & (catalog_df["Frequency"] <= higher_freq)
+                ]
+            nentries = len(sliced_catalog)
+            if nentries > 0:
+                # Calculate probability weighting
+                sliced_catalog["Deviation"] = np.abs(sliced_catalog["Frequency"] - uline.frequency)
+                sliced_catalog["Weighting"]
+                sliced_catalog["Weighting"] = (1./sliced_catalog["Deviation"])*(10**sliced_catalog["Intensity"])
+                sliced_catalog["Weighting"]/=sliced_catalog["Weighting"].max()
+                # Sort by obs-calc
+                sliced_catalog.sort_values(["Weighting"], ascending=True)
+                sliced_catalog.index = np.arange(len(nentries))
+                display(HTML(sliced_catalog.to_html()))
+                if auto is False:
+                    index = int(raw_input("Please choose a candidate by index."))
+                elif auto is True:
+                    index = 0
+                if index in sliced_catalog.index:
+                    select_df = sliced_catalog.iloc[index]
+                    # Create an approximate quantum number string
+                    qnos = sliced_catalog[["N'", "J'"]].apply(lambda x: ",".join(x),axis=1)
+                    assign_dict = {
+                        "name": name,
+                        "formula": formula,
+                        "index": uindex,
+                        "frequency": uline.frequency,
+                        "r_qnos": qnos,
+                        "catalog_frequency": select_df["Frequency"]
+                        }
+                    # Pass whatever extra stuff
+                    assign_dict.update(**kwargs)
+                    # Use assign_line function to mark peak as assigned
+                    self.assign_line(**assign_dict)
+                else:
+                    raise IndexError("Invalid index chosen for assignment.")
+        # Update the internal table
+        ass_df = pd.DataFrame(
+            data=[ass_obj.__dict__ for ass_obj in self.assignments]
+            )
+        self.table = ass_df
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
@@ -389,7 +466,7 @@ class AssignmentSession:
                     ass_obj = obj
         if ass_obj:
             ass_obj.name = name
-            ass_obj.assigned = True
+            ass_obj.uline = False
             # Unpack anything else
             ass_obj.__dict__.update(**kwargs)
             self.assignments.append(ass_obj)
@@ -426,8 +503,8 @@ class AssignmentSession:
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
             )
-        ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
         self.table = ass_df
+        ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
         tally = self.get_assigned_names()
         combined_dict = {
             "assigned_lines": len(self.assignments),
