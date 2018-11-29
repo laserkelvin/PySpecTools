@@ -64,7 +64,7 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="2.0.0",
+    version="3.0.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
@@ -75,8 +75,13 @@ setup(
             "pandas",
             "scipy",
             "matplotlib",
+            "astroquery",
+            "astropy",
+            "lmfit",
             "peakutils",
+            "colorlover",
             "plotly>=3.0.0",
+            "periodictable",
             "uncertainties"
     ],
     cmdclass={
