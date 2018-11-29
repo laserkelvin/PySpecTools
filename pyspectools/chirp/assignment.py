@@ -375,6 +375,7 @@ class AssignmentSession:
             name - str corresponding to common name of molecule
             formula - str corresponding to chemical formula
         """
+        old_nulines = len(self.ulines)
         catalog_df = read_cat(
                 catalogpath,
                 self.data[self.freq_col].min(),
@@ -382,7 +383,7 @@ class AssignmentSession:
             )
         # Filter out the states with high energy
         catalog_df = catalog_df.loc[
-            catalog_df["Lower state energy"] <= self.session.t_threshold
+            catalog_df["Lower state energy"] <= self.t_threshold
             ]
         # Loop over the uline list
         for uindex, uline in enumerate(self.ulines):
@@ -396,12 +397,11 @@ class AssignmentSession:
             if nentries > 0:
                 # Calculate probability weighting
                 sliced_catalog["Deviation"] = np.abs(sliced_catalog["Frequency"] - uline.frequency)
-                sliced_catalog["Weighting"]
                 sliced_catalog["Weighting"] = (1./sliced_catalog["Deviation"])*(10**sliced_catalog["Intensity"])
                 sliced_catalog["Weighting"]/=sliced_catalog["Weighting"].max()
                 # Sort by obs-calc
                 sliced_catalog.sort_values(["Weighting"], ascending=True)
-                sliced_catalog.index = np.arange(len(nentries))
+                sliced_catalog.index = np.arange(nentries)
                 display(HTML(sliced_catalog.to_html()))
                 if auto is False:
                     index = int(raw_input("Please choose a candidate by index."))
@@ -410,7 +410,8 @@ class AssignmentSession:
                 if index in sliced_catalog.index:
                     select_df = sliced_catalog.iloc[index]
                     # Create an approximate quantum number string
-                    qnos = sliced_catalog[["N'", "J'"]].apply(lambda x: ",".join(x),axis=1)
+                    qnos = "N'={}, J'={}".format(*sliced_catalog[["N'", "J'"]].values[0])
+                    qnos+="N''={}, J''={}".format(*sliced_catalog[["N''", "J''"]].values[0])
                     assign_dict = {
                         "name": name,
                         "formula": formula,
@@ -430,6 +431,8 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
             )
         self.table = ass_df
+        print("Prior number of ulines: {}".format(old_nulines))
+        print("Current number of ulines: {}".format(len(self.ulines)))
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
@@ -462,7 +465,6 @@ class AssignmentSession:
                 # Check that the deviation is sufficiently small
                 if deviation <= (frequency * 1e-4):
                     # Remove from uline list
-                    self.ulines.pop(index)
                     ass_obj = obj
         if ass_obj:
             ass_obj.name = name
@@ -470,6 +472,8 @@ class AssignmentSession:
             # Unpack anything else
             ass_obj.__dict__.update(**kwargs)
             self.assignments.append(ass_obj)
+            print("{:,.4f} assigned {}".format(frequency, name))
+            self.ulines.pop(index)
         else:
             raise Exception("Peak not found! Try providing an index.")
 

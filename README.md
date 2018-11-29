@@ -3,6 +3,11 @@
 ## A Python library for analysis of rotational spectroscopy and beyond
 
 
+## Version History
+
+From version >= 3 of this module, Python 3.7 is required to support the new
+`dataclass` objects which will be the basis for assigning broadband spectra.
+
 ## Introduction
 
 `PySpecTools` is a library written to help with analyzing rotational
@@ -42,6 +47,7 @@ input files in an object-oriented fashion:
    whatever parameter.
 
 There is still much to do for this module, including a way of managing experimental lines.
+For now, development 
 
 ---
 
