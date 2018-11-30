@@ -54,7 +54,7 @@ class Assignment:
     intensity: float = 0.0
     peak_id: int = 0
     experiment: int = 0
-    uline: bool = False
+    uline: bool = True
     composition: List[str] = field(default_factory = list)
     v_qnos: List[int] = field(default_factory = list)
     r_qnos: str = ""
@@ -289,7 +289,7 @@ class AssignmentSession:
         for index, uline in enumerate(self.ulines):
             frequency = uline.frequency
             # Call splatalogue API to search for frequency
-            splat_df = analysis.search_center_frequency(frequency)
+            splat_df = analysis.search_center_frequency(frequency, width=0.1)
             # Filter out lines that are way too unlikely on grounds of temperature
             splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.t_threshold]
             # Filter out quack elemental compositions
@@ -325,7 +325,7 @@ class AssignmentSession:
                 splat_df["Weighting"] = (1. / splat_df["Deviation"]) * (10**splat_df["CDMS/JPL Intensity"])
                 splat_df["Weighting"]/=splat_df["Weighting"].max()
                 # Sort by obs-calc
-                splat_df.sort_values(["Weighting"], ascending=True)
+                splat_df.sort_values(["Weighting"], ascending=False, inplace=True)
                 # Reindex based on distance from prediction
                 splat_df.index = np.arange(len(splat_df))
                 display(HTML(splat_df.to_html()))
@@ -419,7 +419,7 @@ class AssignmentSession:
                 sliced_catalog["Weighting"] = (1./sliced_catalog["Deviation"])*(10**sliced_catalog["Intensity"])
                 sliced_catalog["Weighting"]/=sliced_catalog["Weighting"].max()
                 # Sort by obs-calc
-                sliced_catalog.sort_values(["Weighting"], ascending=True)
+                sliced_catalog.sort_values(["Weighting"], ascending=True, inplace=True)
                 sliced_catalog.index = np.arange(nentries)
                 display(HTML(sliced_catalog.to_html()))
                 if auto is False:
@@ -490,6 +490,7 @@ class AssignmentSession:
             ass_obj.uline = False
             # Unpack anything else
             ass_obj.__dict__.update(**kwargs)
+            ass_obj.frequency = frequency
             print("{:,.4f} assigned to {}".format(frequency, name))
             self.ulines.pop(index)
             self.assignments.append(ass_obj)
@@ -569,20 +570,18 @@ class AssignmentSession:
         """
         fig = go.FigureWidget()
 
-        fig = go.FigureWidget()
-
         fig.add_scatter(
-            x=assignmentsession.data["Frequency"],
-            y=assignmentsession.data["Intensity"],
+            x=self.data["Frequency"],
+            y=self.data["Intensity"],
             name="Experiment",
             opacity=0.4
         )
 
         fig.add_bar(
-            x=assignmentsession.table["frequency"],
-            y=assignmentsession.table["intensity"],
+            x=self.table["catalog_frequency"],
+            y=self.table["intensity"],
             hoverinfo="text",
-            text=assignmentsession.table["formula"] + "-" + assignmentsession.table["r_qnos"],
+            text=self.table["formula"] + "-" + self.table["r_qnos"],
             name="Assignments"
         )
         # Store as attribute

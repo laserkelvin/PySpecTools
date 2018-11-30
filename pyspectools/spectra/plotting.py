@@ -16,7 +16,7 @@ from matplotlib import pyplot as plt
 from matplotlib import colors as cl
 
 
-def stacked_plot(dataframe, frequencies, freq_range=0.01):
+def stacked_plot(dataframe, frequencies, freq_range=0.002):
     # Function for generating an interactive stacked plot.
     # This form of plotting helps with searching for vibrational satellites.
     # Input is the full dataframe containing the frequency/intensity data,
@@ -29,11 +29,10 @@ def stacked_plot(dataframe, frequencies, freq_range=0.01):
     # Want the frequencies in ascending order, going upwards in the plot
     frequencies = np.sort(frequencies)[::-1]
 
-    titles = tuple("{:.2f} MHz".format(frequency) for frequency in frequencies)
+    titles = tuple("{:.4f} MHz".format(frequency) for frequency in frequencies)
     fig = tools.make_subplots(
         rows=nplots,
         cols=1,
-        specs=[[{}] for plot in range(nplots)],
         shared_xaxes=True,
         vertical_spacing=0.15,
         subplot_titles=titles,
