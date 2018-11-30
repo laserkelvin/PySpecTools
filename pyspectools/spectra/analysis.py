@@ -5,6 +5,7 @@ from lmfit import models
 import numpy as np
 import pandas as pd
 import peakutils
+from scipy.signal import savgol_filter
 from . import plotting
 
 
@@ -19,8 +20,8 @@ def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=Fals
     # Set up boundary conditions for the fit
     params["center"].set(
         frequency,
-        min=frequency - 0.05,
-        max=frequency + 0.05
+        min=frequency - 0.03,
+        max=frequency + 0.03
     )
     # If an intensity is supplied
     if intensity:
