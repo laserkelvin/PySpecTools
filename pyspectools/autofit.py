@@ -72,8 +72,8 @@ class Autofit:
             )
         # Generate lower state quantum numbers
         N_l = delta_no(N_u, True)
-        Ka_l = delta_no(Ka_u, True)
-        Kc_l = delta_no(Kc_u, True)
+        Ka_l = delta_no(Ka_u, False)
+        Kc_l = delta_no(Kc_u, False)
         # Store quantum numbers in an ordered dictionary
         qnos = OrderedDict({
             "N_u": N_u,
