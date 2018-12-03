@@ -115,19 +115,22 @@ def harmonic_fit(frequencies, maxJ=10, verbose=False):
         fit_obj - ModelResult class with the best fit
     """
     frequencies = np.sort(frequencies)
-    harm_model = lmfit.models.Model(harmonic_molecule)
+    harm_model = lmfit.models.Model(harmonic_molecule, maxfev=100)
 
     # Make guesses for constants based on frequencies
     approx_B = np.average(np.diff(frequencies))
     approx_D = np.std(np.diff(frequencies))
 
     # Set model parameters
+    # Realistically, B will be larger than 100 MHz...
     params = harm_model.make_params()
     params["B"].set(
         approx_B,
-        min=0.,
+        min=100.,
         max=approx_B * 1.5
         )
+    if approx_D == 0.:
+        approx_D+=0.1
     params["D"].set(
         approx_D,
         min=0.,

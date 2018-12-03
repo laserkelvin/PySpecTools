@@ -200,9 +200,12 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     if prefilter is True:
         for length in [3, 4]:
             for combo in combinations(frequencies, length):
-                stdev = np.std(np.diff(combo))
-                if np.std(np.diff(combo)) <= dev_thres:
-                    candidates.append(combo)
+                mean = np.mean(np.diff(combo))
+                # We are only after realistic values of B...
+                if mean >= 500.:
+                    stdev = np.std(np.diff(combo))
+                    if np.std(np.diff(combo)) <= dev_thres:
+                        candidates.append(combo)
         print("Number of candidates: {}".format(len(candidates)))
     elif prefilter is False:
         # If we won't prefilter, then just chain the
@@ -214,6 +217,10 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
 
     data_list = list()
     fit_results = list()
+    if prefilter is True:
+        progress = np.array([0.25, 0.50, 0.75])
+        progress = progress * len(candidates)
+        progress = [int(prog) for prog in progress]
 
     print("Looping over candidate combinations")
     # Perform the fitting procedure on candidate combinations
@@ -226,9 +233,12 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
         data_list.append(
             [min_index, 
              min_rms, 
-             list(fit_values[min_index].values())]
+             *list(fit_values[min_index].values())]
             )
         fit_results.append(fit_objs[min_index])
+        if prefilter is True:
+            if index in progress:
+                print("{}% done.".format(index * 100 / len(candidate)))
 
     print("Finalizing results.")
     results_df = pd.DataFrame(
