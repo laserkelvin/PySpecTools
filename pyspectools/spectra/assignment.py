@@ -270,6 +270,46 @@ class AssignmentSession:
         self.peaks = peaks_df
         return peaks_df
 
+    def search_frequency(self, frequency):
+        """ Method for searching a frequency in the spectrum.
+            Gives information relevant to whether it's a U-line
+            or assigned.
+
+            Raises exception error if nothing is found.
+
+            parameters:
+            ----------------
+            frequency - float corresponding to the frequency in MHz
+
+            returns:
+            ----------------
+            slice_df - pandas dataframe containing matches
+        """
+        if not self.table:
+            self.finalize_assignment()
+
+        lower_freq = frequency * 0.999
+        upper_freq = frequency * 1.001
+        slice_df = self.table.loc[
+            (self.table["Frequency"] >= lower_freq) & 
+            (self.table["Frequency"] <= upper_freq)
+            ]
+        # If no hits turn up, look for it in U-lines
+        if len(slice_df) < 0:
+            print("No assignment found; searching U-lines")
+            slice_df = self.peaks.loc[
+                (self.peaks["Frequency"] >= lower_freq) &
+                (self.peaks["Frequency"] <= upper_freq)
+                ]
+            if len(slice_df) < 0:
+                raise Exception("Frequency not found in U-lines.")
+            else:
+                print("Found U-lines.")
+                return slice_df
+        else:
+            print("Found assignments.")
+            return slice_df
+
     def splat_assign_spectrum(self, auto=False):
         """ Function that will provide an "interface" for interactive
             line assignment in a notebook environment.
@@ -528,8 +568,18 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
             )
         self.table = ass_df
+        # Dump assignments to disk
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
+
+        # Update the uline peak list with only unassigned stuff
+        uline_data = [[uline.frequency, uline.intensity] for uline in self.ulines]
+        self.peaks = pd.DataFrame(
+            data=uline_data,
+            columns=["Frequency", "Intensity"]
+            )
+        # Dump Uline data to disk
         self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
+
         tally = self.get_assigned_names()
         combined_dict = {
             "assigned_lines": len(self.assignments),
@@ -562,7 +612,6 @@ class AssignmentSession:
             for folder in folders:
                 rmtree(folder)
 
-
     def plot_assigned(self):
         """
             Generates a Plotly figure with the assignments overlaid
@@ -580,12 +629,50 @@ class AssignmentSession:
         fig.add_bar(
             x=self.table["catalog_frequency"],
             y=self.table["intensity"],
+            width=1.0,
             hoverinfo="text",
-            text=self.table["formula"] + "-" + self.table["r_qnos"],
+            text=self.table["name"] + "-" + self.table["r_qnos"],
             name="Assignments"
         )
+
+        fig.add_bar(
+            x=self.peaks["Frequency"],
+            y=self.peaks["Intensity"],
+            width=1.0,
+            name="U-lines"
+            )
         # Store as attribute
         self.plot = fig
 
         return fig
+
+    def find_progressions(self, maxJ=10, dev_thres=5., prefilter=False):
+        """
+            High level function for searching U-line database for
+            possible harmonic progressions. Wraps the lower level function
+            harmonic_search, which will generate 3-4 frequency combinations
+            to search.
+
+            parameters:
+            ---------------
+            maxJ - int corresponding to maximum J value considered in fits
+            dev_thres - maximum threshold allowed for deviation in between
+                        transitions. Used to screen candidates
+            prefilter - bool dictating whether or not the prescreening is
+                        done on the frequency list. This may bias away
+                        from progressions with missing lines.
+
+            returns:
+            ---------------
+            harmonic_df - dataframe containing the viable transitions
+        """
+        uline_frequencies = [uline.frequency for uline in self.ulines]
+        self.harmonic_df, self.harmonic_fits = analysis.harmonic_search(
+            uline_frequencies,
+            maxJ=maxJ,
+            dev_thres=dev_thres,
+            prefilter=prefilter
+            )
+
+        return self.harmonic_df
 

@@ -57,7 +57,8 @@ def peak_find(spec_df, col="Intensity", thres=0.015):
     """ Wrapper for peakutils applied to pandas dataframes """
     peak_indices = peakutils.indexes(
         spec_df[col],
-        thres=thres
+        thres=thres,
+        min_dist=10
         )
     return spec_df.iloc[peak_indices]
 
@@ -179,13 +180,21 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
         maxJ - maximum value of J considered for quantum numbers
         dev_thres - standard deviation threshold for filtering unlikely
                     combinations of frequencies
+        prefilter - bool dictating whether or not the frequency lists
+                    are prescreened by standard deviation. This potentially
+                    biases away from missing transitions!
+
+        returns:
+        ----------------
+        results_df - pandas dataframe containing RMS information and fitted
+                     constants
+        fit_results - list containing all of ModelResult objects
     """
     frequencies = np.sort(frequencies)
-    # Generate all possible three membered combinations
-    combo_gen = combinations(frequencies, 4)
-
+    # List for holding candidates
     candidates = list()
     
+    print("Generating possible frequency combinations.")
     # Sweep through all possible combinations, and look
     # for viable candidates
     if prefilter is True:
@@ -194,7 +203,10 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
                 stdev = np.std(np.diff(combo))
                 if np.std(np.diff(combo)) <= dev_thres:
                     candidates.append(combo)
+        print("Number of candidates: {}".format(len(candidates)))
     elif prefilter is False:
+        # If we won't prefilter, then just chain the
+        # two generators together
         candidates = chain(
             combinations(frequencies, 3),
             combinations(frequencies, 4)
@@ -203,6 +215,7 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     data_list = list()
     fit_results = list()
 
+    print("Looping over candidate combinations")
     # Perform the fitting procedure on candidate combinations
     for index, candidate in enumerate(candidates):
         min_rms, min_index, _, fit_values, fit_objs = fitting.harmonic_fit(
@@ -211,13 +224,16 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
             verbose=False
             )
         data_list.append(
-            [min_index, min_rms, list(fit_values.values())]
+            [min_index, 
+             min_rms, 
+             list(fit_values[min_index].values())]
             )
-        fit_results.append(fit_objs)
+        fit_results.append(fit_objs[min_index])
 
+    print("Finalizing results.")
     results_df = pd.DataFrame(
         data=data_list,
-        names=["Index", "RMS", "B", "D"]
+        columns=["Index", "RMS", "B", "D"]
         )
 
     results_df.sort_values(["RMS"], ascending=True, inplace=True)
