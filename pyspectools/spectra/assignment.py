@@ -264,7 +264,9 @@ class AssignmentSession:
                 peak_id=index,
                 **selected_session
                 )
-            if ass_obj not in self.ulines:
+            # If the frequency hasn't already been done, add it
+            # to the U-line pile
+            if ass_obj not in self.ulines and ass_obj not in self.assignments:
                 self.ulines.append(ass_obj)
         # Assign attribute
         self.peaks = peaks_df
@@ -285,15 +287,14 @@ class AssignmentSession:
             ----------------
             slice_df - pandas dataframe containing matches
         """
-        if not self.table:
-            self.finalize_assignment()
-
-        lower_freq = frequency * 0.999
-        upper_freq = frequency * 1.001
-        slice_df = self.table.loc[
-            (self.table["Frequency"] >= lower_freq) & 
-            (self.table["Frequency"] <= upper_freq)
-            ]
+        slice_df = []
+        if hasattr(self, "table"):
+            lower_freq = frequency * 0.999
+            upper_freq = frequency * 1.001
+            slice_df = self.table.loc[
+                (self.table["Frequency"] >= lower_freq) & 
+                (self.table["Frequency"] <= upper_freq)
+                ]
         # If no hits turn up, look for it in U-lines
         if len(slice_df) < 0:
             print("No assignment found; searching U-lines")
@@ -309,6 +310,27 @@ class AssignmentSession:
         else:
             print("Found assignments.")
             return slice_df
+
+def in_experiment(self, frequency):
+    """ Method to ask a simple yes/no if the frequency
+        exists in either U-lines or assignments.
+
+        parameters:
+        ---------------
+        frequency - float corresponding to frequency in MHz
+
+        returns:
+        --------------
+        bool - True if it's in ulines/assignments, False otherwise
+    """
+    try:
+        slice_df = self.search_frequency(frequency)
+        if len(slice_df) > 0:
+            return True
+        else:
+            return False
+    except:
+        return False
 
     def splat_assign_spectrum(self, auto=False):
         """ Function that will provide an "interface" for interactive
@@ -572,11 +594,7 @@ class AssignmentSession:
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
 
         # Update the uline peak list with only unassigned stuff
-        uline_data = [[uline.frequency, uline.intensity] for uline in self.ulines]
-        self.peaks = pd.DataFrame(
-            data=uline_data,
-            columns=["Frequency", "Intensity"]
-            )
+        self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
         # Dump Uline data to disk
         self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
 
