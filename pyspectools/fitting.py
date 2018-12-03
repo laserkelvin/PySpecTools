@@ -158,6 +158,4 @@ def harmonic_fit(frequencies, maxJ=10):
             fit_values.append(result.best_values)
             fit_objs.append(result)
     min_rms = np.min(rms_bin)
-    min_index = rms_bin.index(min_rms)
-    return min_rms, fit_values[min_index], fit_objs[min_index]
-
+    return min_rms, rms_bin, fit_values, fit_objs
