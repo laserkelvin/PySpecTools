@@ -12,7 +12,7 @@
 import numpy as np
 import lmfit
 
-from iterables import combinations
+from itertools import combinations
 
 from pyspectools.lineshapes import first_deriv_lorentzian, sec_deriv_lorentzian
 
