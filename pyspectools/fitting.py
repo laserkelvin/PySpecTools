@@ -115,7 +115,7 @@ def harmonic_fit(frequencies, maxJ=10, verbose=False):
         fit_obj - ModelResult class with the best fit
     """
     frequencies = np.sort(frequencies)
-    harm_model = lmfit.models.Model(harmonic_molecule, maxfev=100)
+    harm_model = lmfit.models.Model(harmonic_molecule, fit_kws={"maxfev":30})
 
     # Make guesses for constants based on frequencies
     approx_B = np.average(np.diff(frequencies))
@@ -126,15 +126,18 @@ def harmonic_fit(frequencies, maxJ=10, verbose=False):
     params = harm_model.make_params()
     params["B"].set(
         approx_B,
-        min=100.,
-        max=approx_B * 1.5
+        min=approx_B * 0.6,
+        max=approx_B * 1.4
         )
     if approx_D == 0.:
         approx_D+=0.1
+    if approx_D > 100.:
+        approx_D = 100.
     params["D"].set(
         approx_D,
+        0.,
         min=0.,
-        max=approx_D * 10.
+        max=approx_D
         )
 
     rms_bin = list()
@@ -149,18 +152,18 @@ def harmonic_fit(frequencies, maxJ=10, verbose=False):
     if verbose:
         print("Estimated 2B: {:,.3f}".format(approx_B))
         print("Estimated D: {:,.3f}".format(approx_D))
-        print("Number of combinations: {}".format(len(combo_obj)))
     # iterate over possible quantum number shifts
     for index, combo in enumerate(combo_obj):
         # Offset the frequency array by a shift
         result = harm_model.fit(
             frequencies,
             J=combo,
-            params=params
+            params=params,
+            fit_kws={"maxfev": 50}
             )
         # We only care about success stories
         if result.success is True:
-            rms = np.sqrt(np.sum(np.square(result.residual)))
+            rms = np.sqrt(np.average(np.square(result.residual)))
             rms_bin.append(rms)
             fit_values.append(result.best_values)
             fit_objs.append(result)
