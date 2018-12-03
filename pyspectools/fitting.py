@@ -87,7 +87,7 @@ def harmonic_molecule(J, B, D=0.):
     return B * J * (J + 1) - D * J**2. * (J + 1)**2.
 
 
-def harmonic_fit(frequencies, maxJ=10):
+def harmonic_fit(frequencies, maxJ=10, verbose=False):
     """
         Function for fitting a set of frequencies to a
         linear/prolate molecule model; i.e. B and D only.
@@ -99,7 +99,7 @@ def harmonic_fit(frequencies, maxJ=10):
         Frequencies are sorted in ascending order, and then
         assigned a set of quantum numbers.
 
-        It produces an approximate B value by taking half of 
+        It produces an approximate 2B value by taking half of 
         the average difference between frequencies.
 
         parameters:
@@ -143,6 +143,10 @@ def harmonic_fit(frequencies, maxJ=10):
     J_list = np.arange(1, maxJ)
     combo_obj = combinations(J_list, len(frequencies))
 
+    if verbose:
+        print("Estimated 2B: {:,.3f}".format(approx_B))
+        print("Estimated D: {:,.3f}".format(approx_D))
+        print("Number of combinations: {}".format(len(combo_obj)))
     # iterate over possible quantum number shifts
     for index, combo in enumerate(combo_obj):
         # Offset the frequency array by a shift
@@ -153,9 +157,10 @@ def harmonic_fit(frequencies, maxJ=10):
             )
         # We only care about success stories
         if result.success is True:
-            rms = np.sqrt(np.square(result.residual))
+            rms = np.sqrt(np.sum(np.square(result.residual)))
             rms_bin.append(rms)
             fit_values.append(result.best_values)
             fit_objs.append(result)
     min_rms = np.min(rms_bin)
-    return min_rms, rms_bin, fit_values, fit_objs
+    min_index = rms_bin.index(min_rms)
+    return min_rms, min_index, rms_bin, fit_values, fit_objs
