@@ -12,6 +12,8 @@
 import numpy as np
 import lmfit
 
+from iterables import combinations
+
 from pyspectools.lineshapes import first_deriv_lorentzian, sec_deriv_lorentzian
 
 
@@ -66,4 +68,96 @@ def construct_lineshape_mod(func_name="gaussian", n=1):
         else:
             model+=current_model
             parameters+=current_params
+
+
+def harmonic_molecule(J, B, D=0.):
+    """ Expression for a linear/prolate top with
+        centrifugal distortion.
+
+        parameters:
+        ---------------
+        J - integer quantum number
+        B - rotational constant in MHz
+        D - CD term in MHz
+
+        returns:
+        --------------
+        transition frequency in MHz
+    """
+    return B * J * (J + 1) - D * J**2. * (J + 1)**2.
+
+
+def harmonic_fit(frequencies, maxJ=10):
+    """
+        Function for fitting a set of frequencies to a
+        linear/prolate molecule model; i.e. B and D only.
+
+        The primary function is for autofitting random peaks
+        and seeing where there may be possible harmonic
+        progressions in broadband spectra.
+
+        Frequencies are sorted in ascending order, and then
+        assigned a set of quantum numbers.
+
+        It produces an approximate B value by taking half of 
+        the average difference between frequencies.
+
+        parameters:
+        ------------------
+        frequencies - iterable with floats corresponding to frequency
+                      centers. Must be length greater than three.
+        maxJ - optional int specifying maximum value of J
+
+        returns:
+        ------------------
+        min_rms - minimum value for the rms from successful fits
+        fit_values - dict with constants associated with the minimum rms fit
+        fit_obj - ModelResult class with the best fit
+    """
+    frequencies = np.sort(frequencies)
+    harm_model = lmfit.models.Model(harmonic_molecule)
+
+    # Make guesses for constants based on frequencies
+    approx_B = np.average(np.diff(frequencies))
+    approx_D = np.std(np.diff(frequencies))
+
+    # Set model parameters
+    params = harm_model.make_params()
+    params["B"].set(
+        approx_B,
+        min=0.,
+        max=approx_B * 1.5
+        )
+    params["D"].set(
+        approx_D,
+        min=0.,
+        max=approx_D * 10.
+        )
+
+    rms_bin = list()
+    fit_values = list()
+    fit_objs = list()
+
+    # Generate every possible combination of quantum
+    # numbers
+    J_list = np.arange(1, maxJ)
+    combo_obj = combinations(J_list, len(frequencies))
+
+    # iterate over possible quantum number shifts
+    for index, combo in enumerate(combo_obj):
+        # Offset the frequency array by a shift
+        result = harm_model.fit(
+            frequencies,
+            J=combo,
+            params=params
+            )
+        # We only care about success stories
+        if result.success is True:
+            rms = np.sqrt(np.square(result.residual))
+            rms_bin.append(rms)
+            fit_values.append(result.best_values)
+            fit_objs.append(result)
+    min_rms = np.min(rms_bin)
+    min_index = rms_bin.index(min_rms)
+    return min_rms, fit_values[min_index], fit_objs[min_index]
 
