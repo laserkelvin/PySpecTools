@@ -7,6 +7,8 @@ import pandas as pd
 import peakutils
 from scipy.signal import savgol_filter
 from . import plotting
+from pyspectools import fitting
+from itertools import combinations, chain
 
 
 def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=False):
@@ -160,3 +162,64 @@ def assign_peaks(spec_df, frequencies, **kwargs):
         else:
             print("No species known for " + str(frequency))
     return dataframes, unassigned
+
+
+def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
+    """
+        Function that will search for possible harmonic candidates
+        in a list of frequencies. Wraps the lower level function.
+
+        Generates every possible 4 membered combination of the
+        frequencies, and makes a first pass filtering out unreasonable
+        combinations.
+
+        parameters:
+        ----------------
+        frequencies - iterable containing floats of frequencies (ulines)
+        maxJ - maximum value of J considered for quantum numbers
+        dev_thres - standard deviation threshold for filtering unlikely
+                    combinations of frequencies
+    """
+    frequencies = np.sort(frequencies)
+    # Generate all possible three membered combinations
+    combo_gen = combinations(frequencies, 4)
+
+    candidates = list()
+    
+    # Sweep through all possible combinations, and look
+    # for viable candidates
+    if prefilter is True:
+        for length in [3, 4]:
+            for combo in combinations(frequencies, length):
+                stdev = np.std(np.diff(combo))
+                if np.std(np.diff(combo)) <= dev_thres:
+                    candidates.append(combo)
+    elif prefilter is False:
+        candidates = chain(
+            combinations(frequencies, 3),
+            combinations(frequencies, 4)
+        )
+
+    data_list = list()
+    fit_results = list()
+
+    # Perform the fitting procedure on candidate combinations
+    for index, candidate in enumerate(candidates):
+        min_rms, min_index, _, fit_values, fit_objs = fitting.harmonic_fit(
+            candidate, 
+            maxJ=maxJ, 
+            verbose=False
+            )
+        data_list.append(
+            [min_index, min_rms, list(fit_values.values())]
+            )
+        fit_results.append(fit_objs)
+
+    results_df = pd.DataFrame(
+        data=data_list,
+        names=["Index", "RMS", "B", "D"]
+        )
+
+    results_df.sort_values(["RMS"], ascending=True, inplace=True)
+
+    return results_df, fit_results
