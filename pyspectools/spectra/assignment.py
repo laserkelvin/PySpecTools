@@ -61,6 +61,7 @@ class Assignment:
     fit: Dict = field(default_factory = dict)
     ustate_energy: float = 0.0
     weighting: float = 0.0
+    source: str = "Catalog"
 
     def __eq__(self, other):
         """ Dunder method for comparing molecules.
@@ -356,7 +357,8 @@ class AssignmentSession:
                        "formula": ass_df["Species"][0],
                        "r_qnos": ass_df["Resolved QNs"][0],
                        "ustate_energy": ass_df["E_U (K)"][0],
-                       "weighting": ass_df["Weighting"][0]
+                       "weighting": ass_df["Weighting"][0],
+                       "source": "CDMS/JPL"
                        }
                     # Perform a Voigt profile fit
                     print("Attempting to fit line profile...")
@@ -437,7 +439,8 @@ class AssignmentSession:
                         "index": uindex,
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
-                        "catalog_frequency": select_df["Frequency"]
+                        "catalog_frequency": select_df["Frequency"],
+                        "source": "Catalog"
                         }
                     # Pass whatever extra stuff
                     assign_dict.update(**kwargs)
