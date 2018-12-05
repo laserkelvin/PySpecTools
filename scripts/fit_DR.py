@@ -43,3 +43,4 @@ while valid is False:
 
 # Perform the analysis
 dr.analyze_dr(filepath, baseline=baseline, freqrange=[lowerfreq, upperfreq])
+
