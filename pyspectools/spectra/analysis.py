@@ -201,6 +201,9 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     # for viable candidates
     if prefilter is True:
         for length in [3, 4, 5]:
+            # Check the length of array we need...
+            if comb(len(frequencies), length) > 5e6:
+                pass
             combos = np.array(list(combinations(frequencies, length)))
             # Calculate the standard deviation between frequency
             # entries - if the series is harmonic, then the deviation

@@ -753,7 +753,9 @@ class AssignmentSession:
 
         return fig
 
-    def find_progressions(self, maxJ=10, dev_thres=5., prefilter=False):
+    def find_progressions(self, maxJ=10, dev_thres=5.,
+            prefilter=False, damping=0.7, preference=-1e5,
+            plot=True, **kwargs):
         """
             High level function for searching U-line database for
             possible harmonic progressions. Wraps the lower level function
@@ -774,12 +776,57 @@ class AssignmentSession:
             harmonic_df - dataframe containing the viable transitions
         """
         uline_frequencies = [uline.frequency for uline in self.ulines]
-        self.harmonic_df, self.harmonic_fits = analysis.harmonic_search(
-            uline_frequencies,
-            maxJ=maxJ,
-            dev_thres=dev_thres,
-            prefilter=prefilter
+        rerun = True
+        settings = {
+            "maxJ": maxJ,
+            "dev_thres": dev_thres,
+            "prefilter": prefilter
+            }
+
+        # Due to the computational expense of doing the brute force fitting,
+        # the fit will only be run if it has not been run before, or
+        # if the settings have changed since.
+        if hasattr(self, "harmonic_df") is True:
+            if self.harmonic_settings == settings:
+                print("Harmonic search parameters are same as previous; not redoing.")
+                rerun = False
+
+        if rerun is True:
+            self.harmonic_settings = settings
+            self.harmonic_df, self.harmonic_fits = analysis.harmonic_search(
+                uline_frequencies,
+                maxJ=maxJ,
+                dev_thres=dev_thres,
+                prefilter=prefilter
+                )
+
+        # Run cluster analysis on the results
+        self.cluster = analysis.cluster_AP_analysis(
+            self.harmonic_df,
+            damping=damping,
+            preference=preference,
+            **kwargs
             )
 
-        return self.harmonic_df
+        # Get the frequencies associated with each cluster
+        data = list()
+        for index in self.harmonic_df["Cluster index"].unique():
+            line_data = [index]
+            slice_df = self.harmonic_df.loc[
+                self.harmonic_df["Cluster index"] == index
+                ]
+            line_data.extend(
+                self.cluster.cluster_centers[index]
+                )
+            line_data.extend(slice_df["Frequencies"].unique())
+            data.append(line_data)
+
+        cluster_df = pd.DataFrame(
+            data=data,
+            )
+        cols = ["Index", "RMS", "B", "D"]
+        cols.extend([value for value in range(len(cluster_df) - 4)])
+
+        cluster_df.columns = cols
+        return cluster_df
 
