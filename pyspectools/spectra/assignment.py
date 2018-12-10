@@ -61,6 +61,7 @@ class Assignment:
     r_qnos: str = ""
     fit: Dict = field(default_factory = dict)
     ustate_energy: float = 0.0
+    interference: bool = False
     weighting: float = 0.0
     source: str = "Catalog"
 
@@ -74,7 +75,8 @@ class Assignment:
             comparisons = [
                 self.smiles == other.smiles,
                 self.name == other.name,
-                self.frequency == other.frequency
+                self.frequency == other.frequency,
+                self.v_qnos == other.v_qnos
                 ]
             return all(comparisons)
         else:
@@ -290,21 +292,21 @@ class AssignmentSession:
             slice_df - pandas dataframe containing matches
         """
         slice_df = []
+        lower_freq = frequency * 0.999
+        upper_freq = frequency * 1.001
         if hasattr(self, "table"):
-            lower_freq = frequency * 0.999
-            upper_freq = frequency * 1.001
             slice_df = self.table.loc[
                 (self.table["Frequency"] >= lower_freq) & 
                 (self.table["Frequency"] <= upper_freq)
                 ]
         # If no hits turn up, look for it in U-lines
-        if len(slice_df) < 0:
+        if len(slice_df) == 0:
             print("No assignment found; searching U-lines")
             slice_df = self.peaks.loc[
                 (self.peaks["Frequency"] >= lower_freq) &
                 (self.peaks["Frequency"] <= upper_freq)
                 ]
-            if len(slice_df) < 0:
+            if len(slice_df) == 0:
                 raise Exception("Frequency not found in U-lines.")
             else:
                 print("Found U-lines.")
@@ -313,26 +315,26 @@ class AssignmentSession:
             print("Found assignments.")
             return slice_df
 
-def in_experiment(self, frequency):
-    """ Method to ask a simple yes/no if the frequency
-        exists in either U-lines or assignments.
+    def in_experiment(self, frequency):
+        """ Method to ask a simple yes/no if the frequency
+            exists in either U-lines or assignments.
 
-        parameters:
-        ---------------
-        frequency - float corresponding to frequency in MHz
+            parameters:
+            ---------------
+            frequency - float corresponding to frequency in MHz
 
-        returns:
-        --------------
-        bool - True if it's in ulines/assignments, False otherwise
-    """
-    try:
-        slice_df = self.search_frequency(frequency)
-        if len(slice_df) > 0:
-            return True
-        else:
+            returns:
+            --------------
+            bool - True if it's in ulines/assignments, False otherwise
+        """
+        try:
+            slice_df = self.search_frequency(frequency)
+            if len(slice_df) > 0:
+                return True
+            else:
+                return False
+        except:
             return False
-    except:
-        return False
 
     def splat_assign_spectrum(self, auto=False):
         """ Function that will provide an "interface" for interactive
@@ -350,8 +352,9 @@ def in_experiment(self, frequency):
             print("Peak detection not run; running with default settings.")
             self.find_peaks()
 
-        for index, uline in enumerate(self.ulines):
+        for uindex, uline in enumerate(self.ulines):
             frequency = uline.frequency
+            print("Searching for frequency {:,.4f}".format(frequency))
             # Call splatalogue API to search for frequency
             splat_df = analysis.search_center_frequency(frequency, width=0.1)
             # Filter out lines that are way too unlikely on grounds of temperature
@@ -378,8 +381,8 @@ def in_experiment(self, frequency):
                     splat_df.drop(index, inplace=True)
             nitems = len(splat_df)
 
-            splat_df = self.calc_line_weighting(frequency, splat_df)
-            if sliced_catalog is not None:
+            splat_df = self.calc_line_weighting(frequency, splat_df, prox=0.01)
+            if splat_df is not None:
                 display(HTML(splat_df.to_html()))
                 try:
                     print("Observed frequency is {:,.4f}".format(frequency))
@@ -397,14 +400,14 @@ def in_experiment(self, frequency):
 
                     ass_df = splat_df.iloc[[splat_index]]
                     splat_df.to_csv(
-                        "queries/{0}-{1}.csv".format(self.session.experiment, index), index=False
+                        "queries/{0}-{1}.csv".format(self.session.experiment, uindex), index=False
                         )
                     ass_dict = {
                        "uline": False,
-                       "index": index,
+                       "index": uindex,
                        "frequency": frequency,
                        "name": ass_df["Chemical Name"][0],
-                       "catalog_frequency": ass_df["Combined"][0],
+                       "catalog_frequency": ass_df["Frequency"][0],
                        "formula": ass_df["Species"][0],
                        "r_qnos": ass_df["Resolved QNs"][0],
                        "ustate_energy": ass_df["E_U (K)"][0],
@@ -427,8 +430,9 @@ def in_experiment(self, frequency):
                     print("Deferring assignment")
             else:
                 # Throw into U-line pile if no matches at all
-                print("No species known for {:,.3f}".format(frequency))
+                print("No species known for {:,.4f}".format(frequency))
             display(HTML("<hr>"))
+        print("Processed {} lines.".format(uindex))
 
     def process_lin(self, name, formula, linpath, auto=True, **kwargs):
         """
@@ -457,14 +461,14 @@ def in_experiment(self, frequency):
                 lin_df
                 )
             if sliced_catalog is not None:
-                display(HTML(lin_df.to_html()))
+                display(HTML(sliced_catalog.to_html()))
                 if auto is False:
                     index = int(input("Please choose a candidate by index"))
                 elif auto is True:
                     index = 0
                 if index in sliced_catalog.index:
                     select_df = sliced_catalog.iloc[index]
-                    qnos = sliced_catalog["Quantum numbers"].values
+                    qnos = "".join(sliced_catalog["Quantum numbers"])
                     assign_dict = {
                         "name": name,
                         "formula": formula,
@@ -626,14 +630,17 @@ def in_experiment(self, frequency):
             for index, obj in enumerate(self.ulines):
                 deviation = np.abs(frequency - obj.frequency)
                 # Check that the deviation is sufficiently small
-                if deviation <= (frequency * 1e-4):
+                if deviation <= (frequency * 1e-5):
                     # Remove from uline list
                     ass_obj = obj
+                    frequency = ass_obj.frequency
         if ass_obj:
             ass_obj.name = name
             ass_obj.uline = False
             # Unpack anything else
             ass_obj.__dict__.update(**kwargs)
+            if frequency is None:
+                frequency = ass_obj.frequency
             ass_obj.frequency = frequency
             print("{:,.4f} assigned to {}".format(frequency, name))
             self.ulines.pop(index)

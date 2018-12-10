@@ -100,11 +100,11 @@ def search_center_frequency(frequency, width=0.5):
         "E_U (K)"
         ]
     # Now we combine the frequency measurements
-    splat_df["Combined"] = splat_df["Meas Freq-GHz"].values
+    splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
     # Replace missing experimental data with calculated
-    splat_df["Combined"].fillna(splat_df["Freq-GHz"], inplace=True)
+    splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
     # Convert to MHz
-    splat_df["Combined"] *= 1000.
+    splat_df["Frequency"] *= 1000.
     return splat_df
 
 

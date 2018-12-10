@@ -12,7 +12,7 @@ import click
 @click.argument(
     "cat_type",
     type=click.Choice(
-        ["dipole", "magnet", "DR", "discharge"]
+        ["dipole", "magnet", "DR", "discharge", "atten"]
         )
     )
 @click.option(
@@ -55,8 +55,9 @@ def run_gencatftb(filepath, cat_type, intensities=False, attn=False):
 
     if cat_type == "dipole":
         options["dipole"] = True
-        if pow_test == "dipole":
-            attn = None
+
+    if cat_type == "atten":
+        options["atten"] = True
         
     elif attn is True:
         attn_col = int(input("Please specify the column number for attenuation:    "))
