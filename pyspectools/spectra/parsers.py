@@ -19,8 +19,9 @@ def parse_lin(filename):
     with open(filename) as read_file:
         for line in read_file:
             line_data = list()
-            qnos = line[:12]
-            split_cols = line[13:].split()
+            # Get all the delimiting out
+            split_line = line.split()
+            split_cols = split_line[-3:]
             # Convert frequency, uncertainty, and weight
             # into floats
             for col in split_cols:
@@ -31,9 +32,9 @@ def parse_lin(filename):
                 except ValueError:
                     line_data.append(0.)
             # Split up the quantum numbers
-            qnos = qnos.split()
-            qnos = [int(num) for num in qnos]
-            line_data.append(qnos)
+            #qnos = qnos.split()
+            #qnos = [int(num) for num in qnos]
+            line_data.append(",".join(split_line[:-3]))
             data.append(line_data)
     dataframe = pd.DataFrame(
         data=data,
