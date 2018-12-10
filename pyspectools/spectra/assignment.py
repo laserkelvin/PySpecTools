@@ -17,6 +17,7 @@ from periodictable import formula
 from plotly import graph_objs as go
 
 from . import analysis
+from . import parsers
 from pyspectools import routines
 from pyspectools.parsecat import read_cat
 
@@ -377,20 +378,8 @@ def in_experiment(self, frequency):
                     splat_df.drop(index, inplace=True)
             nitems = len(splat_df)
 
-            if nitems > 0:
-                # if there are splatalogue entries that have turned up
-                splat_df["Deviation"] = np.abs(
-                        splat_df["Combined"] - frequency
-                        )
-                # Weight by the deviation and state temperature - higher
-                # weight is most likely.
-                # Higher temperature lines and larger deviation mean the
-                splat_df["Weighting"] = (1. / splat_df["Deviation"]) * (10**splat_df["CDMS/JPL Intensity"])
-                splat_df["Weighting"]/=splat_df["Weighting"].max()
-                # Sort by obs-calc
-                splat_df.sort_values(["Weighting"], ascending=False, inplace=True)
-                # Reindex based on distance from prediction
-                splat_df.index = np.arange(len(splat_df))
+            splat_df = self.calc_line_weighting(frequency, splat_df)
+            if sliced_catalog is not None:
                 display(HTML(splat_df.to_html()))
                 try:
                     print("Observed frequency is {:,.4f}".format(frequency))
@@ -441,6 +430,108 @@ def in_experiment(self, frequency):
                 print("No species known for {:,.3f}".format(frequency))
             display(HTML("<hr>"))
 
+    def process_lin(self, name, formula, linpath, auto=True, **kwargs):
+        """
+            Reads in a line file and sweeps through the U-line list.
+
+            Operationally, the same as the catalog and splatalogue methods,
+            but parses a line file instead. The differences are a lack of
+            filtering, since there is insufficient information in a lin
+            file.
+
+            Kwargs are passed into the assignment dictionary.
+
+            parameters:
+            -----------------
+            name - str common name of the molecule
+            formula - str chemical formula of the molecule
+            linpath - path to line file to be parsed
+            auto - optional bool specifying which mode to run in
+        """
+        old_nulines = len(self.ulines)
+        lin_df = parsers.parse_lin(linpath)
+
+        for uindex, uline in enumerate(self.ulines):
+            sliced_catalog = self.calc_line_weighting(
+                uline.frequency,
+                lin_df
+                )
+            if sliced_catalog is not None:
+                display(HTML(lin_df.to_html()))
+                if auto is False:
+                    index = int(input("Please choose a candidate by index"))
+                elif auto is True:
+                    index = 0
+                if index in sliced_catalog.index:
+                    select_df = sliced_catalog.iloc[index]
+                    qnos = sliced_catalog["Quantum numbers"].values
+                    assign_dict = {
+                        "name": name,
+                        "formula": formula,
+                        "index": uindex,
+                        "frequency": uline.frequency,
+                        "r_qnos": qnos,
+                        "catalog_frequency": select_df["Frequency"],
+                        "source": "Line file"
+                        }
+                    assign_dict.update(**kwargs)
+                    self.assign_line(**assign_dict)
+        ass_df = pd.DataFrame(
+            data=[ass_obj.__dict__ for ass_obj in self.assignments]
+            )
+        self.table = ass_df
+        print("Prior number of ulines: {}".format(old_nulines))
+        print("Current number of ulines: {}".format(len(self.ulines)))
+
+
+    def calc_line_weighting(self, frequency, catalog_df, prox=0.0001):
+        """
+            Function for calculating the weighting factor for determining
+            the likely hood of an assignment. The weighting factor is
+            determined by the proximity of the catalog frequency to the
+            observed frequency, as well as the theoretical intensity if it
+            is available.
+
+            parameters:
+            ----------------
+            frequency - float observed frequency in MHz
+            catalog_df - dataframe corresponding to catalog entries
+            prox - optional float for frequency proximity threshold
+
+            returns:
+            ---------------
+            If nothing matches the frequency, returns None.
+            If matches are found, calculate the weights and return the candidates
+            in a dataframe.
+        """
+        lower_freq = frequency * (1 - prox)
+        upper_freq = frequency * (1 + prox)
+        sliced_catalog = catalog_df.loc[
+            (catalog_df["Frequency"] >= lower_freq) & (catalog_df["Frequency"] <= upper_freq)
+            ]
+        nentries = len(sliced_catalog)
+        if nentries > 0:
+            # Calculate probability weighting. Base is the inverse of distance
+            sliced_catalog["Deviation"] = np.abs(sliced_catalog["Frequency"] - frequency)
+            sliced_catalog["Weighting"] = (1./sliced_catalog["Deviation"])
+            # If intensity is included in the catalog incorporate it in
+            # the weight calculation
+            if "Intensity" in sliced_catalog:
+                sliced_catalog["Weighting"]*=(10**sliced_catalog["Intensity"])
+            elif "CDMS/JPL Intensity" in sliced_catalog:
+                sliced_catalog["Weighting"]*=(10**sliced_catalog["CDMS/JPL Intensity"])
+            else:
+                # If there are no recognized intensity columns, pass
+                pass
+            # Normalize the weights
+            sliced_catalog["Weighting"]/=sliced_catalog["Weighting"].max()
+            # Sort by obs-calc
+            sliced_catalog.sort_values(["Weighting"], ascending=True, inplace=True)
+            sliced_catalog.index = np.arange(nentries)
+            return sliced_catalog
+        else:
+            return None
+
     def process_catalog(self, name, formula, catalogpath, auto=True, **kwargs):
         """
             Reads in a catalog (SPCAT) file and sweeps through the
@@ -471,20 +562,8 @@ def in_experiment(self, frequency):
         # Loop over the uline list
         for uindex, uline in enumerate(self.ulines):
             # 0.1% of frequency
-            lower_freq = uline.frequency * 0.9999
-            higher_freq = uline.frequency * 1.0001
-            sliced_catalog = catalog_df.loc[
-                (catalog_df["Frequency"] >= lower_freq) & (catalog_df["Frequency"] <= higher_freq)
-                ]
-            nentries = len(sliced_catalog)
-            if nentries > 0:
-                # Calculate probability weighting
-                sliced_catalog["Deviation"] = np.abs(sliced_catalog["Frequency"] - uline.frequency)
-                sliced_catalog["Weighting"] = (1./sliced_catalog["Deviation"])*(10**sliced_catalog["Intensity"])
-                sliced_catalog["Weighting"]/=sliced_catalog["Weighting"].max()
-                # Sort by obs-calc
-                sliced_catalog.sort_values(["Weighting"], ascending=True, inplace=True)
-                sliced_catalog.index = np.arange(nentries)
+            sliced_catalog = self.calc_line_weighting(uline.frequency, catalog_df)
+            if sliced_catalog is not None:
                 display(HTML(sliced_catalog.to_html()))
                 if auto is False:
                     index = int(raw_input("Please choose a candidate by index."))
