@@ -9,6 +9,8 @@ from scipy.signal import savgol_filter
 from . import plotting
 from pyspectools import fitting
 from itertools import combinations, chain
+from sklearn.cluster import AffinityPropagation
+from sklearn.metrics import silhouette_samples
 
 
 def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=False):
@@ -256,3 +258,51 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     results_df.sort_values(["RMS"], ascending=True, inplace=True)
 
     return results_df, fit_results
+
+
+def cluster_AP_analysis(fit_df, damping=0.7, preference=-1e5, **kwargs):
+    """
+        Wrapper for the AffinityPropagation cluster method from
+        scikit-learn.
+
+        The dataframe provided will also receive new columns: Cluster index,
+        and Silhouette. The latter corresponds to how likely a sample is
+        sandwiched between clusters (0), how squarely it belongs in the
+        assigned cluster (+1), or does not belong (-1). The cluster index
+        corresponds to which cluster the sample belongs to.
+
+        parameters:
+        ---------------
+        fit_df - pandas dataframe taken from the result of progression
+                 fits
+        damping - optional float larger than 0.5 and less than 1.0 for
+                  minimizing numerical oscillation
+        preference - float that corresponds to the number of exemplars/clusters.
+                     Larger negative numbers correspond to fewer clusters.
+        
+        returns:
+        --------------
+        ap_obj - AffinityPropagation object containing all the information
+                 as attributes.
+    """
+    ap_obj = AffinityPropagation(
+        damping=damping,
+        preference=preference,
+        **kwargs)
+    ap_obj.fit(fit_df[["RMS", "B", "D"]])
+
+    # Labels/indices used to identify which set of
+    # fits belong to which cluster
+    fit_df["Cluster index"] = ab_obj.labels_
+    
+    # Calculate the Euclidean distance between
+    # samples, the cluster it belongs to, and the
+    # nearest clusters.
+    fit_df["Silhouette"] = silhouette_samples(
+        fit_df[["RMS", "B", "D"]],
+        fit_df["Cluster index"],
+        metric="euclidean"
+        )
+
+    return ap_obj
+    
