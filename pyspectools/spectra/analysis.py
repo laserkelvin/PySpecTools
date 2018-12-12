@@ -55,14 +55,50 @@ def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=Fals
     return fit_results
 
 
-def peak_find(spec_df, col="Intensity", thres=0.015):
-    """ Wrapper for peakutils applied to pandas dataframes """
+def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
+    """ 
+        Wrapper for peakutils applied to pandas dataframes. First finds
+        the peak indices, which are then used to fit Gaussians to determine
+        the center frequency for each peak.
+
+        parameters:
+        ---------------
+        spec_df - dataframe containing the spectrum
+        freq_col - str denoting frequency column
+        int_col - str denoting intensity column
+        thres - threshold for peak detection
+
+        returns:
+        ---------------
+        peak_df - pandas dataframe containing the peaks frequency/intensity
+    """
     peak_indices = peakutils.indexes(
-        spec_df[col],
+        spec_df[int_col],
         thres=thres,
         min_dist=10
         )
-    return spec_df.iloc[peak_indices]
+    frequencies = peakutils.interpolate(
+        x=spec_df[freq_col].values,
+        y=spec_df[int_col].values,
+        ind=peak_indices,
+        width=20
+        )
+    # Get the peaks if we were just using indexes
+    direct_df = spec_df.iloc[peak_indices]
+    direct_df.reset_index(inplace=True)
+    # Calculate the difference in fit vs. approximate peak
+    # frequencies
+    differences = np.abs(direct_df[freq_col] - frequencies)
+    intensities = spec_df.iloc[peak_indices][int_col].values
+    peak_df = pd.DataFrame(
+        data=list(zip(frequencies, intensities)),
+        columns=["Frequency", "Intensity"]
+        )
+    # Take the indexed frequencies if the fit exploded
+    peak_df.update(
+        direct_df.loc[differences >= 5.]
+        )
+    return peak_df
 
 
 def search_center_frequency(frequency, width=0.5):
@@ -167,7 +203,7 @@ def assign_peaks(spec_df, frequencies, **kwargs):
     return dataframes, unassigned
 
 
-def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
+def brute_harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     """
         Function that will search for possible harmonic candidates
         in a list of frequencies. Wraps the lower level function.
@@ -202,8 +238,8 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     if prefilter is True:
         for length in [3, 4, 5]:
             # Check the length of array we need...
-            if comb(len(frequencies), length) > 5e6:
-                pass
+            #if comb(len(frequencies), length) > 5e6:
+            #    pass
             combos = np.array(list(combinations(frequencies, length)))
             # Calculate the standard deviation between frequency
             # entries - if the series is harmonic, then the deviation
@@ -263,7 +299,43 @@ def harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     return results_df, fit_results
 
 
-def cluster_AP_analysis(fit_df, damping=0.7, preference=-1e5, **kwargs):
+def harmonic_finder(frequencies, search=0.001, low_B=400., high_B=9000.):
+    """
+        Function that will generate candidates for progressions.
+        Every possible pair combination of frequencies are
+        looped over, consider whether or not the B value is either
+        too small (like C60 large) or too large (you won't have
+        enough lines to make a progression), and search the
+        frequencies to find the nearest candidates based on a
+        prediction.
+        
+        parameters:
+        ----------------
+        frequencies - array or tuple-like containing the progressions
+                      we expect to find
+        search - optional argument threshold for determining if something
+                 is close enough
+                 
+        returns:
+        ----------------
+        progressions - list of arrays corresponding to candidate progressions
+    """
+    frequencies = np.sort(frequencies)
+    progressions = list()
+    for combo in combinations(frequencies, 2):
+        # Ignore everything that is too large or
+        # too small
+        guess_B = np.diff(combo)
+        if low_B <= guess_B <= high_B:
+            combo = np.array(combo)
+            # From B, determine the next series of lines and
+            # find the closest ones
+            candidates = find_series(combo, frequencies, search)          
+            progressions.append(candidates)
+    return progressions
+
+
+def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
     """
         Wrapper for the AffinityPropagation cluster method from
         scikit-learn.
@@ -276,36 +348,127 @@ def cluster_AP_analysis(fit_df, damping=0.7, preference=-1e5, **kwargs):
 
         parameters:
         ---------------
-        fit_df - pandas dataframe taken from the result of progression
-                 fits
-        damping - optional float larger than 0.5 and less than 1.0 for
-                  minimizing numerical oscillation
-        preference - float that corresponds to the number of exemplars/clusters.
-                     Larger negative numbers correspond to fewer clusters.
+        progression_df - pandas dataframe taken from the result of progression
+                         fits
+        sil_calc - bool indicating whether silhouettes are calculated
+                   after the AP model is fit
         
         returns:
         --------------
+        data - dict containing clustered frequencies and associated fits
         ap_obj - AffinityPropagation object containing all the information
                  as attributes.
     """
-    ap_obj = AffinityPropagation(
-        damping=damping,
-        preference=preference,
-        **kwargs)
-    ap_obj.fit(fit_df[["RMS", "B", "D"]])
-
-    # Labels/indices used to identify which set of
-    # fits belong to which cluster
-    fit_df["Cluster index"] = ab_obj.labels_
+    ap_options = dict()
+    ap_options.update(kwargs)
+    print(ap_options)
+    ap_obj = AffinityPropagation(**ap_options)
+    # Determine clusters based on the RMS, B, and D
+    # similarities
+    print("Fitting the Affinity Propagation model.")
+    ap_obj.fit(progression_df[["RMS", "B", "D"]])
+    print("Fit complete.")
+    progression_df["Cluster indices"] = ap_obj.labels_
+    print("Determined {} clusters.".format(len(ap_obj.cluster_centers_)))
+    # Calculate the metric for determining how well a sample
+    # fits into its cluster
+    if sil_calc is True:
+        print("Calculating silhouettes.")
+        progression_df["Silhouette"] = silhouette_samples(
+            progression_df[["RMS", "B", "D"]],
+            progression_df["Cluster indices"],
+            metric="euclidean"
+            )
     
-    # Calculate the Euclidean distance between
-    # samples, the cluster it belongs to, and the
-    # nearest clusters.
-    fit_df["Silhouette"] = silhouette_samples(
-        fit_df[["RMS", "B", "D"]],
-        fit_df["Cluster index"],
-        metric="euclidean"
-        )
+    data = dict()
+    print("Aggregating results.")
+    for index, label in enumerate(progression_df["Cluster indices"].unique()):
+        data[index] = dict()
+        cluster_data = ap_obj.cluster_centers_[index]
+        slice_df = progression_df.loc[progression_df["Cluster indices"] == label]
+        columns = list()
+        for col in progression_df:
+            try:
+                columns.append(int(col))
+            except ValueError:
+                pass
+        unique_frequencies = np.unique(slice_df[columns].values.flatten())
+        unique_frequencies = unique_frequencies[~np.isnan(unique_frequencies)]
+        data[index]["Frequencies"] = unique_frequencies
+        if refit is True:
+            # Refit the whole list of frequencies with B and D again
+            BJ_model = models.Model(fitting.calc_harmonic_transition)
+            params = BJ_model.make_params()
+            params["B"].set(
+                cluster_data[1],
+                min=cluster_data[1]*0.99,
+                max=cluster_data[1]*1.01
+                )
+            params["D"].set(cluster_data[2], vary=False)
+            # Get values of J based on B again
+            J = (unique_frequencies / cluster_data[1]) / 2
+            fit = BJ_model.fit(
+                data=unique_frequencies,
+                J=J,
+                params=params
+            )
+            # Package results together
+            fit_values = fit.best_values
+            data[index].update(fit.best_values)
+            data[index]["oldRMS"] = cluster_data[0]
+            data[index]["RMS"] = np.sqrt(np.average(np.square(fit.residual)))
+        else:
+            # Reuse old RMS
+            fit_values = {
+                "B": cluster_data[1],
+                "D": cluster_data[2],
+                "RMS": cluster_data[0]
+                }
+            data[index].update(fit_values)
+    return data, ap_obj
 
-    return ap_obj
-    
+
+def find_series(combo, frequencies, search=0.005):
+    """
+        Function that will exhaustively search for candidate
+        progressions based on a pair of frequencies.
+        
+        The difference of the pair is used to estimate B,
+        which is then used to calculate J. These values of
+        J are then used to predict the next set of lines,
+        which are searched for in the soup of frequencies.
+        The closest matches are added to a list which is returned.
+
+        This is done so that even if frequencies are missing
+        a series of lines can still be considered.
+
+        parameters:
+        ---------------
+        combo - pair of frequencies corresponding to initial guess
+        frequencies - array of frequencies to be searched
+        search - optional threshold for determining the search range
+                 to look for candidates
+
+        returns:
+        --------------
+        array of candidate frequencies
+    """
+    lowest = np.min(combo)
+    approx_B = np.average(np.diff(combo))
+    minJ = (lowest / approx_B) / 2
+    J = np.arange(minJ, minJ + 20., 0.5)
+    # Guess where all the next frequencies are
+    guess_centers = J * 2 * approx_B
+    # Make sure it's within the band of trial frequencies
+    guess_centers = guess_centers[guess_centers <= np.max(frequencies)]
+    candidates = list()
+    for guess in guess_centers:
+        lower_guess = guess * (1 - search)
+        upper_guess = guess * (1 + search)
+        nearest_neighbours = frequencies[(frequencies >= lower_guess) & (frequencies <= upper_guess)]
+        # If we don't find anything close enough, don't worry about it
+        # this will make sure that missing lines aren't necessarily ignored
+        if len(nearest_neighbours) > 0:
+            # Return the closest value to the predicted center
+            candidates.append(nearest_neighbours[np.argmin(np.abs(guess - nearest_neighbours))])
+    return candidates

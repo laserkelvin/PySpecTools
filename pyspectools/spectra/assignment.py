@@ -19,6 +19,7 @@ from plotly import graph_objs as go
 from . import analysis
 from . import parsers
 from pyspectools import routines
+from pyspectools import fitting
 from pyspectools.parsecat import read_cat
 
 
@@ -245,7 +246,8 @@ class AssignmentSession:
         """
         peaks_df = analysis.peak_find(
             self.data,
-            col=self.int_col,
+            freq_col=self.freq_col,
+            int_col=self.int_col,
             thres=threshold
            )
         # Reindex the peaks
@@ -753,9 +755,8 @@ class AssignmentSession:
 
         return fig
 
-    def find_progressions(self, maxJ=10, dev_thres=5.,
-            prefilter=False, damping=0.7, preference=-1e5,
-            plot=True, **kwargs):
+    def find_progressions(self, search=0.001, low_B=400.,
+            high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs):
         """
             High level function for searching U-line database for
             possible harmonic progressions. Wraps the lower level function
@@ -764,69 +765,38 @@ class AssignmentSession:
 
             parameters:
             ---------------
-            maxJ - int corresponding to maximum J value considered in fits
-            dev_thres - maximum threshold allowed for deviation in between
-                        transitions. Used to screen candidates
-            prefilter - bool dictating whether or not the prescreening is
-                        done on the frequency list. This may bias away
-                        from progressions with missing lines.
+            search - threshold for determining if quantum number J is close
+                     enough to an integer/half-integer
+            low_B - minimum value for B
+            high_B - maximum value for B
+            plot - whether or not to produce a plot of the progressions
 
             returns:
             ---------------
             harmonic_df - dataframe containing the viable transitions
         """
         uline_frequencies = [uline.frequency for uline in self.ulines]
-        rerun = True
-        settings = {
-            "maxJ": maxJ,
-            "dev_thres": dev_thres,
-            "prefilter": prefilter
-            }
 
-        # Due to the computational expense of doing the brute force fitting,
-        # the fit will only be run if it has not been run before, or
-        # if the settings have changed since.
-        if hasattr(self, "harmonic_df") is True:
-            if self.harmonic_settings == settings:
-                print("Harmonic search parameters are same as previous; not redoing.")
-                rerun = False
+        progressions = analysis.harmonic_finder(
+            uline_frequencies,
+            search=search,
+            low_B=low_B,
+            high_B=high_B
+            )
 
-        if rerun is True:
-            self.harmonic_settings = settings
-            self.harmonic_df, self.harmonic_fits = analysis.harmonic_search(
-                uline_frequencies,
-                maxJ=maxJ,
-                dev_thres=dev_thres,
-                prefilter=prefilter
-                )
+        fit_df = fitting.harmonic_fitter(progressions)
+
+        self.harmonic_fits = fit_df
 
         # Run cluster analysis on the results
-        self.cluster = analysis.cluster_AP_analysis(
-            self.harmonic_df,
-            damping=damping,
-            preference=preference,
+        self.cluster_dict, self.cluster_obj = analysis.cluster_AP_analysis(
+            self.harmonic_fits,
+            sil_calc,
+            refit,
             **kwargs
             )
 
-        # Get the frequencies associated with each cluster
-        data = list()
-        for index in self.harmonic_df["Cluster index"].unique():
-            line_data = [index]
-            slice_df = self.harmonic_df.loc[
-                self.harmonic_df["Cluster index"] == index
-                ]
-            line_data.extend(
-                self.cluster.cluster_centers[index]
-                )
-            line_data.extend(slice_df["Frequencies"].unique())
-            data.append(line_data)
+        self.cluster_df = pd.DataFrame.from_dict(self.cluster_dict).T
 
-        cluster_df = pd.DataFrame(
-            data=data,
-            )
-        cols = ["Index", "RMS", "B", "D"]
-        cols.extend([value for value in range(len(cluster_df) - 4)])
-
-        cluster_df.columns = cols
-        return cluster_df
+        return self.cluster_df
 
