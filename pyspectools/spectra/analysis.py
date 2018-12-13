@@ -1,16 +1,18 @@
 
-from astroquery.splatalogue import Splatalogue
-from astropy import units as u
-from lmfit import models
+from itertools import combinations, chain
+
 import numpy as np
 import pandas as pd
 import peakutils
+from astroquery.splatalogue import Splatalogue
+from astropy import units as u
+from lmfit import models
 from scipy.signal import savgol_filter
-from . import plotting
-from pyspectools import fitting
-from itertools import combinations, chain
 from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import silhouette_samples
+
+from pyspectools.spectra import plotting
+from pyspectools import fitting
 
 
 def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=False):
