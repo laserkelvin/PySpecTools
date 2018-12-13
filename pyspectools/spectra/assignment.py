@@ -17,11 +17,11 @@ from IPython.display import display, HTML
 from periodictable import formula
 from plotly import graph_objs as go
 
-from pyspectools import analysis
-from pyspectools import parsers
 from pyspectools import routines
 from pyspectools import fitting
 from pyspectools.parsecat import read_cat
+from pyspectools.spectra import analysis
+from pyspectools.spectra import parsers
 
 
 @dataclass
