@@ -8,6 +8,7 @@ from plotly.offline import plot, init_notebook_mode, iplot
 from plotly import tools
 import plotly.graph_objs as go
 from scipy import signal as spsig
+from itertools import combinations
 
 
 def parse_specdata(filename):
@@ -224,3 +225,88 @@ class Scan:
             data=list(zip([frequency, amplitude])),
             columns=["Frequency (MHz)", "Intensity (V)"]
         )
+
+
+def generate_ftb_line(frequency, shots, **kwargs):
+    """ Function that generates an FTB file for a list of
+        frequencies, plus categorization tests.
+    """
+    line = "ftm:{:.4f} shots:{}".format(frequency, shots)
+    for key, value in kwargs.items():
+        line+=" {}:{}".format(key, value)
+    line+="\n"
+    return line
+
+
+def categorize_frequencies(frequencies, nshots=50, intensities=None, power=None, attn_list=None,
+        dipole=None, attn=None, magnet=False, dr=False, discharge=False):
+    """
+        Function that will format an FT batch file to perform categorization
+        tests, with some flexibility on how certain tests are performed.
+    """
+    ftb_str = ""
+    if intensities is None:
+        shots = np.full(len(frequencies), nshots, dtype=int)
+    else:
+        shots = np.sqrt(nshots / intensities).astype(int)
+
+    if dipole:
+        if attn is None:
+            # If dipole test requested, but no attenuation
+            # supplied do the default sweep
+            dipole_test = [0.01, 0.1, 1.0, 3.0, 5.0]
+            dipole_flag = "dipole"
+        else:
+            # Otherwise run specific attenuations
+            dipole_test = attn_list
+            dipole_flag = "atten"
+
+    if dr is True:
+        freq_list = combinations(frequencies, 2)
+        print(list(freq_list))
+    else:
+        freq_list = frequencies
+
+    # loop over each frequency and number of shots
+    for value, shotcount in zip(freq_list, shots):
+        if dr is True:
+            freq, dr_freq = value
+        else:
+            freq = value
+            # Generate normal observation
+        try:
+            freq = float(freq)
+            shotcount = int(shotcount)
+            if dr is True:
+                dr_freq = float(dr_freq)
+
+            ftb_str+=generate_ftb_line(
+                freq, 
+                shotcount, 
+                **{"skiptune": "false"})
+
+            if dr is True:
+                ftb_str+=generate_ftb_line(freq, 
+                    shotcount, 
+                    **{
+                        "skiptune": "true",
+                        "drfreq": dr_freq,
+                        "drpower": "10"
+                    }
+                    )
+
+            if dipole is True:
+                for dipole_value in dipole_test:
+                    ftb_str+=generate_ftb_line(freq, shotcount, **{dipole_flag: dipole_value})
+
+            if magnet is True:
+                ftb_str+=generate_ftb_line(freq, shotcount, **{"magnet": "true"})
+
+            if discharge is True:
+                # Toggle the discharge stack on and off
+                ftb_str+=generate_ftb_line(freq, shotcount, **{"pulse,1,enabled": "false"})
+                ftb_str+=generate_ftb_line(freq, shotcount, **{"pulse,1,enabled": "true"})
+        except ValueError:
+            print("Error with " + str(value))
+
+    return ftb_str

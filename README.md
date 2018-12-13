@@ -3,6 +3,11 @@
 ## A Python library for analysis of rotational spectroscopy and beyond
 
 
+## Version History
+
+From version >= 3 of this module, Python 3.7 is required to support the new
+`dataclass` objects which will be the basis for assigning broadband spectra.
+
 ## Introduction
 
 `PySpecTools` is a library written to help with analyzing rotational
@@ -17,6 +22,11 @@ spectroscopy data. The main sorts of functionality are:
    - Fitting of lineshapes (e.g. Lorentizan second-derivative profiles)
    - Fourier-filtering
    - Double resonance fitting
+4. Analysis of broad band spectra with the `AssignmentSession` and `Assignment` classes.
+   These classes, combined with Jupyter notebooks, provide a way to assign spectra
+   reproducibly.
+5. Autofit routines are available for a set of special cases, like linear/prolate
+   molecules. Eventually, SPFIT will be a backend option.
 
 The library is very much in development, and is gradually being cleaned
 up/improved on as my coding ability gets better.
@@ -42,13 +52,13 @@ input files in an object-oriented fashion:
    whatever parameter.
 
 There is still much to do for this module, including a way of managing experimental lines.
+For now, development 
 
 ---
 
 ## To do
 
 1. Reorganize the coding, and make it more PEP friendly!
-2. Experimental line management for `PyPickett`
-3. Better fitting support 
-4. Example Jupyter notebooks
+2. Example Jupyter notebooks
+3. Improve autofit routines
 
