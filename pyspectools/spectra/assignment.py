@@ -800,3 +800,32 @@ class AssignmentSession:
 
         return self.cluster_df
 
+    def search_species(self, formula=None, name=None, smiles=None):
+        """
+            Method for finding species in the assigned dataframe,
+            with the intention of showing where the observed frequencies
+            are.
+
+            parameters:
+            --------------
+            formula - str for chemical formula lookup
+            name - str for common name
+            smiles - str for unique SMILES string
+
+            returns:
+            --------------
+            pandas dataframe slice with corresponding lookup
+        """
+        if hasattr(self, "table") is False:
+            raise Exception("No assignment table created yet. Finalize assignments.")
+        if formula:
+            locator = "formula"
+            check = formula
+        if name:
+            locator = "name"
+            check = name
+        if smiles:
+            locator = "smiles"
+            check = smiles
+        return self.table.loc[self.table[locator] == check]
+
