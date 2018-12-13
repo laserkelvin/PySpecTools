@@ -8,12 +8,11 @@
     purpose.
 """
 
+from itertools import combinations
 
 import numpy as np
 import pandas as pd
 import lmfit
-
-from itertools import combinations
 
 from pyspectools.lineshapes import first_deriv_lorentzian, sec_deriv_lorentzian
 

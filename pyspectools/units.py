@@ -71,7 +71,11 @@ def cm2MHz(wavenumber):
     # Convert wavenumbers to frequency in MHz
     return (wavenumber * (constants.c / 1e7)) * 1000.
 
-""" Astronomy units """
+""" 
+    Astronomy units 
+
+    Conversions and useful expressions
+"""
 
 def dop2freq(velocity, frequency):
     # Frequency given in MHz, Doppler_shift given in km/s

@@ -1,10 +1,12 @@
 
 import os
+
 import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 from plotly.tools import mpl_to_plotly
 from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
+
 
 class fit_output:
     def __init__(self, fit_file, verbose=True, interactive=False):

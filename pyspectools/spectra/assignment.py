@@ -5,19 +5,20 @@
     in broadband spectra.
 """
 
-from dataclasses import dataclass, field
-from lmfit.models import GaussianModel
-from typing import List, Dict
-from IPython.display import display, HTML
-import numpy as np
-import pandas as pd
 import os
 from shutil import rmtree
+from dataclasses import dataclass, field
+from typing import List, Dict
+
+import numpy as np
+import pandas as pd
+from lmfit.models import GaussianModel
+from IPython.display import display, HTML
 from periodictable import formula
 from plotly import graph_objs as go
 
-from . import analysis
-from . import parsers
+from pyspectools import analysis
+from pyspectools import parsers
 from pyspectools import routines
 from pyspectools import fitting
 from pyspectools.parsecat import read_cat
