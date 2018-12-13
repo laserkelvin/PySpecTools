@@ -230,6 +230,25 @@ class Scan:
 def generate_ftb_line(frequency, shots, **kwargs):
     """ Function that generates an FTB file for a list of
         frequencies, plus categorization tests.
+
+        kwargs are passed as additional options for the ftb
+        batch. Keywords are:
+
+        magnet: bool
+        dipole: float
+        atten: int
+        skiptune: bool
+        drfreq: float
+        drpower: int
+
+        parameters:
+        ---------------
+        frequency - float for frequency in MHz
+        shots - int number of shots to integrate for
+
+        returns:
+        ---------------
+        ftbline - str
     """
     line = "ftm:{:.4f} shots:{}".format(frequency, shots)
     for key, value in kwargs.items():
@@ -238,8 +257,9 @@ def generate_ftb_line(frequency, shots, **kwargs):
     return line
 
 
-def categorize_frequencies(frequencies, nshots=50, intensities=None, power=None, attn_list=None,
-        dipole=None, attn=None, magnet=False, dr=False, discharge=False):
+def categorize_frequencies(frequencies, nshots=50, intensities=None, 
+        power=None, attn_list=None, dipole=None, attn=None, 
+        magnet=False, dr=False, discharge=False):
     """
         Function that will format an FT batch file to perform categorization
         tests, with some flexibility on how certain tests are performed.
@@ -291,7 +311,6 @@ def categorize_frequencies(frequencies, nshots=50, intensities=None, power=None,
                     **{
                         "skiptune": "true",
                         "drfreq": dr_freq,
-                        "drpower": "10"
                     }
                     )
 
