@@ -95,8 +95,9 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
         columns=["Frequency", "Intensity"]
         )
     # Take the indexed frequencies if the fit exploded
+    # and deviates significantly from the original prediction
     peak_df.update(
-        direct_df.loc[differences >= 5.]
+        direct_df.loc[differences >= 0.5]
         )
     return peak_df
 
