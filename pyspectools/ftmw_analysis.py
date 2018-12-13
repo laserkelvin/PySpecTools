@@ -1,14 +1,18 @@
-from pyspectools import parsecat as pc
+
+from itertools import combinations, product
+import os
+
 import pandas as pd
 import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
 from matplotlib import colors
+from scipy import signal as spsig
 from plotly.offline import plot, init_notebook_mode, iplot
 from plotly import tools
 import plotly.graph_objs as go
-from scipy import signal as spsig
-from itertools import combinations
+
+from pyspectools import parsecat as pc
 
 
 def parse_specdata(filename):
@@ -257,6 +261,34 @@ def generate_ftb_line(frequency, shots, **kwargs):
     return line
 
 
+def neu_categorize_frequencies(frequencies, intensities=None, nshots=50, **kwargs):
+    """
+        Routine to generate an FTB batch file for performing a series of tests
+        on frequencies.
+    """
+    ftb_string = ""
+    if intensities:
+        norm_int = intensities / np.max(intensities)
+        shotcounts = np.round(nshots / norm_int).astype(int)
+    else:
+        shotcounts = np.full(len(frequencies), nshots, dtype=int)
+
+    # default settings for all stuff
+    param_dict = {
+        "dipole": 1.,
+        "magnet": "false",
+        "drpower": "10",
+        "skiptune": "false"
+        }
+
+    param_dict.update(kwargs)
+    for freq, shot in zip(frequencies, shotcounts):
+        ftb_string+=generate_ftb_str(freq, shot, **param_dict)
+        if "magnet" in kwargs:
+            param_dict["magnet"] = "true"
+            ftb_string+=generate_ftb_str(freq, shot, **param_dict)
+
+
 def categorize_frequencies(frequencies, nshots=50, intensities=None, 
         power=None, attn_list=None, dipole=None, attn=None, 
         magnet=False, dr=False, discharge=False):
@@ -329,3 +361,265 @@ def categorize_frequencies(frequencies, nshots=50, intensities=None,
             print("Error with " + str(value))
 
     return ftb_str
+
+def calculate_integration_times(intensity, nshots=50):
+    """
+        Method for calculating the expected integration time
+        in shot counts based on the intensity; either theoretical
+        line strengths or SNR.
+
+        parameters:
+        ---------------
+        intensity - array of intensity metric; e.g. SNR
+        nshots - optional int number of shots used for the strongest line
+
+        returns:
+        ---------------
+        shot_counts - array of shot counts for each frequency
+    """
+    norm_int = intensity / np.max(intensity)
+    shot_counts = np.round(nshots / norm_int).astype(int)
+    return shot_counts
+
+class AssayBatch:
+    @classmethod
+    def from_csv(cls, filepath, exp_id):
+        df = pd.read_csv(filepath)
+        return cls(df, exp_id)
+
+    def __init__(self, uline_dataframe, exp_id, 
+            freq_col="Frequency", int_col="Intensity"):
+        folders = ["assays", "ftbfiles"]
+        for folder in folders:
+            if os.path.isdir(folder) is False:
+                os.mkdir(folder)
+
+        if os.path.isdir("assays/plots") is False:
+            os.mkdir("./assays/plots")
+
+        self.data = uline_dataframe
+        self.exp_id = exp_id
+
+        if freq_col not in self.data.columns:
+            self.freq_col = self.data.columns[0]
+        else:
+            self.freq_col = freq_col
+        if int_col not in self.data.columns:
+            self.int_col = self.data.columns[0]
+        else:
+            self.int_col = int_col
+
+    def calc_scan_SNR(self, peak_int, noise_array):
+        """
+            Calculate the signal-to-noise ratio of a peak
+            for a given reference noise intensity array
+            and peak intensity.
+        """
+        noise = np.mean(noise_array)
+        return peak_int / noise
+
+    def dipole_analysis(self, batch_path, thres=0.5,
+            dipoles=[1., 0.01, 0.1, 1.0, 3.0, 5.], snr_thres=5.):
+        """
+            Method for determining the optimal dipole moment to use 
+            for each frequency in a given exported batch of dipole tests.
+
+            In addition to returning a pandas dataframe, it is also
+            stored as the object attribute dipole_df.
+
+            parameters:
+            ----------------
+            batch_path - filepath to the exported XY file from a QtFTM batch
+            thres - threshold in absolute intensity for peak detection (in Volts)
+            dipoles - list of dipole moments used in the screening
+            snr_thres - threshold in signal-to-noise for line detection
+
+            returns:
+            ----------------
+            optimal_df - pandas dataframe containing the optimal dipole moments
+        """
+        batch_df = pd.read_csv(batch_path, sep="\t")
+        batch_df.columns = ["Scan", "Intensity"]
+        
+        # Reference scan numbers from the batch
+        scan_numbers = np.unique(np.around(batch_df["Scan"]).astype(int))
+        # Make a dataframe for what we expect everything should be
+        full_df = pd.DataFrame(
+            data=list(product(self.data["Frequency"], dipoles)),
+            columns=["Frequency", "Dipole"]
+            )
+        full_df["Scan"] = scan_numbers
+        
+        # Loop over each scan, and determine whether or not there is a peak
+        # If there is sufficiently strong feature, add it to the list with the
+        # scan number
+        detected_scans = list()
+        for index, scan in enumerate(scan_numbers):
+            scan_slice = batch_df.loc[
+                (dipole_df["Scan"] >= scan - 0.5) & (dipole_df["Scan"] <= scan +0.5)
+                ]
+            # Find the peaks based on absolute signal intensity
+            # Assumption is that everything is integrated for the same period of time
+            peaks = scan_slice.iloc[
+                peakutils.indexes(scan_slice["Intensity"], thres=thres, thres_abs=True)
+                ].sort_values(["Intensity"], ascending=False)
+
+            peak_int = np.average(peaks["Intensity"][:2])
+            snr = self.calc_scan_SNR(peak_int, scan_slice["Intensity"][-10:])
+            if snr >= snr_thres:
+                detected_scans.append([scan, snr])
+        snr_df = pd.DataFrame(data=detected_scans, columns=["Scan", "SNR"])
+        # Merge the dataframes based on scan number. This will identify
+        # scans where we observe a line
+        obs_df = full_df.merge(snr_df, on=["Scan"], copy=False)
+
+        optimal_data = list()
+        # Loop over each frequency in order to determine the optimal
+        # dipole moment to use
+        for frequency in np.unique(obs_df["Frequency"]):
+            slice_df = obs_df.loc[
+                obs_df["Frequency"] == frequency
+                ]
+            # Sort the best response dipole moment at the top
+            slice_df.sort_values(["SNR"], inplace=True, ascending=False)
+            slice_df.index = np.arange(len(slice_df))
+            optimal_data.append(slice_df.iloc[0].values)
+        optimal_df = pd.DataFrame(
+            data,
+            columns=["Scan", "Frequency", "Dipole", "SNR"]
+            )
+        optimal_df.sort_values(["SNR"], ascending=False, inplace=True)
+
+        self.dipole_df = optimal_df
+
+        # Generate histogram of dipole moments
+        with plt.style.context("publication"):
+            fig, ax = plt.subplots()
+
+            self.dipole_df["Dipole"].hist(ax=ax)
+            ax.set_xlabel("Dipole (D)")
+            ax.set_ylabel("Counts")
+
+            fig.savefig(
+                "./assays/plots/{}-dipole.pdf".format(self.exp_id),
+                format="pdf",
+                transparent=True
+                )
+        return optimal_df
+
+
+    def generate_magnet_test(self, dataframe=None, cal=False, nshots=50, **kwargs):
+        """
+            Generate an FT batch file for performing magnet tests.
+        """
+        if dataframe is None:
+            dataframe = self.dipole_df
+            dataframe["Shots"] = calculate_integration_times(
+                dataframe["SNR"].values,
+                nshots
+                )
+        ftb_str = ""
+        
+        # If there are no shots determined, 
+        if "Shots" not in dataframe:
+            dataframe["Shots"] = nshots
+
+        if cal_freq is True:
+            cal_settings = {
+                "cal_freq": dataframe["Frequency"][0],
+                "cal_rate": 100,
+                "cal_shots": dataframe["Shots"][0]
+                }
+            if "Dipole" in dataframe:
+                cal_settings["cal_dipole"] = dataframe["Dipole"][0]
+            cal_settings.update(kwargs)
+            # Generate the calibration string
+            cal_str = generate_ftb_line(
+                cal_settings["cal_freq"],
+                cal_settings["cal_shots"],
+                **{
+                    "dipole": cal_settings["cal_dipole"],
+                    "skiptune": "false"
+                }
+                )
+            cal_str = cal_str.replace("\n", " cal\n")
+
+        # generate the batch file
+        for index, row in dataframe.iterrows():
+            # If we want to add a calibration line
+            if index % cal_settings["cal_rate"] == 0:
+                ftb_str+=cal_str
+            param_dict = {}
+            # Make sure the magnet is off
+            if "Dipole" in row:
+                param_df["dipole"] = row["Dipole"]
+            param_df["magnet"] = "false"
+            param_df["skiptune"] = "false"
+            ftb_str+=generate_ftb_line(
+                row["Frequency"],
+                row["Shots"],
+                **param_df
+                )
+            # Turn on the magnet
+            param_df["skiptune"] = "true"
+            param_df["magnet"] = "true"
+            ftb_str+=generate_ftb_line(
+                row["Frequency"],
+                row["Shots"],
+                **param_df
+                )
+
+        with open("./ftbfiles/{}.ftb".format(self.exp_id), "w+") as write_file:
+            write_file.write(ftb_str)
+
+    def plot_scan(self, scan_number):
+        """
+            Quick method for plotting up a strip to highlight a particular
+            scan in a batch.
+
+            parameters:
+            ---------------
+            scan_number - float corresponding to the scan 
+        """
+        fig = go.FigureWidget()
+
+        fig.add_scatter(
+            x=self.data["Scan"],
+            y=self.data["Intensity"]
+            )
+
+        fig.add_bar(
+            x=[scan_number],
+            y=[np.max(self.data["Intensity"])]
+            )
+
+        return fig
+
+    def static_plot(self, scan_number, dataframe=None):
+        if dataframe is None:
+            if hasattr(self, "dipole_df"):
+                dataframe = self.dipole_df
+            else:
+                dataframe = self.data
+        slice_df = dataframe.loc[
+            (dataframe["Scan"] >= scan_number - 1.5) & (dataframe["Scan"] <= scan_number + 1.5)
+            ]
+        scan_numbers = np.unique(np.round(slice_df["Scan"]))
+
+        with plt.style.context("publication"):
+            fig, ax = plt.subplots()
+
+            ax.plot(slice_df["Scan"], slice_df["Intensity"])
+
+            ax.set_xticks(scan_numbers)
+            # Makes the x axis not scientific notation
+            ax.get_xaxis().get_major_formatter().set_useOffset(False)
+            ax.set_xlabel("Scan number")
+            ax.set_ylabel("Intensity")
+
+            fig.savefig(
+                "./assays/plots/{}.pdf".format(scan_number),
+                format="pdf",
+                transparent=True
+                )
+
