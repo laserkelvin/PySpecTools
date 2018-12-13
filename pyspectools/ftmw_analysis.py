@@ -456,7 +456,7 @@ class AssayBatch:
         detected_scans = list()
         for index, scan in enumerate(scan_numbers):
             scan_slice = batch_df.loc[
-                (dipole_df["Scan"] >= scan - 0.5) & (dipole_df["Scan"] <= scan +0.5)
+                (batch_df["Scan"] >= scan - 0.5) & (batch_df["Scan"] <= scan +0.5)
                 ]
             # Find the peaks based on absolute signal intensity
             # Assumption is that everything is integrated for the same period of time
@@ -485,8 +485,8 @@ class AssayBatch:
             slice_df.index = np.arange(len(slice_df))
             optimal_data.append(slice_df.iloc[0].values)
         optimal_df = pd.DataFrame(
-            data,
-            columns=["Scan", "Frequency", "Dipole", "SNR"]
+            optimal_data,
+            columns=["Frequency", "Dipole", "Scan", "SNR"]
             )
         optimal_df.sort_values(["SNR"], ascending=False, inplace=True)
 
