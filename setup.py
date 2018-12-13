@@ -64,14 +64,14 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="3.0.0",
+    version="3.1.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
     include_package_data=True,
     author_email="kin_long_kelvin.lee@cfa.harvard.edu",
     install_requires=[
-            "numpy",
+            "numpy>=1.15",
             "pandas",
             "scipy",
             "matplotlib",
@@ -79,6 +79,7 @@ setup(
             "astropy",
             "lmfit",
             "peakutils",
+            "sklearn",
             "colorlover",
             "plotly>=3.0.0",
             "periodictable",
