@@ -83,7 +83,8 @@ setup(
             "colorlover",
             "plotly>=3.0.0",
             "periodictable",
-            "uncertainties"
+            "uncertainties",
+            "joblib"
     ],
     cmdclass={
         "develop": PostInstallCommand,
