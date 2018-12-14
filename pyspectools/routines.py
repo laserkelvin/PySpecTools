@@ -7,6 +7,7 @@ import os
 import subprocess
 import shutil
 import json
+import types
 from glob import glob
 
 import ruamel_yaml as yaml
@@ -268,3 +269,34 @@ def read_obj(filepath):
     obj = joblib.load(filepath)
     return obj
 
+
+def dump_packages():
+    """
+        Function that will return a list of packages that
+        have been loaded and their version numbers.
+
+        This function will ignore system packages:
+        sys, __builtins__, types, os
+        
+        as well as modules with no version.
+
+
+        This is not working the way I want it to...
+
+        returns:
+        -------------
+        mod_dict - dict with keys corresponding to module name,
+                   and values the version number.
+    """
+    mod_dict = dict()
+    sys_packages = ["sys", "__builtins__", "types", "os"]
+    for name, module in globals().items():
+        if isinstance(module, types.ModuleType):
+            if module.__name__ not in sys_packages:
+                try:
+                    mod_name = module.__name__
+                    mod_ver = module.__version__
+                    mod_dict[mod_name] = mod_ver
+                except AttributeError:
+                    pass
+    return mod_dict
