@@ -7,9 +7,13 @@ import os
 import subprocess
 import shutil
 import json
-import ruamel_yaml as yaml
-from pyspectools import pypickett as pp
 from glob import glob
+
+import ruamel_yaml as yaml
+import joblib
+
+from pyspectools import pypickett as pp
+
 
 def run_spcat(filename, temperature=None):
     # Run SPCAT
@@ -232,4 +236,28 @@ def isnotebook():
             return False  # Other type (?)
     except NameError:
         return False      # Probably standard Python interpreter
+
+
+def save_obj(obj, filepath):
+    """
+        Function to serialize an object using dump from joblib.
+
+        parameters:
+        ---------------
+        obj - instance of object to be serialized
+        filepath - filepath to save to
+    """
+    joblib.dump(obj, filepath)
+
+
+def read_obj(filepath):
+    """
+        Wrapper for joblib.load to load an object from disk
+
+        parameters:
+        ---------------
+        filepath - path to object
+    """
+    obj = joblib.load(filename)
+    return obj
 
