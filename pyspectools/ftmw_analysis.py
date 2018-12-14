@@ -507,7 +507,6 @@ class AssayBatch:
                 )
         return optimal_df
 
-
     def generate_magnet_test(self, dataframe=None, cal=False, nshots=50, **kwargs):
         """
             Generate an FT batch file for performing magnet tests.
@@ -572,6 +571,14 @@ class AssayBatch:
         with open("./ftbfiles/{}.ftb".format(self.exp_id), "w+") as write_file:
             write_file.write(ftb_str)
 
+#    def generate_dr_test(self, cluster_dict=None, nshots=50):
+#        """
+#            Take the dipole moment dataframe and generate a DR batch.
+#            If possible, we will instead use the progressions predicted
+#            by the cluster model.
+#        """
+#
+
     def plot_scan(self, scan_number):
         """
             Quick method for plotting up a strip to highlight a particular
@@ -596,11 +603,22 @@ class AssayBatch:
         return fig
 
     def static_plot(self, scan_number, dataframe=None):
+        """
+            Produce a static plot with matplotlib of a particular
+            scan from a batch.
+
+            Saves the plot to ./assays/plots/
+
+            By default, the full dataframe will be used for the plotting.
+            Other dataframes (such as from other assays) can also be used.
+
+            parameters:
+            ---------------
+            scan_number - float corresponding to the scan of interest
+            dataframe - optional arg; pandas dataframe with Scan/Intensity
+        """
         if dataframe is None:
-            if hasattr(self, "dipole_df"):
-                dataframe = self.dipole_df
-            else:
-                dataframe = self.data
+            dataframe = self.data
         slice_df = dataframe.loc[
             (dataframe["Scan"] >= scan_number - 1.5) & (dataframe["Scan"] <= scan_number + 1.5)
             ]
