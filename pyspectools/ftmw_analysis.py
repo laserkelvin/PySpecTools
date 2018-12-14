@@ -13,6 +13,8 @@ from plotly import tools
 import plotly.graph_objs as go
 
 from pyspectools import parsecat as pc
+from pyspectools import fitting
+from pyspectools.spectra import analysis
 
 
 def parse_specdata(filename):
@@ -244,6 +246,7 @@ def generate_ftb_line(frequency, shots, **kwargs):
         skiptune: bool
         drfreq: float
         drpower: int
+        cal
 
         parameters:
         ---------------
@@ -384,11 +387,31 @@ def calculate_integration_times(intensity, nshots=50):
 class AssayBatch:
     @classmethod
     def from_csv(cls, filepath, exp_id):
+        """
+            Create an AssayBatch session by providing a
+            filepath to a file containing the frequency and
+            intensity information, as well as the experiment
+            ID from which it was based.
+
+            parameters:
+            --------------
+            filepath - path to a CSV file with Frequency/Intensity
+                       columns
+            exp_id - experiment ID; typically the chirp experiment number
+        """
         df = pd.read_csv(filepath)
         return cls(df, exp_id)
 
-    def __init__(self, uline_dataframe, exp_id, 
-            freq_col="Frequency", int_col="Intensity"):
+    @classmethod
+    def load_session(cls, filepath):
+        """
+            Loads a previously saved AssayBatch session.
+        """
+        session = routines.read_obj(filepath)
+        obj = cls(**session)
+        return obj
+
+    def __init__(self, data, exp_id, freq_col="Frequency", int_col="Intensity"):
         folders = ["assays", "ftbfiles"]
         for folder in folders:
             if os.path.isdir(folder) is False:
@@ -397,7 +420,7 @@ class AssayBatch:
         if os.path.isdir("assays/plots") is False:
             os.mkdir("./assays/plots")
 
-        self.data = uline_dataframe
+        self.data = data
         self.exp_id = exp_id
 
         if freq_col not in self.data.columns:
@@ -509,7 +532,21 @@ class AssayBatch:
 
     def generate_magnet_test(self, dataframe=None, cal=False, nshots=50, **kwargs):
         """
-            Generate an FT batch file for performing magnet tests.
+            Generate an FT batch file for performing magnetic tests.
+
+            parameters:
+            -----------------
+            dataframe - dataframe used for the frequency information.
+                        By default the dipole dataframe will be used.
+            cal - bool denoting whether a calibration line is used.
+                  A user can provide it in kwargs, or use the default
+                  which is the first line in the dataframe (strongest
+                  if sorted by intensity)
+            nshots - optional int specifying number of shots for each
+                     line, or if SNR is in the dataframe, the number
+                     of shots for the strongest line.
+            kwargs - passed into the calibration settings, which are
+                     cal_freq, cal_rate, and cal_shots
         """
         if dataframe is None:
             dataframe = self.dipole_df
@@ -523,7 +560,9 @@ class AssayBatch:
         if "Shots" not in dataframe:
             dataframe["Shots"] = nshots
 
-        if cal_freq is True:
+        # If calibration is requested
+        # cal_rate sets the number of scans per calibration
+        if cal is True:
             cal_settings = {
                 "cal_freq": dataframe["Frequency"][0],
                 "cal_rate": 100,
@@ -571,15 +610,123 @@ class AssayBatch:
         with open("./ftbfiles/{}.ftb".format(self.exp_id), "w+") as write_file:
             write_file.write(ftb_str)
 
-#    def generate_dr_test(self, cluster_dict=None, nshots=50):
-#        """
-#            Take the dipole moment dataframe and generate a DR batch.
-#            If possible, we will instead use the progressions predicted
-#            by the cluster model.
-#        """
-#
+    def generate_bruteforce_dr(self, nshots=10, dr_channel=3):
+        """
+            Brute force double resonance test on every single frequency
+            observed in the initial dipole test.
 
-    def plot_scan(self, scan_number):
+            This method will perform DR measurements on sequentially
+            weaker lines, if the dipole_df is sorted by SNR.
+
+            Optionally, the 
+        """
+        ftb_str = ""
+        combos = combinations(self.dipole_df[["Frequency", "Dipole"]].values, 2)
+        for index, combo in enumerate(combos):
+            # For the first time a cavity frequency is used
+            # we will measure it once without DR
+            if (index == 0) or (last_freq != combo[0][0]):
+                ftb_str+=generate_ftb_line(
+                    combo[0][0],
+                    nshots,
+                    **{
+                        "dipole": combo[0][1],
+                        "pulse,{},enable".format(dr_channel): "false",
+                        "skiptune": "false",
+                        }
+                    )
+            ftb_str+=generate_ftb_line(
+                combo[0][0],
+                nshots,
+                **{
+                    "dipole": combo[0][1],
+                    "drfreq": combo[1][0],
+                    "pulse,{},enable".format(dr_channel): "true",
+                    "skiptune": "true"
+                    }
+                )
+            last_freq = combo[0][0]
+        print("There are {} combinations to measure.".format(index))
+        
+        with open("./ftbfiles/{}-bruteDR.ftb".format(self.exp_id), "w+") as write_file:
+            write_file.write(ftb_str)
+
+        print("FTB file saved to ./ftbfiles/{}-bruteDR.ftb".format(self.exp_id))
+
+    def find_progressions(self, **kwargs):
+        """
+            Uses the dipole assay data to look for harmonic
+            progression.
+
+            Kwargs are passed into the affinity propagation
+            clustering; usually this means "preference" should
+            be set to tune the number of clusters.
+
+            returns:
+            --------------
+            cluster_dict - dictionary containing all of the clustered
+                           progressions
+        """
+        progressions = analysis.harmonic_finder(
+            self.dipole_df["Frequency"].values
+            )
+        self.progression_df = fitting.harmonic_fitter(progressions)
+        data, ap_obj = analysis.cluster_AP_analysis(
+            self.progression_df,
+            True,
+            False,
+            **kwargs
+            )
+        self.cluster_dict = data
+        self.cluster_obj = ap_obj
+        return self.cluster_dict
+
+    def generate_progression_test(self, nshots=50, dr_channel=3):
+        """
+            Take the dipole moment dataframe and generate a DR batch.
+            If possible, we will instead use the progressions predicted
+            by the cluster model.
+        """
+        ftb_str = ""
+        count = 0
+        # Loop over progressions
+        for index, sub_dict in self.cluster_dict.items():
+            # Take only frequencies that are in the current progression
+            slice_df = self.dipole_df.loc[
+                self.dipole_df["Frequency"].isin(sub_dict["Frequencies"])
+                ]
+            prog_data = slice_df[["Frequency", "Dipole", "Shots"]].values
+            for sub_index, pair in enumerate(combinations(prog_data, 2)):
+                count+=1
+                if (sub_index == 0) or (last_freq != pair[0][0]):
+                    ftb_str+=generate_ftb_line(
+                        pair[0][0],
+                        10,
+                        **{
+                            "dipole": pair[0][1],
+                            "pulse,{},enable".format(dr_channel): "false",
+                            "skiptune": "false"
+                            }
+                        )
+                # Perform the DR measurement
+                ftb_str+=generate_ftb_line(
+                    pair[0][0],
+                    10,
+                    **{
+                        "dipole": pair[0][1],
+                        "pulse,{},enable".format(dr_channel): "true",
+                        "skiptune": "true"
+                        }
+                    )
+                last_freq = pair[0][0]
+        print("There are {} combinations to test.".format(count))
+
+        with open("./ftbfiles/{}-progressionDR.ftb".format(self.exp_id), "w+") as write_file:
+            write_file.write(ftb_str)
+
+        print("FTB file saved to ./ftbfiles/{}-progressionDR.ftb".format(self.exp_id))
+
+    def plot_scan(self, scan_number=None):
         """
             Quick method for plotting up a strip to highlight a particular
             scan in a batch.
@@ -594,11 +741,12 @@ class AssayBatch:
             x=self.data["Scan"],
             y=self.data["Intensity"]
             )
-
-        fig.add_bar(
-            x=[scan_number],
-            y=[np.max(self.data["Intensity"])]
-            )
+        
+        if scan_number is not None:
+            fig.add_bar(
+                x=[scan_number],
+                y=[np.max(self.data["Intensity"])]
+                )
 
         return fig
 
@@ -640,4 +788,24 @@ class AssayBatch:
                 format="pdf",
                 transparent=True
                 )
+
+    def save_session(self, filepath=None):
+        """
+            Method to save the current assay analysis session to disk.
+
+            The data can be reloaded using the AssayBatch.load_session
+            class method.
+
+            parameters:
+            ---------------
+            filepath - path to save the data to. By default, the path will
+                       be the experiment ID.
+        """
+        if filepath is None:
+            filepath = "./assays/{}-assay-analysis.dat".format(self.exp_id)
+        routines.save_obj(
+            self.__dict__,
+            filepath
+            )
+        print("Saved session to {}".format(filepath))
 
