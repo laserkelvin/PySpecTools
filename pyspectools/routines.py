@@ -238,16 +238,23 @@ def isnotebook():
         return False      # Probably standard Python interpreter
 
 
-def save_obj(obj, filepath):
+def save_obj(obj, filepath, **kwargs):
     """
         Function to serialize an object using dump from joblib.
+
+        Additional kwargs are passed into the dump, which can
+        be compression parameters, etc.
 
         parameters:
         ---------------
         obj - instance of object to be serialized
         filepath - filepath to save to
     """
-    joblib.dump(obj, filepath)
+    settings = {
+        "compress": ("gzip", 6)
+        }
+    settings.update(kwargs)
+    joblib.dump(obj, filepath, **settings)
 
 
 def read_obj(filepath):
