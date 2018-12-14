@@ -199,6 +199,32 @@ class AssignmentSession:
         module so that this can be run reproducibly in a jupyter
         notebook.
     """
+
+    @classmethod
+    def load_session(cls, filepath):
+        """
+            Load an AssignmentSession from disk, once it has
+            been saved with the save_session method.
+
+            parameters:
+            --------------
+            filepath - path to the AssignmentSession file; typically
+                       in the sessions/{experiment_id}.dat
+        """
+        session = routines.read_obj(filepath)
+        obj = cls(
+            session["data"],
+            **session["session"]
+            )
+        # Reinitialize classes
+        obj.ulines = [
+            Assignment.from_dict(uline) for uline in session["ulines"]
+            ]
+        obj.assignments = [
+            Assignment.from_dict(ass_obj) for ass_obj in session["assignments"]
+            ]
+        return obj 
+
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0,
             freq_col="Frequency", int_col="Intensity"):
@@ -829,4 +855,32 @@ class AssignmentSession:
             locator = "smiles"
             check = smiles
         return self.table.loc[self.table[locator] == check]
+
+    def save_session(self, filepath=None):
+        """
+            Method to save an AssignmentSession to disk.
+            
+            The underlying mechanics are based on the joblib library,
+            and so there are can cross-compatibility issues particularly
+            when loading from different versions of Python.
+
+            parameters:
+            ---------------
+            filepath - path to save the file to. By default it will go into
+                       the sessions folder.
+        """
+        if filepath is None:
+            filepath = "./sessions/{}.dat".format(self.session.experiment)
+
+        # Unpack everything so that object serialization works properly...
+        session_dict = self.__dict__
+        session_dict["session"] = self.session.__dict__
+        session_dict["ulines"] = [uline.__dict__ for uline in self.ulines]
+        session_dict["assignments"] = [ass_obj.__dict__ for ass_obj in self.assignments]
+        # Save to disk
+        routines.save_obj(
+            self.__dict__,
+            filepath
+            )
+        print("Saved session to {}".format(filepath))
 
