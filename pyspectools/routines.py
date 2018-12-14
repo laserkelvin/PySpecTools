@@ -265,6 +265,6 @@ def read_obj(filepath):
         ---------------
         filepath - path to object
     """
-    obj = joblib.load(filename)
+    obj = joblib.load(filepath)
     return obj
 
