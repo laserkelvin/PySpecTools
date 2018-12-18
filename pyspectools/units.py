@@ -5,6 +5,7 @@
     that are often used in spectroscopy.
 """
 
+import numpy as np
 from scipy import constants
 
 """ Commonly used values
@@ -98,7 +99,7 @@ def wavenumber2kjmol(wavenumber):
     return wavenumber / (jm / 100.) / (avo * 1000.)
 
 
-def fwhm(sigma):
+def gaussian_fwhm(sigma):
     """
         Calculate the full-width half maximum
         value assuming a Gaussian function.
@@ -113,3 +114,20 @@ def fwhm(sigma):
     """
     return 2. * np.sqrt(2. * np.log(2.)) * sigma
 
+def gaussian_height(amplitude, sigma):
+    """
+        Calculate the height of a Gaussian distribution,
+        based on the amplitude and sigma. This value
+        corresponds to the peak height at the centroid.
+
+        parameters:
+        ----------------
+        amplitude - float
+        sigma - float
+
+        returns:
+        ----------------
+        h - float
+    """
+    h = amplitude / (np.sqrt(2. * np.pi) * sigma)
+    return h
