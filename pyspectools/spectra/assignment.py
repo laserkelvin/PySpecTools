@@ -743,6 +743,7 @@ class AssignmentSession:
                         ass_obj.ustate_energy
                         )
                 profile_data.append(profile_dict)
+                ass_obj.fit = fit_report
                 ass_obj.N = profile_dict["N cm$^{-2}$"]
         if len(profile_data) > 0:
             profile_df = pd.DataFrame(
