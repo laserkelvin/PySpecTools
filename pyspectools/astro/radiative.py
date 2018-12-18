@@ -7,7 +7,8 @@
 import numpy as np
 import pandas as pd
 from scipy import constants
-from .units import kbcm, MHz2cm
+
+from pyspectools.units import kbcm, MHz2cm
 
 
 def parse_str(filepath):
