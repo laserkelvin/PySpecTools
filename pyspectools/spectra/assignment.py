@@ -20,6 +20,7 @@ from plotly import graph_objs as go
 from pyspectools import routines
 from pyspectools import fitting
 from pyspectools import units
+from pyspectools.astro import analysis as aa
 from pyspectools.parsecat import read_cat
 from pyspectools.spectra import analysis
 from pyspectools.spectra import parsers
@@ -40,6 +41,7 @@ class Assignment:
         smiles - str representing SMILES code (specific!)
         frequency - float for observed frequency
         intensity - float for observed intensity
+        I - float for theoretical intensity
         peak_id - int for peak id from experiment
         uline - bool flag to signal whether line is identified or not
         composition - list-like with string corresponding to experimental
@@ -56,6 +58,7 @@ class Assignment:
     frequency: float = 0.0
     catalog_frequency: float = 0.0
     intensity: float = 0.0
+    I: float = 0.0
     peak_id: int = 0
     experiment: int = 0
     uline: bool = True
@@ -424,6 +427,7 @@ class AssignmentSession:
                        "frequency": frequency,
                        "name": ass_df["Chemical Name"][0],
                        "catalog_frequency": ass_df["Frequency"][0],
+                       "I": ass_df["CDMS/JPL Intensity"][0],
                        "formula": ass_df["Species"][0],
                        "r_qnos": ass_df["Resolved QNs"][0],
                        "ustate_energy": ass_df["E_U (K)"][0],
@@ -552,7 +556,8 @@ class AssignmentSession:
         else:
             return None
 
-    def process_catalog(self, name, formula, catalogpath, auto=True, **kwargs):
+    def process_catalog(self, name, formula, catalogpath, 
+            auto=True, thres=-10., **kwargs):
         """
             Reads in a catalog (SPCAT) file and sweeps through the
             U-line list for this experiment finding coincidences.
@@ -575,9 +580,11 @@ class AssignmentSession:
                 self.data[self.freq_col].min(),
                 self.data[self.freq_col].max()
             )
-        # Filter out the states with high energy
+        # Filter out the states with high energy, and matches the
+        # minimum intensity
         catalog_df = catalog_df.loc[
-            catalog_df["Lower state energy"] <= self.t_threshold
+            (catalog_df["Lower state energy"] <= self.t_threshold) &
+            (catalog_df["Intensity"] >= thres)
             ]
         # Loop over the uline list
         for uindex, uline in enumerate(self.ulines):
@@ -601,6 +608,7 @@ class AssignmentSession:
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
+                        "I": select_df["Intensity"],
                         "source": "Catalog"
                         }
                     # Pass whatever extra stuff
@@ -679,6 +687,84 @@ class AssignmentSession:
             }
         return self.identifications
 
+    def analyze_molecule(self, Q, T, name=None, formula=None, smiles=None):
+        """
+            Function for providing some astronomically relevant
+            parameters by analyzing Gaussian line shapes.
+
+            parameters:
+            --------------
+            Q - rotational partition function at temperature
+            T - temperature in K
+            name - str name of molecule
+            formula - chemical formula of molecule
+            smiles - SMILES string for molecule
+
+            returns:
+            --------------
+            profile_df - pandas dataframe containing all of the
+                         analysis
+        """
+        profile_data = list()
+        if name:
+            selector = "name"
+            value = name
+        if formula:
+            selector = "formula"
+            value = formula
+        if smiles:
+            selector = "smiles"
+            value = smiles
+        # Loop over all of the assignments
+        for ass_obj in self.assignments:
+            # If the assignment matches the criteria
+            # we perform the analysis
+            if ass_obj.__dict__[selector] == value:
+                # Get width estimate
+                width = units.dop2freq(
+                    self.session.doppler,
+                    ass_obj.frequency
+                    )
+                # Perform a Gaussian fit
+                fit_report = analysis.fit_line_profile(
+                    self.data,
+                    ass_obj.frequency,
+                    width,
+                    ass_obj.intensity,
+                    freq_col=self.freq_col,
+                    int_col=self.int_col
+                    )
+                # Add the profile parameters to list
+                profile_dict = aa.lineprofile_analysis(
+                        fit_report,
+                        ass_obj.I,
+                        Q,
+                        T,
+                        ass_obj.ustate_energy
+                        )
+                profile_data.append(profile_dict)
+                ass_obj.N = profile_dict["N cm$^{-2}$"]
+        if len(profile_data) > 0:
+            profile_df = pd.DataFrame(
+                data=profile_data
+                )
+            sim_y = self.simulate_spectrum(
+                self.data[self.freq_col],
+                profile_df["frequency"].values,
+                profile_df["width"].values,
+                profile_df["amplitude"].values
+                )
+            sim_df = pd.DataFrame(
+                data=list(zip(
+                    self.data[self.freq_col].values,
+                    sim_y
+                    ))
+                )
+            return profile_df, sim_df
+        else:
+            print("No molecules found!")
+            return None
+
     def finalize_assignments(self):
         """
             Function that will complete the assignment process by
@@ -690,13 +776,22 @@ class AssignmentSession:
                 "assignment_objs/{}-{}".format(ass_obj.experiment,ass_obj.peak_id),
                 "yaml"
                 )
+                
         # Convert all of the assignment data into a CSV file
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
             )
+        profiles_df = pd.DataFrame(
+            data=[ass_obj.fit for ass_obj in self.assignments]
+            )
         self.table = ass_df
+        self.profiles = profiles_df
         # Dump assignments to disk
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
+        profiles_df.to_csv(
+            "reports/{0}-profiles.csv".format(self.session.experiment),
+            index=False
+            )
 
         # Update the uline peak list with only unassigned stuff
         self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]

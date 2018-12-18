@@ -23,7 +23,13 @@ def flux2N(W, Q, E, T, S, v):
         N - column density in 1/cm^2
     """
     numerator = 2.04 * W * Q * np.exp(E / T)
-    denominator = S * v**3.
+    denominator = S * (v / 1e3)**3.
     N = (numerator / denominator) * 10**20.
     return N
+
+
+def N2flux(N, S, v, Q, E, T):
+    numerator = N * S * (v / 1e3)**3.
+    denominator = 2.04 * Q * np.exp(E / T)
+    return numerator / denominator
 

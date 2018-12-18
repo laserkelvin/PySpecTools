@@ -8,3 +8,4 @@ from . import routines
 from . import mmw
 from . import units
 from . import spectra
+from . import lineshapes
