@@ -507,7 +507,6 @@ class AssignmentSession:
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
 
-
     def calc_line_weighting(self, frequency, catalog_df, prox=0.0001):
         """
             Function for calculating the weighting factor for determining
@@ -922,6 +921,10 @@ class AssignmentSession:
         """
             Generates a Plotly figure with the assignments overlaid
             on the experimental spectrum.
+
+            Does not require any parameters, but requires that
+            the assignments and peak finding functions have been
+            run previously.
         """
         fig = go.FigureWidget()
 
