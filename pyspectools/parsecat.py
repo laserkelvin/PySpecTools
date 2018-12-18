@@ -1,9 +1,13 @@
+
+import sys
+
 import pandas as pd
 import numpy as np
 from matplotlib import colors
 from matplotlib import cm
 from matplotlib import pyplot as plt
-import sys
+
+from pyspectools import units
 
 def read_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
     """
@@ -42,6 +46,7 @@ def read_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
             (simulation_df["Frequency"].astype(float) <= high_freq) &        # based on user specified values
             (simulation_df["Intensity"].astype(float) >= threshold)          # or lack thereof
             ]
+    thresholded_df["Lower state energy"] = units.wavenumber2T(thresholded_df["Lower state energy"])
     return thresholded_df
 
 

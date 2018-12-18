@@ -47,8 +47,7 @@ def N2flux(N, S, v, Q, E, T):
         ---------------
         flux - the integrated flux in Jy
     """
-    numerator = N * S * (v / 1e3)**3.
+    numerator = (N * S * (v / 1e3)**3.) / 1e20
     denominator = 2.04 * Q * np.exp(E / T)
     flux = numerator / denominator
     return flux
-

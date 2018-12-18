@@ -856,6 +856,50 @@ class AssignmentSession:
             for folder in folders:
                 rmtree(folder)
 
+    def simulate_sticks(self, catalogpath, N, Q, T, doppler=None, gaussian=False):
+        """
+        Simulates a stick spectrum with intensities in flux units (Jy) for
+        a given catalog file and molecular properties.
+        :param catalogpath: path to SPCAT catalog file
+        :param N: column density in cm^-2
+        :param Q: partition function at temperature T
+        :param T: temperature in Kelvin
+        :param doppler: doppler width in km/s; defaults to session wide value
+        :param gaussian: bool; if True, simulates Gaussian profiles instead of sticks
+        :return: if gaussian is False, returns a dataframe with sticks; if True,
+                 returns a simulated Gaussian line profile spectrum
+        """
+        # If no Doppler width provided, use the session wide value
+        if doppler is None:
+            doppler = self.session.doppler
+        catalog_df = aa.simulate_catalog(catalogpath, N, Q, T, doppler)
+        # Take only the values within band
+        catalog_df = catalog_df[
+            (catalog_df["Frequency"] >= self.data[self.freq_col].min()) &
+            (catalog_df["Frequency"] <= self.data[self.freq_col].max())
+        ]
+        if gaussian is False:
+            return catalog_df[["Frequency", "Flux (Jy)"]]
+        else:
+            # Convert Doppler width to frequency widths
+            widths = units.dop2freq(
+                doppler,
+                catalog_df["Frequency"].values
+            )
+            # Calculate the Gaussian amplitude
+            amplitudes = catalog_df["Flux (Jy"] / np.sqrt(2. * np.pi**2. * widths)
+            sim_y = self.simulate_spectrum(
+                self.data[self.freq_col],
+                catalog_df["Frequency"].values,
+                widths,
+                amplitudes
+            )
+            simulated_df = pd.DataFrame(
+                data=list(zip(self.data[self.freq_col], sim_y)),
+                columns=["Frequency", "Intensity"]
+            )
+            return simulated_df
+
     def simulate_spectrum(self, x, centers, widths, amplitudes, fake=False):
         """
             Generate a synthetic spectrum with Gaussians with the
@@ -896,6 +940,9 @@ class AssignmentSession:
             present, it will plot the simulated spectrum also.
         """
         fig = go.FigureWidget()
+
+        fig.layout["xaxis"]["title"] = "Frequency (MHz)"
+        fig.layout["xaxis"]["tickformat"] = ".,"
 
         fig.add_scatter(
             x=self.data[self.freq_col],
