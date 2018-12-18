@@ -131,3 +131,9 @@ def gaussian_height(amplitude, sigma):
     """
     h = amplitude / (np.sqrt(2. * np.pi) * sigma)
     return h
+
+
+def gaussian_integral(amplitude, sigma):
+    integral = amplitude * np.sqrt(2. * np.pi**2. * sigma)
+    return integral
+

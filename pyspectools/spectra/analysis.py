@@ -15,45 +15,46 @@ from pyspectools.spectra import plotting
 from pyspectools import fitting
 
 
-def fit_line_profile(spec_df, frequency, intensity=None, name=None, verbose=False):
-    """ Low level function wrapper to to fit line profiles
-        in chirp spectra.
+def fit_line_profile(spec_df, center, width, intensity,
+        verbose=False, freq_col="Frequency", int_col="Intensity"):
+    """ 
+        Somewhat high level function that wraps lmfit for
+        fitting Gaussian lineshapes to a spectrum.
+
+        For a given guess center and optional intensity,
+        the 
     """
-    if "Cleaned" not in spec_df.columns:
-        spec_df["Cleaned"] = spec_df["Intensity"].values
-    model = models.VoigtModel()
+    model = models.GaussianModel()
     params = model.make_params()
     # Set up boundary conditions for the fit
     params["center"].set(
-        frequency,
-        min=frequency - 0.03,
-        max=frequency + 0.03
+        center,
+        min=center * 0.9997,
+        max=center * 1.0003
     )
-    # If an intensity is supplied
-    if intensity:
-        params["amplitude"].set(intensity)
+    params["height"].set(
+        intensity,
+        min=0.
+        )
     params["sigma"].set(
-        0.05,
-        min=0.04,
-        max=0.07
-    )
-    freq_range = [frequency + offset for offset in [-5., 5.]]
+        width,
+        min=width * 0.9,
+        max=width * 1.1
+        )
+    # Slice up a small chunk in frequency space; 0.5% of the
+    # center frequency to allow for broad lineshapes
+    freq_range = [center * offset for offset in [0.9995, 1.0005]]
     slice_df = spec_df[
-        (spec_df["Frequency"] >= freq_range[0]) & (spec_df["Frequency"] <= freq_range[1])
+        (spec_df[freq_col] >= freq_range[0]) & (spec_df[freq_col] <= freq_range[1])
     ]
     # Fit the peak lineshape
     fit_results = model.fit(
-        slice_df["Intensity"],
-        params,
-        x=slice_df["Frequency"],
+        data=slice_df[int_col],
+        params=params,
+        x=slice_df[freq_col],
     )
     if verbose is True:
         print(fit_results.fit_report())
-    yfit = fit_results.eval(x=spec_df["Frequency"])
-    if name:
-        spec_df[name] = yfit
-    # Subtract the peak contribution
-    spec_df["Cleaned"] -= yfit
     return fit_results
 
 
