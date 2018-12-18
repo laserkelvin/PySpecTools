@@ -29,7 +29,26 @@ def flux2N(W, Q, E, T, S, v):
 
 
 def N2flux(N, S, v, Q, E, T):
+    """
+        Calculate the expected integrated flux based on
+        column density. This can be used to simulate a
+        spectrum purely from theoretical terms.
+
+        parameters:
+        ---------------
+        N - column density in cm^-2
+        S - intrinsic line strength; Su^2
+        v - transition frequency in MHz
+        Q - rotational partition function
+        E - state energy
+        T - temperature
+
+        returns:
+        ---------------
+        flux - the integrated flux in Jy
+    """
     numerator = N * S * (v / 1e3)**3.
     denominator = 2.04 * Q * np.exp(E / T)
-    return numerator / denominator
+    flux = numerator / denominator
+    return flux
 
