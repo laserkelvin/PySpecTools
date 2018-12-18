@@ -19,6 +19,7 @@ from plotly import graph_objs as go
 
 from pyspectools import routines
 from pyspectools import fitting
+from pyspectools import units
 from pyspectools.parsecat import read_cat
 from pyspectools.spectra import analysis
 from pyspectools.spectra import parsers
@@ -184,11 +185,22 @@ class Assignment:
 @dataclass
 class Session:
     """ DataClass for a Session, which simply holds the
-        experiment ID, composition, and guess temperature
+        experiment ID, composition, and guess_temperature.
+        Doppler broadening can also be incorporated. 
+
+        parameters:
+        --------------
+        experiment: integer ID for experiment
+        composition: list of strings corresponding to atomic
+                     symbols
+        temperature: float temperature
+        doppler: float doppler in km/s; default value is about
+                 5 kHz at 15 GHz.
     """
     experiment: int
     composition: List[str] = field(default_factory = list)
     temperature: float = 4.0
+    doppler: float = 0.01
 
 
 class AssignmentSession:
@@ -287,8 +299,9 @@ class AssignmentSession:
             # drop repeated frequencies
             peaks_df.drop_duplicates(["Frequency"],inplace=True)
         # Generate U-lines
+        skip = ["temperature", "doppler"]
         selected_session = {
-            key: self.session.__dict__[key] for key in self.session.__dict__ if key != "temperature"
+            key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
         for index, row in peaks_df.iterrows():
             ass_obj = Assignment(
@@ -748,6 +761,93 @@ class AssignmentSession:
             for folder in folders:
                 rmtree(folder)
 
+    def simulate_spectrum(self, x, centers, widths, amplitudes, fake=False):
+        """
+            Generate a synthetic spectrum with Gaussians with the
+            specified parameters, on a given x axis.
+
+            GaussianModel is used here to remain internally consistent
+            with the rest of the code.
+
+            parameters:
+            ---------------
+            x - array of x values to evaluate Gaussians on
+            centers - array of Gaussian centers
+            widths - array of Gaussian widths
+            amplitudes - array of Gaussian amplitudes
+
+            returns:
+            ---------------
+            y - array of y values
+        """
+        y = np.zeros(len(x))
+        model = GaussianModel()
+        for c, w, a in zip(centers, widths, amplitudes):
+            if fake is True:
+                scaling = a
+            else:
+                scaling = 1.
+            y+=scaling * model.eval(
+                x=x,
+                center=c,
+                sigma=w,
+                amplitude=a
+                )
+        return y
+
+    def plot_spectrum(self):
+        """
+            Generates a Plotly figure of the spectrum. If U-lines are
+            present, it will plot the simulated spectrum also.
+        """
+        fig = go.FigureWidget()
+
+        fig.add_scatter(
+            x=self.data[self.freq_col],
+            y=self.data[self.int_col],
+            name="Experiment",
+            opacity=0.6
+            )
+
+        if hasattr(self, "ulines"):
+            centers = np.array([uline.frequency for uline in self.ulines])
+            widths = units.dop2freq(
+                self.session.doppler,
+                centers
+                )
+            amplitudes = np.array([uline.intensity for uline in self.ulines])
+            labels = [uline.peak_id for uline in self.ulines]
+
+            simulated = self.simulate_spectrum(
+                self.data[self.freq_col].values,
+                centers,
+                widths,
+                amplitudes,
+                fake=True
+                )
+
+            self.simulated = pd.DataFrame(
+                data=list(zip(self.data[self.freq_col].values, simulated)),
+                columns=["Frequency", "Intensity"]
+                )
+
+            fig.add_scatter(
+                x=self.simulated["Frequency"],
+                y=self.simulated["Intensity"],
+                name="Simulated spectrum"
+                )
+
+            fig.add_bar(
+                x=centers,
+                y=amplitudes,
+                hoverinfo="text",
+                text=labels,
+                name="Peaks"
+                )
+
+        return fig
+
+
     def plot_assigned(self):
         """
             Generates a Plotly figure with the assignments overlaid
@@ -759,7 +859,7 @@ class AssignmentSession:
             x=self.data["Frequency"],
             y=self.data["Intensity"],
             name="Experiment",
-            opacity=0.4
+            opacity=0.6
         )
 
         fig.add_bar(

@@ -77,6 +77,7 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
     peak_indices = peakutils.indexes(
         spec_df[int_col],
         thres=thres,
+        thres_abs=True,
         min_dist=10
         )
     frequencies = peakutils.interpolate(
