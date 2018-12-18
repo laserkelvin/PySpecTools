@@ -1,6 +1,7 @@
 
 import numpy as np
 
+from pyspectools import units
 from pyspectools.parsecat import read_cat
 from pyspectools.units import gaussian_fwhm, gaussian_height, gaussian_integral
 from pyspectools.astro import conversions
@@ -63,6 +64,7 @@ def lineprofile_analysis(fit, I, Q, T, E):
         }
     return data_dict
 
+
 def simulate_catalog(catalogpath, N, Q, T, doppler=10.):
     """
      Function for simulating what the expected flux would be for
@@ -81,12 +83,14 @@ def simulate_catalog(catalogpath, N, Q, T, doppler=10.):
     catalog_df = read_cat(catalogpath)
     # Calculate the line strength
     catalog_df["Su^2"] = radiative.I2S(
+        catalog_df["Intensity"].values,
         Q,
-        catalog_df["Intensity"],
-        catalog_df["Lower state energy"],
+        catalog_df["Frequency"].values,
+        catalog_df["Lower state energy"].values,
         T
     )
-    flux = conversions.N2flux(
+    # Calculate the expected integrated flux in Jy
+    catalog_df["Integrated Flux (Jy)"] = conversions.N2flux(
         N,
         catalog_df["Su^2"].values,
         catalog_df["Frequency"].values,
@@ -94,4 +98,11 @@ def simulate_catalog(catalogpath, N, Q, T, doppler=10.):
         catalog_df["Lower state energy"].values,
         T
     )
-
+    catalog_df["Doppler Shifts"] = units.dop2freq(velocity=doppler, frequency=catalog_df["Frequency"].values)
+    catalog_df["Doppler Frequency"] = catalog_df["Frequency"] + catalog_df["Doppler Shifts"]
+    amplitudes = catalog_df["Integrated Flux (Jy)"] / np.sqrt(2. * np.pi**2. * catalog_df["Doppler Shifts"])
+    catalog_df["Flux (Jy)"] = units.gaussian_height(
+        amplitudes,
+        catalog_df["Doppler Shifts"]
+    )
+    return catalog_df
