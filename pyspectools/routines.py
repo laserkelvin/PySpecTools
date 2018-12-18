@@ -7,7 +7,7 @@ import os
 import subprocess
 import shutil
 import json
-import ruamel_yaml as yaml
+import yaml
 from pyspectools import pypickett as pp
 from glob import glob
 
