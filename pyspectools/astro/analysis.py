@@ -1,8 +1,7 @@
 
 import numpy as np
-from scipy.integrate import quad
 
-from pyspectools.lineshapes import gaussian
+from pyspectools.parsecat import read_cat
 from pyspectools.units import gaussian_fwhm, gaussian_height, gaussian_integral
 from pyspectools.astro import conversions
 from pyspectools.astro import radiative
@@ -63,4 +62,36 @@ def lineprofile_analysis(fit, I, Q, T, E):
         "N cm$^{-2}$": N
         }
     return data_dict
-    
+
+def simulate_catalog(catalogpath, N, Q, T, doppler=10.):
+    """
+     Function for simulating what the expected flux would be for
+     a given molecule and its catalog file from SPCAT. Returns a
+     spectrum of Gaussian line shapes, predicted by either a supplied
+     Doppler width or session-wide value (self.doppler), and
+     the parameters required to calculate the flux in Jy.
+
+     :param catalogpath: path to the SPCAT catalog file
+     :param N: column density in cm^-2
+     :param Q: rotational partition function
+     :param T: temperature in Kelvin
+     :param doppler: Doppler width in km/s
+     :return: simulated_df; pandas dataframe with frequency/intensity
+     """
+    catalog_df = read_cat(catalogpath)
+    # Calculate the line strength
+    catalog_df["Su^2"] = radiative.I2S(
+        Q,
+        catalog_df["Intensity"],
+        catalog_df["Lower state energy"],
+        T
+    )
+    flux = conversions.N2flux(
+        N,
+        catalog_df["Su^2"].values,
+        catalog_df["Frequency"].values,
+        Q,
+        catalog_df["Lower state energy"].values,
+        T
+    )
+
