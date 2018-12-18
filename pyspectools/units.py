@@ -96,3 +96,20 @@ def hartree2kjmol(hartree):
 
 def wavenumber2kjmol(wavenumber):
     return wavenumber / (jm / 100.) / (avo * 1000.)
+
+
+def fwhm(sigma):
+    """
+        Calculate the full-width half maximum
+        value assuming a Gaussian function.
+
+        parameters:
+        --------------
+        sigma - float for width
+
+        returns:
+        --------------
+        fwhm - float value for full-width at half-max
+    """
+    return 2. * np.sqrt(2. * np.log(2.)) * sigma
+
