@@ -38,8 +38,8 @@ def fit_line_profile(spec_df, center, width, intensity,
         )
     params["sigma"].set(
         width,
-        min=width * 0.9,
-        max=width * 1.1
+        min=width * 0.95,
+        max=width * 1.05
         )
     # Slice up a small chunk in frequency space; 0.5% of the
     # center frequency to allow for broad lineshapes
