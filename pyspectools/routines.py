@@ -10,7 +10,7 @@ import json
 import types
 from glob import glob
 
-import ruamel_yaml as yaml
+import yaml
 import joblib
 
 from pyspectools import pypickett as pp
