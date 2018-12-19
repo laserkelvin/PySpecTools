@@ -1,0 +1,986 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pyspectools.spectra.assignment &#8212; PySpecTools 3.1.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for pyspectools.spectra.assignment</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    assignment.py</span>
+
+<span class="sd">    Contains dataclass routines for tracking assignments</span>
+<span class="sd">    in broadband spectra.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">shutil</span> <span class="k">import</span> <span class="n">rmtree</span>
+<span class="kn">from</span> <span class="nn">dataclasses</span> <span class="k">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">lmfit.models</span> <span class="k">import</span> <span class="n">GaussianModel</span>
+<span class="kn">from</span> <span class="nn">IPython.display</span> <span class="k">import</span> <span class="n">display</span><span class="p">,</span> <span class="n">HTML</span>
+<span class="kn">from</span> <span class="nn">periodictable</span> <span class="k">import</span> <span class="n">formula</span>
+<span class="kn">from</span> <span class="nn">plotly</span> <span class="k">import</span> <span class="n">graph_objs</span> <span class="k">as</span> <span class="n">go</span>
+
+<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">routines</span>
+<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">fitting</span>
+<span class="kn">from</span> <span class="nn">pyspectools.parsecat</span> <span class="k">import</span> <span class="n">read_cat</span>
+<span class="kn">from</span> <span class="nn">pyspectools.spectra</span> <span class="k">import</span> <span class="n">analysis</span>
+<span class="kn">from</span> <span class="nn">pyspectools.spectra</span> <span class="k">import</span> <span class="n">parsers</span>
+
+
+<div class="viewcode-block" id="Assignment"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Assignment">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Assignment</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        DataClass for handling assignments.</span>
+<span class="sd">        There should be sufficient information to store a</span>
+<span class="sd">        line assignment and reproduce it later in a form</span>
+<span class="sd">        that is both machine and human readable.</span>
+
+<span class="sd">        parameters:</span>
+<span class="sd">        ------------------</span>
+<span class="sd">        name - str representing IUPAC/common name</span>
+<span class="sd">        formula - str representing chemical formula</span>
+<span class="sd">        smiles - str representing SMILES code (specific!)</span>
+<span class="sd">        frequency - float for observed frequency</span>
+<span class="sd">        intensity - float for observed intensity</span>
+<span class="sd">        peak_id - int for peak id from experiment</span>
+<span class="sd">        uline - bool flag to signal whether line is identified or not</span>
+<span class="sd">        composition - list-like with string corresponding to experimental</span>
+<span class="sd">                      chemical composition. SMILES syntax.</span>
+<span class="sd">        v_qnos - list with quantum numbers for vibrational modes. Index</span>
+<span class="sd">                 corresponds to mode, and int value to number of quanta.</span>
+<span class="sd">                 Length should be equal to 3N-6.</span>
+<span class="sd">        experiment - int for experiment ID</span>
+<span class="sd">        fit - dict-like containing the fitted parameters and model</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">name</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">smiles</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">formula</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">catalog_frequency</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">intensity</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">peak_id</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">experiment</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">uline</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">composition</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span> <span class="o">=</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="n">v_qnos</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span> <span class="o">=</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="n">r_qnos</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="n">fit</span><span class="p">:</span> <span class="n">Dict</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">)</span>
+    <span class="n">ustate_energy</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">interference</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">weighting</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">0.0</span>
+    <span class="n">source</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;Catalog&quot;</span>
+
+    <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Dunder method for comparing molecules.</span>
+<span class="sd">            This method is simply a shortcut to see if</span>
+<span class="sd">            two molecules are the same based on their</span>
+<span class="sd">            SMILES code, the chemical name, and frequency.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">==</span> <span class="nb">type</span><span class="p">(</span><span class="n">other</span><span class="p">):</span>
+            <span class="n">comparisons</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">smiles</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">smiles</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">name</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">v_qnos</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">v_qnos</span>
+                <span class="p">]</span>
+            <span class="k">return</span> <span class="nb">all</span><span class="p">(</span><span class="n">comparisons</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>
+
+    <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.name}</span><span class="s2">, </span><span class="si">{self.frequency}</span><span class="s2">&quot;</span>
+
+<div class="viewcode-block" id="Assignment.to_file"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Assignment.to_file">[docs]</a>    <span class="k">def</span> <span class="nf">to_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;yaml&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method to dump data to YAML format.</span>
+<span class="sd">            Extensions are automatically decided, but</span>
+<span class="sd">            can also be supplied.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            --------------------</span>
+<span class="sd">            filepath - str path to yaml file</span>
+<span class="sd">            format - str denoting the syntax used for dumping.</span>
+<span class="sd">                     Defaults to YAML.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s2">&quot;.&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filepath</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
+                <span class="n">filepath</span><span class="o">+=</span><span class="s2">&quot;.json&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">filepath</span><span class="o">+=</span><span class="s2">&quot;.yml&quot;</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s2">&quot;json&quot;</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">routines</span><span class="o">.</span><span class="n">dump_json</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">writer</span> <span class="o">=</span> <span class="n">routines</span><span class="o">.</span><span class="n">dump_yaml</span>
+        <span class="n">writer</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="Assignment.get_spectrum"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Assignment.get_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">get_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Generate a synthetic peak by supplying</span>
+<span class="sd">            the x axis for a particular spectrum. This method</span>
+<span class="sd">            assumes that some fit parameters have been determined</span>
+<span class="sd">            previously.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            x - 1D array with frequencies of experiment</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            y - 1D array of synthetic Gaussian spectrum</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="n">GaussianModel</span><span class="p">()</span>
+        <span class="n">params</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">make_params</span><span class="p">()</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">fit</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">eval</span><span class="p">(</span><span class="n">params</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="n">x</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">y</span></div>
+
+<div class="viewcode-block" id="Assignment.from_dict"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Assignment.from_dict">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_dict</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">data_dict</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method for generating an Assignment object</span>
+<span class="sd">            from a dictionary. All this method does is</span>
+<span class="sd">            unpack a dictionary into the __init__ method.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            data_dict - dict with DataClass fields</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            Assignment object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">assignment_obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">(</span><span class="o">**</span><span class="n">data_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">assignment_obj</span></div>
+
+<div class="viewcode-block" id="Assignment.from_yml"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Assignment.from_yml">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_yml</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">yaml_path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method for initializing an Assignment object</span>
+<span class="sd">            from a YAML file.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            yaml_path - str path to yaml file</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            Assignment object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">yaml_dict</span> <span class="o">=</span> <span class="n">routines</span><span class="o">.</span><span class="n">read_yaml</span><span class="p">(</span><span class="n">yaml_path</span><span class="p">)</span>
+        <span class="n">assignment_obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">(</span><span class="o">**</span><span class="n">yaml_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">assignment_obj</span></div>
+
+<div class="viewcode-block" id="Assignment.from_json"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Assignment.from_json">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_json</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">json_path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method for initializing an Assignment object</span>
+<span class="sd">            from a JSON file.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            json_path - str path to json file</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            Assignment object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">json_dict</span> <span class="o">=</span> <span class="n">routines</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="n">json_path</span><span class="p">)</span>
+        <span class="n">assignment_obj</span> <span class="o">=</span> <span class="n">obj</span><span class="p">(</span><span class="o">**</span><span class="n">json_dict</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">assignment_obj</span></div></div>
+
+
+<div class="viewcode-block" id="Session"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.Session">[docs]</a><span class="nd">@dataclass</span>
+<span class="k">class</span> <span class="nc">Session</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; DataClass for a Session, which simply holds the</span>
+<span class="sd">        experiment ID, composition, and guess temperature</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">experiment</span><span class="p">:</span> <span class="nb">int</span>
+    <span class="n">composition</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span> <span class="o">=</span> <span class="nb">list</span><span class="p">)</span>
+    <span class="n">temperature</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">4.0</span></div>
+
+
+<div class="viewcode-block" id="AssignmentSession"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession">[docs]</a><span class="k">class</span> <span class="nc">AssignmentSession</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot; Class for managing a session of assigning molecules</span>
+<span class="sd">        to a broadband spectrum.</span>
+
+<span class="sd">        Wraps some high level functionality from the analysis</span>
+<span class="sd">        module so that this can be run reproducibly in a jupyter</span>
+<span class="sd">        notebook.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="AssignmentSession.load_session"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.load_session">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load_session</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Load an AssignmentSession from disk, once it has</span>
+<span class="sd">            been saved with the save_session method.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            --------------</span>
+<span class="sd">            filepath - path to the AssignmentSession file; typically</span>
+<span class="sd">                       in the sessions/{experiment_id}.dat</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">session</span> <span class="o">=</span> <span class="n">routines</span><span class="o">.</span><span class="n">read_obj</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="n">obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">session</span><span class="p">[</span><span class="s2">&quot;data&quot;</span><span class="p">],</span>
+            <span class="o">**</span><span class="n">session</span><span class="p">[</span><span class="s2">&quot;session&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="c1"># Reinitialize classes</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">ulines</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Assignment</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">uline</span><span class="p">)</span> <span class="k">for</span> <span class="n">uline</span> <span class="ow">in</span> <span class="n">session</span><span class="p">[</span><span class="s2">&quot;ulines&quot;</span><span class="p">]</span>
+            <span class="p">]</span>
+        <span class="n">obj</span><span class="o">.</span><span class="n">assignments</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">Assignment</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="n">ass_obj</span><span class="p">)</span> <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="n">session</span><span class="p">[</span><span class="s2">&quot;assignments&quot;</span><span class="p">]</span>
+            <span class="p">]</span>
+        <span class="k">return</span> <span class="n">obj</span> </div>
+
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span>
+            <span class="bp">self</span><span class="p">,</span> <span class="n">exp_dataframe</span><span class="p">,</span> <span class="n">experiment</span><span class="p">,</span> <span class="n">composition</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="mf">4.0</span><span class="p">,</span>
+            <span class="n">freq_col</span><span class="o">=</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="n">int_col</span><span class="o">=</span><span class="s2">&quot;Intensity&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Initialize a AssignmentSession with a pandas dataframe</span>
+<span class="sd">            corresponding to a spectrum.</span>
+
+<span class="sd">            description of data:</span>
+<span class="sd">            -------------------------</span>
+<span class="sd">            exp_dataframe - pandas dataframe with observational data in frequency/intensity</span>
+<span class="sd">            experiment - int ID for the experiment</span>
+<span class="sd">            composition - list of str corresponding to experiment composition</span>
+<span class="sd">            freq_col - optional arg specifying the name for the frequency column</span>
+<span class="sd">            int_col - optional arg specifying the name of the intensity column</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Make folders for organizing output</span>
+        <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;assignment_objs&quot;</span><span class="p">,</span> <span class="s2">&quot;queries&quot;</span><span class="p">,</span> <span class="s2">&quot;sessions&quot;</span><span class="p">,</span> <span class="s2">&quot;clean&quot;</span><span class="p">,</span> <span class="s2">&quot;reports&quot;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">folders</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+        <span class="c1"># Initialize a Session dataclass</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">session</span> <span class="o">=</span> <span class="n">Session</span><span class="p">(</span><span class="n">experiment</span><span class="p">,</span> <span class="n">composition</span><span class="p">,</span> <span class="n">temperature</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">exp_dataframe</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">t_threshold</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">temperature</span> <span class="o">*</span> <span class="mf">3.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="c1"># Default settings for columns</span>
+        <span class="k">if</span> <span class="n">freq_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span> <span class="o">=</span> <span class="n">freq_col</span>
+        <span class="k">if</span> <span class="n">int_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">int_col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">int_col</span> <span class="o">=</span> <span class="n">int_col</span>
+
+<div class="viewcode-block" id="AssignmentSession.find_peaks"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.find_peaks">[docs]</a>    <span class="k">def</span> <span class="nf">find_peaks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.015</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Wrap peakutils method for detecting peaks.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            threshold - peak detection threshold</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            peaks_df - dataframe containing peaks</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">peaks_df</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">peak_find</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">freq_col</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">,</span>
+            <span class="n">int_col</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int_col</span><span class="p">,</span>
+            <span class="n">thres</span><span class="o">=</span><span class="n">threshold</span>
+           <span class="p">)</span>
+        <span class="c1"># Reindex the peaks</span>
+        <span class="n">peaks_df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">peaks_df</span><span class="p">))</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;peaks&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="c1"># If we&#39;ve looked for peaks previously</span>
+            <span class="c1"># we don&#39;t have to re-add the U-line to</span>
+            <span class="c1"># the list</span>
+            <span class="n">peaks_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">peaks_df</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">])</span>
+            <span class="c1"># drop repeated frequencies</span>
+            <span class="n">peaks_df</span><span class="o">.</span><span class="n">drop_duplicates</span><span class="p">([</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># Generate U-lines</span>
+        <span class="n">selected_session</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">key</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;temperature&quot;</span>
+            <span class="p">}</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">peaks_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+            <span class="n">ass_obj</span> <span class="o">=</span> <span class="n">Assignment</span><span class="p">(</span>
+                <span class="n">frequency</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">],</span>
+                <span class="n">intensity</span><span class="o">=</span><span class="n">row</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">int_col</span><span class="p">],</span>
+                <span class="n">peak_id</span><span class="o">=</span><span class="n">index</span><span class="p">,</span>
+                <span class="o">**</span><span class="n">selected_session</span>
+                <span class="p">)</span>
+            <span class="c1"># If the frequency hasn&#39;t already been done, add it</span>
+            <span class="c1"># to the U-line pile</span>
+            <span class="k">if</span> <span class="n">ass_obj</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span> <span class="ow">and</span> <span class="n">ass_obj</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ass_obj</span><span class="p">)</span>
+        <span class="c1"># Assign attribute</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span> <span class="o">=</span> <span class="n">peaks_df</span>
+        <span class="k">return</span> <span class="n">peaks_df</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.search_frequency"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.search_frequency">[docs]</a>    <span class="k">def</span> <span class="nf">search_frequency</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method for searching a frequency in the spectrum.</span>
+<span class="sd">            Gives information relevant to whether it&#39;s a U-line</span>
+<span class="sd">            or assigned.</span>
+
+<span class="sd">            Raises exception error if nothing is found.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            frequency - float corresponding to the frequency in MHz</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            slice_df - pandas dataframe containing matches</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">slice_df</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">lower_freq</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">*</span> <span class="mf">0.999</span>
+        <span class="n">upper_freq</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">*</span> <span class="mf">1.001</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;table&quot;</span><span class="p">):</span>
+            <span class="n">slice_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">lower_freq</span><span class="p">)</span> <span class="o">&amp;</span> 
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">upper_freq</span><span class="p">)</span>
+                <span class="p">]</span>
+        <span class="c1"># If no hits turn up, look for it in U-lines</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">slice_df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No assignment found; searching U-lines&quot;</span><span class="p">)</span>
+            <span class="n">slice_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">lower_freq</span><span class="p">)</span> <span class="o">&amp;</span>
+                <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">upper_freq</span><span class="p">)</span>
+                <span class="p">]</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">slice_df</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Frequency not found in U-lines.&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Found U-lines.&quot;</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">slice_df</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Found assignments.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">slice_df</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.in_experiment"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.in_experiment">[docs]</a>    <span class="k">def</span> <span class="nf">in_experiment</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method to ask a simple yes/no if the frequency</span>
+<span class="sd">            exists in either U-lines or assignments.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            frequency - float corresponding to frequency in MHz</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            --------------</span>
+<span class="sd">            bool - True if it&#39;s in ulines/assignments, False otherwise</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">slice_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">search_frequency</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">slice_df</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">True</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.splat_assign_spectrum"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.splat_assign_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">splat_assign_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auto</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Function that will provide an &quot;interface&quot; for interactive</span>
+<span class="sd">            line assignment in a notebook environment.</span>
+
+<span class="sd">            Basic functionality is looping over a series of peaks,</span>
+<span class="sd">            which will query splatalogue for known transitions in the</span>
+<span class="sd">            vicinity. If the line is known in Splatalogue, it will</span>
+<span class="sd">            throw it into an Assignment object and flag it as known.</span>
+<span class="sd">            Conversely, if it&#39;s not known in Splatalogue it will defer</span>
+<span class="sd">            assignment, flagging it as unassigned and dumping it into</span>
+<span class="sd">            the `uline` attribute.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;peaks&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Peak detection not run; running with default settings.&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">()</span>
+
+        <span class="k">for</span> <span class="n">uindex</span><span class="p">,</span> <span class="n">uline</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">):</span>
+            <span class="n">frequency</span> <span class="o">=</span> <span class="n">uline</span><span class="o">.</span><span class="n">frequency</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Searching for frequency </span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">frequency</span><span class="p">))</span>
+            <span class="c1"># Call splatalogue API to search for frequency</span>
+            <span class="n">splat_df</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">search_center_frequency</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">width</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
+            <span class="c1"># Filter out lines that are way too unlikely on grounds of temperature</span>
+            <span class="n">splat_df</span> <span class="o">=</span> <span class="n">splat_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">splat_df</span><span class="p">[</span><span class="s2">&quot;E_U (K)&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_threshold</span><span class="p">]</span>
+            <span class="c1"># Filter out quack elemental compositions</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">splat_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+                <span class="c1"># Convert the string into a chemical formula object</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">clean_formula</span> <span class="o">=</span> <span class="n">row</span><span class="p">[</span><span class="s2">&quot;Species&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;v=&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">prefix</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;l-&quot;</span><span class="p">,</span> <span class="s2">&quot;c-&quot;</span><span class="p">]:</span>
+                        <span class="n">clean_formula</span> <span class="o">=</span> <span class="n">clean_formula</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">prefix</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+                    <span class="n">formula_obj</span> <span class="o">=</span> <span class="n">formula</span><span class="p">(</span><span class="n">clean_formula</span><span class="p">)</span>
+                    <span class="c1"># Check if proposed molecule contains atoms not</span>
+                    <span class="c1"># expected in composition</span>
+                    <span class="n">comp_check</span> <span class="o">=</span> <span class="nb">all</span><span class="p">(</span>
+                        <span class="nb">str</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">composition</span> <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="n">formula_obj</span><span class="o">.</span><span class="n">atoms</span>
+                        <span class="p">)</span>
+                    <span class="k">if</span> <span class="n">comp_check</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                        <span class="c1"># If there are crazy things in the mix, forget about it</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Molecule &quot;</span> <span class="o">+</span> <span class="n">clean_formula</span> <span class="o">+</span> <span class="s2">&quot; rejected.&quot;</span><span class="p">)</span>
+                        <span class="n">splat_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Could not parse molecule &quot;</span> <span class="o">+</span> <span class="n">clean_formula</span> <span class="o">+</span> <span class="s2">&quot; rejected.&quot;</span><span class="p">)</span>
+                    <span class="n">splat_df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">nitems</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">splat_df</span><span class="p">)</span>
+
+            <span class="n">splat_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_line_weighting</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">splat_df</span><span class="p">,</span> <span class="n">prox</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">splat_df</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">splat_df</span><span class="o">.</span><span class="n">to_html</span><span class="p">()))</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Observed frequency is </span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">frequency</span><span class="p">))</span>
+                    <span class="k">if</span> <span class="n">auto</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                        <span class="c1"># If not automated, we need a human to look at frequencies</span>
+                        <span class="c1"># Print the dataframe for notebook viewing</span>
+                        <span class="n">splat_index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span>
+                            <span class="nb">input</span><span class="p">(</span>
+                                <span class="s2">&quot;Please choose an assignment index: 0 - &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">nitems</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+                                <span class="p">)</span>
+                            <span class="p">)</span>
+                    <span class="k">else</span><span class="p">:</span>
+                        <span class="c1"># If automated, choose closest frequency</span>
+                        <span class="n">splat_index</span> <span class="o">=</span> <span class="mi">0</span>
+
+                    <span class="n">ass_df</span> <span class="o">=</span> <span class="n">splat_df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[[</span><span class="n">splat_index</span><span class="p">]]</span>
+                    <span class="n">splat_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span>
+                        <span class="s2">&quot;queries/</span><span class="si">{0}</span><span class="s2">-</span><span class="si">{1}</span><span class="s2">.csv&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span> <span class="n">uindex</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span>
+                        <span class="p">)</span>
+                    <span class="n">ass_dict</span> <span class="o">=</span> <span class="p">{</span>
+                       <span class="s2">&quot;uline&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
+                       <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">uindex</span><span class="p">,</span>
+                       <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="n">frequency</span><span class="p">,</span>
+                       <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">ass_df</span><span class="p">[</span><span class="s2">&quot;Chemical Name&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="s2">&quot;catalog_frequency&quot;</span><span class="p">:</span> <span class="n">ass_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="n">ass_df</span><span class="p">[</span><span class="s2">&quot;Species&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="s2">&quot;r_qnos&quot;</span><span class="p">:</span> <span class="n">ass_df</span><span class="p">[</span><span class="s2">&quot;Resolved QNs&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="s2">&quot;ustate_energy&quot;</span><span class="p">:</span> <span class="n">ass_df</span><span class="p">[</span><span class="s2">&quot;E_U (K)&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="s2">&quot;weighting&quot;</span><span class="p">:</span> <span class="n">ass_df</span><span class="p">[</span><span class="s2">&quot;Weighting&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">],</span>
+                       <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;CDMS/JPL&quot;</span>
+                       <span class="p">}</span>
+                    <span class="c1"># Perform a Voigt profile fit</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Attempting to fit line profile...&quot;</span><span class="p">)</span>
+                    <span class="n">fit_results</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">fit_line_profile</span><span class="p">(</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                        <span class="n">frequency</span>
+                        <span class="p">)</span>
+                    <span class="c1"># Pass the fitted parameters into Assignment object</span>
+                    <span class="n">ass_dict</span><span class="p">[</span><span class="s2">&quot;fit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_results</span><span class="o">.</span><span class="n">best_values</span>
+                    <span class="c1"># Need support to convert common name to SMILES</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">assign_line</span><span class="p">(</span><span class="o">**</span><span class="n">ass_dict</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="c1"># If nothing matches, keep in the U-line</span>
+                    <span class="c1"># pile.</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Deferring assignment&quot;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Throw into U-line pile if no matches at all</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No species known for </span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">frequency</span><span class="p">))</span>
+            <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="s2">&quot;&lt;hr&gt;&quot;</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Processed </span><span class="si">{}</span><span class="s2"> lines.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">uindex</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.process_lin"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.process_lin">[docs]</a>    <span class="k">def</span> <span class="nf">process_lin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">linpath</span><span class="p">,</span> <span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Reads in a line file and sweeps through the U-line list.</span>
+
+<span class="sd">            Operationally, the same as the catalog and splatalogue methods,</span>
+<span class="sd">            but parses a line file instead. The differences are a lack of</span>
+<span class="sd">            filtering, since there is insufficient information in a lin</span>
+<span class="sd">            file.</span>
+
+<span class="sd">            Kwargs are passed into the assignment dictionary.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            -----------------</span>
+<span class="sd">            name - str common name of the molecule</span>
+<span class="sd">            formula - str chemical formula of the molecule</span>
+<span class="sd">            linpath - path to line file to be parsed</span>
+<span class="sd">            auto - optional bool specifying which mode to run in</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">old_nulines</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">)</span>
+        <span class="n">lin_df</span> <span class="o">=</span> <span class="n">parsers</span><span class="o">.</span><span class="n">parse_lin</span><span class="p">(</span><span class="n">linpath</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">uindex</span><span class="p">,</span> <span class="n">uline</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">):</span>
+            <span class="n">sliced_catalog</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_line_weighting</span><span class="p">(</span>
+                <span class="n">uline</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                <span class="n">lin_df</span>
+                <span class="p">)</span>
+            <span class="k">if</span> <span class="n">sliced_catalog</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">sliced_catalog</span><span class="o">.</span><span class="n">to_html</span><span class="p">()))</span>
+                <span class="k">if</span> <span class="n">auto</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Please choose a candidate by index&quot;</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="n">auto</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">if</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">sliced_catalog</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                    <span class="n">select_df</span> <span class="o">=</span> <span class="n">sliced_catalog</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                    <span class="n">qnos</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Quantum numbers&quot;</span><span class="p">])</span>
+                    <span class="n">assign_dict</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                        <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="n">formula</span><span class="p">,</span>
+                        <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">uindex</span><span class="p">,</span>
+                        <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="n">uline</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                        <span class="s2">&quot;r_qnos&quot;</span><span class="p">:</span> <span class="n">qnos</span><span class="p">,</span>
+                        <span class="s2">&quot;catalog_frequency&quot;</span><span class="p">:</span> <span class="n">select_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;Line file&quot;</span>
+                        <span class="p">}</span>
+                    <span class="n">assign_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">assign_line</span><span class="p">(</span><span class="o">**</span><span class="n">assign_dict</span><span class="p">)</span>
+        <span class="n">ass_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">ass_obj</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="o">=</span> <span class="n">ass_df</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Prior number of ulines: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">old_nulines</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current number of ulines: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">)))</span></div>
+
+
+<div class="viewcode-block" id="AssignmentSession.calc_line_weighting"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.calc_line_weighting">[docs]</a>    <span class="k">def</span> <span class="nf">calc_line_weighting</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency</span><span class="p">,</span> <span class="n">catalog_df</span><span class="p">,</span> <span class="n">prox</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Function for calculating the weighting factor for determining</span>
+<span class="sd">            the likely hood of an assignment. The weighting factor is</span>
+<span class="sd">            determined by the proximity of the catalog frequency to the</span>
+<span class="sd">            observed frequency, as well as the theoretical intensity if it</span>
+<span class="sd">            is available.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            frequency - float observed frequency in MHz</span>
+<span class="sd">            catalog_df - dataframe corresponding to catalog entries</span>
+<span class="sd">            prox - optional float for frequency proximity threshold</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            If nothing matches the frequency, returns None.</span>
+<span class="sd">            If matches are found, calculate the weights and return the candidates</span>
+<span class="sd">            in a dataframe.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lower_freq</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">prox</span><span class="p">)</span>
+        <span class="n">upper_freq</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">prox</span><span class="p">)</span>
+        <span class="n">sliced_catalog</span> <span class="o">=</span> <span class="n">catalog_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">lower_freq</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">upper_freq</span><span class="p">)</span>
+            <span class="p">]</span>
+        <span class="n">nentries</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">sliced_catalog</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">nentries</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="c1"># Calculate probability weighting. Base is the inverse of distance</span>
+            <span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Deviation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">frequency</span><span class="p">)</span>
+            <span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Weighting&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.</span><span class="o">/</span><span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Deviation&quot;</span><span class="p">])</span>
+            <span class="c1"># If intensity is included in the catalog incorporate it in</span>
+            <span class="c1"># the weight calculation</span>
+            <span class="k">if</span> <span class="s2">&quot;Intensity&quot;</span> <span class="ow">in</span> <span class="n">sliced_catalog</span><span class="p">:</span>
+                <span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Weighting&quot;</span><span class="p">]</span><span class="o">*=</span><span class="p">(</span><span class="mi">10</span><span class="o">**</span><span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">])</span>
+            <span class="k">elif</span> <span class="s2">&quot;CDMS/JPL Intensity&quot;</span> <span class="ow">in</span> <span class="n">sliced_catalog</span><span class="p">:</span>
+                <span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Weighting&quot;</span><span class="p">]</span><span class="o">*=</span><span class="p">(</span><span class="mi">10</span><span class="o">**</span><span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">])</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># If there are no recognized intensity columns, pass</span>
+                <span class="k">pass</span>
+            <span class="c1"># Normalize the weights</span>
+            <span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Weighting&quot;</span><span class="p">]</span><span class="o">/=</span><span class="n">sliced_catalog</span><span class="p">[</span><span class="s2">&quot;Weighting&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="c1"># Sort by obs-calc</span>
+            <span class="n">sliced_catalog</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;Weighting&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">sliced_catalog</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">nentries</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">sliced_catalog</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.process_catalog"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.process_catalog">[docs]</a>    <span class="k">def</span> <span class="nf">process_catalog</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">catalogpath</span><span class="p">,</span> <span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Reads in a catalog (SPCAT) file and sweeps through the</span>
+<span class="sd">            U-line list for this experiment finding coincidences.</span>
+
+<span class="sd">            Similar to the splatalogue interface, lines are rejected</span>
+<span class="sd">            on state energy from the t_threshold attribute.</span>
+
+<span class="sd">            Each catalog entry will be weighted according to their</span>
+<span class="sd">            theoretical intensity and deviation from observation. In</span>
+<span class="sd">            automatic mode, the highest weighted transition is assigned.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ----------------</span>
+<span class="sd">            name - str corresponding to common name of molecule</span>
+<span class="sd">            formula - str corresponding to chemical formula</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">old_nulines</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">)</span>
+        <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">read_cat</span><span class="p">(</span>
+                <span class="n">catalogpath</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+            <span class="p">)</span>
+        <span class="c1"># Filter out the states with high energy</span>
+        <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">catalog_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Lower state energy&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_threshold</span>
+            <span class="p">]</span>
+        <span class="c1"># Loop over the uline list</span>
+        <span class="k">for</span> <span class="n">uindex</span><span class="p">,</span> <span class="n">uline</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">):</span>
+            <span class="c1"># 0.1% of frequency</span>
+            <span class="n">sliced_catalog</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_line_weighting</span><span class="p">(</span><span class="n">uline</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="n">catalog_df</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">sliced_catalog</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">display</span><span class="p">(</span><span class="n">HTML</span><span class="p">(</span><span class="n">sliced_catalog</span><span class="o">.</span><span class="n">to_html</span><span class="p">()))</span>
+                <span class="k">if</span> <span class="n">auto</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">raw_input</span><span class="p">(</span><span class="s2">&quot;Please choose a candidate by index.&quot;</span><span class="p">))</span>
+                <span class="k">elif</span> <span class="n">auto</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="k">if</span> <span class="n">index</span> <span class="ow">in</span> <span class="n">sliced_catalog</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                    <span class="n">select_df</span> <span class="o">=</span> <span class="n">sliced_catalog</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+                    <span class="c1"># Create an approximate quantum number string</span>
+                    <span class="n">qnos</span> <span class="o">=</span> <span class="s2">&quot;N&#39;=</span><span class="si">{}</span><span class="s2">, J&#39;=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">sliced_catalog</span><span class="p">[[</span><span class="s2">&quot;N&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;J&#39;&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">qnos</span><span class="o">+=</span><span class="s2">&quot;N&#39;&#39;=</span><span class="si">{}</span><span class="s2">, J&#39;&#39;=</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">sliced_catalog</span><span class="p">[[</span><span class="s2">&quot;N&#39;&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;J&#39;&#39;&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                    <span class="n">assign_dict</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                        <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="n">formula</span><span class="p">,</span>
+                        <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="n">uindex</span><span class="p">,</span>
+                        <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="n">uline</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span>
+                        <span class="s2">&quot;r_qnos&quot;</span><span class="p">:</span> <span class="n">qnos</span><span class="p">,</span>
+                        <span class="s2">&quot;catalog_frequency&quot;</span><span class="p">:</span> <span class="n">select_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                        <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="s2">&quot;Catalog&quot;</span>
+                        <span class="p">}</span>
+                    <span class="c1"># Pass whatever extra stuff</span>
+                    <span class="n">assign_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+                    <span class="c1"># Use assign_line function to mark peak as assigned</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">assign_line</span><span class="p">(</span><span class="o">**</span><span class="n">assign_dict</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">IndexError</span><span class="p">(</span><span class="s2">&quot;Invalid index chosen for assignment.&quot;</span><span class="p">)</span>
+        <span class="c1"># Update the internal table</span>
+        <span class="n">ass_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">ass_obj</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="o">=</span> <span class="n">ass_df</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Prior number of ulines: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">old_nulines</span><span class="p">))</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Current number of ulines: </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">)))</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.assign_line"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.assign_line">[docs]</a>    <span class="k">def</span> <span class="nf">assign_line</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">frequency</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Mark a transition as assigned, and dump it into</span>
+<span class="sd">            the assignments list attribute.</span>
+
+<span class="sd">            The two methods for doing this is to supply either:</span>
+<span class="sd">                1. U-line index</span>
+<span class="sd">                2. U-line frequency</span>
+<span class="sd">            One way or the other, the U-line Assignment object</span>
+<span class="sd">            will be updated to signify the new assignment.</span>
+<span class="sd">            Optional kwargs will also be passed to the Assignment</span>
+<span class="sd">            object to update any other details.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            -----------------</span>
+<span class="sd">            name - str denoting the name of the molecule</span>
+<span class="sd">            index - optional arg specifying U-line index</span>
+<span class="sd">            frequency - optional float specifying frequency to assign</span>
+<span class="sd">            **kwargs - passed to update Assignment object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="n">frequency</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Index/Frequency not specified!&quot;</span><span class="p">)</span>
+        <span class="n">ass_obj</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="k">if</span> <span class="n">index</span><span class="p">:</span>
+            <span class="c1"># If an index is supplied, pull up from uline list</span>
+            <span class="n">ass_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">frequency</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">obj</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">):</span>
+                <span class="n">deviation</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">frequency</span> <span class="o">-</span> <span class="n">obj</span><span class="o">.</span><span class="n">frequency</span><span class="p">)</span>
+                <span class="c1"># Check that the deviation is sufficiently small</span>
+                <span class="k">if</span> <span class="n">deviation</span> <span class="o">&lt;=</span> <span class="p">(</span><span class="n">frequency</span> <span class="o">*</span> <span class="mf">1e-5</span><span class="p">):</span>
+                    <span class="c1"># Remove from uline list</span>
+                    <span class="n">ass_obj</span> <span class="o">=</span> <span class="n">obj</span>
+                    <span class="n">frequency</span> <span class="o">=</span> <span class="n">ass_obj</span><span class="o">.</span><span class="n">frequency</span>
+        <span class="k">if</span> <span class="n">ass_obj</span><span class="p">:</span>
+            <span class="n">ass_obj</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">name</span>
+            <span class="n">ass_obj</span><span class="o">.</span><span class="n">uline</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="c1"># Unpack anything else</span>
+            <span class="n">ass_obj</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">frequency</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">frequency</span> <span class="o">=</span> <span class="n">ass_obj</span><span class="o">.</span><span class="n">frequency</span>
+            <span class="n">ass_obj</span><span class="o">.</span><span class="n">frequency</span> <span class="o">=</span> <span class="n">frequency</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{:,.4f}</span><span class="s2"> assigned to </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">name</span><span class="p">))</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">ass_obj</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Peak not found! Try providing an index.&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.get_assigned_names"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.get_assigned_names">[docs]</a>    <span class="k">def</span> <span class="nf">get_assigned_names</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method for getting all the unique molecules out</span>
+<span class="sd">            of the assignments, and tally up the counts.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">ass_obj</span><span class="o">.</span><span class="n">name</span> <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">]</span>
+        <span class="c1"># Get unique names</span>
+        <span class="n">seen</span> <span class="o">=</span> <span class="nb">set</span><span class="p">()</span>
+        <span class="n">seen_add</span> <span class="o">=</span> <span class="n">seen</span><span class="o">.</span><span class="n">add</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">names</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">names</span> <span class="k">if</span> <span class="ow">not</span> <span class="p">(</span><span class="n">name</span> <span class="ow">in</span> <span class="n">seen</span> <span class="ow">or</span> <span class="n">seen_add</span><span class="p">(</span><span class="n">name</span><span class="p">))]</span>
+        <span class="c1"># Tally up the molecules</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">identifications</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="n">name</span><span class="p">:</span> <span class="n">names</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span>
+            <span class="p">}</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">identifications</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.finalize_assignments"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.finalize_assignments">[docs]</a>    <span class="k">def</span> <span class="nf">finalize_assignments</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Function that will complete the assignment process by</span>
+<span class="sd">            serializing DataClass objects and formatting a report.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">:</span>
+            <span class="c1"># Dump all the assignments into YAML format</span>
+            <span class="n">ass_obj</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span>
+                <span class="s2">&quot;assignment_objs/</span><span class="si">{}</span><span class="s2">-</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">ass_obj</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span><span class="n">ass_obj</span><span class="o">.</span><span class="n">peak_id</span><span class="p">),</span>
+                <span class="s2">&quot;yaml&quot;</span>
+                <span class="p">)</span>
+        <span class="c1"># Convert all of the assignment data into a CSV file</span>
+        <span class="n">ass_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">ass_obj</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">]</span>
+            <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">table</span> <span class="o">=</span> <span class="n">ass_df</span>
+        <span class="c1"># Dump assignments to disk</span>
+        <span class="n">ass_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;reports/</span><span class="si">{0}</span><span class="s2">.csv&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">experiment</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="c1"># Update the uline peak list with only unassigned stuff</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="o">~</span><span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;frequency&quot;</span><span class="p">])]</span>
+        <span class="c1"># Dump Uline data to disk</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;reports/</span><span class="si">{0}</span><span class="s2">-ulines.csv&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">experiment</span><span class="p">),</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+
+        <span class="n">tally</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_assigned_names</span><span class="p">()</span>
+        <span class="n">combined_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;assigned_lines&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">),</span>
+            <span class="s2">&quot;ulines&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">),</span>
+            <span class="s2">&quot;peaks&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+            <span class="s2">&quot;num_peaks&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]),</span>
+            <span class="s2">&quot;tally&quot;</span><span class="p">:</span> <span class="n">tally</span><span class="p">,</span>
+            <span class="s2">&quot;unique_molecules&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">,</span>
+            <span class="s2">&quot;num_unique&quot;</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">)</span>
+            <span class="p">}</span>
+        <span class="c1"># Combine Session information</span>
+        <span class="n">combined_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
+        <span class="c1"># Dump to disk</span>
+        <span class="n">routines</span><span class="o">.</span><span class="n">dump_yaml</span><span class="p">(</span>
+            <span class="s2">&quot;sessions/</span><span class="si">{0}</span><span class="s2">.yml&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">experiment</span><span class="p">),</span>
+            <span class="s2">&quot;yaml&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Dump data to notebook output</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">combined_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s2">&quot;:   &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.clean_folder"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.clean_folder">[docs]</a>    <span class="k">def</span> <span class="nf">clean_folder</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">action</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Method for cleaning up all of the directories used by this routine.</span>
+<span class="sd">            Use with caution!!!</span>
+
+<span class="sd">            Requires passing a True statement to actually clean up.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">folders</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;assignment_objs&quot;</span><span class="p">,</span> <span class="s2">&quot;queries&quot;</span><span class="p">,</span> <span class="s2">&quot;sessions&quot;</span><span class="p">,</span> <span class="s2">&quot;clean&quot;</span><span class="p">,</span> <span class="s2">&quot;reports&quot;</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">action</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">folders</span><span class="p">:</span>
+                <span class="n">rmtree</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.plot_assigned"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.plot_assigned">[docs]</a>    <span class="k">def</span> <span class="nf">plot_assigned</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Generates a Plotly figure with the assignments overlaid</span>
+<span class="sd">            on the experimental spectrum.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">FigureWidget</span><span class="p">()</span>
+
+        <span class="n">fig</span><span class="o">.</span><span class="n">add_scatter</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+            <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Experiment&quot;</span><span class="p">,</span>
+            <span class="n">opacity</span><span class="o">=</span><span class="mf">0.4</span>
+        <span class="p">)</span>
+
+        <span class="n">fig</span><span class="o">.</span><span class="n">add_bar</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;catalog_frequency&quot;</span><span class="p">],</span>
+            <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;intensity&quot;</span><span class="p">],</span>
+            <span class="n">width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;text&quot;</span><span class="p">,</span>
+            <span class="n">text</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;name&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;r_qnos&quot;</span><span class="p">],</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Assignments&quot;</span>
+        <span class="p">)</span>
+
+        <span class="n">fig</span><span class="o">.</span><span class="n">add_bar</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+            <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">peaks</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">],</span>
+            <span class="n">width</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;U-lines&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Store as attribute</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">plot</span> <span class="o">=</span> <span class="n">fig</span>
+
+        <span class="k">return</span> <span class="n">fig</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.find_progressions"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.find_progressions">[docs]</a>    <span class="k">def</span> <span class="nf">find_progressions</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">search</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span> <span class="n">low_B</span><span class="o">=</span><span class="mf">400.</span><span class="p">,</span>
+            <span class="n">high_B</span><span class="o">=</span><span class="mf">9000.</span><span class="p">,</span> <span class="n">sil_calc</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">refit</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">plot</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            High level function for searching U-line database for</span>
+<span class="sd">            possible harmonic progressions. Wraps the lower level function</span>
+<span class="sd">            harmonic_search, which will generate 3-4 frequency combinations</span>
+<span class="sd">            to search.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            search - threshold for determining if quantum number J is close</span>
+<span class="sd">                     enough to an integer/half-integer</span>
+<span class="sd">            low_B - minimum value for B</span>
+<span class="sd">            high_B - maximum value for B</span>
+<span class="sd">            plot - whether or not to produce a plot of the progressions</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            harmonic_df - dataframe containing the viable transitions</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">uline_frequencies</span> <span class="o">=</span> <span class="p">[</span><span class="n">uline</span><span class="o">.</span><span class="n">frequency</span> <span class="k">for</span> <span class="n">uline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">]</span>
+
+        <span class="n">progressions</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">harmonic_finder</span><span class="p">(</span>
+            <span class="n">uline_frequencies</span><span class="p">,</span>
+            <span class="n">search</span><span class="o">=</span><span class="n">search</span><span class="p">,</span>
+            <span class="n">low_B</span><span class="o">=</span><span class="n">low_B</span><span class="p">,</span>
+            <span class="n">high_B</span><span class="o">=</span><span class="n">high_B</span>
+            <span class="p">)</span>
+
+        <span class="n">fit_df</span> <span class="o">=</span> <span class="n">fitting</span><span class="o">.</span><span class="n">harmonic_fitter</span><span class="p">(</span><span class="n">progressions</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">harmonic_fits</span> <span class="o">=</span> <span class="n">fit_df</span>
+
+        <span class="c1"># Run cluster analysis on the results</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_dict</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_obj</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">cluster_AP_analysis</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">harmonic_fits</span><span class="p">,</span>
+            <span class="n">sil_calc</span><span class="p">,</span>
+            <span class="n">refit</span><span class="p">,</span>
+            <span class="o">**</span><span class="n">kwargs</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">cluster_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cluster_dict</span><span class="p">)</span><span class="o">.</span><span class="n">T</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">cluster_df</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.search_species"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.search_species">[docs]</a>    <span class="k">def</span> <span class="nf">search_species</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">smiles</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Method for finding species in the assigned dataframe,</span>
+<span class="sd">            with the intention of showing where the observed frequencies</span>
+<span class="sd">            are.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            --------------</span>
+<span class="sd">            formula - str for chemical formula lookup</span>
+<span class="sd">            name - str for common name</span>
+<span class="sd">            smiles - str for unique SMILES string</span>
+
+<span class="sd">            returns:</span>
+<span class="sd">            --------------</span>
+<span class="sd">            pandas dataframe slice with corresponding lookup</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;table&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No assignment table created yet. Finalize assignments.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">formula</span><span class="p">:</span>
+            <span class="n">locator</span> <span class="o">=</span> <span class="s2">&quot;formula&quot;</span>
+            <span class="n">check</span> <span class="o">=</span> <span class="n">formula</span>
+        <span class="k">if</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">locator</span> <span class="o">=</span> <span class="s2">&quot;name&quot;</span>
+            <span class="n">check</span> <span class="o">=</span> <span class="n">name</span>
+        <span class="k">if</span> <span class="n">smiles</span><span class="p">:</span>
+            <span class="n">locator</span> <span class="o">=</span> <span class="s2">&quot;smiles&quot;</span>
+            <span class="n">check</span> <span class="o">=</span> <span class="n">smiles</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">table</span><span class="p">[</span><span class="n">locator</span><span class="p">]</span> <span class="o">==</span> <span class="n">check</span><span class="p">]</span></div>
+
+<div class="viewcode-block" id="AssignmentSession.save_session"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.assignment.AssignmentSession.save_session">[docs]</a>    <span class="k">def</span> <span class="nf">save_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">            Method to save an AssignmentSession to disk.</span>
+<span class="sd">            </span>
+<span class="sd">            The underlying mechanics are based on the joblib library,</span>
+<span class="sd">            and so there are can cross-compatibility issues particularly</span>
+<span class="sd">            when loading from different versions of Python.</span>
+
+<span class="sd">            parameters:</span>
+<span class="sd">            ---------------</span>
+<span class="sd">            filepath - path to save the file to. By default it will go into</span>
+<span class="sd">                       the sessions folder.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">filepath</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">filepath</span> <span class="o">=</span> <span class="s2">&quot;./sessions/</span><span class="si">{}</span><span class="s2">.dat&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">experiment</span><span class="p">)</span>
+
+        <span class="c1"># Unpack everything so that object serialization works properly...</span>
+        <span class="n">session_dict</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span>
+        <span class="n">session_dict</span><span class="p">[</span><span class="s2">&quot;session&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="vm">__dict__</span>
+        <span class="n">session_dict</span><span class="p">[</span><span class="s2">&quot;ulines&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">uline</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">uline</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">]</span>
+        <span class="n">session_dict</span><span class="p">[</span><span class="s2">&quot;assignments&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="n">ass_obj</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">ass_obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">]</span>
+        <span class="c1"># Save to disk</span>
+        <span class="n">routines</span><span class="o">.</span><span class="n">save_obj</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">,</span>
+            <span class="n">filepath</span>
+            <span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Saved session to </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filepath</span><span class="p">))</span></div></div>
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">PySpecTools</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Kelvin Lee.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>

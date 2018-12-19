@@ -1,0 +1,301 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pyspectools.doubleresonance &#8212; PySpecTools 3.1.0 documentation</title>
+    <link rel="stylesheet" href="../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../" src="../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+   
+  <link rel="stylesheet" href="../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for pyspectools.doubleresonance</h1><div class="highlight"><pre>
+<span></span>
+<span class="sd">&quot;&quot;&quot; Routines for fitting double resonance data &quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">scipy.interpolate</span> <span class="k">import</span> <span class="n">interp1d</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">sparse</span>
+<span class="kn">from</span> <span class="nn">scipy.sparse.linalg</span> <span class="k">import</span> <span class="n">spsolve</span>
+<span class="kn">from</span> <span class="nn">lmfit</span> <span class="k">import</span> <span class="n">Model</span>
+<span class="kn">from</span> <span class="nn">lmfit.models</span> <span class="k">import</span> <span class="n">GaussianModel</span><span class="p">,</span> <span class="n">LinearModel</span>
+
+
+<div class="viewcode-block" id="parse_data"><a class="viewcode-back" href="../../index.html#pyspectools.doubleresonance.parse_data">[docs]</a><span class="k">def</span> <span class="nf">parse_data</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to read in a DR file. When there are multiple columns present</span>
+<span class="sd">        in the file, this is interpreted as multiple channels being used to</span>
+<span class="sd">        monitor during the DR experiment. In this case, we do the analysis on</span>
+<span class="sd">        the co-average of these columns.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Skip reading the header - we&#39;re doing it ourselves</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">sep</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="s2">&quot;#&quot;</span><span class="p">)</span>
+    <span class="c1"># Columns denoted by number</span>
+    <span class="n">cols</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">)))</span>
+    <span class="n">full_cols</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span>
+    <span class="n">full_cols</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
+    <span class="c1"># Rename to generalize</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">full_cols</span>
+    <span class="n">stats</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># Set up vector for performing averages</span>
+    <span class="n">average</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]))</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">column</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">df</span><span class="p">):</span>
+        <span class="k">if</span> <span class="s2">&quot;Frequency&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;BS&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">):</span>
+            <span class="n">dr</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;-N&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span>
+            <span class="c1"># Make sure the baseline is the same for all of the</span>
+            <span class="c1"># spectra - subtract off the &quot;noise average&quot;</span>
+            <span class="c1"># and offset by 1 to make it easily convertible into</span>
+            <span class="c1"># a percentage</span>
+            <span class="n">df</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-BS&quot;</span><span class="p">]</span><span class="o">-=</span><span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+            <span class="n">df</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">column</span><span class="p">)</span><span class="o">+</span><span class="s2">&quot;-BS&quot;</span><span class="p">]</span><span class="o">+=</span><span class="mf">1.</span>
+            <span class="c1"># for weighting the averages </span>
+            <span class="n">weight</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">std</span><span class="p">()</span>
+            <span class="c1"># Calculate the weighted average</span>
+            <span class="n">average</span><span class="o">+=</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">*</span> <span class="n">weight</span><span class="p">)</span> <span class="o">/</span> <span class="n">weight</span>
+    <span class="c1"># Create composite average - this may or may not be used</span>
+    <span class="n">average</span><span class="o">/=</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">average</span><span class="o">-=</span><span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">average</span><span class="p">)</span>
+    <span class="n">average</span><span class="o">+=</span><span class="mi">1</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Average-BS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">average</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;Average&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">cols</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="init_dr_model"><a class="viewcode-back" href="../../index.html#pyspectools.doubleresonance.init_dr_model">[docs]</a><span class="k">def</span> <span class="nf">init_dr_model</span><span class="p">(</span><span class="n">baseline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">guess</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to serialize a Model object for DR fits.</span>
+<span class="sd">        Defaults to a Gaussian line shape, but the option to include</span>
+<span class="sd">        a linear offset is available.</span>
+
+<span class="sd">        Additionally, if a guess is provided in the</span>
+<span class="sd">        lmfit convention then it will be incorporated.</span>
+
+<span class="sd">        args:</span>
+<span class="sd">        -----------------</span>
+<span class="sd">        baseline - boolean indicating if linear offset is included</span>
+<span class="sd">        guess - nested dict with keys corresponding to parameter name</span>
+<span class="sd">                and values corresponding to dicts with key/value</span>
+<span class="sd">                indicating the parameter value, range, and constraints</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">GaussianModel</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">baseline</span><span class="p">:</span>
+        <span class="n">model</span><span class="o">+=</span><span class="n">LinearModel</span><span class="p">()</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">make_params</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">guess</span><span class="p">:</span>
+        <span class="n">params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">guess</span><span class="p">)</span>
+    <span class="c1"># Constrain amplitude to always be negative</span>
+    <span class="c1"># since we&#39;re measuring depletion.</span>
+    <span class="n">params</span><span class="p">[</span><span class="s2">&quot;amplitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="nb">max</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">model</span><span class="p">,</span> <span class="n">params</span></div>
+
+
+<div class="viewcode-block" id="peak_detect"><a class="viewcode-back" href="../../index.html#pyspectools.doubleresonance.peak_detect">[docs]</a><span class="k">def</span> <span class="nf">peak_detect</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s2">&quot;Average&quot;</span><span class="p">,</span> <span class="n">interpolate</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Routine for peak detection to provide an initial</span>
+<span class="sd">        guess for the center frequency.</span>
+
+<span class="sd">        The algorithm assumes that the ten smallest intensities</span>
+<span class="sd">        corresponds to where the depletion approximately is.</span>
+
+<span class="sd">        By default, a cubic spline is performed on the intensities</span>
+<span class="sd">        so that a finer grid of points gives a better determination</span>
+<span class="sd">        of the center frequency.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">interpolate</span><span class="p">:</span>
+        <span class="n">interpolant</span> <span class="o">=</span> <span class="n">interp1d</span><span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">col</span><span class="p">],</span><span class="s2">&quot;cubic&quot;</span><span class="p">)</span>
+        <span class="c1"># Interpolate between the min and max with 10 times more</span>
+        <span class="c1"># points than measured</span>
+        <span class="n">new_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span>
+            <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+            <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
+            <span class="nb">len</span><span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">])</span> <span class="o">*</span> <span class="mi">20</span><span class="p">)</span>
+        <span class="n">new_y</span> <span class="o">=</span> <span class="n">interpolant</span><span class="p">(</span><span class="n">new_x</span><span class="p">)</span>
+        <span class="c1"># Set up dataframe for detection</span>
+        <span class="n">detect_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">new_x</span><span class="p">,</span> <span class="n">new_y</span><span class="p">)),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="n">col</span><span class="p">])</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Use the experimental data</span>
+        <span class="n">detect_df</span> <span class="o">=</span> <span class="n">dataframe</span>
+    <span class="c1"># Use pandas to find the 10 smallest values</span>
+    <span class="n">trunc_df</span> <span class="o">=</span> <span class="n">detect_df</span><span class="o">.</span><span class="n">nsmallest</span><span class="p">(</span><span class="mi">10</span><span class="p">,[</span><span class="n">col</span><span class="p">],</span><span class="s2">&quot;first&quot;</span><span class="p">)</span>
+    <span class="n">avg_freq</span> <span class="o">=</span> <span class="n">trunc_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="c1"># Guess amplitude given by negative value</span>
+    <span class="n">guess_ampl</span> <span class="o">=</span> <span class="n">trunc_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span> <span class="o">-</span> <span class="n">trunc_df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">mean</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">avg_freq</span><span class="p">,</span> <span class="n">guess_ampl</span></div>
+
+
+<div class="viewcode-block" id="fit_dr"><a class="viewcode-back" href="../../index.html#pyspectools.doubleresonance.fit_dr">[docs]</a><span class="k">def</span> <span class="nf">fit_dr</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s2">&quot;Average&quot;</span><span class="p">,</span> <span class="n">baseline</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">guess</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for fitting double resonance data.</span>
+<span class="sd">        </span>
+<span class="sd">        Required input:</span>
+<span class="sd">        -----------------</span>
+<span class="sd">        dataframe - pandas dataframe containing</span>
+
+<span class="sd">        args:</span>
+<span class="sd">        -----------------</span>
+<span class="sd">        col - str denoting which column to use for fitting.</span>
+<span class="sd">        baseline - boolean denoting whether a linear baseline is fit</span>
+<span class="sd">        guess - dict for fitting parameters; this is passed into</span>
+<span class="sd">                the fit directly and so must match the lmfit convention.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">model</span><span class="p">,</span> <span class="n">params</span> <span class="o">=</span> <span class="n">init_dr_model</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="n">guess</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">guess</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">center</span><span class="p">,</span> <span class="n">guess_ampl</span> <span class="o">=</span> <span class="n">peak_detect</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">col</span><span class="p">)</span>
+        <span class="c1"># Center guess is constrained to 500 kHz</span>
+        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">center</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="n">center</span><span class="o">-</span><span class="mf">0.5</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="n">center</span><span class="o">+</span><span class="mf">0.5</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;amplitude&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">guess_ampl</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="nb">min</span><span class="o">=-</span><span class="mf">10.</span><span class="p">)</span>
+        <span class="n">params</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="nb">min</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="nb">max</span><span class="o">=</span><span class="mf">10.</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">baseline</span><span class="p">:</span>
+            <span class="k">pass</span>
+            <span class="c1">#params[&quot;intercept&quot;].set(min=-., max=5.)</span>
+            <span class="c1">#params[&quot;slope&quot;].set(min=-5., max=5.)</span>
+
+    <span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">dataframe</span><span class="p">[</span><span class="n">col</span><span class="p">],</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">params</span><span class="p">)</span>
+
+    <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Fit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">result</span><span class="o">.</span><span class="n">best_fit</span>
+    <span class="n">dataframe</span><span class="o">.</span><span class="n">fit_result</span> <span class="o">=</span> <span class="n">result</span>
+    <span class="c1"># Do some extra stuff like figure out the &quot;baseline&quot;</span>
+    <span class="c1"># for plotting; expressing it in terms of percent</span>
+    <span class="c1"># depletion</span>
+    <span class="n">zero</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Fit&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+    <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Base Signal&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">zero</span><span class="p">)</span>
+    <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Base Fit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">100</span> <span class="o">*</span> <span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Fit&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">zero</span><span class="p">)</span>
+    <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Offset Frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">result</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">result</span><span class="o">.</span><span class="n">fit_report</span><span class="p">())</span></div>
+
+
+<div class="viewcode-block" id="baseline_als"><a class="viewcode-back" href="../../index.html#pyspectools.doubleresonance.baseline_als">[docs]</a><span class="k">def</span> <span class="nf">baseline_als</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="n">lam</span><span class="o">=</span><span class="mf">1e9</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">niter</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function for performing an iterative baseline</span>
+<span class="sd">        fitting using the asymmetric least squares algorithm.</span>
+<span class="sd">        </span>
+<span class="sd">        This refers to the paper:</span>
+<span class="sd">        &quot;Baseline Correction with Asymmetric Least Squares Smoothing&quot;</span>
+<span class="sd">        by Eilers and Boelens (2005).</span>
+<span class="sd">        </span>
+<span class="sd">        The code is taken from a Stack Overflow question:</span>
+<span class="sd">        https://stackoverflow.com/a/29185844</span>
+
+<span class="sd">        According to the paper, the tested values are:</span>
+<span class="sd">        0.001 &lt;= p &lt;= 0.1 for positive peaks</span>
+<span class="sd">        1e2 &lt;= lam &lt;= 1e9</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        --------------</span>
+<span class="sd">        y - data used to fit the baseline</span>
+<span class="sd">        lam - tuning factor for penalty function that offsets</span>
+<span class="sd">              the difference cost function</span>
+<span class="sd">        p - weighting factor for the cost function</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        --------------</span>
+<span class="sd">        z - array containing the baseline values</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">diags</span><span class="p">([</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">,</span><span class="mi">1</span><span class="p">],[</span><span class="mi">0</span><span class="p">,</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="o">-</span><span class="mi">2</span><span class="p">],</span> <span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="n">L</span><span class="p">,</span><span class="n">L</span><span class="o">-</span><span class="mi">2</span><span class="p">))</span>
+    <span class="c1"># Initialize a set of weights</span>
+    <span class="n">w</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+    <span class="c1"># Iterate for a set number of times to fit baseline</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">niter</span><span class="p">):</span>
+        <span class="c1"># w is a sparse matrix of 1&#39;s with shape the</span>
+        <span class="c1"># length of the number of datapoints</span>
+        <span class="n">W</span> <span class="o">=</span> <span class="n">sparse</span><span class="o">.</span><span class="n">spdiags</span><span class="p">(</span><span class="n">w</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">L</span><span class="p">,</span> <span class="n">L</span><span class="p">)</span>
+        <span class="n">Z</span> <span class="o">=</span> <span class="n">W</span> <span class="o">+</span> <span class="n">lam</span> <span class="o">*</span> <span class="n">D</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">D</span><span class="o">.</span><span class="n">transpose</span><span class="p">())</span>
+        <span class="c1"># Solve the linear equation Ax = b</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="n">spsolve</span><span class="p">(</span><span class="n">Z</span><span class="p">,</span> <span class="n">w</span><span class="o">*</span><span class="n">y</span><span class="p">)</span>
+        <span class="c1"># Update the weight function</span>
+        <span class="c1"># p where y &gt; z and (1 - p) where y &lt; z</span>
+        <span class="n">w</span> <span class="o">=</span> <span class="n">p</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">&gt;</span> <span class="n">z</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">p</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">y</span> <span class="o">&lt;</span> <span class="n">z</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">z</span></div>
+
+
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../index.html">PySpecTools</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../index.html">Documentation overview</a><ul>
+  <li><a href="../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Kelvin Lee.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
