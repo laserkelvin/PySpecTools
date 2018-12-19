@@ -1,0 +1,442 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>pyspectools.spectra.plotting &#8212; PySpecTools 3.1.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/alabaster.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script type="text/javascript" id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+   
+  <link rel="stylesheet" href="../../../_static/custom.css" type="text/css" />
+  
+  
+  <meta name="viewport" content="width=device-width, initial-scale=0.9, maximum-scale=0.9" />
+
+  </head><body>
+  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          
+
+          <div class="body" role="main">
+            
+  <h1>Source code for pyspectools.spectra.plotting</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; plotting.py</span>
+
+<span class="sd">    Functions for plotting up chirp data that requires interactivity based</span>
+<span class="sd">    on Plotly.</span>
+
+<span class="sd">    The idea is to have some low level wrappers that will plot whatever data in</span>
+<span class="sd">    pandas dataframes, then have some specific higher level functions that will</span>
+<span class="sd">    plot specific stuff (e.g. artifact comparison, assignments).</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">plotly.offline</span> <span class="k">import</span> <span class="n">plot</span><span class="p">,</span> <span class="n">init_notebook_mode</span><span class="p">,</span> <span class="n">iplot</span>
+<span class="kn">from</span> <span class="nn">plotly</span> <span class="k">import</span> <span class="n">tools</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objs</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">colors</span> <span class="k">as</span> <span class="n">cl</span>
+
+
+<span class="k">def</span> <span class="nf">stacked_plot</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="mf">0.002</span><span class="p">):</span>
+    <span class="c1"># Function for generating an interactive stacked plot.</span>
+    <span class="c1"># This form of plotting helps with searching for vibrational satellites.</span>
+    <span class="c1"># Input is the full dataframe containing the frequency/intensity data,</span>
+    <span class="c1"># and frequencies is a list containing the centering frequencies.</span>
+    <span class="c1"># The frequency range is specified as a percentage of frequency, so it</span>
+    <span class="c1"># will change the range depending on what the centered frequency is.</span>
+    <span class="n">nplots</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)</span>
+    <span class="n">plot_func</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span>
+
+    <span class="c1"># Want the frequencies in ascending order, going upwards in the plot</span>
+    <span class="n">frequencies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="n">titles</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{:.4f}</span><span class="s2"> MHz&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span> <span class="k">for</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="n">frequencies</span><span class="p">)</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">tools</span><span class="o">.</span><span class="n">make_subplots</span><span class="p">(</span>
+        <span class="n">rows</span><span class="o">=</span><span class="n">nplots</span><span class="p">,</span>
+        <span class="n">cols</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">shared_xaxes</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+        <span class="n">vertical_spacing</span><span class="o">=</span><span class="mf">0.15</span><span class="p">,</span>
+        <span class="n">subplot_titles</span><span class="o">=</span><span class="n">titles</span><span class="p">,</span>
+    <span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequencies</span><span class="p">):</span>
+        <span class="c1"># Calculate the offset frequency</span>
+        <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Offset &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)]</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">frequency</span>
+        <span class="c1"># Range as a fraction of the center frequency</span>
+        <span class="n">freq_cutoff</span> <span class="o">=</span> <span class="n">freq_range</span> <span class="o">*</span> <span class="n">frequency</span>
+        <span class="n">sliced_df</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+            <span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Offset &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)]</span> <span class="o">&gt;</span> <span class="o">-</span><span class="n">freq_cutoff</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Offset &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)]</span> <span class="o">&lt;</span> <span class="n">freq_cutoff</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="c1"># Plot the data</span>
+        <span class="n">trace</span> <span class="o">=</span> <span class="n">plot_func</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="n">sliced_df</span><span class="p">[</span><span class="s2">&quot;Offset &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)],</span>
+            <span class="n">y</span><span class="o">=</span><span class="n">sliced_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">],</span>
+            <span class="n">text</span><span class="o">=</span><span class="n">sliced_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+            <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;lines&quot;</span>
+        <span class="p">)</span>
+        <span class="c1"># Plotly indexes from one because they&#39;re stupid</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">append_trace</span><span class="p">(</span><span class="n">trace</span><span class="p">,</span> <span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">fig</span><span class="p">[</span><span class="s2">&quot;layout&quot;</span><span class="p">][</span><span class="s2">&quot;xaxis1&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+            <span class="nb">range</span><span class="o">=</span><span class="p">[</span><span class="o">-</span><span class="n">freq_cutoff</span><span class="p">,</span> <span class="n">freq_cutoff</span><span class="p">],</span>
+            <span class="n">title</span><span class="o">=</span><span class="s2">&quot;Offset frequency (MHz)&quot;</span><span class="p">,</span>
+            <span class="n">showgrid</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+        <span class="n">fig</span><span class="p">[</span><span class="s2">&quot;layout&quot;</span><span class="p">][</span><span class="s2">&quot;yaxis&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">showgrid</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">fig</span><span class="p">[</span><span class="s2">&quot;layout&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update</span><span class="p">(</span>
+        <span class="n">autosize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">paper_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+        <span class="n">showlegend</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="n">iplot</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig</span>
+
+
+<div class="viewcode-block" id="plot_catchirp"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.plot_catchirp">[docs]</a><span class="k">def</span> <span class="nf">plot_catchirp</span><span class="p">(</span><span class="n">chirpdf</span><span class="p">,</span> <span class="n">catfiles</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to perform interactive analysis with a chirp spectrum, as well</span>
+<span class="sd">        as any reference .cat files you may want to provide.</span>
+<span class="sd">        This is not designed to replace SPECData analysis, but simply to</span>
+<span class="sd">        perform some interactive viewing of the data.</span>
+
+<span class="sd">        The argument `catfiles` is supplied as a dictionary; where the keys are</span>
+<span class="sd">        the names of the species, and the items are the paths to the .cat files</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="c1"># Generate the experimental plot first</span>
+    <span class="n">plots</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">exp_trace</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">chirpdf</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">chirpdf</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Experiment&quot;</span>
+    <span class="p">)</span>
+
+    <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">exp_trace</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">catfiles</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Generate the color palette, and remove the alpha value from RGBA</span>
+        <span class="n">color_palette</span> <span class="o">=</span> <span class="n">generate_colors</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">catfiles</span><span class="p">))</span>
+        <span class="c1"># Loop over each of the cat files</span>
+        <span class="k">for</span> <span class="n">color</span><span class="p">,</span> <span class="n">species</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">color_palette</span><span class="p">,</span> <span class="n">catfiles</span><span class="p">):</span>
+            <span class="n">species_df</span> <span class="o">=</span> <span class="n">pc</span><span class="o">.</span><span class="n">pick_pickett</span><span class="p">(</span><span class="n">catfiles</span><span class="p">[</span><span class="n">species</span><span class="p">])</span>
+            <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+                <span class="n">go</span><span class="o">.</span><span class="n">Bar</span><span class="p">(</span>
+                    <span class="n">x</span><span class="o">=</span><span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                    <span class="n">y</span><span class="o">=</span><span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
+                    <span class="n">name</span><span class="o">=</span><span class="n">species</span><span class="p">,</span>
+                    <span class="n">marker</span><span class="o">=</span><span class="p">{</span>
+                        <span class="c1"># Convert the matplotlib rgb color to hex code</span>
+                        <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span>
+                    <span class="p">},</span>
+                    <span class="n">width</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span>
+                    <span class="n">opacity</span><span class="o">=</span><span class="mf">0.6</span><span class="p">,</span>
+                    <span class="n">yaxis</span><span class="o">=</span><span class="s2">&quot;y2&quot;</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Layout</span><span class="p">(</span>
+        <span class="n">autosize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mi">600</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="mi">900</span><span class="p">,</span>
+        <span class="n">xaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Frequency (MHz)&quot;</span><span class="p">},</span>
+        <span class="n">paper_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+        <span class="n">yaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+        <span class="n">yaxis2</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;side&quot;</span><span class="p">:</span> <span class="s2">&quot;right&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;overlaying&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;range&quot;</span><span class="p">:</span> <span class="p">[</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">]</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">plots</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+    <span class="n">iplot</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="plot_df"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.plot_df">[docs]</a><span class="k">def</span> <span class="nf">plot_df</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function that wraps around the lower level function plot_column.</span>
+<span class="sd">        Will plot every column in a dataframe against the Frequency, unless</span>
+<span class="sd">        specific column names are provided.</span>
+
+<span class="sd">        Input arguments:</span>
+<span class="sd">        dataframe - pandas dataframe object, with every column as intensity</span>
+<span class="sd">        except &quot;Frequency&quot;</span>
+<span class="sd">        cols - NoneType or tuple-like: if None, every column is plotted.</span>
+<span class="sd">        Alternatively, an iterable is provided to specify which columns are</span>
+<span class="sd">        plotted.</span>
+<span class="sd">        Optional arguments are passed into define_layout, which will define</span>
+<span class="sd">        the axis labels, or into the color map generation</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">cols</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;Frequency&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">4</span><span class="p">:</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;#66c2a5&quot;</span><span class="p">,</span> <span class="s2">&quot;#fc8d62&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">colors</span> <span class="o">=</span> <span class="n">generate_colors</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">cols</span><span class="p">),</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="c1"># Generate the plotly traces</span>
+    <span class="n">traces</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">plot_column</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="n">color</span><span class="p">)</span> <span class="k">for</span> <span class="n">col</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">cols</span><span class="p">,</span> <span class="n">colors</span><span class="p">)</span>
+    <span class="p">]</span>
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">define_layout</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="c1"># Generate figure object</span>
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">traces</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+    <span class="n">iplot</span><span class="p">(</span><span class="n">figure</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">figure</span></div>
+
+
+<div class="viewcode-block" id="plot_assignment"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.plot_assignment">[docs]</a><span class="k">def</span> <span class="nf">plot_assignment</span><span class="p">(</span><span class="n">spec_df</span><span class="p">,</span> <span class="n">assignments_df</span><span class="p">,</span> <span class="n">col</span><span class="o">=</span><span class="s2">&quot;Intensity&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for plotting spectra with assignments. The assumption is that</span>
+<span class="sd">        the assignments routines are ran prior too this, and so the function</span>
+<span class="sd">        simply takes a dataframe of chosen molecules and plots them alongside</span>
+<span class="sd">        the experimental spectrum, color coded by the molecule</span>
+
+<span class="sd">        Input argument:</span>
+<span class="sd">        spec_df - dataframe holding the experimental data</span>
+<span class="sd">        assignments_df - dataframe produced from running assignments</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get a list of unique molecules</span>
+    <span class="n">molecules</span> <span class="o">=</span> <span class="n">assignments_df</span><span class="p">[</span><span class="s2">&quot;Chemical Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    <span class="c1"># The ttal number of traces are the number of unique molecules, the traces</span>
+    <span class="c1"># in the experimental data minus the frequency column</span>
+    <span class="n">nitems</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">molecules</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">color_iterator</span><span class="p">(</span><span class="n">nitems</span><span class="p">)</span>
+    <span class="n">traces</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># Loop over the experimental data</span>
+    <span class="n">traces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">plot_column</span><span class="p">(</span>
+            <span class="n">spec_df</span><span class="p">,</span>
+            <span class="n">col</span><span class="p">,</span>
+            <span class="n">color</span><span class="o">=</span><span class="nb">next</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    <span class="c1"># Loop over the assignments</span>
+    <span class="k">for</span> <span class="n">molecule</span> <span class="ow">in</span> <span class="n">molecules</span><span class="p">:</span>
+        <span class="n">sliced_df</span> <span class="o">=</span> <span class="n">assignments_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">assignments_df</span><span class="p">[</span><span class="s2">&quot;Chemical Name&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="n">molecule</span><span class="p">]</span>
+        <span class="n">traces</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">plot_bar_assignments</span><span class="p">(</span>
+                <span class="n">sliced_df</span><span class="p">,</span>
+                <span class="nb">next</span><span class="p">(</span><span class="n">colors</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">define_layout</span><span class="p">()</span>
+    <span class="n">layout</span><span class="p">[</span><span class="s2">&quot;yaxis&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Experimental Intensity&quot;</span>
+    <span class="p">}</span>
+    <span class="c1"># Specify a second y axis for the catalog intensity</span>
+    <span class="n">layout</span><span class="p">[</span><span class="s2">&quot;yaxis2&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;overlaying&quot;</span><span class="p">:</span> <span class="s2">&quot;y&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;side&quot;</span><span class="p">:</span> <span class="s2">&quot;right&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="s2">&quot;log&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;autorange&quot;</span><span class="p">:</span> <span class="kc">True</span>
+    <span class="p">}</span>
+    <span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">traces</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+    <span class="n">iplot</span><span class="p">(</span><span class="n">figure</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">figure</span></div>
+
+
+<div class="viewcode-block" id="generate_colors"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.generate_colors">[docs]</a><span class="k">def</span> <span class="nf">generate_colors</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">cm</span><span class="o">.</span><span class="n">Spectral</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Simple function for generating a colour map &quot;&quot;&quot;</span>
+    <span class="n">colormap</span> <span class="o">=</span> <span class="n">cmap</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">,</span> <span class="n">n</span><span class="p">))</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="p">[</span><span class="n">cl</span><span class="o">.</span><span class="n">rgb2hex</span><span class="p">(</span><span class="n">color</span><span class="p">)</span> <span class="k">for</span> <span class="n">color</span> <span class="ow">in</span> <span class="n">colormap</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">colors</span><span class="c1">#[:, :-1]</span></div>
+
+
+<div class="viewcode-block" id="color_iterator"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.color_iterator">[docs]</a><span class="k">def</span> <span class="nf">color_iterator</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Simple generator that will yield a different color each time.</span>
+<span class="sd">        This is primarily designed when multiple plot types are expected.</span>
+
+<span class="sd">        Input arguements:</span>
+<span class="sd">        n - number of plots</span>
+<span class="sd">        Optional kwargs are passed into generate_colors</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">index</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">generate_colors</span><span class="p">(</span><span class="n">n</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="k">while</span> <span class="n">index</span> <span class="o">&lt;</span> <span class="n">n</span><span class="p">:</span>
+        <span class="k">yield</span> <span class="n">colors</span><span class="p">[</span><span class="n">index</span><span class="p">]</span>
+        <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="plot_bar_assignments"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.plot_bar_assignments">[docs]</a><span class="k">def</span> <span class="nf">plot_bar_assignments</span><span class="p">(</span><span class="n">species_df</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;#fc8d62&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to generate a bar plot trace for a chemical species.</span>
+<span class="sd">        These plots will be placed in the second y axis!</span>
+
+<span class="sd">        Input arguments:</span>
+<span class="sd">        species_df - a slice of an assignments dataframe, containing only</span>
+<span class="sd">        one unique species</span>
+<span class="sd">        Optional argument color is a hex code color; if nothing is given</span>
+<span class="sd">        it just defaults to whatever</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># We just want one of the molecules, not their life&#39;s story</span>
+    <span class="n">molecule</span> <span class="o">=</span> <span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;Chemical Name&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Bar</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;Combined&quot;</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="mi">10</span><span class="o">**</span><span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">molecule</span><span class="p">,</span>
+        <span class="n">text</span><span class="o">=</span><span class="n">species_df</span><span class="p">[</span><span class="s2">&quot;Resolved QNs&quot;</span><span class="p">],</span>
+        <span class="n">marker</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span>
+            <span class="p">},</span>
+        <span class="n">width</span><span class="o">=</span><span class="mf">0.25</span><span class="p">,</span>
+        <span class="n">yaxis</span><span class="o">=</span><span class="s2">&quot;y2&quot;</span><span class="p">,</span>
+        <span class="n">opacity</span><span class="o">=</span><span class="mf">0.9</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">trace</span></div>
+
+
+<div class="viewcode-block" id="plot_column"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.plot_column">[docs]</a><span class="k">def</span> <span class="nf">plot_column</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">col</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; A low level function for plotting a specific column of</span>
+<span class="sd">        data in a pandas dataframe. This will assume that there</span>
+<span class="sd">        is a column named &quot;Frequency&quot; in the dataframe.</span>
+
+<span class="sd">        If a layout is not supplied, then the function will</span>
+<span class="sd">        return a Plotly scatter object to be combined with other</span>
+<span class="sd">        data. If a layout is given, then the data will be plot</span>
+<span class="sd">        up directly.</span>
+
+<span class="sd">        Input arguments:</span>
+<span class="sd">        dataframe - pandas dataframe object</span>
+<span class="sd">        col - str specifying the column used to plot</span>
+<span class="sd">        layout - optional argument; if specified a plotly plot will be</span>
+<span class="sd">        produced.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># If no legend name is provided, use the column</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">name</span> <span class="o">=</span> <span class="n">col</span>
+    <span class="c1"># Generate the scatter plot</span>
+    <span class="k">if</span> <span class="n">color</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">color</span> <span class="o">=</span> <span class="s2">&quot;#1c9099&quot;</span>
+    <span class="n">trace</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">dataframe</span><span class="p">[</span><span class="n">col</span><span class="p">],</span>
+        <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+        <span class="n">marker</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span>
+        <span class="p">}</span>
+    <span class="p">)</span>
+    <span class="c1"># If a layout is supplied, plot the figure</span>
+    <span class="k">if</span> <span class="n">layout</span><span class="p">:</span>
+        <span class="n">figure</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">trace</span><span class="p">],</span>
+            <span class="n">layout</span><span class="o">=</span><span class="n">layout</span>
+        <span class="p">)</span>
+        <span class="n">iplot</span><span class="p">(</span><span class="n">figure</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">trace</span></div>
+
+
+<div class="viewcode-block" id="define_layout"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.define_layout">[docs]</a><span class="k">def</span> <span class="nf">define_layout</span><span class="p">(</span><span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for generating a layout for plotly.</span>
+<span class="sd">        Some degree of customization is provided, but generally sticking</span>
+<span class="sd">        with not having to fuss around with plots.</span>
+
+<span class="sd">        Input arguments:</span>
+<span class="sd">        x/ylabel - str for what the x and y labels are to be</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Layout</span><span class="p">(</span>
+        <span class="n">xaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">xlabel</span><span class="p">,</span> <span class="s2">&quot;tickformat&quot;</span><span class="p">:</span> <span class="s2">&quot;0.1f&quot;</span><span class="p">},</span>
+        <span class="n">yaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">ylabel</span><span class="p">,</span> <span class="s2">&quot;tickformat&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">},</span>
+        <span class="n">autosize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mf">600.</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="mf">1200.</span><span class="p">,</span>
+        <span class="n">paper_bgcolor</span><span class="o">=</span><span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span>
+        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;#ffffff&quot;</span><span class="p">,</span>
+        <span class="n">font</span><span class="o">=</span><span class="nb">dict</span><span class="p">(</span><span class="n">family</span><span class="o">=</span><span class="s1">&#39;Roboto&#39;</span><span class="p">,</span> <span class="n">size</span><span class="o">=</span><span class="mi">18</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;#000000&#39;</span><span class="p">),</span>
+        <span class="n">annotations</span><span class="o">=</span><span class="nb">list</span><span class="p">()</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">layout</span></div>
+
+
+<div class="viewcode-block" id="save_plot"><a class="viewcode-back" href="../../../index.html#pyspectools.spectra.plotting.save_plot">[docs]</a><span class="k">def</span> <span class="nf">save_plot</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">filename</span><span class="p">,</span> <span class="n">js</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method for exporting a plotly figure with interactivity.</span>
+<span class="sd">        This method does inject the plotly.js code by default, and so will</span>
+<span class="sd">        result in relatively large files. Use `save_html` instead.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">plot</span><span class="p">(</span>
+        <span class="n">fig</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+        <span class="n">show_link</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">auto_open</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">include_plotlyjs</span><span class="o">=</span><span class="n">js</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+          </div>
+          
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+<h1 class="logo"><a href="../../../index.html">PySpecTools</a></h1>
+
+
+
+
+
+
+
+
+<h3>Navigation</h3>
+
+<div class="relations">
+<h3>Related Topics</h3>
+<ul>
+  <li><a href="../../../index.html">Documentation overview</a><ul>
+  <li><a href="../../index.html">Module code</a><ul>
+  </ul></li>
+  </ul></li>
+</ul>
+</div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="../../../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    </div>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+
+
+
+
+
+
+
+
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="footer">
+      &copy;2018, Kelvin Lee.
+      
+      |
+      Powered by <a href="http://sphinx-doc.org/">Sphinx 1.8.2</a>
+      &amp; <a href="https://github.com/bitprophet/alabaster">Alabaster 0.7.12</a>
+      
+    </div>
+
+    
+
+    
+  </body>
+</html>
