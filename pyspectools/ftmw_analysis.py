@@ -625,9 +625,10 @@ class AssayBatch:
         for index, combo in enumerate(combos):
             # For the first time a cavity frequency is used
             # we will measure it once without DR
-            if (index == 0) or (last_freq != combo[0][0]):
+            freq = combo[0][0]
+            if (index == 0) or (last_freq != freq):
                 ftb_str+=generate_ftb_line(
-                    combo[0][0],
+                    freq,
                     nshots,
                     **{
                         "dipole": combo[0][1],
@@ -635,16 +636,19 @@ class AssayBatch:
                         "skiptune": "false",
                         }
                     )
-            ftb_str+=generate_ftb_line(
-                combo[0][0],
-                nshots,
-                **{
-                    "dipole": combo[0][1],
-                    "drfreq": combo[1][0],
-                    "pulse,{},enable".format(dr_channel): "true",
-                    "skiptune": "true"
-                    }
-                )
+            # Only do DR if the DR frequency is significantly different from
+            # the cavity frequency
+            if np.abs(combo[1][0] - freq) >= 100.:
+                ftb_str+=generate_ftb_line(
+                    freq,
+                    nshots,
+                    **{
+                        "dipole": combo[0][1],
+                        "drfreq": combo[1][0],
+                        "pulse,{},enable".format(dr_channel): "true",
+                        "skiptune": "true"
+                        }
+                    )
             last_freq = combo[0][0]
         print("There are {} combinations to measure.".format(index))
         
@@ -808,4 +812,3 @@ class AssayBatch:
             filepath
             )
         print("Saved session to {}".format(filepath))
-
