@@ -98,8 +98,8 @@ class Assignment:
 
             parameters:
             --------------------
-            filepath - str path to yaml file
-            format - str denoting the syntax used for dumping.
+            :param filepath: str path to yaml file
+            :param format: str denoting the syntax used for dumping.
                      Defaults to YAML.
         """
         if "." not in filepath:
@@ -280,11 +280,11 @@ class AssignmentSession:
 
             parameters:
             ---------------
-            threshold - peak detection threshold
+            :param threshold: peak detection threshold
 
             returns:
             ---------------
-            peaks_df - dataframe containing peaks
+            :return peaks_df: dataframe containing peaks
         """
         peaks_df = analysis.peak_find(
             self.data,
@@ -330,11 +330,11 @@ class AssignmentSession:
 
             parameters:
             ----------------
-            frequency - float corresponding to the frequency in MHz
+            :param frequency: float corresponding to the frequency in MHz
 
             returns:
             ----------------
-            slice_df - pandas dataframe containing matches
+            :return slice_df: pandas dataframe containing matches
         """
         slice_df = []
         lower_freq = frequency * 0.999
@@ -366,11 +366,11 @@ class AssignmentSession:
 
             parameters:
             ---------------
-            frequency - float corresponding to frequency in MHz
+            :param frequency: float corresponding to frequency in MHz
 
             returns:
             --------------
-            bool - True if it's in ulines/assignments, False otherwise
+            :return bool: True if it's in ulines/assignments, False otherwise
         """
         try:
             slice_df = self.search_frequency(frequency)
@@ -493,10 +493,10 @@ class AssignmentSession:
 
             parameters:
             -----------------
-            name - str common name of the molecule
-            formula - str chemical formula of the molecule
-            linpath - path to line file to be parsed
-            auto - optional bool specifying which mode to run in
+            :param name: str common name of the molecule
+            :param formula: str chemical formula of the molecule
+            :param linpath: path to line file to be parsed
+            :param auto: optional bool specifying which mode to run in
         """
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
@@ -543,13 +543,13 @@ class AssignmentSession:
 
             parameters:
             ----------------
-            frequency - float observed frequency in MHz
-            catalog_df - dataframe corresponding to catalog entries
-            prox - optional float for frequency proximity threshold
+            :param frequency: float observed frequency in MHz
+            :param catalog_df: dataframe corresponding to catalog entries
+            :param prox: optional float for frequency proximity threshold
 
             returns:
             ---------------
-            If nothing matches the frequency, returns None.
+            :returns If nothing matches the frequency, returns None.
             If matches are found, calculate the weights and return the candidates
             in a dataframe.
         """
@@ -596,8 +596,8 @@ class AssignmentSession:
 
             parameters:
             ----------------
-            name - str corresponding to common name of molecule
-            formula - str corresponding to chemical formula
+            :param name: str corresponding to common name of molecule
+            :param formula: str corresponding to chemical formula
         """
         old_nulines = len(self.ulines)
         catalog_df = read_cat(
@@ -664,10 +664,10 @@ class AssignmentSession:
 
             parameters:
             -----------------
-            name - str denoting the name of the molecule
-            index - optional arg specifying U-line index
-            frequency - optional float specifying frequency to assign
-            **kwargs - passed to update Assignment object
+            :param name: str denoting the name of the molecule
+            :param index: optional arg specifying U-line index
+            :param frequency: optional float specifying frequency to assign
+            :param kwargs: passed to update Assignment object
         """
         if index == frequency:
             raise Exception("Index/Frequency not specified!")
@@ -700,6 +700,11 @@ class AssignmentSession:
     def get_assigned_names(self):
         """ Method for getting all the unique molecules out
             of the assignments, and tally up the counts.
+
+            returns:
+            ---------------
+            :return identifications: dict containing a tally of molecules
+                                     identified
         """
         names = [ass_obj.name for ass_obj in self.assignments]
         # Get unique names
@@ -719,11 +724,11 @@ class AssignmentSession:
 
             parameters:
             --------------
-            Q - rotational partition function at temperature
-            T - temperature in K
-            name - str name of molecule
-            formula - chemical formula of molecule
-            smiles - SMILES string for molecule
+            :param Q - rotational partition function at temperature
+            :param T - temperature in K
+            :param name - str name of molecule
+            :param formula - chemical formula of molecule
+            :param smiles - SMILES string for molecule
 
             returns:
             --------------
@@ -795,6 +800,9 @@ class AssignmentSession:
         """
             Function that will complete the assignment process by
             serializing DataClass objects and formatting a report.
+
+            Creates summary pandas dataframes as self.table and self.profiles,
+            which correspond to the assignments and fitted line profiles respectively.
         """
         for ass_obj in self.assignments:
             # Dump all the assignments into YAML format
@@ -846,10 +854,13 @@ class AssignmentSession:
             print(key + ":   " + str(value))
 
     def clean_folder(self, action=False):
-        """ Method for cleaning up all of the directories used by this routine.
+        """
+            Method for cleaning up all of the directories used by this routine.
             Use with caution!!!
 
             Requires passing a True statement to actually clean up.
+
+            :param action: bool; will only clean up when True is passed
         """
         folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
         if action is True:
