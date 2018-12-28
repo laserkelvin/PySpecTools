@@ -7,9 +7,11 @@ import os
 import subprocess
 import shutil
 import json
-import yaml
-from pyspectools import pypickett as pp
 from glob import glob
+
+import yaml
+
+from pyspectools import pypickett as pp
 
 import yaml
 import joblib
