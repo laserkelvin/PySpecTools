@@ -1,5 +1,9 @@
 
 from itertools import combinations, product
+import datetime
+import re
+from dataclasses import dataclass, field
+from typing import List, Dict
 import os
 
 import pandas as pd
@@ -8,8 +12,7 @@ import peakutils
 from matplotlib import pyplot as plt
 from matplotlib import colors
 from scipy import signal as spsig
-from plotly.offline import plot, init_notebook_mode, iplot
-from plotly import tools
+from plotly.offline import plot, init_notebook_mode
 import plotly.graph_objs as go
 
 from pyspectools import parsecat as pc
@@ -137,100 +140,130 @@ def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
     plot(fig, filename=output)
 
 
+@dataclass
 class Scan:
-    """ Object for analyzing raw FIDs from QtFTM.
-        The goal is to be able to retrieve a scan file from QtFTM, perform the
-        FFT analysis and everything externally, without the need to open QtFTM.
-
-        Some of the methods I intend to implement are:
-
-        1. Doppler fitting
-        2. Export the resulting FFT for external plotting
-        3. Stock plotting
     """
-    def __init__(self, scan_id, window_function=None):
-        self.settings = dict()
-        self.fid = list()
-        with open(str(scan_id) + ".txt") as fid_file:
-            self.parsed_data = fid_file.readlines()
-        self.read_fid_settings()
-        self.fid = np.array(self.fid)
+    DataClass for a Scan. Holds all of the relevant information that
+    describes a FT scan, such as the ID, what machine it was collected
+    on, and the experimental settings.
 
-    def read_fid_settings(self):
-        """ Function to read in the settings in an FID from QtFTM """
-        read_fid = False
-        for line in self.parsed_data:
+    Has a few class methods that will make look ups easily such as
+    the date the scan was collected and the gases used.
+    """
+    id: int
+    machine: str
+    fid: np.array
+    date: datetime.datetime
+    shots: int = 0
+    cavity_voltage: int = 0
+    cavity_atten: int = 0
+    cavity_frequency: float = 0.0
+    dr_frequency: float = 0.0
+    dr_power: int = 0
+    fid_points: int = 0
+    fid_spacing: float = 0.0
+    discharge: bool = False
+    magnet: bool = False
+    gases: Dict = field(default_factory = dict)
+
+    @classmethod
+    def from_dict(cls, data_dict):
+        """
+        Function to initialize a Scan object from a dictionary
+        of FT scan data collected from `parse_scan`.
+        :param data_dict: dict containing parsed data from FT
+        :return: Scan object
+        """
+        scan_obj = cls(**data_dict)
+        return scan_obj
+
+    @classmethod
+    def from_file(cls, filepath):
+        """
+        Method to initialize a Scan object from a FT scan file.
+        Will load the lines into memory and parse the data into
+        a dictionary, which then gets passed into a Scan object.
+        :param filepath: str path to FID file
+        :return: Scan object
+        """
+        with open(filepath) as read_file:
+            data_dict = parse_scan(read_file.readlines())
+        scan_obj = cls(**data_dict)
+        return scan_obj
+
+
+def parse_scan(filecontents):
+    """
+    Function for extracting the FID data from an FT scan. The data
+    is returned as a dictionary, which can be used to initialize a
+    Scan object.
+    :param filecontents: list of lines from an FID file
+    :return: dict containing parsed data from FID
+    """
+    data = dict()
+    # Regex to find gas channels
+    gas_regex = re.compile(r"^#Gas \d name", re.M)
+    flow_regex = re.compile(r"^#Gas \d flow", re.M)
+    # Regex to detect which channel is set to the discharge
+    dc_regex = re.compile(r"^#Pulse ch \d name\s*DC", re.M)
+    dc_channel = None
+    for line in filecontents:
+        if "#Scan" in line:
             split_line = line.split()
-            if len(split_line) != 0:
-                if "#" in split_line[0]:
-                    # Settings lines are commented with "#"
-                    if "Scan" in line:
-                        # Read in the scan ID
-                        self.settings["ID"] = "-".join(split_line[1:])
-                    elif "Shots" in line:
-                        # Read in the number of Shots
-                        self.settings["Shots"] = int(split_line[1])
-                    elif "Cavity freq" in line:
-                        # Read in the cavity frequency; units of MHz
-                        self.settings["Frequency"] = float(split_line[2])
-                    elif "Tuning Voltage" in line:
-                        # Read in tuning voltage; units of mV
-                        self.settings["Tuning voltage"] = int(split_line[2])
-                    elif "Attenunation" in line:
-                        # Read in the Attenuation; units of dB
-                        self.settings["Attenuation"] = int(split_line[1])
-                    elif "Cavity Voltage" in line:
-                        # Read in cavity voltage; units of mV
-                        self.settings["Cavity voltage"] = int(split_line[2])
-                    elif "FID spacing" in line:
-                        # Read in the FID spacing, units of seconds
-                        self.settings["FID spacing"] = float(split_line[2])
-                    elif "FID points" in line:
-                        # Read in the number of points we expect for the FID
-                        self.settings["FID points"] = int(split_line[2])
-                    elif "Probe" in line:
-                        # The probe frequency, in MHz
-                        self.settings["Probe frequency"] = float(split_line[2])
-                if read_fid is True:
-                    self.fid.append(float(line))
-                if "fid" in line:
-                    # Start reading the FID in after this line is found
-                    read_fid = True
-            else:
-                pass
-
-    def fid2fft(self, window_function=None, dc_offset=True, exp_filter=None):
-        """ Perform the DFT of an FID using NumPy's FFT package. """
-        available_windows = [
-            "blackmanharris",
-            "blackman",
-            "boxcar",
-            "gaussian",
-            "hanning",
-            "bartlett"
-        ]
-        if window_function is not None:
-        # Use a scipy.signal window function to process the FID signal
-            if window_function not in available_windows:
-                print("Incorrect choice for window function.")
-                print("Available:")
-                print(available_windows)
-            else:
-                self.fid *= spsig.get_window(window_function, self.fid.size)
-        # Perform the FFT
-        if exp_filter is not None:
-            self.fid *= spsig.exponential(self.fid.size, exp_filter)
-        amplitude = np.fft.fft(self.fid)
-        # Calclate the frequency window
-        frequency = np.linspace(
-            self.settings["Probe frequency"],
-            self.settings["Probe frequency"] + 1.,
-            amplitude.size
-        )
-        self.fft = pd.DataFrame(
-            data=list(zip([frequency, amplitude])),
-            columns=["Frequency (MHz)", "Intensity (V)"]
-        )
+            data["scan"] = int(split_line[1])
+            data["machine"] = split_line[2]
+        if "#Cavity freq" in line:
+            data["cavity_frequency"] = float(line.split()[2])
+        if "#Shots" in line:
+            data["shots"] = int(line.split()[-1])
+        if "#Date" in line:
+            data["date"] = datetime.datetime.strptime(
+                line.strip("#Date   "),
+                "%a %B %d %X %Y"
+            )
+        if "#Cavity Voltage" in line:
+            data["cavity_voltage"] = int(line.split()[2])
+        if "#Attenuation" in line:
+            data["cavity_attenuation"] = int(line.split()[1])
+        if "#DR freq" in line:
+            data["dr_frequency"] = float(line.split()[2])
+        if "#DR power" in line:
+            data["dr_power"] = int(line.split()[2])
+        if "#FID spacing" in line:
+            data["fid_spacing"] = float(
+                    re.find(
+                    r"\de[+-]?\d\d",
+                    line
+                )[0]
+            )
+        if "#FID points" in line:
+            data["fid_points"] = int(line.split()[-1])
+        # Get the name of the gas
+        if gas_regex.match(line):
+            split_line = line.split()
+            # Only bother parsing if the channel is used
+            gas_index = int(split_line[1])
+            try:
+                data["gases"][gas_index] = {"gas": " ".join(split_line[3:])}
+            except IndexError:
+                data["gases"][gas_index] = {"gas": ""}
+        # Get the flow rate for channel
+        if flow_regex.match(line):
+            split_line = line.split()
+            gas_index = int(split_line[1])
+            data["gases"][gas_index]["flow"] = float(split_line[3])
+        if "#Magnet enabled" in line:
+            data["magnet"] = bool(int(line.split()[2]))
+        # Find the channel the discharge is set to and compile a regex
+        # to look for the channel
+        if dc_regex.match(line):
+            dc_index = line.split()[2]
+            dc_channel = re.compile(r"^#Pulse ch {} enabled".format(dc_index), re.M)
+        # Once the discharge channel index is known, start searching for it
+        if dc_channel:
+            if dc_channel.match(line):
+                data["discharge"] = bool(int(line.split(()[-1])))
+    return data
 
 
 def generate_ftb_line(frequency, shots, **kwargs):
