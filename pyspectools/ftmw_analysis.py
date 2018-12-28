@@ -11,6 +11,7 @@ import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
 from scipy import signal as spsig
+from scipy.stats import chisquare
 import plotly.graph_objs as go
 
 from pyspectools import routines
@@ -52,6 +53,25 @@ def center_cavity(dataframe, thres=0.3, verbose=True):
 class Batch:
     assay: str
     id: int
+    machine: str
+    date: datetime.datetime
+    scans: List = field(default_factory=list)
+    filter: List = field(default_factory=list)
+    exp: float = 0.
+    zeropad: bool = False
+    window: str = ""
+
+    @classmethod
+    def from_qtftm(cls, filepath, assay, machine):
+        assays = ["dr", "magnet", "discharge", "dipole"]
+        assay = assay.lower()
+        if assay not in assays:
+            raise Exception("Not a valid assay type; choose dr, magnet, discharge, dipole.")
+        with open(filepath) as read_file:
+            batch_df, batch_data = parse_batch(read_file.readlines())
+        batch_data["assay"] = assay
+        batch_data["machine"] = machine.upper()
+        batch_obj = cls(**batch_data)
 
 
 @dataclass
@@ -78,12 +98,11 @@ class Scan:
     fid_spacing: float = 0.0
     discharge: bool = False
     magnet: bool = False
-    gases: Dict = field(default_factory = dict)
-    filter: List = field(default_factory = list)
+    gases: Dict = field(default_factory=dict)
+    filter: List = field(default_factory=list)
     exp: float = 0.
     zeropad: bool = False
     window: str = ""
-
 
     @classmethod
     def from_dict(cls, data_dict):
@@ -179,6 +198,53 @@ class Scan:
         self.spectrum = fid2fft(self.fid, 1. / self.fid_spacing, frequencies, **process_dict)
         self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": self.fid})
 
+    def within_time(self, date_range):
+        """
+        Function for determining of the scan was taken between
+        a specified date range in month/day/year, in the format
+        04/09/08 for April 9th, 2008.
+        :param date_range: list containing the beginning and end date strings
+        :return: bool - True if within range, False otherwise
+        """
+        try:
+            early = datetime.datetime.strptime(
+                date_range[0],
+                "%m/%d/%y"
+            )
+        except:
+            early = datetime.datetime(1, 1, 1)
+        try:
+            late = datetime.datetime.strptime(
+                date_range[1],
+                "%m/%d/%y"
+            )
+        except:
+            late = datetime.datetime(9999, 1, 1)
+        return early <= self.date <= late
+
+    def is_depleted(self, ref, depletion=0.9):
+        """
+        Function for determining if the signal in this Scan is less
+        than that of another scan. This is done by a simple comparison
+        of the average of 10 largest intensities in the two spectra. If
+        the current scan is less intense than the reference by the
+        expected depletion percentage, then it is "depleted".
+
+        This function can be used to determine if a scan if depleted
+        in DR/magnet/discharge assays.
+
+        TODO - implement a chi squared test of sorts to determine if a
+               depletion is statistically significant
+
+        :param ref: second Scan object for comparison
+        :param depletion: percentage of depletion expected of the reference
+        :return: bool - True if signal in this Scan is less intense than the reference
+        """
+        present = np.average(self.spectrum["Intensity"].nlargest(10))
+        reference = np.average(ref.spectrum["Intensity"].nlargest(10))
+        expected = reference * depletion
+        return present <= expected
+
 
 def parse_scan(filecontents):
     """
@@ -210,7 +276,7 @@ def parse_scan(filecontents):
             strip_targets = ["#Date", "\t", "\n"]
             data["date"] = datetime.datetime.strptime(
                 re.sub("|".join(strip_targets), "", line),
-                "%a %B %d %H:%M:%S %Y"
+                "%a %b %d %H:%M:%S %Y"
             )
         if "#Cavity Voltage" in line:
             data["cavity_voltage"] = int(line.split()[2])
@@ -364,6 +430,39 @@ def apply_butter_filter(data, low, high, rate, order=5):
     return y
 
 
+def parse_batch(filecontents):
+    data = dict()
+    for index, line in enumerate(filecontents):
+        if "#Batch scan" in line:
+            data["id"] = int(line.split()[2])
+        if "#Date" in line:
+            strip_targets = ["#Date", "\t", "\n"]
+            data["date"] = datetime.datetime.strptime(
+                re.sub("|".join(strip_targets), "", line),
+                "%a %b %d %H:%M:%S %Y"
+            )
+        if line.startswith("batchscan"):
+            scan_details = filecontents[index+1:]
+    headers = [
+        "id",
+        "max",
+        "iscal",
+        "issat",
+        "ftfreq",
+        "attn",
+        "drfreq",
+        "drpower",
+        "pulses",
+        "shots",
+        "autofitpair_freq",
+        "autofitpair_int",
+        "autofitfreq",
+        "autofitint"
+    ]
+    df = pd.DataFrame(scan_details, columns=headers)
+    return df, data
+
+
 def generate_ftb_line(frequency, shots, **kwargs):
     """ Function that generates an FTB file for a list of
         frequencies, plus categorization tests.
@@ -381,12 +480,12 @@ def generate_ftb_line(frequency, shots, **kwargs):
 
         parameters:
         ---------------
-        frequency - float for frequency in MHz
-        shots - int number of shots to integrate for
+        :param frequency: float for frequency in MHz
+        :param shots: int number of shots to integrate for
 
         returns:
         ---------------
-        ftbline - str
+        :return ftbline: str
     """
     line = "ftm:{:.4f} shots:{}".format(frequency, shots)
     for key, value in kwargs.items():
