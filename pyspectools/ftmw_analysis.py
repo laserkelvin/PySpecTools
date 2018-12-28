@@ -3,7 +3,7 @@ from itertools import combinations, product
 import datetime
 import re
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import Dict
 import os
 
 import pandas as pd
@@ -15,7 +15,7 @@ from scipy import signal as spsig
 from plotly.offline import plot, init_notebook_mode
 import plotly.graph_objs as go
 
-from pyspectools import parsecat as pc
+from pyspectools import routines
 from pyspectools import fitting
 from pyspectools.spectra import analysis
 
@@ -50,94 +50,11 @@ def center_cavity(dataframe, thres=0.3, verbose=True):
     dataframe["Offset Frequency"] = dataframe["Frequency"] - center
 
 
-def configure_colors(dataframe):
-    """ Generates color palettes for plotting arbitrary number of SPECData
-        assignments.
-    """
-    num_unique = len(dataframe["Assignment"].unique())
-    return plt.cm.spectral(np.linspace(0., 1., num_unique))
-
-
-def plot_specdata_mpl(dataframe):
-    """ Function to display SPECData output using matplotlib.
-        The caveat here is that the plot is not interactive, although it does
-        provide an overview of what the assignments are. This is probably the
-        preferred way if preparing a plot for a paper.
-    """
-    colors = configure_colors(dataframe)
-    fig, exp_ax = plt.subplots(figsize=(10,6))
-
-    exp_ax.vlines(dataframe["Exp. Frequency"], ymin=0., ymax=dataframe["Exp. Intensity"], label="Observations")
-
-    exp_ax.set_yticks([])
-    exp_ax.set_xlabel("Frequency (MHz)")
-
-    assign_ax = exp_ax.twinx()
-    current_limits = assign_ax.get_xlim()
-    for color, assignment in zip(colors, dataframe["Assignment"].unique()):
-        trunc_dataframe = dataframe[dataframe["Assignment"] == assignment]
-        assign_ax.vlines(
-            trunc_dataframe["Frequency"],
-            ymin=np.negative((trunc_dataframe["Intensity"] / trunc_dataframe["Intensity"].max())),
-            ymax=0.,
-            alpha=0.5,
-            label=assignment,
-            color=color
-        )
-    exp_ax.hlines(0., 0., 30000.,)
-    assign_ax.set_ylim([1., -1.])
-    exp_ax.set_ylim([1., -1.])
-    assign_ax.set_xlim(current_limits)
-
-    assign_ax.set_yticks([])
-    assign_ax.legend(loc=9, ncol=4, bbox_to_anchor=(0.5, -0.1), frameon=True)
-
-
-def plot_specdata_plotly(dataframe, output="specdata_interactive.html"):
-    """ Interactive SPECData result plotting using plotly.
-        The function will automatically swap between spectra and peaks by
-        inspecting the number of data points we have.
-    """
-    init_notebook_mode(connected=False)
-    if len(dataframe) >= 10000:
-        exp_plot_function = go.Scatter
-    else:
-        exp_plot_function = go.Bar
-    plots = list()
-    plots.append(
-        # Plot the experimental data
-        exp_plot_function(
-            x = dataframe["Exp. Frequency"],
-            y = dataframe["Exp. Intensity"],
-            name = "Experiment",
-            width = 1.,
-            opacity = 0.6
-        )
-    )
-    # Use Matplotlib function to generate a colourmap
-    color_palette = configure_colors(dataframe)
-    # Loop over the colours and assignments
-    for color, assignment in zip(color_palette, dataframe["Assignment"].unique()):
-        # Truncate the dataframe to only hold the assignment
-        trunc_dataframe = dataframe[dataframe["Assignment"] == assignment]
-        plots.append(
-            go.Bar(
-                x=trunc_dataframe["Frequency"],
-                y=np.negative((trunc_dataframe["Intensity"] / trunc_dataframe["Intensity"].max())),
-                name=assignment,
-                width=1.,
-                marker={
-                    # Convert the matplotlib color array to hex code
-                    "color": colors.rgb2hex(color[:-1])
-                }
-            )
-        )
-    layout = go.Layout(
-        yaxis={"title": "Intensity"},
-        xaxis={"title": "Frequency (MHz)"}
-    )
-    fig = go.Figure(data=plots, layout=layout)
-    plot(fig, filename=output)
+@dataclass
+class Batch:
+    assay: str
+    id: int
+    scans:
 
 
 @dataclass
@@ -191,6 +108,27 @@ class Scan:
         scan_obj = cls(**data_dict)
         return scan_obj
 
+    def to_file(self, filepath, format="yaml"):
+        """ Method to dump data to YAML format.
+            Extensions are automatically decided, but
+            can also be supplied.
+
+            parameters:
+            --------------------
+            :param filepath - str path to yaml file
+            :param format - str denoting the syntax used for dumping. Defaults to YAML.
+        """
+        if "." not in filepath:
+            if format == "json":
+                filepath+=".json"
+            else:
+                filepath+=".yml"
+        if format == "json":
+            writer = routines.dump_json
+        else:
+            writer = routines.dump_yaml
+        writer(filepath, self.__dict__)
+
 
 def parse_scan(filecontents):
     """
@@ -201,13 +139,15 @@ def parse_scan(filecontents):
     :return: dict containing parsed data from FID
     """
     data = dict()
+    # FID regex
+    fid_regex = re.compile(r"^fid\d*", re.M)
     # Regex to find gas channels
     gas_regex = re.compile(r"^#Gas \d name", re.M)
     flow_regex = re.compile(r"^#Gas \d flow", re.M)
     # Regex to detect which channel is set to the discharge
     dc_regex = re.compile(r"^#Pulse ch \d name\s*DC", re.M)
     dc_channel = None
-    for line in filecontents:
+    for index, line in enumerate(filecontents):
         if "#Scan" in line:
             split_line = line.split()
             data["scan"] = int(split_line[1])
@@ -263,6 +203,11 @@ def parse_scan(filecontents):
         if dc_channel:
             if dc_channel.match(line):
                 data["discharge"] = bool(int(line.split(()[-1])))
+        # Find when the FID lines start popping up
+        if fid_regex.match(line):
+            fid = filecontents[index+1:]
+            fid = [float(value) for value in fid]
+            data["fid"] = np.array(fid)
     return data
 
 
