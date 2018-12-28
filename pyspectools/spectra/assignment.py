@@ -706,7 +706,7 @@ class AssignmentSession:
 
             returns:
             --------------
-            profile_df - pandas dataframe containing all of the
+            :return profile_df - pandas dataframe containing all of the
                          analysis
         """
         profile_data = list()
@@ -844,7 +844,8 @@ class AssignmentSession:
     def simulate_sticks(self, catalogpath, N, Q, T, doppler=None, gaussian=False):
         """
         Simulates a stick spectrum with intensities in flux units (Jy) for
-        a given catalog file and molecular properties.
+        a given catalog file, the column density, and the rotational partition
+        function at temperature T.
         :param catalogpath: path to SPCAT catalog file
         :param N: column density in cm^-2
         :param Q: partition function at temperature T
@@ -872,7 +873,7 @@ class AssignmentSession:
                 catalog_df["Frequency"].values
             )
             # Calculate the Gaussian amplitude
-            amplitudes = catalog_df["Flux (Jy"] / np.sqrt(2. * np.pi**2. * widths)
+            amplitudes = catalog_df["Flux (Jy)"] / np.sqrt(2. * np.pi**2. * widths)
             sim_y = self.simulate_spectrum(
                 self.data[self.freq_col],
                 catalog_df["Frequency"].values,
@@ -881,7 +882,7 @@ class AssignmentSession:
             )
             simulated_df = pd.DataFrame(
                 data=list(zip(self.data[self.freq_col], sim_y)),
-                columns=["Frequency", "Intensity"]
+                columns=["Frequency", "Flux (Jy)"]
             )
             return simulated_df
 
