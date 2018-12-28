@@ -1,18 +1,16 @@
 
-from itertools import combinations, product
 import datetime
 import re
-from dataclasses import dataclass, field
-from typing import Dict
 import os
+from dataclasses import dataclass, field
+from itertools import combinations, product
+from typing import List, Dict
 
 import pandas as pd
 import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
-from matplotlib import colors
 from scipy import signal as spsig
-from plotly.offline import plot, init_notebook_mode
 import plotly.graph_objs as go
 
 from pyspectools import routines
@@ -81,6 +79,11 @@ class Scan:
     discharge: bool = False
     magnet: bool = False
     gases: Dict = field(default_factory = dict)
+    filter: List = field(default_factory = list)
+    exp: float = 0.
+    zeropad: bool = False
+    window: str = ""
+
 
     @classmethod
     def from_dict(cls, data_dict):
@@ -94,7 +97,7 @@ class Scan:
         return scan_obj
 
     @classmethod
-    def from_file(cls, filepath):
+    def from_qtftm(cls, filepath):
         """
         Method to initialize a Scan object from a FT scan file.
         Will load the lines into memory and parse the data into
@@ -106,6 +109,17 @@ class Scan:
             data_dict = parse_scan(read_file.readlines())
         scan_obj = cls(**data_dict)
         return scan_obj
+
+    @classmethod
+    def from_pickle(cls, filepath):
+        """
+        Method to create a Scan object from a previously pickled
+        Scan.
+        :param filepath: path to the Scan pickle
+        :return: instance of the Scan object
+        """
+        scan_dict = routines.read_obj(filepath)
+        return scan_dict
 
     def to_file(self, filepath, format="yaml"):
         """ Method to dump data to YAML format.
@@ -127,6 +141,43 @@ class Scan:
         else:
             writer = routines.dump_yaml
         writer(filepath, self.__dict__)
+
+    def to_pickle(self, filepath=None, **kwargs):
+        """
+        Pickles the Scan object with the joblib wrapper implemented
+        in routines.
+        :param filepath: optional argument to pickle to. Defaults to the id.pkl
+        :param kwargs: additional settings for the pickle operation
+        """
+        if filepath is None:
+            filepath = "{}.pkl".format(self.id)
+        routines.save_obj(self, filepath, **kwargs)
+
+    def process_fid(self, **kwargs):
+        """
+        Perform an FFT on the FID to yield the frequency domain spectrum.
+        Kwargs are passed into the FID processing, which will override the
+        Scan attributes.
+        :param kwargs: Optional keyword arguments for processing the FID
+        """
+        # Calculate the frequency bins
+        frequencies = np.linspace(
+            self.cavity_frequency,
+            self.cavity_frequency + 1.,
+            len(self.fid)
+        )
+        # Calculate the time bins
+        time = np.linspace(
+            0.,
+            self.fid_spacing * self.fid_points,
+            self.fid_points
+        )
+        process_list = ["window", "filter", "exp", "zeropad"]
+        process_dict = {key: value for key, value in self.__dict__.items() if key in process_list}
+        # Override with user settings
+        process_dict.update(**kwargs)
+        self.spectrum = fid2fft(self.fid, 1. / self.fid_spacing, frequencies, **process_dict)
+        self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": self.fid})
 
 
 def parse_scan(filecontents):
@@ -151,7 +202,7 @@ def parse_scan(filecontents):
             split_line = line.split()
             data["id"] = int(split_line[1])
             data["machine"] = split_line[2]
-        if "#Cavity freq" in line:
+        if "#Probe freq" in line:
             data["cavity_frequency"] = float(line.split()[2])
         if "#Shots" in line:
             data["shots"] = int(line.split()[-1])
@@ -209,6 +260,108 @@ def parse_scan(filecontents):
             fid = [float(value) for value in fid]
             data["fid"] = np.array(fid)
     return data
+
+
+def fid2fft(fid, rate, frequencies, **kwargs):
+    """
+    Process an FID by performing an FFT to yield the frequency domain
+    information. Kwargs are passed as additional processing options,
+    and are implemented as some case statements to ensure the settings
+    are valid (e.g. conforms to sampling rate, etc.)
+
+    :param fid: np.array corresponding to the FID intensity
+    :param rate: sampling rate in Hz
+    :param frequencies: np.array corresponding to the frequency bins
+    :param kwargs: signal processing options:
+                    delay - delays the FID processing by setting the start
+                            of the FID to zero
+                    zeropad - Toggles whether or not the number of sampled
+                              points is doubled to get artificially higher
+                              resolution in the FFT
+                    window - Various window functions provided by `scipy.signal`
+                    exp - Specifies an exponential filter
+                    filter - 2-tuple specifying the frequency cutoffs for a
+                             band pass filter
+    :return: freq_df - pandas dataframe with the FFT spectrum
+    """
+    # Remove DC
+    fid-=np.average(fid)
+    if "delay" in kwargs:
+        if 0 < kwargs["delay"] < len(fid) * (1e6 / rate):
+            fid[:int(delay)] = 0.
+    # Zero-pad the FID
+    if "zeropad" in kwargs:
+        if kwargs["zeropad"] is True:
+            # Pad the FID with zeros to get higher resolution
+            fid = np.append(fid, np.zeros(len(fid)))
+            # Since we've padded with zeros, we'll have to update the
+            # frequency array
+            frequencies = spsig.resample(frequencies, len(frequencies) * 2)
+    # Apply a window function to the FID
+    if "window" in kwargs:
+        available = ["blackmanharris", "blackman", "boxcar", "gaussian", "hanning", "bartlett"]
+        if (kwargs["window"] != "") and (kwargs["window"] in available):
+            fid*=spsig.get_window(kwargs["window"], len(fid))
+    # Apply an exponential filter on the FID
+    if "exp" in kwargs:
+        if kwargs["exp"] > 0.:
+            fid*=spsig.exponential(len(fid), tau=kwargs["exp"])
+    # Apply a bandpass filter on the FID
+    if ("filter" in kwargs) and (len(kwargs["filter"]) == 2):
+        low, high = sorted(kwargs["filter"])
+        if (low < high) and (high <= 950.):
+            fid = apply_butter_filter(
+                fid,
+                low,
+                high,
+                1. / rate
+            )
+    # Perform the FFT
+    fft = np.fft.fft(fid)
+    # Get the real part of the FFT
+    real_fft = np.abs(fft[:int(len(fid) / 2)]) / len(fid)
+    frequencies = spsig.resample(frequencies, len(real_fft))
+    # For some reason, resampling screws up the frequency ordering...
+    frequencies = np.sort(frequencies)
+    # Package into a pandas dataframe
+    freq_df = pd.DataFrame({"Frequency (MHz)": frequencies, "Intensity": real_fft})
+    return freq_df
+
+
+def butter_bandpass(low, high, rate, order=5):
+    """
+        A modified version of the Butterworth bandpass filter described here,
+        adapted for use with the FID signal.
+        http://scipy-cookbook.readthedocs.io/items/ButterworthBandpass.html
+        The arguments are:
+
+        :param low The low frequency cut-off, given in kHz.
+        :param high The high frequency cut-off, given in kHz.
+        :param rate The sampling rate, given in Hz. From the FIDs, this means that
+                    the inverse of the FID spacing is used.
+        :return bandpass window
+    """
+    # Calculate the Nyquist freqiemcy
+    nyq = 0.5 * (rate / (2. * np.pi))
+    low = (low * 1e3) / nyq
+    high = (high * 1e3) / nyq
+    b, a = spsig.butter(order, [low, high], btype='band', analog=False)
+    return b, a
+
+
+def apply_butter_filter(data, low, high, rate, order=5):
+    """
+        A modified Butterworth bandpass filter, adapted from the Scipy cookbook.
+
+        The argument data supplies the FID, which then uses the scipy signal
+        processing function to apply the digital filter, and returns the filtered
+        FID.
+
+        See the `butter_bandpass` function for additional arguments.
+    """
+    b, a = butter_bandpass(low, high, rate, order=order)
+    y = spsig.lfilter(b, a, data)
+    return y
 
 
 def generate_ftb_line(frequency, shots, **kwargs):
