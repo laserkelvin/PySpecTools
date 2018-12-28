@@ -54,7 +54,6 @@ def center_cavity(dataframe, thres=0.3, verbose=True):
 class Batch:
     assay: str
     id: int
-    scans:
 
 
 @dataclass
@@ -138,7 +137,7 @@ def parse_scan(filecontents):
     :param filecontents: list of lines from an FID file
     :return: dict containing parsed data from FID
     """
-    data = dict()
+    data = {"gases": dict()}
     # FID regex
     fid_regex = re.compile(r"^fid\d*", re.M)
     # Regex to find gas channels
@@ -150,28 +149,29 @@ def parse_scan(filecontents):
     for index, line in enumerate(filecontents):
         if "#Scan" in line:
             split_line = line.split()
-            data["scan"] = int(split_line[1])
+            data["id"] = int(split_line[1])
             data["machine"] = split_line[2]
         if "#Cavity freq" in line:
             data["cavity_frequency"] = float(line.split()[2])
         if "#Shots" in line:
             data["shots"] = int(line.split()[-1])
         if "#Date" in line:
+            strip_targets = ["#Date", "\t", "\n"]
             data["date"] = datetime.datetime.strptime(
-                line.strip("#Date   "),
-                "%a %B %d %X %Y"
+                re.sub("|".join(strip_targets), "", line),
+                "%a %B %d %H:%M:%S %Y"
             )
         if "#Cavity Voltage" in line:
             data["cavity_voltage"] = int(line.split()[2])
         if "#Attenuation" in line:
-            data["cavity_attenuation"] = int(line.split()[1])
+            data["cavity_atten"] = int(line.split()[1])
         if "#DR freq" in line:
             data["dr_frequency"] = float(line.split()[2])
         if "#DR power" in line:
             data["dr_power"] = int(line.split()[2])
         if "#FID spacing" in line:
             data["fid_spacing"] = float(
-                    re.find(
+                    re.findall(
                     r"\de[+-]?\d\d",
                     line
                 )[0]
@@ -202,7 +202,7 @@ def parse_scan(filecontents):
         # Once the discharge channel index is known, start searching for it
         if dc_channel:
             if dc_channel.match(line):
-                data["discharge"] = bool(int(line.split(()[-1])))
+                data["discharge"] = bool(int(line.split()[-1]))
         # Find when the FID lines start popping up
         if fid_regex.match(line):
             fid = filecontents[index+1:]

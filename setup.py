@@ -64,7 +64,7 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="3.1.0",
+    version="3.2.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
