@@ -83,6 +83,8 @@ class Scan:
 
     Has a few class methods that will make look ups easily such as
     the date the scan was collected and the gases used.
+
+    TODO - add a classmethod to get a scan from remote.
     """
     id: int
     machine: str
