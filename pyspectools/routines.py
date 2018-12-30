@@ -319,6 +319,20 @@ class RemoteClient(paramiko.SSHClient):
 
         self.sftp = self.open_sftp()
 
+    @classmethod
+    def from_file(cls, filepath):
+        """
+        Reload a remote session from a pickle file created by the save_session.
+        :param filepath: str path to RemoteClient pickle file
+        :return: RemoteClient object
+        """
+        remote = read_obj(filepath)
+        # Make sure that the pickle file is a RemoteClient object
+        if remote.__name__ != "RemoteClient":
+            raise Exception("File was not a RemoteClient session; {}".format(remote.__name__))
+        else:
+            return read_obj(filepath)
+
     def __exit__(self, exc_type, exc_value, traceback):
         """
         Dunder method that should be called when the object is destroyed. In this case,
@@ -363,3 +377,12 @@ class RemoteClient(paramiko.SSHClient):
         """
         contents = self.run_command("ls {}".format(remote_path))
         return contents
+
+    def save_session(self, filepath="ssh.pkl", **kwargs):
+        """
+        Function to dump the ssh settings object to a pickle file. Keep in mind
+        that while this is a matter of convenience, the file is unencrypted and
+        so storing passwords in here is not exactly the safest thing to do!
+        :param filepath: str optional path to save the session to.
+        """
+        save_obj(self, filepath, **kwargs)

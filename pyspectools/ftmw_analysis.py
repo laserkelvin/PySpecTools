@@ -73,6 +73,19 @@ class Batch:
         batch_data["machine"] = machine.upper()
         batch_obj = cls(**batch_data)
 
+    @classmethod
+    def from_remote(cls, remote_path, assay, machine, ssh_obj=None):
+        if ssh_obj is None:
+            hostname = input("Please provide remote hostname:    ")
+            username = input("Please provide login:              ")
+            password = input("Please provide password:           ")
+            ssh_settings = {
+                "hostname": hostname,
+                "username": username,
+                "password": password
+            }
+            remote = routines.RemoteClient(**ssh_settings)
+
 
 @dataclass
 class Scan:
@@ -83,8 +96,6 @@ class Scan:
 
     Has a few class methods that will make look ups easily such as
     the date the scan was collected and the gases used.
-
-    TODO - add a classmethod to get a scan from remote.
     """
     id: int
     machine: str
@@ -139,8 +150,37 @@ class Scan:
         :param filepath: path to the Scan pickle
         :return: instance of the Scan object
         """
-        scan_dict = routines.read_obj(filepath)
-        return scan_dict
+        scan_obj = routines.read_obj(filepath)
+        if scan_obj.__name__ != "Scan":
+            raise Exception("File is not a Scan object; {}".format(scan_obj.__name__))
+        else:
+            return scan_obj
+
+    @classmethod
+    def from_remote(cls, remote_path, ssh_obj=None):
+        """
+        Method to initialize a Scan object from a remote server.
+        Has the option to pass an instance of a paramiko SSHClient, which would be
+        useful in a Batch. If none is supplied, an instance will be created.
+
+        :param remote_path: str remote path to the file
+        :param ssh_obj: optional argument to supply a paramiko SSHClient object
+        :return: Scan object from remote QtFTM file
+        """
+        if ssh_obj is None:
+            hostname = input("Please provide remote hostname:    ")
+            username = input("Please provide login:              ")
+            password = input("Please provide password:           ")
+            ssh_settings = {
+                "hostname": hostname,
+                "username": username,
+                "password": password
+            }
+            remote = routines.RemoteClient(**ssh_settings)
+        # Parse the scan data from remote file
+        data_dict = parse_scan(remote.open_remote(remote_path))
+        scan_obj = cls(**data_dict)
+        return scan_obj
 
     def to_file(self, filepath, format="yaml"):
         """ Method to dump data to YAML format.
