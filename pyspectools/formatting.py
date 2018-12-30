@@ -7,9 +7,6 @@
 """
 
 
-import pandas
-
-
 def read_lin(filepath, labels):
     """ Function that will read in a .lin file and quantum number
         labeling, and return a formatted LaTeX table.
