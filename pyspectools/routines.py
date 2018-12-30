@@ -12,6 +12,7 @@ from glob import glob
 
 import yaml
 import joblib
+import paramiko
 
 from pyspectools import pypickett as pp
 
@@ -300,3 +301,62 @@ def dump_packages():
                 except AttributeError:
                     pass
     return mod_dict
+
+
+class RemoteClient(paramiko.SSHClient):
+    def __init__(self, hostname=None, username=None, **kwargs):
+        super().__init__()
+        self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        #self.set_log_channel(paramiko.transport)
+        self.connect(
+            hostname=hostname,
+            username=username,
+            **kwargs
+        )
+
+        self.sftp = self.open_sftp()
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Dunder method that should be called when the object is destroyed. In this case,
+        the remote connection should be closed automatically.
+        """
+        self.sftp.close()
+        self.close()
+
+    def get_file(self, remote_path, local_path=os.getcwd()):
+        """
+        Download a file from remote server to disk. If no local path is provided, defaults
+        to the current working directory.
+        :param remote_path: str remote file path target
+        :param local_path: str optional path to save the file to
+        """
+        self.sftp.get(remote_path, local_path)
+
+    def run_command(self, command):
+        stdin, stdout, stderr = self.exec_command(command)
+        error_msg = stderr.read()
+        if len(error_msg) == 0:
+            return stdout.readlines()
+        else:
+            raise Exception("Error in running command: {}".format(error_msg))
+
+    def open_remote(self, remote_path):
+        """
+        Function to stream the file contents of a remote file. Can be used to directly
+        provide data into memory without downloading it to disk.
+        :param remote_path: str remote path to target file
+        :return: list of contents of the target file
+        """
+        contents = self.run_command("cat {}".format(remote_path))
+        return contents
+
+    def ls(self, remote_path=""):
+        """
+        Function to get the list of files present in a specified directory.
+        Defaults to the current ssh directory.
+        :param remote_path: str remote path to inspect
+        :return: list of files and folders
+        """
+        contents = self.run_command("ls {}".format(remote_path))
+        return contents
