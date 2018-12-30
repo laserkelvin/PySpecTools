@@ -84,7 +84,7 @@ class Batch:
                 "username": username,
                 "password": password
             }
-            remote = routines.RemoteClient(**ssh_settings)
+            ssh_obj = routines.RemoteClient(**ssh_settings)
 
 
 @dataclass
@@ -178,7 +178,7 @@ class Scan:
             }
             remote = routines.RemoteClient(**ssh_settings)
         # Parse the scan data from remote file
-        data_dict = parse_scan(remote.open_remote(remote_path))
+        data_dict = parse_scan(ssh_obj.open_remote(remote_path))
         scan_obj = cls(**data_dict)
         return scan_obj
 
