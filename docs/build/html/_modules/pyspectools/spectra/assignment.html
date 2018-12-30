@@ -53,7 +53,7 @@
 
 <span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">routines</span>
 <span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">fitting</span>
-<span class="kn">from</span> <span class="nn">pyspectools.parsecat</span> <span class="k">import</span> <span class="n">read_cat</span>
+<span class="kn">from</span> <span class="nn">pyspectools.parsecat</span> <span class="k">import</span> <span class="n">parse_cat</span>
 <span class="kn">from</span> <span class="nn">pyspectools.spectra</span> <span class="k">import</span> <span class="n">analysis</span>
 <span class="kn">from</span> <span class="nn">pyspectools.spectra</span> <span class="k">import</span> <span class="n">parsers</span>
 
@@ -617,7 +617,7 @@
 <span class="sd">            formula - str corresponding to chemical formula</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">old_nulines</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ulines</span><span class="p">)</span>
-        <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">read_cat</span><span class="p">(</span>
+        <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">parse_cat</span><span class="p">(</span>
                 <span class="n">catalogpath</span><span class="p">,</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
