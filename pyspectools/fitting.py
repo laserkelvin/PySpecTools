@@ -15,34 +15,26 @@ import pandas as pd
 from pyspectools import lineshapes
 
 
-class PySpecModel(lmfit.models.Model)
+class PySpecModel(lmfit.models.Model):
     def __init__(self, function, **kwargs):
         super.__init__(function, nan_policy="omit", **kwargs)
         self.params = self.make_params()
 
 
-class FirstDerivLorentzian_Model(PySpecModel)
-
-
+class FirstDerivLorentzian_Model(PySpecModel):
     """
     Child class of the PySpecModel, which in itself inherits from the `lmfit` `Models` class.
     Gives the first derivative Lorentzian line shape profile for fitting.
     """
-
-
 def __init__(self, **kwargs):
     super.__init__(lineshapes.first_deriv_lorentzian, **kwargs)
 
 
-class SecDerivLorentzian_Model(PySpecModel)
-
-
+class SecDerivLorentzian_Model(PySpecModel):
     """
     Child class of the PySpecModel, which in itself inherits from the `lmfit` `Models` class.
     Gives the second derivative Lorentzian line shape profile for fitting.
     """
-
-
 def __init__(self, **kwargs):
     super.__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
 

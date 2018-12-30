@@ -307,7 +307,6 @@ class RemoteClient(paramiko.SSHClient):
     def __init__(self, hostname=None, username=None, **kwargs):
         super().__init__()
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        #self.set_log_channel(paramiko.transport)
         self.connect(
             hostname=hostname,
             username=username,

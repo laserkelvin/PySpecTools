@@ -1,6 +1,6 @@
 
 import pandas as pd
-
+import numpy as np
 
 def parse_spectrum(filename, threshold=20.):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
