@@ -17,13 +17,9 @@ from IPython.display import display, HTML
 from periodictable import formula
 from plotly import graph_objs as go
 
-from pyspectools import routines
+from pyspectools import routines, parsers
 from pyspectools import fitting
-from pyspectools import units
-from pyspectools.astro import analysis as aa
-from pyspectools.parsecat import read_cat
 from pyspectools.spectra import analysis
-from pyspectools.spectra import parsers
 
 
 @dataclass
@@ -600,7 +596,7 @@ class AssignmentSession:
             :param formula: str corresponding to chemical formula
         """
         old_nulines = len(self.ulines)
-        catalog_df = read_cat(
+        catalog_df = parsers.parse_cat(
                 catalogpath,
                 self.data[self.freq_col].min(),
                 self.data[self.freq_col].max()

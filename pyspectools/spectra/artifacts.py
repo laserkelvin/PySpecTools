@@ -1,7 +1,4 @@
-
-import numpy as np
-import pandas as pd
-from . import parsers
+from pyspectools import parsers
 from . import analysis
 
 

@@ -3,18 +3,19 @@ import os
 from glob import glob
 import pickle
 import shutil
+
 import numpy as np
 import pandas as pd
 import stat
-from .routines import *
-from .parsecat import *
-from .parsefit import *
 from matplotlib import pyplot as plt
 from matplotlib import cm
 from matplotlib import colors
 import pprint
-from plotly.tools import mpl_to_plotly
-from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
+
+from pyspectools.routines import *
+from pyspectools.spcat import *
+from pyspectools.parsefit import *
+from pyspectools import parsers
 
 class molecule:
     """ Class for handling the top level of a Pickett simulation.
@@ -357,7 +358,7 @@ class molecule:
         # Second pass of SPCAT with correct intensities
         run_spcat(self.properties["name"])
         # Parse the output of SPCAT
-        self.cat_lines = read_cat(
+        self.cat_lines = parsers.parse_cat(
             self.properties["name"] + ".cat",
         )
         print("Saving the parsed lines to " + self.properties["name"] + "_parsedlines.csv")

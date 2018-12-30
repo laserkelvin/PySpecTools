@@ -5,7 +5,12 @@ import numpy as np
 from matplotlib import pyplot as plt
 import pandas as pd
 from plotly.tools import mpl_to_plotly
-from plotly.offline import init_notebook_mode, iplot, enable_mpl_offline
+from plotly.offline import iplot
+
+"""
+TODO - merge into parsers.py
+        This will involve a rewrite to be somewhat simpler...
+"""
 
 
 class fit_output:
