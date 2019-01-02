@@ -385,3 +385,17 @@ class RemoteClient(paramiko.SSHClient):
         :param filepath: str optional path to save the session to.
         """
         save_obj(self, filepath, **kwargs)
+
+
+def search_file(root_path, filename, ext=".txt"):
+    """
+    Function for searching for a specific filename in a given root path.
+    The option `ext` specifies whether or not the extension must also be matched.
+    :param root: str path to begin search
+    :param filename: str filename to match
+    :param ext: bool option to match file extension also
+    :return: str full path to the file
+    """
+    for root, dirs, files in os.walk(root_path):
+        if any([file for file in files if filename in file]) is True:
+            return os.path.join(root, filename) + ext
