@@ -11,7 +11,7 @@ import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
 from scipy import signal as spsig
-from scipy.stats import chisquare
+#from scipy.stats import chisquare
 import plotly.graph_objs as go
 
 from pyspectools import routines
@@ -72,20 +72,113 @@ class Batch:
         batch_data["assay"] = assay
         batch_data["machine"] = machine.upper()
         batch_obj = cls(**batch_data)
+        batch_obj.details = batch_df
+        return batch_obj
 
     @classmethod
-    def from_remote(cls, remote_path, assay, machine, ssh_obj=None):
+    def from_remote(cls, root_path, batch_id, assay, machine, ssh_obj=None):
         if ssh_obj is None:
+            default_keypath = os.path.join(
+                os.path.expanduser("~"),
+                ".ssh/id_rsa.pub"
+            )
             hostname = input("Please provide remote hostname:    ")
             username = input("Please provide login:              ")
-            password = input("Please provide password:           ")
             ssh_settings = {
                 "hostname": hostname,
-                "username": username,
-                "password": password
+                "username": username
             }
+            if os.path.isfile(default_keypath) is True:
+                ssh_settings["key_filename"] = default_keypath
+            else:
+                password = input("Please provide password:              ")
+                ssh_settings["password"] = password
             ssh_obj = routines.RemoteClient(**ssh_settings)
+        # Parse the scan data from remote file
+        remote_path = ssh_obj.ls(
+            os.path.join(root_path, "*", "*", str(batch_id) + ".txt")
+        )
+        batch_df, batch_data = parse_batch(ssh_obj.open_remote(remote_path[0]))
+        batch_data["assay"] = assay
+        batch_data["machine"] = machine.upper()
+        batch_obj = cls(**batch_data)
+        batch_obj.details = batch_df
+        batch_obj.remote = ssh_obj
+        batch_obj.get_scans(root_path, batch_df.id.values)
+        return batch_obj
 
+    def get_scans(self, root_path, ids):
+        """
+        Function to create Scan objects for all of the scans in
+        a QtFTM batch.
+        :param root_path: str scans root path
+        :param ids: list scan ids
+        :param src: str optional specifying whether a remote or local path is used
+        """
+        root_path = root_path.replace("batch", "scans")
+        path_list = [
+            os.path.join(root_path, "*", "*", str(scan_id) + ".txt") for scan_id in ids
+        ]
+        if hasattr(self, "remote") is True:
+            scans = [Scan.from_remote(path, self.remote) for path in path_list]
+        else:
+            scans = [Scan.from_qtftm(path) for path in path_list]
+        self.scans = scans
+
+    def process_dr(self, global_depletion=0.8, depletion_dict=None):
+        """
+        Function to batch process all of the DR measurements.
+        :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
+                                 without a specific expected value.
+        :param depletion_dict: dict with keys corresponding to cavity frequencies, and values the expected
+                               depletion value between 0. and 1.
+        :return dr_dict: dict with keys corresponding to cavity frequency, with each value
+                         a dict of the DR frequencies, scan IDs and Scan objects.
+        """
+        if self.assay != "dr":
+            raise Exception("Batch is not a DR test! I think it's {}".format(self.assay))
+        # Find the cavity frequencies that DR was performed on
+        unique_freq = np.unique(self.details["ftfreq"])
+        dr_dict = dict()
+        for freq in unique_freq:
+            # Pick out the scans with this cavity frequency that aren't calibration
+            slice_df = self.details.loc[(self.details.ftfreq == freq) & (self.details.cal == 0)]
+            # Get the Scan objects associated with this series of cavity measurements
+            scans = [scan for scan in self.scans if scan.id in slice_df.id.values]
+            # Unless user supplies a value for the expected depletion, use the global value
+            if depletion_dict and freq in depletion_dict:
+                depletion = dipole_dict[freq]
+            else:
+                depletion = global_depletion
+            # Assume the reference scan is the first of this list, and check for depletion
+            connections = [
+                scan.dr_frequency for scan in scans[1:] if scan.is_depleted(scans[0], depletion) is True
+            ]
+            if len(connections) > 0:
+                dr_dict[freq] = {
+                    {"dr_frequencies": [scan.dr_frequency for scan in connections]},
+                    {"ids": [scan.id for scan in connections]},
+                    {"scans": connections}
+                }
+        return dr_dict
+
+
+    def plot_scans(self):
+        """
+        Create a plotly figure of all of the Scans within a Batch.
+        :return:
+        """
+        fig = go.FigureWidget()
+        fig.layout["title"] = "{} Batch {}".format(self.machine, self.id)
+        fig.layout["showlegend"] = False
+        for scan in self.scans:
+            fig.add_scattergl(
+                x=np.linspace(scan.id, scan.id + 1, len(scan.spectrum["Intensity"])),
+                y=scan.spectrum["Intensity"],
+                text=str(scan.cavity_frequency),
+                hoverinfo="text"
+            )
+        return fig
 
 @dataclass
 class Scan:
@@ -116,6 +209,13 @@ class Scan:
     exp: float = 0.
     zeropad: bool = False
     window: str = ""
+
+    def __post_init__(self):
+        """
+        Functions called after __init__ is called.
+        """
+        # Perform FFT
+        self.process_fid()
 
     @classmethod
     def from_dict(cls, data_dict):
@@ -151,8 +251,8 @@ class Scan:
         :return: instance of the Scan object
         """
         scan_obj = routines.read_obj(filepath)
-        if scan_obj.__name__ != "Scan":
-            raise Exception("File is not a Scan object; {}".format(scan_obj.__name__))
+        if isinstance(scan_obj, Scan) is False:
+            raise Exception("File is not a Scan object; {}".format(type(scan_obj)))
         else:
             return scan_obj
 
@@ -168,15 +268,22 @@ class Scan:
         :return: Scan object from remote QtFTM file
         """
         if ssh_obj is None:
+            default_keypath = os.path.join(
+                os.path.expanduser("~"),
+                ".ssh/id_rsa.pub"
+            )
             hostname = input("Please provide remote hostname:    ")
             username = input("Please provide login:              ")
-            password = input("Please provide password:           ")
             ssh_settings = {
                 "hostname": hostname,
-                "username": username,
-                "password": password
+                "username": username
             }
-            remote = routines.RemoteClient(**ssh_settings)
+            if os.path.isfile(default_keypath) is True:
+                ssh_settings["key_filename"] = default_keypath
+            else:
+                password = input("Please provide password:              ")
+                ssh_settings["password"] = password
+            ssh_obj = routines.RemoteClient(**ssh_settings)
         # Parse the scan data from remote file
         data_dict = parse_scan(ssh_obj.open_remote(remote_path))
         scan_obj = cls(**data_dict)
@@ -309,7 +416,10 @@ def parse_scan(filecontents):
         if "#Scan" in line:
             split_line = line.split()
             data["id"] = int(split_line[1])
-            data["machine"] = split_line[2]
+            try:
+                data["machine"] = split_line[2]
+            except IndexError:
+                data["machine"] = "FT1"
         if "#Probe freq" in line:
             data["cavity_frequency"] = float(line.split()[2])
         if "#Shots" in line:
@@ -485,6 +595,7 @@ def parse_batch(filecontents):
             )
         if line.startswith("batchscan"):
             scan_details = filecontents[index+1:]
+            scan_details = [scan.split() for scan in scan_details]
     headers = [
         "id",
         "max",
