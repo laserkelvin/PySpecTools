@@ -63,6 +63,13 @@ class Batch:
 
     @classmethod
     def from_qtftm(cls, filepath, assay, machine):
+        """
+        Create a Batch object from a QtFTM scan file.
+        :param filepath:
+        :param assay:
+        :param machine:
+        :return:
+        """
         assays = ["dr", "magnet", "discharge", "dipole"]
         assay = assay.lower()
         if assay not in assays:
@@ -107,6 +114,20 @@ class Batch:
         batch_obj.get_scans(root_path, batch_df.id.values)
         return batch_obj
 
+    @classmethod
+    def from_pickle(cls, filepath):
+        """
+        Method to create a Scan object from a previously pickled
+        Scan.
+        :param filepath: path to the Scan pickle
+        :return: instance of the Scan object
+        """
+        batch_obj = routines.read_obj(filepath)
+        if isinstance(batch_obj, Batch) is False:
+            raise Exception("File is not a Scan object; {}".format(type(batch_obj)))
+        else:
+            return batch_obj
+
     def get_scans(self, root_path, ids):
         """
         Function to create Scan objects for all of the scans in
@@ -142,7 +163,7 @@ class Batch:
         dr_dict = dict()
         for freq in unique_freq:
             # Pick out the scans with this cavity frequency that aren't calibration
-            slice_df = self.details.loc[(self.details.ftfreq == freq) & (self.details.cal == 0)]
+            slice_df = self.details.loc[(self.details.ftfreq == freq) & (self.details.iscal == 0)]
             # Get the Scan objects associated with this series of cavity measurements
             scans = [scan for scan in self.scans if scan.id in slice_df.id.values]
             # Unless user supplies a value for the expected depletion, use the global value
@@ -162,7 +183,6 @@ class Batch:
                 }
         return dr_dict
 
-
     def plot_scans(self):
         """
         Create a plotly figure of all of the Scans within a Batch.
@@ -171,14 +191,35 @@ class Batch:
         fig = go.FigureWidget()
         fig.layout["title"] = "{} Batch {}".format(self.machine, self.id)
         fig.layout["showlegend"] = False
-        for scan in self.scans:
-            fig.add_scattergl(
-                x=np.linspace(scan.id, scan.id + 1, len(scan.spectrum["Intensity"])),
-                y=scan.spectrum["Intensity"],
-                text=str(scan.cavity_frequency),
-                hoverinfo="text"
-            )
+        fig.add_traces([scan.scatter_trace() for scan in self.scans])
         return fig
+
+    def reprocess_fft(self, **kwargs):
+        """
+        Reprocess all of the FIDs with specified settings. The default values
+        are taken from the Batch attributes, and kwargs provided will override
+        the defaults.
+        :param kwargs:
+        """
+        param_list = ["filter", "exp", "zeropad", "window"]
+        params = {key: value for key, value in self.__dict__.values() if key in param_list}
+        params.update(**kwargs)
+        _ = [scan.process_fid(**params) for scan in self.scans]
+
+    def to_pickle(self, filepath=None, **kwargs):
+        """
+        Pickles the Batch object with the joblib wrapper implemented
+        in routines.
+        :param filepath: optional argument to pickle to. Defaults to the {assay}-{id}.pkl
+        :param kwargs: additional settings for the pickle operation
+        """
+        if filepath is None:
+            filepath = "{}-{}.pkl".format(self.assay, self.id)
+        # the RemoteClient object has some thread locking going on that prevents
+        # pickling TODO - figure out why paramiko doesn't allow pickling
+        delattr(self, "remote")
+        routines.save_obj(self, filepath, **kwargs)
+
 
 @dataclass
 class Scan:
@@ -393,6 +434,16 @@ class Scan:
         reference = np.average(ref.spectrum["Intensity"].nlargest(10))
         expected = reference * depletion
         return present <= expected
+
+    def scatter_trace(self):
+        trace = go.Scattergl(
+            x=np.linspace(self.id, self.id + 1, len(self.spectrum["Intensity"])),
+            y=self.spectrum["Intensity"],
+            text=str(self.cavity_frequency),
+            marker={"color": "rgb(43,140,190)"},
+            hoverinfo="text"
+        )
+        return trace
 
 
 def parse_scan(filecontents):
