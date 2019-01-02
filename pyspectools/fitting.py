@@ -26,8 +26,8 @@ class FirstDerivLorentzian_Model(PySpecModel):
     Child class of the PySpecModel, which in itself inherits from the `lmfit` `Models` class.
     Gives the first derivative Lorentzian line shape profile for fitting.
     """
-def __init__(self, **kwargs):
-    super.__init__(lineshapes.first_deriv_lorentzian, **kwargs)
+    def __init__(self, **kwargs):
+        super.__init__(lineshapes.first_deriv_lorentzian, **kwargs)
 
 
 class SecDerivLorentzian_Model(PySpecModel):
@@ -35,8 +35,8 @@ class SecDerivLorentzian_Model(PySpecModel):
     Child class of the PySpecModel, which in itself inherits from the `lmfit` `Models` class.
     Gives the second derivative Lorentzian line shape profile for fitting.
     """
-def __init__(self, **kwargs):
-    super.__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
+    def __init__(self, **kwargs):
+        super.__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
 
 
 def rotor_energy(J, B, D=0.):
