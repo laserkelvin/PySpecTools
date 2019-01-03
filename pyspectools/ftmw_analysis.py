@@ -385,7 +385,7 @@ class Scan:
         process_dict = {key: value for key, value in self.__dict__.items() if key in process_list}
         # Override with user settings
         process_dict.update(**kwargs)
-        self.spectrum = fid2fft(self.fid, 1. / self.fid_spacing, frequencies, **process_dict)
+        self.spectrum = fid2fft(self.fid.copy(), 1. / self.fid_spacing, frequencies, **process_dict)
         self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": self.fid})
 
     def within_time(self, date_range):
@@ -436,6 +436,11 @@ class Scan:
         return present <= expected
 
     def scatter_trace(self):
+        """
+        Create a Plotly Scattergl trace. Called by the Batch function, although
+        performance-wise it takes forever to plot up ~3000 scans.
+        :return trace: Scattergl object
+        """
         trace = go.Scattergl(
             x=np.linspace(self.id, self.id + 1, len(self.spectrum["Intensity"])),
             y=self.spectrum["Intensity"],
@@ -557,7 +562,7 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     fid-=np.average(fid)
     if "delay" in kwargs:
         if 0 < kwargs["delay"] < len(fid) * (1e6 / rate):
-            fid[:int(delay)] = 0.
+            fid[:int(kwargs["delay"])] = 0.
     # Zero-pad the FID
     if "zeropad" in kwargs:
         if kwargs["zeropad"] is True:
@@ -569,7 +574,7 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     # Apply a window function to the FID
     if "window" in kwargs:
         available = ["blackmanharris", "blackman", "boxcar", "gaussian", "hanning", "bartlett"]
-        if (kwargs["window"] != "") and (kwargs["window"] in available):
+        if (kwargs["window"] != "") and (kwargs["wqindow"] in available):
             fid*=spsig.get_window(kwargs["window"], len(fid))
     # Apply an exponential filter on the FID
     if "exp" in kwargs:
