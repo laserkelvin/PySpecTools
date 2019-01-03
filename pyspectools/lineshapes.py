@@ -19,6 +19,21 @@ def gaussian(x, A, x0, w):
     return A * np.exp(-(x - x0)**2. / (2. * w**2.))
 
 
+def pair_gaussian(x, A1, A2, x0, w, xsep):
+    """
+    Paired Gaussian lineshape. The function allows for the amplitudes to be
+    floated, however the two Gaussians are locked in width and center
+    frequency.
+    :param x: np.array to evaluate the pair gaussians on
+    :param A1, A2: float amplitude of the gaussians
+    :param x0: float center-of-mass value for the two gaussian centers
+    :param w: float width of the gaussians
+    :param xsep: float seperation expected for the gaussian centers
+    :return: np.array y values of the gaussian
+    """
+    return gaussian(x, A1, x0 - xsep, w) + gaussian(x, A2, x0 + xsep, w)
+
+
 def lorentzian(x, x0, gamma, A):
     # Stock Lorentizan function
     return (A / np.pi * gamma) * (gamma**2. / ((x - x0)**2. + gamma**2.))

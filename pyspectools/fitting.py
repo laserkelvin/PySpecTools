@@ -39,6 +39,11 @@ class SecDerivLorentzian_Model(PySpecModel):
         super.__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
 
 
+class PairGaussianModel(PySpecModel):
+    def __init__(self, **kwargs):
+        super.__init__(lineshapes.pair_gaussian, independent_vars=["x"], **kwargs)
+
+
 def rotor_energy(J, B, D=0.):
     """ Expression for a linear/prolate top with
         centrifugal distortion.

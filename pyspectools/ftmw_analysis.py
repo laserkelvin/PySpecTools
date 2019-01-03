@@ -268,6 +268,7 @@ class Scan:
             def __init__(self):
                 pass
         new_scan = Empty()
+        new_scan.__class__ = self.__class__
         new_scan.__dict__.update(self.__dict__)
         return new_scan
 
@@ -526,6 +527,42 @@ class Scan:
         )
         return trace
 
+    def fit_cavity(self, plot=True):
+        """
+        Perform a fit to the cavity spectrum. Uses a paired Gaussian model
+        that minimizes the number of fitting parameters.
+        :param plot: bool specify whether a Plotly figure is made
+        :return: Model Fit result
+        """
+        y = self.spectrum["Intensity"].values
+        x = self.spectrum["Frequency (MHz)"].values
+        model = fitting.PairGaussianModel()
+        params = model.make_params()
+        # Automatically find where the Doppler splitting is
+        indexes = peakutils.indexes(y, thres=0.7, min_dist=10)
+        guess_center = np.average(x[indexes])
+        guess_sep = np.std(x[indexes])
+        # This calculates the amplitude of a Gaussian based on
+        # the peak height
+        prefactor = np.sqrt(2. * np.pi) * 0.01
+        guess_amp = np.average(y[indexes]) * prefactor
+        # Set the parameter guesses
+        params["A1"].set(guess_amp)
+        params["A2"].set(guess_amp)
+        params["w"].set(0.01, min=0.005, max=0.05)
+        params["xsep"].set(guess_sep)
+        params["x0"].set(guess_center, min=guess_center - 0.05, max=guess_center + 0.05)
+        results = model.fit(data=y, x=x, params=params)
+        self.spectrum["Fit"] = results.best_fit
+        self.fit = results
+        if plot is True:
+            fig = go.FigureWidget()
+            fig.add_trace(x=x, y=y, name="Observed")
+            fig.add_trace(x=x, y=results.best_fit, name="Fit")
+            return results, fig
+        else:
+            return results
+
 
 def parse_scan(filecontents):
     """
@@ -659,17 +696,17 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     # Apply a bandpass filter on the FID
     if ("filter" in kwargs) and (len(kwargs["filter"]) == 2):
         low, high = sorted(kwargs["filter"])
-        if (low < high) and (high <= 950.):
+        if low < high:
             fid = apply_butter_filter(
                 fid,
                 low,
                 high,
-                1. / rate
+                rate
             )
     # Perform the FFT
     fft = np.fft.fft(fid)
     # Get the real part of the FFT
-    real_fft = np.abs(fft[:int(len(fid) / 2)]) / len(fid)
+    real_fft = np.abs(fft[:int(len(fid) / 2)]) / len(fid) * 1e3
     frequencies = spsig.resample(frequencies, len(real_fft))
     # For some reason, resampling screws up the frequency ordering...
     frequencies = np.sort(frequencies)
@@ -678,7 +715,7 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     return freq_df
 
 
-def butter_bandpass(low, high, rate, order=5):
+def butter_bandpass(low, high, rate, order=1):
     """
         A modified version of the Butterworth bandpass filter described here,
         adapted for use with the FID signal.
@@ -691,15 +728,17 @@ def butter_bandpass(low, high, rate, order=5):
                     the inverse of the FID spacing is used.
         :return bandpass window
     """
-    # Calculate the Nyquist freqiemcy
+    # Calculate the Nyquist frequency
     nyq = 0.5 * (rate / (2. * np.pi))
     low = (low * 1e3) / nyq
     high = (high * 1e3) / nyq
+    if high > 1.:
+        raise Exception("High frequency cut-off exceeds the Nyquist frequency.")
     b, a = spsig.butter(order, [low, high], btype='band', analog=False)
     return b, a
 
 
-def apply_butter_filter(data, low, high, rate, order=5):
+def apply_butter_filter(data, low, high, rate, order=1):
     """
         A modified Butterworth bandpass filter, adapted from the Scipy cookbook.
 
