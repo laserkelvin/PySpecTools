@@ -17,7 +17,7 @@ from pyspectools import lineshapes
 
 class PySpecModel(lmfit.models.Model):
     def __init__(self, function, **kwargs):
-        super.__init__(function, nan_policy="omit", **kwargs)
+        super(PySpecModel, self).__init__(function, nan_policy="omit", **kwargs)
         self.params = self.make_params()
 
 
@@ -27,7 +27,7 @@ class FirstDerivLorentzian_Model(PySpecModel):
     Gives the first derivative Lorentzian line shape profile for fitting.
     """
     def __init__(self, **kwargs):
-        super.__init__(lineshapes.first_deriv_lorentzian, **kwargs)
+        super(FirstDerivLorentzian_Model, self).__init__(lineshapes.first_deriv_lorentzian, **kwargs)
 
 
 class SecDerivLorentzian_Model(PySpecModel):
@@ -36,12 +36,13 @@ class SecDerivLorentzian_Model(PySpecModel):
     Gives the second derivative Lorentzian line shape profile for fitting.
     """
     def __init__(self, **kwargs):
-        super.__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
+        super(SecDerivLorentzian_Model, self).__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
 
 
 class PairGaussianModel(PySpecModel):
+
     def __init__(self, **kwargs):
-        super.__init__(lineshapes.pair_gaussian, independent_vars=["x"], **kwargs)
+        super(PairGaussianModel, self).__init__(lineshapes.pair_gaussian, independent_vars=["x"], **kwargs)
 
 
 def rotor_energy(J, B, D=0.):

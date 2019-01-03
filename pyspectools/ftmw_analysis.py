@@ -539,7 +539,7 @@ class Scan:
         model = fitting.PairGaussianModel()
         params = model.make_params()
         # Automatically find where the Doppler splitting is
-        indexes = peakutils.indexes(y, thres=0.7, min_dist=10)
+        indexes = peakutils.indexes(y, thres=0.5, min_dist=10)
         guess_center = np.average(x[indexes])
         guess_sep = np.std(x[indexes])
         # This calculates the amplitude of a Gaussian based on
@@ -549,16 +549,18 @@ class Scan:
         # Set the parameter guesses
         params["A1"].set(guess_amp)
         params["A2"].set(guess_amp)
-        params["w"].set(0.01, min=0.005, max=0.05)
-        params["xsep"].set(guess_sep)
+        params["w"].set(0.01, min=0.005, max=0.1)
+        params["xsep"].set(guess_sep, min=guess_sep*0.8, max=guess_sep*1.2)
         params["x0"].set(guess_center, min=guess_center - 0.05, max=guess_center + 0.05)
         results = model.fit(data=y, x=x, params=params)
         self.spectrum["Fit"] = results.best_fit
         self.fit = results
         if plot is True:
             fig = go.FigureWidget()
-            fig.add_trace(x=x, y=y, name="Observed")
-            fig.add_trace(x=x, y=results.best_fit, name="Fit")
+            fig.layout["xaxis"]["title"] = "Frequency (MHz)"
+            fig.layout["xaxis"]["tickformat"] = ".2f"
+            fig.add_scatter(x=x, y=y, name="Observed")
+            fig.add_scatter(x=x, y=results.best_fit, name="Fit")
             return results, fig
         else:
             return results
