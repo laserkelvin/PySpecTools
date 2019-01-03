@@ -258,6 +258,82 @@ class Scan:
         # Perform FFT
         self.process_fid()
 
+    def __deepcopy__(self):
+        """
+        Dunder method to produce a deep copy - this will be used when
+        manipulating multiple Scan objects.
+        :return: A deep copy of the current Scan object
+        """
+        class Empty(self.__class__):
+            def __init__(self):
+                pass
+        new_scan = Empty()
+        new_scan.__dict__.update(self.__dict__)
+        return new_scan
+
+    def average(self, others):
+        """
+        Dunder method to co-average two or more Scans in the time domain.
+        :param other: Scan object, or tuple/list
+        :return: A new Scan object with the co-added FID
+        """
+        new_scan = self.__deepcopy__()
+        try:
+            new_scan.fid = np.average(others.extend(new_scan.fid), axis=0)
+            new_scan.average_ids = [scan.id for scan in others]
+        # If there is no extend method, then assume we're working with a
+        # single Scan
+        except AttributeError:
+            new_scan.fid = np.average([new_scan.fid, others.fid], axis=0)
+            new_scan.average_ids = [others.id]
+        new_scan.process_fid()
+        return new_scan
+
+    def __add__(self, other):
+        """
+        Dunder method to co-add two or more Scans in the time domain.
+        :param other: Scan object, or tuple/list
+        :return: A new Scan object with the co-added FID
+        """
+        new_scan = self.__deepcopy__()
+        new_scan.fid = np.sum([new_scan.fid, other.fid], axis=0)
+        new_scan.process_fid()
+        return new_scan
+
+    def __sub__(self, other):
+        """
+        Dunder method to subtract another Scan from the current Scan in the time domain.
+        i.e. this scan - other scan
+        :param other: Scan object, or tuple/list
+        :return: A new Scan object with the subtracted FID
+        """
+        new_scan = self.__deepcopy__()
+        new_scan.fid = np.subtract(new_scan.fid, other.fid)
+        new_scan.process_fid()
+        return new_scan
+
+    def subtract_frequency(self, other):
+        """
+        Method to subtract another Scan from the current in the frequency domain.
+        :param other: Scan object to subtract with
+        :return: A new Scan object with the subtracted spectrum
+        """
+        new_scan = self.__deepcopy__()
+        new_scan.spectrum["Intensity"] = new_scan.spectrum["Intensity"] - other.spectrum["Intensity"]
+        new_scan.subtracted = other.id
+        return new_scan
+
+    def add_frequency(self, other):
+        """
+        Method to add another Scan from the current in the frequency domain.
+        :param other: Scan object to add with
+        :return: A new Scan object with the co-added spectrum
+        """
+        new_scan = self.__deepcopy__()
+        new_scan.spectrum["Intensity"] = new_scan.spectrum["Intensity"] + other.spectrum["Intensity"]
+        new_scan.subtracted = other.id
+        return new_scan
+
     @classmethod
     def from_dict(cls, data_dict):
         """
