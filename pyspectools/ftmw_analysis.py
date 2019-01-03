@@ -11,7 +11,7 @@ import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
 from scipy import signal as spsig
-#from scipy.stats import chisquare
+from scipy.stats import chisquare
 import plotly.graph_objs as go
 
 from pyspectools import routines
@@ -146,7 +146,7 @@ class Batch:
             scans = [Scan.from_qtftm(path) for path in path_list]
         self.scans = scans
 
-    def process_dr(self, global_depletion=0.8, depletion_dict=None):
+    def process_dr(self, global_depletion=0.5, depletion_dict=None):
         """
         Function to batch process all of the DR measurements.
         :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
@@ -163,17 +163,18 @@ class Batch:
         dr_dict = dict()
         for freq in unique_freq:
             # Pick out the scans with this cavity frequency that aren't calibration
-            slice_df = self.details.loc[(self.details.ftfreq == freq) & (self.details.iscal == 0)]
+            slice_df = self.details.loc[self.details.ftfreq == str(freq)]
             # Get the Scan objects associated with this series of cavity measurements
-            scans = [scan for scan in self.scans if scan.id in slice_df.id.values]
+            scans = [scan for scan in self.scans if scan.id in slice_df.id.astype(int).values]
             # Unless user supplies a value for the expected depletion, use the global value
             if depletion_dict and freq in depletion_dict:
                 depletion = dipole_dict[freq]
             else:
                 depletion = global_depletion
             # Assume the reference scan is the first of this list, and check for depletion
+            ref = scans[0]
             connections = [
-                scan.dr_frequency for scan in scans[1:] if scan.is_depleted(scans[0], depletion) is True
+                scan for scan in scans[1:] if scan.is_depleted(ref, depletion) is True
             ]
             if len(connections) > 0:
                 dr_dict[freq] = {
@@ -202,7 +203,7 @@ class Batch:
         :param kwargs:
         """
         param_list = ["filter", "exp", "zeropad", "window"]
-        params = {key: value for key, value in self.__dict__.values() if key in param_list}
+        params = {key: value for key, value in self.__dict__.items() if key in param_list}
         params.update(**kwargs)
         _ = [scan.process_fid(**params) for scan in self.scans]
 
@@ -489,7 +490,7 @@ class Scan:
             late = datetime.datetime(9999, 1, 1)
         return early <= self.date <= late
 
-    def is_depleted(self, ref, depletion=0.9):
+    def is_depleted(self, ref, p_thres=0.5):
         """
         Function for determining if the signal in this Scan is less
         than that of another scan. This is done by a simple comparison
@@ -507,10 +508,10 @@ class Scan:
         :param depletion: percentage of depletion expected of the reference
         :return: bool - True if signal in this Scan is less intense than the reference
         """
-        present = np.average(self.spectrum["Intensity"].nlargest(10))
-        reference = np.average(ref.spectrum["Intensity"].nlargest(10))
-        expected = reference * depletion
-        return present <= expected
+        chisq, p_value = chisquare(
+            self.spectrum["Intensity"].values, ref.spectrum["Intensity"].values
+        )
+        return p_value <= p_thres
 
     def scatter_trace(self):
         """
