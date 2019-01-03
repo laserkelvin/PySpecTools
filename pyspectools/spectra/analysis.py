@@ -4,14 +4,12 @@ from itertools import combinations, chain
 import numpy as np
 import pandas as pd
 import peakutils
-from astroquery.splatalogue import Splatalogue
 from astropy import units as u
+from astroquery.splatalogue import Splatalogue
 from lmfit import models
-from scipy.signal import savgol_filter
 from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import silhouette_samples
 
-from pyspectools.spectra import plotting
 from pyspectools import fitting
 
 
@@ -104,6 +102,55 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
         direct_df.loc[differences >= 0.5]
         )
     return peak_df
+
+
+def search_molecule(species, freq_range=[0., 40e3]):
+    """
+    Function to search Splatalogue for a specific molecule. Technically I'd prefer to
+    download entries from CDMS instead, but this is probably the most straight
+    forward way.
+
+    The main use for this function is to verify line identifications - if a line is
+    tentatively assigned to a U-line, then other transitions for the molecule that
+    are stronger or comparatively strong should be visible.
+    :param species: str for the chemical name of the molecule
+    :param freq_range: list for the frequency range considered
+    :return: DataFrame containing transitions for the molecule
+    """
+    splat_df = Splatalogue.query_lines(
+        min(freq_range) * u.MHz,
+        max(freq_range) * u.MHz,
+        chemical_name=species,
+        line_lists=["CDMS", "JPL"]
+    ).to_pandas()
+    # These are the columns wanted
+    columns = [
+        "Species",
+        "Chemical Name",
+        "Meas Freq-GHz(rest frame,redshifted)",
+        "Freq-GHz(rest frame,redshifted)",
+        "Resolved QNs",
+        "CDMS/JPL Intensity",
+        "E_U (K)"
+    ]
+    # Take only what we want
+    splat_df = splat_df[columns]
+    splat_df.columns = [
+        "Species",
+        "Chemical Name",
+        "Meas Freq-GHz",
+        "Freq-GHz",
+        "Resolved QNs",
+        "CDMS/JPL Intensity",
+        "E_U (K)"
+    ]
+    # Now we combine the frequency measurements
+    splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
+    # Replace missing experimental data with calculated
+    splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+    # Convert to MHz
+    splat_df["Frequency"] *= 1000.
+    return splat_df
 
 
 def search_center_frequency(frequency, width=0.5):
