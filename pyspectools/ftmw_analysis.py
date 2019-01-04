@@ -14,6 +14,7 @@ from scipy import signal as spsig
 from scipy.stats import chisquare
 import plotly.graph_objs as go
 from tqdm.autonotebook import tqdm
+from ipywidgets import interactive, VBox, HBox
 
 from pyspectools import routines
 from pyspectools import figurefactory
@@ -226,6 +227,41 @@ class Batch:
                 except ValueError:
                     print("Could not fit Scan {} - ignoring this section!".format(ref.id))
         return dr_dict
+
+    def split_progression_batch(self):
+        """
+        Split up a DR batch into individual progressions based on the cavity frequency
+        and whether or not the scan IDs are consecutive.
+        :return progressions: dict with keys corresponding to progression index and values are lists of Scans
+        """
+        counter = 0
+        progressions = dict()
+        self.details["id"] = self.details["id"].apply(int)
+        for freq in self.details["ftfreq"].unique():
+            slice_df = self.details.loc[self.details["ftfreq"] == freq]
+            chunks = routines.group_consecutives(slice_df["id"])
+            for chunk in chunks:
+                progressions[counter] = [scan for scan in self.scans if scan.id in chunk]
+                counter += 1
+        return progressions
+
+    def interactive_progression_batch(self):
+        """
+        Create an interactive widget slider with a Plotly figure. The slider will update
+        the progression plotted.
+        :return vbox: VBox object with the Plotly figure and slider objects
+        """
+        progressions = self.split_progression_batch()
+        fig = go.FigureWidget()
+        fig.layout["width"] = 900.
+        fig.layout["showlegend"] = False
+        def update_figure(index):
+            fig.data = []
+            fig.add_traces([scan.scatter_trace() for scan in progressions[index]])
+        index_slider = interactive(update_figure, index=(0, len(progressions), 1))
+        vbox = VBox((fig, index_slider))
+        vbox.layout.align_items = "center"
+        return vbox
 
     def plot_scans(self):
         """
