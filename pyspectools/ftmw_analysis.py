@@ -13,8 +13,10 @@ from matplotlib import pyplot as plt
 from scipy import signal as spsig
 from scipy.stats import chisquare
 import plotly.graph_objs as go
+from tqdm.autonotebook import tqdm
 
 from pyspectools import routines
+from pyspectools import figurefactory
 from pyspectools import fitting
 from pyspectools.spectra import analysis
 
@@ -146,7 +148,7 @@ class Batch:
             scans = [Scan.from_qtftm(path) for path in path_list]
         self.scans = scans
 
-    def process_dr(self, global_depletion=0.5, depletion_dict=None):
+    def process_dr(self, global_depletion=0.6, depletion_dict=None):
         """
         Function to batch process all of the DR measurements.
         :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
@@ -160,28 +162,69 @@ class Batch:
             raise Exception("Batch is not a DR test! I think it's {}".format(self.assay))
         # Find the cavity frequencies that DR was performed on
         unique_freq = np.unique(self.details["ftfreq"])
+        self.details["id"] = self.details["id"].apply(int)
         dr_dict = dict()
-        for freq in unique_freq:
+        for index, freq in tqdm(enumerate(unique_freq)):
+            dr_dict[index] = dict()
             # Pick out the scans with this cavity frequency that aren't calibration
             slice_df = self.details.loc[self.details.ftfreq == str(freq)]
-            # Get the Scan objects associated with this series of cavity measurements
-            scans = [scan for scan in self.scans if scan.id in slice_df.id.astype(int).values]
-            # Unless user supplies a value for the expected depletion, use the global value
-            if depletion_dict and freq in depletion_dict:
-                depletion = dipole_dict[freq]
-            else:
-                depletion = global_depletion
-            # Assume the reference scan is the first of this list, and check for depletion
-            ref = scans[0]
-            connections = [
-                scan for scan in scans[1:] if scan.is_depleted(ref, depletion) is True
-            ]
-            if len(connections) > 0:
-                dr_dict[freq] = {
-                    {"dr_frequencies": [scan.dr_frequency for scan in connections]},
-                    {"ids": [scan.id for scan in connections]},
-                    {"scans": connections}
-                }
+            id_chunks = routines.group_consecutives(slice_df["id"].astype(int))
+            for chunk_index, chunk in enumerate(id_chunks):
+                chunk_df = slice_df.loc[slice_df["id"].isin(chunk)]
+                # Get the Scan objects associated with this series of cavity measurements
+                scans = [scan for scan in self.scans if scan.id in chunk_df.id.values]
+                # Unless user supplies a value for the expected depletion, use the global value
+                if depletion_dict and freq in depletion_dict:
+                    depletion = dipole_dict[freq]
+                else:
+                    depletion = global_depletion
+                # Assume the reference scan is the first of this list, and check for depletion
+                ref = scans[0]
+                try:
+                    # Make sure we autofit the reference
+                    ref.fit_cavity(plot=False)
+                    roi, ref_x, ref_y = ref.get_line_roi()
+                    connections = list()
+                    tests = list()
+                    for scan in scans[1:]:
+                        test, success = scan.is_depleted(ref, roi, depletion)
+                        if success:
+                            connections.append(scan)
+                        tests.append(test)
+                    dr_dict[index][chunk_index] = {
+                    "dr_frequencies": [scan.dr_frequency for scan in connections],
+                    "ids": [scan.id for scan in connections],
+                    "scans": connections,
+                    "tests": tests
+                    }
+                    if len(connections) > 1:
+                        connections.append(ref)
+                        fig, axarray = plt.subplots(1, len(connections), figsize=(15,3), sharey=True)
+                        for ax, scan in zip(axarray, connections):
+                            ax.plot(
+                                scan.spectrum["Frequency (MHz)"],
+                                scan.spectrum["Intensity"],
+                            )
+                            ax.text(
+                                0.8,
+                                0.8,
+                                "DR: {:,.4f}".format(scan.dr_frequency),
+                                horizontalalignment="right",
+                                transform=ax.transAxes
+                            )
+                            ax.text(
+                                0.8,
+                                0.6,
+                                "Cavity: {:,.4f}".format(scan.cavity_frequency),
+                                horizontalalignment="right",
+                                transform=ax.transAxes
+                            )
+                            ax.set_title(str(scan.id))
+                            figurefactory.no_scientific(ax)
+                        fig.savefig("figures/dr-{}-{}.pdf".format(self.id, freq), transparent=True)
+                        plt.close()
+                except ValueError:
+                    print("Could not fit Scan {} - ignoring this section!".format(ref.id))
         return dr_dict
 
     def plot_scans(self):
@@ -205,7 +248,7 @@ class Batch:
         param_list = ["filter", "exp", "zeropad", "window"]
         params = {key: value for key, value in self.__dict__.items() if key in param_list}
         params.update(**kwargs)
-        _ = [scan.process_fid(**params) for scan in self.scans]
+        _ = [scan.process_fid(**params) for scan in tqdm(self.scans)]
 
     def to_pickle(self, filepath=None, **kwargs):
         """
@@ -218,7 +261,8 @@ class Batch:
             filepath = "{}-{}.pkl".format(self.assay, self.id)
         # the RemoteClient object has some thread locking going on that prevents
         # pickling TODO - figure out why paramiko doesn't allow pickling
-        delattr(self, "remote")
+        if hasattr(self, "remote"):
+            delattr(self, "remote")
         routines.save_obj(self, filepath, **kwargs)
 
 
@@ -490,7 +534,7 @@ class Scan:
             late = datetime.datetime(9999, 1, 1)
         return early <= self.date <= late
 
-    def is_depleted(self, ref, p_thres=0.5):
+    def is_depleted(self, ref, roi=None, p_thres=0.5):
         """
         Function for determining if the signal in this Scan is less
         than that of another scan. This is done by a simple comparison
@@ -508,10 +552,15 @@ class Scan:
         :param depletion: percentage of depletion expected of the reference
         :return: bool - True if signal in this Scan is less intense than the reference
         """
+        y_ref = ref.spectrum["Intensity"].values
+        y_obs = self.spectrum["Intensity"].values
+        if roi:
+            y_ref = y_ref[roi]
+            y_obs = y_obs[roi]
         chisq, p_value = chisquare(
-            self.spectrum["Intensity"].values, ref.spectrum["Intensity"].values
+            y_obs, y_ref
         )
-        return p_value <= p_thres
+        return (chisq, p_value), p_value <= p_thres
 
     def scatter_trace(self):
         """
@@ -519,10 +568,13 @@ class Scan:
         performance-wise it takes forever to plot up ~3000 scans.
         :return trace: Scattergl object
         """
+        text = "Scan ID: {}<br>Cavity: {}<br>DR: {}<br>Magnet: {}<br>Attn: {}".format(
+            self.id, self.cavity_frequency, self.dr_frequency, self.magnet, self.cavity_atten
+        )
         trace = go.Scattergl(
             x=np.linspace(self.id, self.id + 1, len(self.spectrum["Intensity"])),
             y=self.spectrum["Intensity"],
-            text=str(self.cavity_frequency),
+            text=text,
             marker={"color": "rgb(43,140,190)"},
             hoverinfo="text"
         )
@@ -538,33 +590,30 @@ class Scan:
         y = self.spectrum["Intensity"].values
         x = self.spectrum["Frequency (MHz)"].values
         model = fitting.PairGaussianModel()
-        params = model.make_params()
-        # Automatically find where the Doppler splitting is
-        indexes = peakutils.indexes(y, thres=0.5, min_dist=10)
-        guess_center = np.average(x[indexes])
-        guess_sep = np.std(x[indexes])
-        # This calculates the amplitude of a Gaussian based on
-        # the peak height
-        prefactor = np.sqrt(2. * np.pi) * 0.01
-        guess_amp = np.average(y[indexes]) * prefactor
-        # Set the parameter guesses
-        params["A1"].set(guess_amp)
-        params["A2"].set(guess_amp)
-        params["w"].set(0.01, min=0.005, max=0.1)
-        params["xsep"].set(guess_sep, min=guess_sep*0.8, max=guess_sep*1.2)
-        params["x0"].set(guess_center, min=guess_center - 0.05, max=guess_center + 0.05)
-        results = model.fit(data=y, x=x, params=params)
-        self.spectrum["Fit"] = results.best_fit
-        self.fit = results
+        result = model.fit_pair(x, y)
+        self.spectrum["Fit"] = result.best_fit
+        self.fit = result
         if plot is True:
             fig = go.FigureWidget()
             fig.layout["xaxis"]["title"] = "Frequency (MHz)"
             fig.layout["xaxis"]["tickformat"] = ".2f"
             fig.add_scatter(x=x, y=y, name="Observed")
-            fig.add_scatter(x=x, y=results.best_fit, name="Fit")
-            return results, fig
+            fig.add_scatter(x=x, y=result.best_fit, name="Fit")
+            return result, fig
         else:
-            return results
+            return result
+
+    def get_line_roi(self):
+        if hasattr(self, "fit") is False:
+            raise Exception("Auto peak fitting has not been run yet!")
+        # Get one of the Doppler horns plus 4sigma
+        params = self.fit.best_values
+        x = self.spectrum["Frequency (MHz)"].values
+        y = self.spectrum["Intensity"].values
+        _, low_end = routines.find_nearest(x, params["x0"] - params["xsep"] - params["w"] * 4.)
+        _, high_end = routines.find_nearest(x, params["x0"] + params["xsep"] + params["w"] * 4.)
+        index = list(range(low_end, high_end))
+        return index, x[low_end:high_end], y[low_end:high_end]
 
 
 def parse_scan(filecontents):
@@ -677,8 +726,7 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     # Remove DC
     fid-=np.average(fid)
     if "delay" in kwargs:
-        if 0 < kwargs["delay"] < len(fid) * (1e6 / rate):
-            fid[:int(kwargs["delay"])] = 0.
+        fid[:int(kwargs["delay"])] = 0.
     # Zero-pad the FID
     if "zeropad" in kwargs:
         if kwargs["zeropad"] is True:
@@ -690,7 +738,7 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     # Apply a window function to the FID
     if "window" in kwargs:
         available = ["blackmanharris", "blackman", "boxcar", "gaussian", "hanning", "bartlett"]
-        if (kwargs["window"] != "") and (kwargs["wqindow"] in available):
+        if (kwargs["window"] != "") and (kwargs["window"] in available):
             fid*=spsig.get_window(kwargs["window"], len(fid))
     # Apply an exponential filter on the FID
     if "exp" in kwargs:
