@@ -1,2 +1,3 @@
 include pyspectools/parameters.json
 include pyspectools/templates/*.json
+include pyspectools/spectra/report_template.html
