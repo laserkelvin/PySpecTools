@@ -57,7 +57,7 @@ class PairGaussianModel(PySpecModel):
         # Set the parameter guesses
         self.params["A1"].set(guess_amp)
         self.params["A2"].set(guess_amp)
-        self.params["w"].set(0.01, min=0.005, max=0.1)
+        self.params["w"].set(0.005, min=0.0001, max=0.05)
         self.params["xsep"].set(guess_sep, min=guess_sep * 0.8, max=guess_sep * 1.2)
         self.params["x0"].set(guess_center, min=guess_center - 0.05, max=guess_center + 0.05)
         results = self.fit(data=y, x=x, params=self.params)
