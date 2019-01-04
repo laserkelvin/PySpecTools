@@ -11,6 +11,7 @@
 import lmfit
 import numpy as np
 import pandas as pd
+import peakutils
 
 from pyspectools import lineshapes
 
@@ -43,6 +44,24 @@ class PairGaussianModel(PySpecModel):
 
     def __init__(self, **kwargs):
         super(PairGaussianModel, self).__init__(lineshapes.pair_gaussian, independent_vars=["x"], **kwargs)
+
+    def fit_pair(self, x, y):
+        # Automatically find where the Doppler splitting is
+        indexes = peakutils.indexes(y, thres=0.5, min_dist=10)
+        guess_center = np.average(x[indexes])
+        guess_sep = np.std(x[indexes])
+        # This calculates the amplitude of a Gaussian based on
+        # the peak height
+        prefactor = np.sqrt(2. * np.pi) * 0.01
+        guess_amp = np.average(y[indexes]) * prefactor
+        # Set the parameter guesses
+        self.params["A1"].set(guess_amp)
+        self.params["A2"].set(guess_amp)
+        self.params["w"].set(0.01, min=0.005, max=0.1)
+        self.params["xsep"].set(guess_sep, min=guess_sep * 0.8, max=guess_sep * 1.2)
+        self.params["x0"].set(guess_center, min=guess_center - 0.05, max=guess_center + 0.05)
+        results = self.fit(data=y, x=x, params=self.params)
+        return results
 
 
 def rotor_energy(J, B, D=0.):

@@ -10,10 +10,7 @@ import json
 from glob import glob
 
 import yaml
-
-from pyspectools import pypickett as pp
-
-import yaml
+import numpy as np
 import joblib
 import paramiko
 
@@ -306,6 +303,18 @@ def dump_packages():
     return mod_dict
 
 
+def find_nearest(array, value):
+    """
+    Search a numpy array for the closest value.
+    :param array: np.array of values
+    :param value: float value to search array for
+    :return: value of array closest to target, and the index
+    """
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
+
+
 class RemoteClient(paramiko.SSHClient):
     def __init__(self, hostname=None, username=None, **kwargs):
         super().__init__()
@@ -399,3 +408,18 @@ def search_file(root_path, filename, ext=".txt"):
     for root, dirs, files in os.walk(root_path):
         if any([file for file in files if filename in file]) is True:
             return os.path.join(root, filename) + ext
+
+
+def group_consecutives(vals, step=1):
+    """Return list of consecutive lists of numbers from vals (number list)."""
+    run = []
+    result = [run]
+    expect = None
+    for v in vals:
+        if (v == expect) or (expect is None):
+            run.append(v)
+        else:
+            run = [v]
+            result.append(run)
+        expect = v + step
+    return result

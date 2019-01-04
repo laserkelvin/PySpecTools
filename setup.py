@@ -87,7 +87,8 @@ setup(
         "joblib",
         "ruamel.yaml",
         "paramiko",
-        "jinja2"
+        "jinja2",
+        "tqdm"
     ],
     cmdclass={
         "develop": PostInstallCommand,

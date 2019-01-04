@@ -1100,8 +1100,7 @@ class AssignmentSession:
     def create_html_report(self, filepath=None):
         """
         Function for generating an HTML report for sharing.
-        :param filepath:
-        :return:
+        :param filepath: str path to save the report to. Defaults to reports/{id}-summary.html
         """
         from jinja2 import Template
         template_path = os.path.join(
