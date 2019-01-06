@@ -149,7 +149,7 @@ class Batch:
             scans = [Scan.from_qtftm(path) for path in path_list]
         self.scans = scans
 
-    def process_dr(self, global_depletion=0.6, depletion_dict=None):
+    def process_dr(self, depletion=0.6):
         """
         Function to batch process all of the DR measurements.
         :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
@@ -162,70 +162,15 @@ class Batch:
         if self.assay != "dr":
             raise Exception("Batch is not a DR test! I think it's {}".format(self.assay))
         # Find the cavity frequencies that DR was performed on
-        unique_freq = np.unique(self.details["ftfreq"])
-        self.details["id"] = self.details["id"].apply(int)
+        progressions = self.split_progression_batch()
         dr_dict = dict()
-        for index, freq in tqdm(enumerate(unique_freq)):
-            dr_dict[index] = dict()
-            # Pick out the scans with this cavity frequency that aren't calibration
-            slice_df = self.details.loc[self.details.ftfreq == str(freq)]
-            id_chunks = routines.group_consecutives(slice_df["id"].astype(int))
-            for chunk_index, chunk in enumerate(id_chunks):
-                chunk_df = slice_df.loc[slice_df["id"].isin(chunk)]
-                # Get the Scan objects associated with this series of cavity measurements
-                scans = [scan for scan in self.scans if scan.id in chunk_df.id.values]
-                # Unless user supplies a value for the expected depletion, use the global value
-                if depletion_dict and freq in depletion_dict:
-                    depletion = dipole_dict[freq]
-                else:
-                    depletion = global_depletion
-                # Assume the reference scan is the first of this list, and check for depletion
-                ref = scans[0]
-                try:
-                    # Make sure we autofit the reference
-                    ref.fit_cavity(plot=False)
-                    roi, ref_x, ref_y = ref.get_line_roi()
-                    connections = list()
-                    tests = list()
-                    for scan in scans[1:]:
-                        test, success = scan.is_depleted(ref, roi, depletion)
-                        if success:
-                            connections.append(scan)
-                        tests.append(test)
-                    dr_dict[index][chunk_index] = {
-                    "dr_frequencies": [scan.dr_frequency for scan in connections],
-                    "ids": [scan.id for scan in connections],
-                    "scans": connections,
-                    "tests": tests
-                    }
-                    if len(connections) > 1:
-                        connections.append(ref)
-                        fig, axarray = plt.subplots(1, len(connections), figsize=(15,3), sharey=True)
-                        for ax, scan in zip(axarray, connections):
-                            ax.plot(
-                                scan.spectrum["Frequency (MHz)"],
-                                scan.spectrum["Intensity"],
-                            )
-                            ax.text(
-                                0.8,
-                                0.8,
-                                "DR: {:,.4f}".format(scan.dr_frequency),
-                                horizontalalignment="right",
-                                transform=ax.transAxes
-                            )
-                            ax.text(
-                                0.8,
-                                0.6,
-                                "Cavity: {:,.4f}".format(scan.cavity_frequency),
-                                horizontalalignment="right",
-                                transform=ax.transAxes
-                            )
-                            ax.set_title(str(scan.id))
-                            figurefactory.no_scientific(ax)
-                        fig.savefig("figures/dr-{}-{}.pdf".format(self.id, freq), transparent=True)
-                        plt.close()
-                except ValueError:
-                    print("Could not fit Scan {} - ignoring this section!".format(ref.id))
+        for index, progression in enumerate(tqdm(progressions)):
+            scans = [scan for scan in self.scans if scan.id in progression]
+            ref = scans.pop(0)
+            ref_fit = ref.fit_cavity(plot=False)
+            roi, ref_x, ref_y = ref.get_line_roi()
+            connections = [scan for scan in scans if scan.is_depleted(ref, roi, depletion)]
+            dr_dict[index] = connections
         return dr_dict
 
     def split_progression_batch(self):
