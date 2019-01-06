@@ -20,7 +20,11 @@ from plotly import graph_objs as go
 
 from pyspectools import routines, parsers
 from pyspectools import fitting
+from pyspectools import units
+from pyspectools.astro import analysis as aa
+from pyspectools.parsecat import read_cat
 from pyspectools.spectra import analysis
+from pyspectools.spectra import parsers
 
 
 @dataclass
@@ -302,8 +306,8 @@ class AssignmentSession:
         # Generate U-lines
         skip = ["temperature", "doppler"]
         selected_session = {
-            key: self.session.__dict__[key] for key in self.session.__dict__ if key != "temperature"
-        }
+            key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
+            }
         for index, row in peaks_df.iterrows():
             ass_obj = Assignment(
                 frequency=row[self.freq_col],

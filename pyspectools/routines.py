@@ -7,6 +7,7 @@ import os
 import subprocess
 import shutil
 import json
+import types
 from glob import glob
 
 import yaml
