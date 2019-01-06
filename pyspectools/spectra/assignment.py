@@ -15,9 +15,10 @@ import pandas as pd
 from lmfit.models import GaussianModel
 from IPython.display import display, HTML
 from periodictable import formula
+from plotly.offline import plot
 from plotly import graph_objs as go
 
-from pyspectools import routines
+from pyspectools import routines, parsers
 from pyspectools import fitting
 from pyspectools import units
 from pyspectools.astro import analysis as aa
@@ -57,15 +58,17 @@ class Assignment:
     formula: str = ""
     frequency: float = 0.0
     catalog_frequency: float = 0.0
+    catalog_intensity: float = 0.0
+    deviation: float = 0.0
     intensity: float = 0.0
     I: float = 0.0
     peak_id: int = 0
     experiment: int = 0
     uline: bool = True
-    composition: List[str] = field(default_factory = list)
-    v_qnos: List[int] = field(default_factory = list)
+    composition: List[str] = field(default_factory=list)
+    v_qnos: List[int] = field(default_factory=list)
     r_qnos: str = ""
-    fit: Dict = field(default_factory = dict)
+    fit: Dict = field(default_factory=dict)
     ustate_energy: float = 0.0
     interference: bool = False
     weighting: float = 0.0
@@ -83,7 +86,7 @@ class Assignment:
                 self.name == other.name,
                 self.frequency == other.frequency,
                 self.v_qnos == other.v_qnos
-                ]
+            ]
             return all(comparisons)
         else:
             return False
@@ -104,9 +107,9 @@ class Assignment:
         """
         if "." not in filepath:
             if format == "json":
-                filepath+=".json"
+                filepath += ".json"
             else:
-                filepath+=".yml"
+                filepath += ".yml"
         if format == "json":
             writer = routines.dump_json
         else:
@@ -201,9 +204,15 @@ class Session:
                  5 kHz at 15 GHz.
     """
     experiment: int
-    composition: List[str] = field(default_factory = list)
+    composition: List[str] = field(default_factory=list)
     temperature: float = 4.0
     doppler: float = 0.01
+
+    def __str__(self):
+        form = "Experiment: {}, Composition: {}, Temperature: {} K".format(
+            self.experiment, self.composition, self.temperature
+        )
+        return form
 
 
 class AssignmentSession:
@@ -214,6 +223,21 @@ class AssignmentSession:
         module so that this can be run reproducibly in a jupyter
         notebook.
     """
+
+    @classmethod
+    def load_session(cls, filepath):
+        """
+            Load an AssignmentSession from disk, once it has
+            been saved with the save_session method.
+
+            parameters:
+            --------------
+            filepath - path to the AssignmentSession file; typically
+                       in the sessions/{experiment_id}.dat
+        """
+        session = routines.read_obj(filepath)
+        return session
+
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0,
             freq_col="Frequency", int_col="Intensity"):
@@ -249,7 +273,7 @@ class AssignmentSession:
         else:
             self.int_col = int_col
 
-    def find_peaks(self, threshold=0.015):
+    def find_peaks(self, threshold=None):
         """ Wrap peakutils method for detecting peaks.
 
             parameters:
@@ -260,21 +284,25 @@ class AssignmentSession:
             ---------------
             :return peaks_df: dataframe containing peaks
         """
+        if threshold is None:
+            # Set the threshold as 10% of the baseline + 1sigma. The peak_find function will
+            # automatically weed out the rest.
+            threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std()) * 0.1
         peaks_df = analysis.peak_find(
             self.data,
             freq_col=self.freq_col,
             int_col=self.int_col,
             thres=threshold
-           )
+        )
         # Reindex the peaks
-        peaks_df.index = np.arange(len(peaks_df))
+        peaks_df.reset_index(drop=True, inplace=True)
         if hasattr(self, "peaks") is True:
             # If we've looked for peaks previously
             # we don't have to re-add the U-line to
             # the list
             peaks_df = pd.concat([peaks_df, self.peaks])
             # drop repeated frequencies
-            peaks_df.drop_duplicates(["Frequency"],inplace=True)
+            peaks_df.drop_duplicates(["Frequency"], inplace=True)
         # Generate U-lines
         skip = ["temperature", "doppler"]
         selected_session = {
@@ -286,7 +314,7 @@ class AssignmentSession:
                 intensity=row[self.int_col],
                 peak_id=index,
                 **selected_session
-                )
+            )
             # If the frequency hasn't already been done, add it
             # to the U-line pile
             if ass_obj not in self.ulines and ass_obj not in self.assignments:
@@ -315,7 +343,7 @@ class AssignmentSession:
         upper_freq = frequency * 1.001
         if hasattr(self, "table"):
             slice_df = self.table.loc[
-                (self.table["Frequency"] >= lower_freq) & 
+                (self.table["Frequency"] >= lower_freq) &
                 (self.table["Frequency"] <= upper_freq)
                 ]
         # If no hits turn up, look for it in U-lines
@@ -390,7 +418,7 @@ class AssignmentSession:
                     # expected in composition
                     comp_check = all(
                         str(atom) in self.session.composition for atom in formula_obj.atoms
-                        )
+                    )
                     if comp_check is False:
                         # If there are crazy things in the mix, forget about it
                         print("Molecule " + clean_formula + " rejected.")
@@ -411,8 +439,8 @@ class AssignmentSession:
                         splat_index = int(
                             input(
                                 "Please choose an assignment index: 0 - " + str(nitems - 1)
-                                )
                             )
+                        )
                     else:
                         # If automated, choose closest frequency
                         splat_index = 0
@@ -420,26 +448,27 @@ class AssignmentSession:
                     ass_df = splat_df.iloc[[splat_index]]
                     splat_df.to_csv(
                         "queries/{0}-{1}.csv".format(self.session.experiment, uindex), index=False
-                        )
+                    )
                     ass_dict = {
-                       "uline": False,
-                       "index": uindex,
-                       "frequency": frequency,
-                       "name": ass_df["Chemical Name"][0],
-                       "catalog_frequency": ass_df["Frequency"][0],
-                       "I": ass_df["CDMS/JPL Intensity"][0],
-                       "formula": ass_df["Species"][0],
-                       "r_qnos": ass_df["Resolved QNs"][0],
-                       "ustate_energy": ass_df["E_U (K)"][0],
-                       "weighting": ass_df["Weighting"][0],
-                       "source": "CDMS/JPL"
-                       }
+                        "uline": False,
+                        "index": uindex,
+                        "frequency": frequency,
+                        "name": ass_df["Chemical Name"][0],
+                        "catalog_frequency": ass_df["Frequency"][0],
+                        "catalog_intensity": ass_df["CDMS/JPL Intensity"][0],
+                        "formula": ass_df["Species"][0],
+                        "r_qnos": ass_df["Resolved QNs"][0],
+                        "ustate_energy": ass_df["E_U (K)"][0],
+                        "weighting": ass_df["Weighting"][0],
+                        "source": "CDMS/JPL",
+                        "deviation": frequency - ass_df["Frequency"][0]
+                    }
                     # Perform a Voigt profile fit
                     print("Attempting to fit line profile...")
                     fit_results = analysis.fit_line_profile(
                         self.data,
                         frequency
-                        )
+                    )
                     # Pass the fitted parameters into Assignment object
                     ass_dict["fit"] = fit_results.best_values
                     # Need support to convert common name to SMILES
@@ -479,7 +508,7 @@ class AssignmentSession:
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency,
                 lin_df
-                )
+            )
             if sliced_catalog is not None:
                 display(HTML(sliced_catalog.to_html()))
                 if auto is False:
@@ -496,13 +525,14 @@ class AssignmentSession:
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
-                        "source": "Line file"
-                        }
+                        "source": "Line file",
+                        "deviation": uline.frequency - select_df["Frequency"]
+                    }
                     assign_dict.update(**kwargs)
                     self.assign_line(**assign_dict)
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
-            )
+        )
         self.table = ass_df
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
@@ -536,21 +566,21 @@ class AssignmentSession:
         if nentries > 0:
             # Calculate probability weighting. Base is the inverse of distance
             sliced_catalog["Deviation"] = np.abs(sliced_catalog["Frequency"] - frequency)
-            sliced_catalog["Weighting"] = (1./sliced_catalog["Deviation"])
+            sliced_catalog["Weighting"] = (1. / sliced_catalog["Deviation"])
             # If intensity is included in the catalog incorporate it in
             # the weight calculation
             if "Intensity" in sliced_catalog:
-                sliced_catalog["Weighting"]*=(10**sliced_catalog["Intensity"])
+                sliced_catalog["Weighting"] *= (10 ** sliced_catalog["Intensity"])
             elif "CDMS/JPL Intensity" in sliced_catalog:
-                sliced_catalog["Weighting"]*=(10**sliced_catalog["CDMS/JPL Intensity"])
+                sliced_catalog["Weighting"] *= (10 ** sliced_catalog["CDMS/JPL Intensity"])
             else:
                 # If there are no recognized intensity columns, pass
                 pass
             # Normalize the weights
-            sliced_catalog["Weighting"]/=sliced_catalog["Weighting"].max()
+            sliced_catalog["Weighting"] /= sliced_catalog["Weighting"].max()
             # Sort by obs-calc
-            sliced_catalog.sort_values(["Weighting"], ascending=True, inplace=True)
-            sliced_catalog.index = np.arange(nentries)
+            sliced_catalog.sort_values(["Weighting"], ascending=False, inplace=True)
+            sliced_catalog.reset_index(drop=True, inplace=True)
             return sliced_catalog
         else:
             return None
@@ -574,13 +604,12 @@ class AssignmentSession:
             :param formula: str corresponding to chemical formula
         """
         old_nulines = len(self.ulines)
-        catalog_df = read_cat(
-                catalogpath,
-                self.data[self.freq_col].min(),
-                self.data[self.freq_col].max()
-            )
-        # Filter out the states with high energy, and matches the
-        # minimum intensity
+        catalog_df = parsers.parse_cat(
+            catalogpath,
+            self.data[self.freq_col].min(),
+            self.data[self.freq_col].max()
+        )
+        # Filter out the states with high energy
         catalog_df = catalog_df.loc[
             (catalog_df["Lower state energy"] <= self.t_threshold) &
             (catalog_df["Intensity"] >= thres)
@@ -599,7 +628,7 @@ class AssignmentSession:
                     select_df = sliced_catalog.iloc[index]
                     # Create an approximate quantum number string
                     qnos = "N'={}, J'={}".format(*sliced_catalog[["N'", "J'"]].values[0])
-                    qnos+="N''={}, J''={}".format(*sliced_catalog[["N''", "J''"]].values[0])
+                    qnos += "N''={}, J''={}".format(*sliced_catalog[["N''", "J''"]].values[0])
                     assign_dict = {
                         "name": name,
                         "formula": formula,
@@ -607,9 +636,10 @@ class AssignmentSession:
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
-                        "I": select_df["Intensity"],
-                        "source": "Catalog"
-                        }
+                        "catalog_intensity": select_df["Intensity"],
+                        "source": "Catalog",
+                        "deviation": uline.frequency - select_df["Frequency"]
+                    }
                     # Pass whatever extra stuff
                     assign_dict.update(**kwargs)
                     # Use assign_line function to mark peak as assigned
@@ -619,10 +649,109 @@ class AssignmentSession:
         # Update the internal table
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
-            )
+        )
         self.table = ass_df
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
+
+    def verify_molecules(self):
+        """
+        Function that is run following the splatalogue assignment routine. This will
+        go through all of the assigned species, and using the weakest line as basis,
+        search for other possible transitions that have not already been assigned.
+
+        In this mode, the search criterion for transitions are loosened w.r.t.
+        upper state temperature and line intensity, as well as the peak finding
+        algorithm.
+        :return possible: dict containing dataframes for each molecule and transition
+        """
+        possible = dict()
+        counter = 0
+        ass_df = pd.DataFrame(
+            [ass_obj.__dict__ for ass_obj in self.assignments]
+        )
+        # this gets a DataFrame with the highest upper state energies for each unique molecule
+        high_df = ass_df.sort_values(["ustate_energy"], ascending=False).drop_duplicates(["name"])
+        for mol_index, mol_row in high_df.iterrows():
+            possible[mol_row["name"]] = dict()
+            splat_df = analysis.search_molecule(
+                mol_row["name"],
+                [
+                    self.data[self.freq_col].min(),
+                    self.data[self.freq_col].max()
+                ]
+            )
+            assigned_df = ass_df.loc[ass_df["name"] == mol_row["name"]]
+            # Loosen the temperature and intensity criterion criterion
+            filtered_df = splat_df.loc[
+                (splat_df["E_U (K)"] <= mol_row["ustate_energy"] * 2.)
+            ]
+            if mol_row["catalog_intensity"] != 0.:
+                # If catalog intensity was known previously, we'll also filter out the
+                # intensities too
+                filtered_df = filtered_df.loc[
+                    filtered_df["CDMS/JPL Intensity"] >= mol_row["catalog_intensity"] * 1.5
+                ]
+            # Get only the transitions that haven't been assigned already
+            mask = [freq not in assigned_df["catalog_frequency"].values for freq in filtered_df["Frequency"].values]
+            filtered_df = filtered_df.loc[mask]
+            """
+                Loop over each molecular frequency, and slice up a bit of the observed spectrum to look for
+                peaks again.
+            """
+            for index, row in filtered_df.iterrows():
+                frequency = row["Frequency"]
+                min_freq = frequency - 4.
+                max_freq = frequency + 4.
+                spectrum_slice = self.data.loc[
+                    (self.data[self.freq_col] >= min_freq) &
+                    (self.data[self.freq_col] <= max_freq)
+                ]
+                spectrum_slice.reset_index(inplace=True, drop=True)
+                # Find peaks in the region of interest with a dynamic threshold for detection
+                peaks = analysis.peak_find(
+                    spectrum_slice, self.freq_col, self.int_col, thres=spectrum_slice[self.int_col].max() * 0.2
+                )
+                if len(peaks) > 0:
+                    print("Found {} peaks between {} and {} MHz.".format(len(peaks), min_freq, max_freq))
+                    # Remove peaks that have already been picked up in ulines/assigned
+                    assigned_check = [peak_freq not in ass_df["frequency"] for peak_freq in peaks["Frequency"].values]
+                    # If the lines were in any of the lists, they would return True. We want lines that
+                    # aren't in the lists
+                    peaks = peaks.loc[assigned_check]
+                    peaks["Distance"] = np.abs(peaks["Frequency"] - row["Frequency"])
+                    viable_freq = peaks["Frequency"].ix[peaks["Distance"].idxmin()]
+                    viable_int = peaks["Intensity"].ix[peaks["Distance"].idxmin()]
+                    uline_check = [uline_obj for  uline_obj in self.ulines if uline_obj.frequency == frequency]
+                    # If we already had a U-line of this frequency we'll mark it as assigned
+                    # Set up the assignment fields
+                    ass_dict = {
+                        "uline": False,
+                        "frequency": frequency,
+                        "intensity": viable_int,
+                        "name": mol_row["name"],
+                        "catalog_frequency": viable_freq,
+                        "catalog_intensity": row["CDMS/JPL Intensity"],
+                        "formula": row["Species"],
+                        "r_qnos": row["Resolved QNs"],
+                        "ustate_energy": row["E_U (K)"],
+                        "source": "Post-CDMS/JPL",
+                        "deviation": frequency - viable_freq
+                    }
+                    if len(uline_check) > 0:
+                        ass_dict["index"] = uline_check[0].peak_id
+                        self.assign_line(**ass_dict)
+                    else:
+                        # We create the assignment object directly because the U-line may not have
+                        # already been there
+                        self.assignments.append(
+                            Assignment(**ass_dict)
+                        )
+                    print("Assigned ")
+                    counter+=1
+                possible[mol_row["name"]][frequency] = peaks
+        print("Assigned a total of {} peaks".format(counter))
+        return possible
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
@@ -688,7 +817,7 @@ class AssignmentSession:
         # Tally up the molecules
         self.identifications = {
             name: names.count(name) for name in self.names
-            }
+        }
         return self.identifications
 
     def analyze_molecule(self, Q, T, name=None, formula=None, smiles=None):
@@ -781,17 +910,13 @@ class AssignmentSession:
         for ass_obj in self.assignments:
             # Dump all the assignments into YAML format
             ass_obj.to_file(
-                "assignment_objs/{}-{}".format(ass_obj.experiment,ass_obj.peak_id),
+                "assignment_objs/{}-{}".format(ass_obj.experiment, ass_obj.peak_id),
                 "yaml"
-                )
-                
+            )
         # Convert all of the assignment data into a CSV file
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
-            )
-        profiles_df = pd.DataFrame(
-            data=[ass_obj.fit for ass_obj in self.assignments]
-            )
+        )
         self.table = ass_df
         self.profiles = profiles_df
         # Dump assignments to disk
@@ -815,14 +940,14 @@ class AssignmentSession:
             "tally": tally,
             "unique_molecules": self.names,
             "num_unique": len(self.names)
-            }
+        }
         # Combine Session information
         combined_dict.update(self.session.__dict__)
         # Dump to disk
         routines.dump_yaml(
             "sessions/{0}.yml".format(self.session.experiment),
             "yaml"
-            )
+        )
         # Dump data to notebook output
         for key, value in combined_dict.items():
             print(key + ":   " + str(value))
@@ -976,6 +1101,51 @@ class AssignmentSession:
         return fig
 
 
+    def create_html_report(self, filepath=None):
+        """
+        Function for generating an HTML report for sharing.
+        :param filepath: str path to save the report to. Defaults to reports/{id}-summary.html
+        """
+        from jinja2 import Template
+        template_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "report_template.html"
+        )
+        with open(template_path) as read_file:
+            template = Template(read_file.read())
+        html_dict = dict()
+        total_lines = len(self.ulines) + len(self.assignments)
+        reduced_table = self.table[
+            ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
+        ]
+        artifacts = reduced_table.loc[reduced_table["name"] == "Artifact"]
+        splat = reduced_table.loc[reduced_table["source"] == "CDMS/JPL"]
+        cats = reduced_table.loc[reduced_table["source"] == "Catalog"]
+        lins = reduced_table.loc[reduced_table["source"] == "Line file"]
+        html_dict["num_peaks"] = total_lines
+        html_dict["num_artifacts"] = len(artifacts)
+        html_dict["artifacts"] = artifacts["frequency"].values
+        html_dict["num_splat"] = len(splat)
+        html_dict["num_splat_mol"] = len(splat["formula"].unique())
+        html_dict["splat_percent"] = (len(splat) / total_lines) * 100.
+        html_dict["num_cat"] = len(cats)
+        html_dict["num_cat_mol"] = len(cats["formula"].unique())
+        html_dict["cat_percent"] = (len(cats) / total_lines) * 100.
+        html_dict["num_lin"] = len(lins)
+        html_dict["num_lin_mol"] = len(lins["formula"].unique())
+        html_dict["lin_percent"] = (len(lins) / total_lines) * 100.
+        html_dict["assignments_table"] = reduced_table.to_html()
+        html_dict["num_uline"] = len(self.ulines)
+        uline_df = pd.DataFrame(
+            [[uline.frequency, uline.intensity] for uline in self.ulines], columns=["Frequency", "Intensity"]
+        )
+        html_dict["uline_table"] = uline_df.to_html()
+        html_dict["plotly_figure"] = plot(self.plot_assigned(), output_type="div")
+        output = template.render(session=self.session, **html_dict)
+        if filepath is None:
+            filepath = "reports/{}-summary.html".format(self.session.experiment)
+        with open(filepath, "w+") as write_file:
+            write_file.write(output)
+
     def plot_assigned(self):
         """
             Generates a Plotly figure with the assignments overlaid
@@ -986,6 +1156,9 @@ class AssignmentSession:
             run previously.
         """
         fig = go.FigureWidget()
+        fig.layout["title"] = "Experiment {}".format(self.session.experiment)
+        fig.layout["xaxis"]["title"] = "Frequency (MHz)"
+        fig.layout["xaxis"]["tickformat"] = ".2f"
 
         fig.add_scatter(
             x=self.data["Frequency"],
@@ -1008,14 +1181,14 @@ class AssignmentSession:
             y=self.peaks["Intensity"],
             width=1.0,
             name="U-lines"
-            )
+        )
         # Store as attribute
         self.plot = fig
 
         return fig
 
     def find_progressions(self, search=0.001, low_B=400.,
-            high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs):
+                          high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs):
         """
             High level function for searching U-line database for
             possible harmonic progressions. Wraps the lower level function
@@ -1041,7 +1214,7 @@ class AssignmentSession:
             search=search,
             low_B=low_B,
             high_B=high_B
-            )
+        )
 
         fit_df = fitting.harmonic_fitter(progressions)
 
@@ -1053,7 +1226,7 @@ class AssignmentSession:
             sil_calc,
             refit,
             **kwargs
-            )
+        )
 
         self.cluster_df = pd.DataFrame.from_dict(self.cluster_dict).T
 
@@ -1088,3 +1261,24 @@ class AssignmentSession:
             check = smiles
         return self.table.loc[self.table[locator] == check]
 
+    def save_session(self, filepath=None):
+        """
+            Method to save an AssignmentSession to disk.
+            
+            The underlying mechanics are based on the joblib library,
+            and so there are can cross-compatibility issues particularly
+            when loading from different versions of Python.
+
+            parameters:
+            ---------------
+            filepath - path to save the file to. By default it will go into
+                       the sessions folder.
+        """
+        if filepath is None:
+            filepath = "./sessions/{}.pkl".format(self.session.experiment)
+        # Save to disk
+        routines.save_obj(
+            self,
+            filepath
+        )
+        print("Saved session to {}".format(filepath))

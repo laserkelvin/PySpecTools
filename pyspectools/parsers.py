@@ -1,6 +1,6 @@
 
 import pandas as pd
-
+import numpy as np
 
 def parse_spectrum(filename, threshold=20.):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
@@ -41,3 +41,43 @@ def parse_lin(filename):
         columns=["Frequency", "Uncertainty", "Weight", "Quantum numbers"]
         )
     return dataframe
+
+
+def parse_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
+    """
+    Parses a simulation output, and filters the frequency and intensity to give
+    a specific set of lines.
+
+    The only argument that is required is the path to the simulation output. Others
+    are optional, and will default to effectively not filter.
+
+    The quantum numbers are read in assuming hyperfine structure, and thus
+    might not be accurate descriptions of what they actually are.
+    """
+    cat_df = pd.read_fwf(
+        simulation_path,
+        widths=[13,8,8,2,10,3,7,4,2,2,2,8,2,2],
+        header=None
+    )
+    cat_df.columns = [
+        "Frequency",
+        "Uncertainty",
+        "Intensity",
+        "DoF",
+        "Lower state energy",
+        "Degeneracy",
+        "ID",
+        "Coding",
+        "N'",
+        "F'",
+        "J'",
+        "N''",
+        "F''",
+        "J''",
+    ]
+    cat_df = cat_df.loc[
+        (cat_df["Frequency"].astype(float) >= low_freq) &  # threshold the simulation output
+        (cat_df["Frequency"].astype(float) <= high_freq) &  # based on user specified values
+        (cat_df["Intensity"].astype(float) >= threshold)          # or lack thereof
+        ]
+    return cat_df

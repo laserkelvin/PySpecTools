@@ -7,11 +7,16 @@ import os
 import subprocess
 import shutil
 import json
+import types
 from glob import glob
 
 import yaml
+import numpy as np
+import joblib
+import paramiko
 
 from pyspectools import pypickett as pp
+
 
 def run_spcat(filename, temperature=None):
     # Run SPCAT
@@ -235,3 +240,187 @@ def isnotebook():
     except NameError:
         return False      # Probably standard Python interpreter
 
+
+def save_obj(obj, filepath, **kwargs):
+    """
+        Function to serialize an object using dump from joblib.
+
+        Additional kwargs are passed into the dump, which can
+        be compression parameters, etc.
+
+        parameters:
+        ---------------
+        obj - instance of object to be serialized
+        filepath - filepath to save to
+    """
+    settings = {
+        "compress": ("gzip", 6)
+        }
+    settings.update(kwargs)
+    joblib.dump(obj, filepath, **settings)
+
+
+def read_obj(filepath):
+    """
+        Wrapper for joblib.load to load an object from disk
+
+        parameters:
+        ---------------
+        filepath - path to object
+    """
+    obj = joblib.load(filepath)
+    return obj
+
+
+def dump_packages():
+    """
+        Function that will return a list of packages that
+        have been loaded and their version numbers.
+
+        This function will ignore system packages:
+        sys, __builtins__, types, os
+        
+        as well as modules with no version.
+
+
+        This is not working the way I want it to...
+
+        returns:
+        -------------
+        mod_dict - dict with keys corresponding to module name,
+                   and values the version number.
+    """
+    mod_dict = dict()
+    sys_packages = ["sys", "__builtins__", "types", "os"]
+    for name, module in globals().items():
+        if isinstance(module, types.ModuleType):
+            if module.__name__ not in sys_packages:
+                try:
+                    mod_name = module.__name__
+                    mod_ver = module.__version__
+                    mod_dict[mod_name] = mod_ver
+                except AttributeError:
+                    pass
+    return mod_dict
+
+
+def find_nearest(array, value):
+    """
+    Search a numpy array for the closest value.
+    :param array: np.array of values
+    :param value: float value to search array for
+    :return: value of array closest to target, and the index
+    """
+    array = np.asarray(array)
+    idx = (np.abs(array - value)).argmin()
+    return array[idx], idx
+
+
+class RemoteClient(paramiko.SSHClient):
+    def __init__(self, hostname=None, username=None, **kwargs):
+        super().__init__()
+        self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        self.connect(
+            hostname=hostname,
+            username=username,
+            **kwargs
+        )
+
+        self.sftp = self.open_sftp()
+
+    @classmethod
+    def from_file(cls, filepath):
+        """
+        Reload a remote session from a pickle file created by the save_session.
+        :param filepath: str path to RemoteClient pickle file
+        :return: RemoteClient object
+        """
+        remote = read_obj(filepath)
+        # Make sure that the pickle file is a RemoteClient object
+        if remote.__name__ != "RemoteClient":
+            raise Exception("File was not a RemoteClient session; {}".format(remote.__name__))
+        else:
+            return read_obj(filepath)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        """
+        Dunder method that should be called when the object is destroyed. In this case,
+        the remote connection should be closed automatically.
+        """
+        self.sftp.close()
+        self.close()
+
+    def get_file(self, remote_path, local_path=os.getcwd()):
+        """
+        Download a file from remote server to disk. If no local path is provided, defaults
+        to the current working directory.
+        :param remote_path: str remote file path target
+        :param local_path: str optional path to save the file to
+        """
+        self.sftp.get(remote_path, local_path)
+
+    def run_command(self, command):
+        stdin, stdout, stderr = self.exec_command(command)
+        error_msg = stderr.read()
+        if len(error_msg) == 0:
+            return stdout.readlines()
+        else:
+            raise Exception("Error in running command: {}".format(error_msg))
+
+    def open_remote(self, remote_path):
+        """
+        Function to stream the file contents of a remote file. Can be used to directly
+        provide data into memory without downloading it to disk.
+        :param remote_path: str remote path to target file
+        :return: list of contents of the target file
+        """
+        contents = self.run_command("cat {}".format(remote_path))
+        return contents
+
+    def ls(self, remote_path=""):
+        """
+        Function to get the list of files present in a specified directory.
+        Defaults to the current ssh directory.
+        :param remote_path: str remote path to inspect
+        :return: list of files and folders
+        """
+        contents = self.run_command("ls {}".format(remote_path))
+        return contents
+
+    def save_session(self, filepath="ssh.pkl", **kwargs):
+        """
+        Function to dump the ssh settings object to a pickle file. Keep in mind
+        that while this is a matter of convenience, the file is unencrypted and
+        so storing passwords in here is not exactly the safest thing to do!
+        :param filepath: str optional path to save the session to.
+        """
+        save_obj(self, filepath, **kwargs)
+
+
+def search_file(root_path, filename, ext=".txt"):
+    """
+    Function for searching for a specific filename in a given root path.
+    The option `ext` specifies whether or not the extension must also be matched.
+    :param root: str path to begin search
+    :param filename: str filename to match
+    :param ext: bool option to match file extension also
+    :return: str full path to the file
+    """
+    for root, dirs, files in os.walk(root_path):
+        if any([file for file in files if filename in file]) is True:
+            return os.path.join(root, filename) + ext
+
+
+def group_consecutives(vals, step=1):
+    """Return list of consecutive lists of numbers from vals (number list)."""
+    run = []
+    result = [run]
+    expect = None
+    for v in vals:
+        if (v == expect) or (expect is None):
+            run.append(v)
+        else:
+            run = [v]
+            result.append(run)
+        expect = v + step
+    return result

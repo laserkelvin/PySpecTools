@@ -1,53 +1,12 @@
 
 import sys
 
-import pandas as pd
 import numpy as np
 from matplotlib import colors
 from matplotlib import cm
 from matplotlib import pyplot as plt
 
-from pyspectools import units
-
-def read_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
-    """
-    Parses a simulation output, and filters the frequency and intensity to give
-    a specific set of lines.
-
-    The only argument that is required is the path to the simulation output. Others
-    are optional, and will default to effectively not filter.
-
-    The quantum numbers are read in assuming hyperfine structure, and thus
-    might not be accurate descriptions of what they actually are.
-    """
-    simulation_df = pd.read_fwf(
-        simulation_path,
-        widths=[13,8,8,2,10,3,7,4,2,2,2,8,2,2],
-        header=None
-    )
-    simulation_df.columns = [
-        "Frequency",
-        "Uncertainty",
-        "Intensity",
-        "DoF",
-        "Lower state energy",
-        "Degeneracy",
-        "ID",
-        "Coding",
-        "N'",
-        "F'",
-        "J'",
-        "N''",
-        "F''",
-        "J''",
-    ]
-    thresholded_df = simulation_df.loc[
-            (simulation_df["Frequency"].astype(float) >= low_freq) &         # threshold the simulation output
-            (simulation_df["Frequency"].astype(float) <= high_freq) &        # based on user specified values
-            (simulation_df["Intensity"].astype(float) >= threshold)          # or lack thereof
-            ]
-    thresholded_df["Lower state energy"] = units.wavenumber2T(thresholded_df["Lower state energy"])
-    return thresholded_df
+from  pyspectools import parsers
 
 
 def clean_cat(filepath):
@@ -156,7 +115,7 @@ if __name__ == "__main__":
     parameters = [float(value) for value in sys.argv[2:]]
     print(parameters)
     # threshold the simulation values
-    thresholded_df = read_cat(simulation_path, *parameters)
+    thresholded_df = parsers.parse_cat(simulation_path, *parameters)
     # export the thresholded values to a cat file
     thresholded_df.to_csv(
             simulation_path.split(".")[0] + "_filtered.cat",

@@ -24,7 +24,7 @@ spectroscopy data. The main sorts of functionality are:
    - Double resonance fitting
 4. Analysis of broad band spectra with the `AssignmentSession` and `Assignment` classes.
    These classes, combined with Jupyter notebooks, provide a way to assign spectra
-   reproducibly.
+   reproducibly; astronomical and laboratory broadband spectra are supported.
 5. Autofit routines are available for a set of special cases, like linear/prolate
    molecules. Eventually, SPFIT will be a backend option.
 
