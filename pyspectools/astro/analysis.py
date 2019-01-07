@@ -2,7 +2,7 @@
 import numpy as np
 
 from pyspectools import units
-from pyspectools.parsecat import read_cat
+from pyspectools.parsers import parse_cat
 from pyspectools.units import gaussian_fwhm, gaussian_height, gaussian_integral
 from pyspectools.astro import conversions
 from pyspectools.astro import radiative
@@ -80,7 +80,7 @@ def simulate_catalog(catalogpath, N, Q, T, doppler=10.):
      :param doppler: Doppler width in km/s
      :return: simulated_df; pandas dataframe with frequency/intensity
      """
-    catalog_df = read_cat(catalogpath)
+    catalog_df = parse_cat(catalogpath)
     # Calculate the line strength
     catalog_df["Su^2"] = radiative.I2S(
         catalog_df["Intensity"].values,
