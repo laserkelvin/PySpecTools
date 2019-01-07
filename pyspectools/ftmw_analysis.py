@@ -162,9 +162,9 @@ class Batch:
         :param src: str optional specifying whether a remote or local path is used
         """
         root_path = root_path.replace("batch", "scans")
-        path_list = [
+        path_list = tqdm([
             os.path.join(root_path, "*", "*", str(scan_id) + ".txt") for scan_id in ids
-        ]
+        ])
         if hasattr(self, "remote") is True:
             scans = [Scan.from_remote(path, self.remote) for path in path_list]
         else:
@@ -192,21 +192,22 @@ class Batch:
             try:
                 ref_fit = ref.fit_cavity(plot=False)
                 roi, ref_x, ref_y = ref.get_line_roi()
+                signal = [np.sum(ref_y, axis=0)]
                 sigma = np.average(
                     [np.std(scan.spectrum["Intensity"].iloc[roi]) for scan in progression]
                 ) * significance
                 connections = [scan for scan in progression if scan.is_depleted(ref, roi, sigma)]
                 if len(connections) > 1:
                     counter += len(connections)
+                    signal.extend(
+                        [np.sum(scan.spectrum["Intensity"].iloc[roi], axis=0) for scan in connections]
+                    )
                     dr_dict[index] = {
                         "frequencies": [scan.dr_frequency for scan in connections],
                         "ids": [scan.id for scan in connections],
                         "cavity": ref.cavity_frequency,
-                        "signal": [
-                            np.sum(ref_y)].extend(
-                            [np.sum(scan.spectrum["Intensity"]).iloc[roi] for scan in connections]
-                        ),
-                        "scans": connections
+                        "signal": signal,
+                        "expected": np.sum(ref_y) - sigma
                     }
             except ValueError:
                 print("Progression {} could not be fit; ignoring.".format(index))
@@ -339,6 +340,9 @@ class Scan:
         new_scan.__class__ = self.__class__
         new_scan.__dict__.update(self.__dict__)
         return new_scan
+
+    def __repr__(self):
+        return self.id
 
     def average(self, others):
         """
