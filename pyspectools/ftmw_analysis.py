@@ -164,13 +164,25 @@ class Batch:
         # Find the cavity frequencies that DR was performed on
         progressions = self.split_progression_batch()
         dr_dict = dict()
-        for index, progression in enumerate(tqdm(progressions)):
-            scans = [scan for scan in self.scans if scan.id in progression]
-            ref = scans.pop(0)
-            ref_fit = ref.fit_cavity(plot=False)
-            roi, ref_x, ref_y = ref.get_line_roi()
-            connections = [scan for scan in scans if scan.is_depleted(ref, roi, depletion)]
-            dr_dict[index] = connections
+        for index, progression in tqdm(progressions.items()):
+            ref = progression.pop(0)
+            try:
+                ref_fit = ref.fit_cavity(plot=False)
+                roi, ref_x, ref_y = ref.get_line_roi()
+                connections = [scan for scan in progression if scan.is_depleted(ref, roi, depletion)[1]]
+                if len(connections) > 1:
+                    dr_dict[index] = {
+                        "frequencies": [scan.dr_frequency for scan in connections],
+                        "ids": [scan.id for scan in connections],
+                        "cavity": ref.cavity_frequency,
+                        "signal": [
+                            np.cumsum(ref_y)].extend(
+                            [np.cumsum(scan.spectrum["Intensity"]).iloc[roi] for scan in connections]
+                        ),
+                        "scans": connections
+                    }
+            except ValueError:
+                print("Progression {} could not be fit; ignoring.".format(index))
         return dr_dict
 
     def split_progression_batch(self):
@@ -488,8 +500,9 @@ class Scan:
         process_dict = {key: value for key, value in self.__dict__.items() if key in process_list}
         # Override with user settings
         process_dict.update(**kwargs)
-        self.spectrum = fid2fft(self.fid.copy(), 1. / self.fid_spacing, frequencies, **process_dict)
-        self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": self.fid})
+        temp_fid = np.copy(self.fid)
+        self.spectrum = fid2fft(temp_fid, 1. / self.fid_spacing, frequencies, **process_dict)
+        self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": temp_fid})
 
     def within_time(self, date_range):
         """
@@ -705,14 +718,15 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     :return: freq_df - pandas dataframe with the FFT spectrum
     """
     # Remove DC
-    fid-=np.average(fid)
+    new_fid = fid - np.average(fid)
     if "delay" in kwargs:
-        fid[:int(kwargs["delay"])] = 0.
+        delay = int(kwargs["delay"] / (1. / rate) / 1e6)
+        new_fid[:delay] = 0.
     # Zero-pad the FID
     if "zeropad" in kwargs:
         if kwargs["zeropad"] is True:
             # Pad the FID with zeros to get higher resolution
-            fid = np.append(fid, np.zeros(len(fid)))
+            fid = np.append(new_fid, np.zeros(len(new_fid)))
             # Since we've padded with zeros, we'll have to update the
             # frequency array
             frequencies = spsig.resample(frequencies, len(frequencies) * 2)
@@ -720,25 +734,25 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     if "window" in kwargs:
         available = ["blackmanharris", "blackman", "boxcar", "gaussian", "hanning", "bartlett"]
         if (kwargs["window"] != "") and (kwargs["window"] in available):
-            fid*=spsig.get_window(kwargs["window"], len(fid))
+            new_fid*=spsig.get_window(kwargs["window"], len(new_fid))
     # Apply an exponential filter on the FID
     if "exp" in kwargs:
         if kwargs["exp"] > 0.:
-            fid*=spsig.exponential(len(fid), tau=kwargs["exp"])
+            new_fid*=spsig.exponential(len(new_fid), tau=kwargs["exp"])
     # Apply a bandpass filter on the FID
     if ("filter" in kwargs) and (len(kwargs["filter"]) == 2):
         low, high = sorted(kwargs["filter"])
         if low < high:
-            fid = apply_butter_filter(
-                fid,
+            new_fid = apply_butter_filter(
+                new_fid,
                 low,
                 high,
                 rate
             )
     # Perform the FFT
-    fft = np.fft.fft(fid)
+    fft = np.fft.fft(new_fid)
     # Get the real part of the FFT
-    real_fft = np.abs(fft[:int(len(fid) / 2)]) / len(fid) * 1e3
+    real_fft = np.abs(fft[:int(len(new_fid) / 2)]) / len(new_fid) * 1e3
     frequencies = spsig.resample(frequencies, len(real_fft))
     # For some reason, resampling screws up the frequency ordering...
     frequencies = np.sort(frequencies)
