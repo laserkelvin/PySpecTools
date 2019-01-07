@@ -22,9 +22,8 @@ from pyspectools import routines, parsers
 from pyspectools import fitting
 from pyspectools import units
 from pyspectools.astro import analysis as aa
-from pyspectools.parsecat import read_cat
 from pyspectools.spectra import analysis
-from pyspectools.spectra import parsers
+from pyspectools import parsers
 
 
 @dataclass
