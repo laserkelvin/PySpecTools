@@ -947,6 +947,7 @@ class AssignmentSession:
             "sessions/{0}.yml".format(self.session.experiment),
             "yaml"
         )
+        self.create_html_report()
         # Dump data to notebook output
         for key, value in combined_dict.items():
             print(key + ":   " + str(value))

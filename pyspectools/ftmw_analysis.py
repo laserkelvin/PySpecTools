@@ -87,6 +87,28 @@ class Batch:
 
     @classmethod
     def from_remote(cls, root_path, batch_id, assay, machine, ssh_obj=None):
+        """
+        Create a Batch object by retrieving a QtFTM batch file from a remote
+        location. The user must provide a path to the root directory of the
+        batch type, e.g. /home/data/QtFTM/batch/, and the corresponding
+        batch type ID. Additionally, the type of batch must be specified to
+        determine the type of analysis required.
+
+        Optionally, the user can provide a reference to a RemoteClient object
+        from `pyspectools.routines`. If none is provided, a RemoteClient object
+        will be created with public key authentication (if available), otherwise
+        the user will be queried for a hostname, username, and password.
+
+        Keep in mind this method can be slow as every scan is downloaded. I
+        recommend creating this once, then saving a local copy for subsequent
+        analysis.
+        :param root_path: str path to the batch type root directory
+        :param batch_id: int or str value for the batch number
+        :param assay: str the batch type
+        :param machine: str reference the machine used for the batch
+        :param ssh_obj: `RemoteClient` object
+        :return:
+        """
         if ssh_obj is None:
             default_keypath = os.path.join(
                 os.path.expanduser("~"),
@@ -149,7 +171,7 @@ class Batch:
             scans = [Scan.from_qtftm(path) for path in path_list]
         self.scans = scans
 
-    def process_dr(self, depletion=0.6):
+    def process_dr(self, significance=16.):
         """
         Function to batch process all of the DR measurements.
         :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
@@ -164,25 +186,32 @@ class Batch:
         # Find the cavity frequencies that DR was performed on
         progressions = self.split_progression_batch()
         dr_dict = dict()
+        counter = 0
         for index, progression in tqdm(progressions.items()):
             ref = progression.pop(0)
             try:
                 ref_fit = ref.fit_cavity(plot=False)
                 roi, ref_x, ref_y = ref.get_line_roi()
-                connections = [scan for scan in progression if scan.is_depleted(ref, roi, depletion)[1]]
+                sigma = np.average(
+                    [np.std(scan.spectrum["Intensity"].iloc[roi]) for scan in progression]
+                ) * significance
+                connections = [scan for scan in progression if scan.is_depleted(ref, roi, sigma)]
                 if len(connections) > 1:
+                    counter += len(connections)
                     dr_dict[index] = {
                         "frequencies": [scan.dr_frequency for scan in connections],
                         "ids": [scan.id for scan in connections],
                         "cavity": ref.cavity_frequency,
                         "signal": [
-                            np.cumsum(ref_y)].extend(
-                            [np.cumsum(scan.spectrum["Intensity"]).iloc[roi] for scan in connections]
+                            np.sum(ref_y)].extend(
+                            [np.sum(scan.spectrum["Intensity"]).iloc[roi] for scan in connections]
                         ),
                         "scans": connections
                     }
             except ValueError:
                 print("Progression {} could not be fit; ignoring.".format(index))
+        print("Possible depletions detected in these indexes: {}".format(list(dr_dict.keys())))
+        print("There are {} possible depletions.".format(counter))
         return dr_dict
 
     def split_progression_batch(self):
@@ -202,10 +231,11 @@ class Batch:
                 counter += 1
         return progressions
 
-    def interactive_progression_batch(self):
+    def interactive_dr_batch(self):
         """
-        Create an interactive widget slider with a Plotly figure. The slider will update
-        the progression plotted.
+        Create an interactive widget slider with a Plotly figure. The batch will be split
+        up into "subbatches" by the cavity frequency and whether or not the scan IDs are
+        consecutive.
         :return vbox: VBox object with the Plotly figure and slider objects
         """
         progressions = self.split_progression_batch()
@@ -215,7 +245,7 @@ class Batch:
         def update_figure(index):
             fig.data = []
             fig.add_traces([scan.scatter_trace() for scan in progressions[index]])
-        index_slider = interactive(update_figure, index=(0, len(progressions), 1))
+        index_slider = interactive(update_figure, index=(0, len(progressions) - 1, 1))
         vbox = VBox((fig, index_slider))
         vbox.layout.align_items = "center"
         return vbox
@@ -528,7 +558,7 @@ class Scan:
             late = datetime.datetime(9999, 1, 1)
         return early <= self.date <= late
 
-    def is_depleted(self, ref, roi=None, p_thres=0.5):
+    def is_depleted(self, ref, roi=None, depletion=None):
         """
         Function for determining if the signal in this Scan is less
         than that of another scan. This is done by a simple comparison
@@ -551,10 +581,16 @@ class Scan:
         if roi:
             y_ref = y_ref[roi]
             y_obs = y_obs[roi]
-        chisq, p_value = chisquare(
-            y_obs, y_ref
-        )
-        return (chisq, p_value), p_value <= p_thres
+        # This doesn't work, or is not particularly discriminating.
+        #chisq, p_value = chisquare(
+        #    y_obs, y_ref
+        #)
+        if depletion is None:
+            sigma = np.std(y_obs, axis=0) * 16.
+        else:
+            sigma = depletion
+        expected = np.sum(y_ref, axis=0) - sigma
+        return np.sum(y_obs, axis=0) <= expected
 
     def scatter_trace(self):
         """
@@ -755,6 +791,7 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     real_fft = np.abs(fft[:int(len(new_fid) / 2)]) / len(new_fid) * 1e3
     frequencies = spsig.resample(frequencies, len(real_fft))
     # For some reason, resampling screws up the frequency ordering...
+    real_fft = real_fft[np.argsort(frequencies)]
     frequencies = np.sort(frequencies)
     # Package into a pandas dataframe
     freq_df = pd.DataFrame({"Frequency (MHz)": frequencies, "Intensity": real_fft})
