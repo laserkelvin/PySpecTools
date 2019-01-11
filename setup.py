@@ -88,7 +88,8 @@ setup(
         "ruamel.yaml",
         "paramiko",
         "jinja2",
-        "tqdm"
+        "tqdm",
+        "networkx"
     ],
     cmdclass={
         "develop": PostInstallCommand,
