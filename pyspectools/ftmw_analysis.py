@@ -14,10 +14,12 @@ from scipy import signal as spsig
 from scipy.stats import chisquare
 import plotly.graph_objs as go
 from tqdm.autonotebook import tqdm
+import networkx as nx
 from ipywidgets import interactive, VBox, HBox
 
 from pyspectools import routines
 from pyspectools import figurefactory
+from pyspectools import plotting
 from pyspectools import fitting
 from pyspectools.spectra import analysis
 
@@ -288,6 +290,19 @@ class Batch:
         if hasattr(self, "remote"):
             delattr(self, "remote")
         routines.save_obj(self, filepath, **kwargs)
+
+    def create_dr_network(self, scans):
+        """
+        Take a list of scans, and generate a NetworkX Graph object
+        for analysis and plotting.
+        :param scans: list of scan IDs to connect
+        :return fig: Plotly FigureWidget object
+        """
+        connections = [
+            [np.floor(scan.cavity_frequency), np.floor(scan.dr_frequency) for scan in self.scans if scan.id in scans]
+        ]
+        fig, self.progressions = dr_network_diagram(connections)
+        return fig
 
 
 @dataclass
@@ -580,6 +595,7 @@ class Scan:
         :param depletion: percentage of depletion expected of the reference
         :return: bool - True if signal in this Scan is less intense than the reference
         """
+        self.ref = ref
         y_ref = ref.spectrum["Intensity"].values
         y_obs = self.spectrum["Intensity"].values
         if roi:
@@ -627,6 +643,7 @@ class Scan:
         result = model.fit_pair(x, y)
         self.spectrum["Fit"] = result.best_fit
         self.fit = result
+        self.fit.frequency = self.fit.best_values["x0"]
         if plot is True:
             fig = go.FigureWidget()
             fig.layout["xaxis"]["title"] = "Frequency (MHz)"
@@ -1024,6 +1041,55 @@ def calculate_integration_times(intensity, nshots=50):
     norm_int = intensity / np.max(intensity)
     shot_counts = np.round(nshots / norm_int).astype(int)
     return shot_counts
+
+
+def dr_network_diagram(connections):
+    """
+    Use NetworkX to create a graph with nodes corresponding to cavity
+    frequencies, and vertices as DR connections.
+    :param connections: list of 2-tuples corresponding to pairs of connections
+    :return
+    """
+    graph = nx.Graph()
+    nodes = [graph.add_node(frequency) for frequency in np.unique(connections)]
+    vertices = [graph.add_edge(*pair) for pair in connections]
+    # Generate positions based on the shell layout that's typical of DR connections
+    # Frequencies are sorted in anti-clockwise order, starting at 3 o'clock
+    positions = nx.shell_layout(graph)
+
+    coords = np.array(list(pos.values()))
+    connected = list(nx.connected_components(graph))
+    colors = plotting.generate_colors(len(connected))
+
+    fig_layout = {
+        "height": 700.,
+        "width": 700.,
+        "showlegend": False,
+    }
+    fig = go.FigureWidget(layout=fig_layout)
+    # Draw the nodes
+    fig.add_scattergl(
+        x=coords[:,0],
+        y=coords[:,1],
+        text=list(np.unique(connections)),
+        hoverinfo="text",
+        mode="markers"
+    )
+    # Draw the vertices
+    for connectivity, color in zip(connected, colors):
+        # Get all of the coordinates associated with edges within a series
+        # of connections
+        coords = np.array([positions[node] for node in sorted(connectivity)])
+        fig.add_scattergl(
+            x=coords[:,0],
+            y=coords[:,1],
+            mode="lines",
+            hoverinfo=None,
+            name="",
+            opacity=0.4,
+            marker={"color": color}
+        )
+    return fig, connected
 
 class AssayBatch:
     @classmethod
