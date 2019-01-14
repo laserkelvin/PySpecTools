@@ -1,6 +1,7 @@
 
 
 import numpy as np
+import networkx as nx
 from matplotlib import pyplot as plt
 from matplotlib.offsetbox import AnnotationBbox, OffsetImage
 from matplotlib import colors as cl
@@ -261,10 +262,12 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
 
     return fig, ax
 
-def dr_network_diagram(connections):
+
+def dr_network_diagram(connections, **kwargs):
     """
     Use NetworkX to create a graph with nodes corresponding to cavity
     frequencies, and vertices as DR connections.
+    The color map can be specified by passing kwargs.
     :param connections: list of 2-tuples corresponding to pairs of connections
     :return
     """
@@ -275,13 +278,30 @@ def dr_network_diagram(connections):
     # Frequencies are sorted in anti-clockwise order, starting at 3 o'clock
     positions = nx.shell_layout(graph)
 
-    coords = np.array(list(pos.values()))
+    color_kwarg = {"cmap": plt.cm.tab10}
+    if "cmap" in kwargs:
+        color_kwarg.update(**kwargs)
+
+    coords = np.array(list(positions.values()))
     connected = list(nx.connected_components(graph))
-    colors = plotting.generate_colors(len(connected))
+    colors = generate_colors(len(connected), **color_kwarg)
 
     fig_layout = {
         "height": 700.,
         "width": 700.,
+        "autosize": True,
+        "xaxis": {
+            "showgrid": False,
+            "zeroline": False,
+            "ticks": "",
+            "showticklabels": False
+        },
+        "yaxis": {
+            "showgrid": False,
+            "zeroline": False,
+            "ticks": "",
+            "showticklabels": False
+        },
         "showlegend": False,
     }
     fig = go.FigureWidget(layout=fig_layout)
@@ -318,19 +338,20 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002):
     # The frequency range is specified as a percentage of frequency, so it
     # will change the range depending on what the centered frequency is.
     nplots = len(frequencies)
-    plot_func = go.Scatter
+    plot_func = go.Scattergl
 
     # Want the frequencies in ascending order, going upwards in the plot
     frequencies = np.sort(frequencies)[::-1]
 
-    titles = tuple("{:.4f} MHz".format(frequency) for frequency in frequencies)
-    fig = tools.make_subplots(
+    titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
+    subplot = tools.make_subplots(
         rows=nplots,
         cols=1,
         shared_xaxes=True,
         vertical_spacing=0.15,
         subplot_titles=titles,
     )
+    fig = go.FigureWidget(subplot)
 
     for index, frequency in enumerate(frequencies):
         # Calculate the offset frequency
@@ -344,11 +365,10 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002):
         trace = plot_func(
             x=sliced_df["Offset " + str(index)],
             y=sliced_df["Intensity"],
-            text=sliced_df["Frequency"],
             mode="lines"
         )
         # Plotly indexes from one because they're stupid
-        fig.append_trace(trace, index + 1, 1)
+        fig.add_trace(trace, index + 1, 1)
         fig["layout"]["xaxis1"].update(
             range=[-freq_cutoff, freq_cutoff],
             title="Offset frequency (MHz)",
@@ -357,13 +377,10 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002):
         fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
     fig["layout"].update(
         autosize=False,
-        height=800,
-        width=1000,
-        paper_bgcolor="#f0f0f0",
-        plot_bgcolor="#f0f0f0",
+        height=1000,
+        width=900,
         showlegend=False
     )
-    iplot(fig)
     return fig
 
 
@@ -379,7 +396,7 @@ def plot_catchirp(chirpdf, catfiles=None):
 
     # Generate the experimental plot first
     plots = list()
-    exp_trace = go.Scatter(
+    exp_trace = go.Scattergl(
         x=chirpdf["Frequency"],
         y=chirpdf["Intensity"],
         name="Experiment"
@@ -421,8 +438,7 @@ def plot_catchirp(chirpdf, catfiles=None):
             "range": [0., 1.]
         }
     )
-    fig = go.Figure(data=plots, layout=layout)
-    iplot(fig)
+    fig = go.FigureWidget(data=plots, layout=layout)
 
     return fig
 
@@ -505,15 +521,26 @@ def plot_assignment(spec_df, assignments_df, col="Intensity"):
         "autorange": True
     }
     figure = go.Figure(data=traces, layout=layout)
-    iplot(figure)
+    plot(figure)
     return figure
 
 
-def generate_colors(n, cmap=plt.cm.Spectral):
-    """ Simple function for generating a colour map """
+def generate_colors(n, cmap=plt.cm.Spectral, hex=True):
+    """
+    Generate a linearly spaced color series using a colormap from
+    Matplotlib. The colors can be returned as either RGB values
+    or as hex-codes using the `hex` flag.
+    :param n: number of colors to generate
+    :param cmap: Matplotlib colormap object
+    :param hex: bool specifying whether the return format are hex-codes or RGB
+    :return:
+    """
     colormap = cmap(np.linspace(0., 1., n))
-    colors = [cl.rgb2hex(color) for color in colormap]
-    return colors#[:, :-1]
+    if hex is True:
+        colors = [cl.rgb2hex(color) for color in colormap]
+    else:
+        colors = colormap
+    return colors
 
 
 def color_iterator(n, **kwargs):
@@ -608,11 +635,11 @@ def define_layout(xlabel="", ylabel=""):
         x/ylabel - str for what the x and y labels are to be
     """
     layout = go.Layout(
-        xaxis={"title": xlabel, "tickformat": "0.1f"},
-        yaxis={"title": ylabel, "tickformat": None},
-        autosize=False,
-        height=600.,
-        width=1200.,
+        xaxis={"title": xlabel, "tickformat": ".,"},
+        yaxis={"title": ylabel},
+        autosize=True,
+        height=650.,
+        width=1000.,
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
         font=dict(family='Roboto', size=18, color='#000000'),
