@@ -330,18 +330,31 @@ def dr_network_diagram(connections, **kwargs):
     return fig, connected
 
 
-def stacked_plot(dataframe, frequencies, freq_range=0.002):
-    # Function for generating an interactive stacked plot.
-    # This form of plotting helps with searching for vibrational satellites.
-    # Input is the full dataframe containing the frequency/intensity data,
-    # and frequencies is a list containing the centering frequencies.
-    # The frequency range is specified as a percentage of frequency, so it
-    # will change the range depending on what the centered frequency is.
-    nplots = len(frequencies)
+def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency", int_col="Intensity"):
+    """
+    Create a Loomis-Wood style plot via a list of frequencies, and a broadband
+    spectrum. The keyword freq_range will use a percentage of the center
+    frequency to extend the frequency range that gets plotted.
+    :param dataframe: pandas DataFrame
+    :param frequencies: iterable with float frequencies to use as centers
+    :param freq_range: decimal percentage to specify the range to plot
+    :param freq_col: str name for the column to use as the frequency axis
+    :param int_col: str name for the column to use as the intensity axis
+    :return fig: Plotly FigureWidget with the subplots
+    """
     plot_func = go.Scattergl
 
     # Want the frequencies in ascending order, going upwards in the plot
+    indices = np.where(
+        np.logical_and(
+            dataframe[freq_col].min() <= frequencies,
+            frequencies <= dataframe[freq_col].max()
+        )
+    )
+    # Plot only frequencies within band
+    frequencies = frequencies[indices]
     frequencies = np.sort(frequencies)[::-1]
+    nplots = len(frequencies)
 
     titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
     subplot = tools.make_subplots(
@@ -355,7 +368,7 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002):
 
     for index, frequency in enumerate(frequencies):
         # Calculate the offset frequency
-        dataframe["Offset " + str(index)] = dataframe["Frequency"] - frequency
+        dataframe["Offset " + str(index)] = dataframe[freq_col] - frequency
         # Range as a fraction of the center frequency
         freq_cutoff = freq_range * frequency
         sliced_df = dataframe.loc[
@@ -364,7 +377,7 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002):
         # Plot the data
         trace = plot_func(
             x=sliced_df["Offset " + str(index)],
-            y=sliced_df["Intensity"],
+            y=sliced_df[int_col],
             mode="lines"
         )
         # Plotly indexes from one because they're stupid
@@ -376,7 +389,7 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002):
         )
         fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
     fig["layout"].update(
-        autosize=False,
+        autosize=True,
         height=1000,
         width=900,
         showlegend=False
