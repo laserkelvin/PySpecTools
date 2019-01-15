@@ -15,6 +15,7 @@ import plotly.graph_objs as go
 from tqdm.autonotebook import tqdm
 import networkx as nx
 from ipywidgets import interactive, VBox, HBox
+from lmfit.models import LinearModel
 
 from pyspectools import routines
 from pyspectools import figurefactory as ff
@@ -205,7 +206,7 @@ class Batch:
                     dr_dict[index] = {
                         "frequencies": [scan.dr_frequency for scan in connections],
                         "ids": [scan.id for scan in connections],
-                        "cavity": ref.cavity_frequency,
+                        "cavity": ref.fit.frequency,
                         "signal": signal,
                         "expected": np.sum(ref_y) - sigma
                     }
@@ -593,9 +594,10 @@ class Scan:
         :param depletion: percentage of depletion expected of the reference
         :return: bool - True if signal in this Scan is less intense than the reference
         """
-        self.ref = ref
         y_ref = ref.spectrum["Intensity"].values
         y_obs = self.spectrum["Intensity"].values
+        self.ref_freq = ref.fit.frequency
+        self.ref_id = ref.id
         if roi:
             y_ref = y_ref[roi]
             y_obs = y_obs[roi]
@@ -1469,3 +1471,24 @@ class AssayBatch:
             filepath
             )
         print("Saved session to {}".format(filepath))
+
+
+def predict_prolate_series(progressions, J_thres=0.1):
+    fit_df, fits = fitting.harmonic_fitter(progressions, J_thres)
+    J_model = LinearModel()
+    BJ_model = fitting.BJModel()
+    predictions = dict()
+    for index, row in fit_df.iterrows():
+        J_values = row[[col for col in row.keys() if "J" in str(col)]].values
+        J_fit = J_model.fit(data=J_values, x=np.arange(len(J_values)))
+        J_predicted = J_fit.eval(x=np.arange(-10, 10, 1))
+        BJ_params = row[["B", "D"]].values
+        freq_predicted = BJ_model.eval(J=J_predicted, B=BJ_params[0], D=BJ_params[1])
+        # Filter out negative frequencies
+        freq_predicted = freq_predicted[0. < freq_predicted]
+        predictions[index] = {
+            "predicted_freq": freq_predicted,
+            "predicted_J": J_predicted,
+        }
+    return predictions
+
