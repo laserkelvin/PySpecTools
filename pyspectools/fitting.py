@@ -12,6 +12,7 @@ import lmfit
 import numpy as np
 import pandas as pd
 import peakutils
+from tqdm.autonotebook import tqdm
 
 from pyspectools import lineshapes
 
@@ -39,6 +40,13 @@ class SecDerivLorentzian_Model(PySpecModel):
     def __init__(self, **kwargs):
         super(SecDerivLorentzian_Model, self).__init__(lineshapes.sec_deriv_lorentzian, **kwargs)
 
+
+class BJModel(PySpecModel):
+    """
+    Model for fitting prolate/linear molecules.
+    """
+    def __init__(self, **kwargs):
+        super(BJModel, self).__init__(calc_harmonic_transition, **kwargs)
 
 class PairGaussianModel(PySpecModel):
 
@@ -155,11 +163,8 @@ def harmonic_fitter(progressions, J_thres=0.01):
     BJ_fit_model = lmfit.models.Model(calc_harmonic_transition)
     params = BJ_fit_model.make_params()
     data = list()
-    progress = [0.25, 0.5, 0.75]
-    progress = [int(value / len(progressions)) for value in progress]
-    for index, progression in enumerate(progressions):
-        if index in progress:
-            print("{} progressions checked.".format(index))
+    fit_objs = list()
+    for index, progression in tqdm(enumerate(progressions)):
         # Determine the approximate value of B based on
         # the differences between observed transitions
         approx_B = np.average(np.diff(progression))
@@ -185,7 +190,7 @@ def harmonic_fitter(progressions, J_thres=0.01):
                 data=progression,
                 J=J,
                 params=params,
-                fit_kws={"maxfev": 50}
+                fit_kws={"maxfev": 100}
             )
             # Only include progressions that can be fit successfully
             if fit.success is True:
@@ -202,8 +207,12 @@ def harmonic_fitter(progressions, J_thres=0.01):
                         return_dict[i] = frequency
                         return_dict["J{}".format(i)] = J[i]
                     data.append(return_dict)
+                    fit_objs.append(fit)
+            else:
+                print("Index {} failed to fit.".format(index))
+                print(fit.fit_report())
     full_df = pd.DataFrame(
         data=data,
     )
     full_df.sort_values(["RMS", "B", "D"], ascending=False, inplace=True)
-    return full_df
+    return full_df, fit_objs
