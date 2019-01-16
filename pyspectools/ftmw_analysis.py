@@ -1023,6 +1023,7 @@ def categorize_frequencies(frequencies, nshots=50, intensities=None,
 
     return ftb_str
 
+
 def calculate_integration_times(intensity, nshots=50):
     """
         Method for calculating the expected integration time
@@ -1479,11 +1480,24 @@ def predict_prolate_series(progressions, J_thres=0.1):
     BJ_model = fitting.BJModel()
     predictions = dict()
     for index, row in fit_df.iterrows():
+        row = row.dropna()
         J_values = row[[col for col in row.keys() if "J" in str(col)]].values
-        J_fit = J_model.fit(data=J_values, x=np.arange(len(J_values)))
-        J_predicted = J_fit.eval(x=np.arange(-10, 10, 1))
-        BJ_params = row[["B", "D"]].values
-        freq_predicted = BJ_model.eval(J=J_predicted, B=BJ_params[0], D=BJ_params[1])
+        if len(J_values) > 2:
+            J_fit = J_model.fit(data=J_values, x=np.arange(len(J_values)))
+            J_predicted = J_fit.eval(x=np.arange(-10, 10, 1))
+            BJ_params = row[["B", "D"]].values
+            freq_predicted = BJ_model.eval(J=J_predicted, B=BJ_params[0], D=BJ_params[1])
+        elif len(J_values) == 2:
+            frequencies = row[[2, 4]].values
+            approx_B = np.abs(np.diff(frequencies))
+            next_freq = np.max(frequencies) + approx_B
+            low_freq = np.min(frequencies) - approx_B
+            freq_predicted = np.concatenate(
+                (frequencies, [next_freq, low_freq]),
+                axis=None
+            )
+            freq_predicted = np.sort(freq_predicted)
+            J_predicted = freq_predicted / approx_B
         # Filter out negative frequencies
         freq_predicted = freq_predicted[0. < freq_predicted]
         predictions[index] = {

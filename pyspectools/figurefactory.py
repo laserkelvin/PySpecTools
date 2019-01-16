@@ -9,6 +9,8 @@ from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly import tools
 
+from pyspectools import routines
+
 
 """
     Commonly used formatting options
@@ -261,6 +263,38 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
     fig.tight_layout()
 
     return fig, ax
+
+
+def overlay_dr_spectrum(dataframe, progressions, freq_col="Frequency", int_col="Intensity", **kwargs):
+    layout = define_layout("Frequency (MHz)", "Intensity")
+    fig = go.FigureWidget(layout=layout)
+
+    fig.add_scattergl(
+        x=dataframe[freq_col],
+        y=dataframe[int_col],
+        name="Observation",
+        opacity=0.4
+    )
+
+    colors = generate_colors(len(progressions), cmap=plt.cm.tab10)
+    level = 2.
+
+    for index, (progression, color) in enumerate(zip(progressions, colors)):
+        mask = np.where(progression <= np.max(dataframe[freq_col]))
+        progression = progression[mask]
+        indices = np.array([routines.find_nearest(dataframe[freq_col], freq) for freq in progression])
+        indices = indices[:,1]
+        y = dataframe[int_col].iloc[indices] * 1.2
+        fig.add_scattergl(
+            x=progression,
+            y=y,
+            marker={"color": color},
+            mode="markers+lines",
+            hoverinfo="name+x",
+            name="Progression {}".format(index)
+        )
+
+    return fig
 
 
 def dr_network_diagram(connections, **kwargs):
@@ -652,10 +686,10 @@ def define_layout(xlabel="", ylabel=""):
         yaxis={"title": ylabel},
         autosize=True,
         height=650.,
-        width=1000.,
+        width=850.,
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
-        font=dict(family='Roboto', size=18, color='#000000'),
+        font=dict(family='Roboto', size=14, color='#000000'),
         annotations=list()
     )
     return layout
