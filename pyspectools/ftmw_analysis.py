@@ -154,6 +154,16 @@ class Batch:
         else:
             return batch_obj
 
+    def __repr__(self):
+        return "{}-Batch {}".format(self.machine, self.id)
+
+    def find_scan(self, id):
+        scans = [scan for scan in self.scans if scan.id == id]
+        if len(scans) == 0:
+            raise Exception("No scans were found.")
+        else:
+            return scans[0]
+
     def get_scans(self, root_path, ids):
         """
         Function to create Scan objects for all of the scans in
@@ -303,6 +313,34 @@ class Batch:
         fig, self.progressions = ff.dr_network_diagram(connections)
         return fig
 
+    def find_optimum_scans(self, thres=0.8):
+        """
+
+        :param thres:
+        :return:
+        """
+        progressions = self.split_progression_batch()
+        data = list()
+        for index, progression in tqdm(progressions.items()):
+            snrs = [scan.calc_snr(thres=thres) for scan in progression]
+            best_scan = progression[np.argmax(snrs)]
+            try:
+                fit_result = best_scan.fit_cavity(plot=False)
+                if fit_result.best_values["w"] < 0.049:
+                    data.append(
+                        {
+                            "frequency": np.round(fit_result.best_values["x0"], 4),
+                            "snr": np.max(snrs),
+                            "scan": best_scan.id,
+                            "attenuation": best_scan.cavity_atten,
+                            "index": index
+                        }
+                    )
+            except ValueError:
+                print("Index {} failed to fit!".format(index))
+        opt_df = pd.DataFrame(data)
+        return opt_df
+
 
 @dataclass
 class Scan:
@@ -356,7 +394,7 @@ class Scan:
         return new_scan
 
     def __repr__(self):
-        return self.id
+        return str(self.id)
 
     def average(self, others):
         """
@@ -637,8 +675,8 @@ class Scan:
         :param plot: bool specify whether a Plotly figure is made
         :return: Model Fit result
         """
-        y = self.spectrum["Intensity"].values
-        x = self.spectrum["Frequency (MHz)"].values
+        y = self.spectrum["Intensity"].dropna().values
+        x = self.spectrum["Frequency (MHz)"].dropna().values
         model = fitting.PairGaussianModel()
         result = model.fit_pair(x, y)
         self.spectrum["Fit"] = result.best_fit
@@ -665,6 +703,22 @@ class Scan:
         _, high_end = routines.find_nearest(x, params["x0"] + params["xsep"] + params["w"] * 4.)
         index = list(range(low_end, high_end))
         return index, x[low_end:high_end], y[low_end:high_end]
+
+    def calc_snr(self, noise=None, thres=0.6):
+        if noise is None:
+            # Get the last 10 points at the end and at the beginning
+            noise = np.average(
+                [
+                    self.spectrum["Intensity"].iloc[-10:],
+                    self.spectrum["Intensity"].iloc[:10]
+                ]
+            )
+        peaks = self.spectrum["Intensity"].iloc[
+            peakutils.indexes(self.spectrum["Intensity"], thres=thres, thres_abs=True)
+            ].values
+        signal = np.average(np.sort(peaks)[:2])
+        return signal / noise
+
 
 
 def parse_scan(filecontents):

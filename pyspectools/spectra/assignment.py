@@ -262,6 +262,8 @@ class AssignmentSession:
         self.t_threshold = self.session.temperature * 3.
         self.assignments = list()
         self.ulines = list()
+        self.umols = list()
+        self.umol_counter = self.umol_gen()
         # Default settings for columns
         if freq_col not in self.data.columns:
             self.freq_col = self.data.columns[0]
@@ -271,6 +273,17 @@ class AssignmentSession:
             self.int_col = self.data.columns[1]
         else:
             self.int_col = int_col
+
+    def umol_gen(self):
+        """
+        Method for keeping track of what unidentified molecule
+        we're up to
+        :return: generator for a formatted string to name unidentified molecules
+        """
+        counter = 1
+        while counter <= 200:
+            yield "UMol_{:03.d}".format(counter)
+            counter+=1
 
     def find_peaks(self, threshold=None):
         """ Wrap peakutils method for detecting peaks.
@@ -652,6 +665,42 @@ class AssignmentSession:
         self.table = ass_df
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
+
+    def process_frequencies(self, frequencies, ids, molecule=None):
+        """
+        Function to mark frequencies to belong to a single molecule, and for book-keeping's
+        sake a list of ids are also required to indicate the original scan as the source
+        of the information.
+
+        :param frequencies: list of frequencies associated with a molecule
+        :param ids: list of scan IDs
+        :param molecule: optional str specifying the name of the molecule
+        """
+        counter = 0
+        if molecule is None:
+            # If no name is supplied, use the next class attribute counter
+            molecule = next(self.umol_counter)
+        for freq, scan_id in zip(frequencies, ids):
+            uline_freqs = np.array([uline.frequency for uline in self.ulines])
+            nearest, index = routines.find_nearest(uline_freqs, freq)
+            # Find the nearest U-line, and if it's sufficiently close then
+            # we assign it to this molecule. This is just to make sure that
+            # if we sneak in some random out-of-band frequency this we won't
+            # just assign it
+            if np.abs(nearest - freq) <= 0.2:
+                assign_dict = {
+                    "name": molecule,
+                    "source": "Scan-{}".format(scan_id),
+                    "catalog_frequency": freq,
+                    "index": index,
+                    "frequency": nearest
+                }
+                self.assign_line(**assign_dict)
+                counter+=1
+            else:
+                print("No U-line was sufficiently close.")
+                print("Expected: {}, Nearest: {}".format(freq, nearest))
+        print("Tentatively assigned {} lines to {}.".format(counter, molecule))
 
     def verify_molecules(self):
         """
