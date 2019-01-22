@@ -19,7 +19,7 @@ from pyspectools import lineshapes
 
 class PySpecModel(lmfit.models.Model):
     def __init__(self, function, **kwargs):
-        super(PySpecModel, self).__init__(function, nan_policy="omit", **kwargs)
+        super(PySpecModel, self).__init__(function, **kwargs)
         self.params = self.make_params()
 
 
@@ -53,23 +53,30 @@ class PairGaussianModel(PySpecModel):
     def __init__(self, **kwargs):
         super(PairGaussianModel, self).__init__(lineshapes.pair_gaussian, independent_vars=["x"], **kwargs)
 
-    def fit_pair(self, x, y):
+    def fit_pair(self, x, y, verbose=False):
         # Automatically find where the Doppler splitting is
-        indexes = peakutils.indexes(y, thres=0.3, min_dist=10)
-
-        guess_center = np.average(x[indexes])
-        guess_sep = np.std(x[indexes])
+        indexes = peakutils.indexes(y, thres=0.4, min_dist=10)
+        best_two = np.argsort(y[indexes])
+        guess_center = np.average(x[best_two])
+        guess_sep = np.std(x[best_two])
         # This calculates the amplitude of a Gaussian based on
         # the peak height
         prefactor = np.sqrt(2. * np.pi) * 0.01
-        guess_amp = np.average(y[indexes]) * prefactor
+        guess_amp = np.average(y[best_two]) * prefactor
         # Set the parameter guesses
         self.params["A1"].set(guess_amp)
         self.params["A2"].set(guess_amp)
-        self.params["w"].set(0.005, min=0.0001, max=0.05)
-        if guess_sep != 0.:
+        self.params["w"].set(0.005, min=0.0001, max=0.03)
+        if np.isfinite(guess_sep) is True:
             self.params["xsep"].set(guess_sep, min=guess_sep * 0.8, max=guess_sep * 1.2)
-        self.params["x0"].set(guess_center, min=guess_center - 0.05, max=guess_center + 0.05)
+        else:
+            self.params["xsep"].set(0.05)
+        self.params["x0"].set(guess_center, min=guess_center - 0.6, max=guess_center + 0.6)
+        if verbose is True:
+            print("Peaks found: {}".format(x[best_two]))
+            print("Initial parameters:")
+            for key, value in self.params.items():
+                print(key, value)
         results = self.fit(data=y, x=x, params=self.params)
         return results
 
@@ -199,19 +206,20 @@ def harmonic_fitter(progressions, J_thres=0.01):
                     rms = np.sqrt(np.average(np.square(fit.residual)))
                     # Only add it to the list of the RMS is
                     # sufficiently low
-                    if rms < 50.:
-                        return_dict = dict()
-                        return_dict["RMS"] = rms
-                        return_dict.update(fit.best_values)
-                        # Make columns for frequency and J
-                        for i, frequency in enumerate(progression):
-                            return_dict[i] = frequency
-                            return_dict["J{}".format(i)] = J[i]
-                        data.append(return_dict)
-                        fit_objs.append(fit)
+                    return_dict = dict()
+                    return_dict["RMS"] = rms
+                    return_dict.update(fit.best_values)
+                    # Make columns for frequency and J
+                    for i, frequency in enumerate(progression):
+                        return_dict[i] = frequency
+                        return_dict["J{}".format(i)] = J[i]
+                    data.append(return_dict)
+                    fit_objs.append(fit)
                 else:
                     print("Index {} failed to fit.".format(index))
                     print(fit.fit_report())
+            else:
+                print("Index {} failed the J test. Try loosen the threshold.")
         else:
             return_dict = dict()
             return_dict["RMS"] = 0.

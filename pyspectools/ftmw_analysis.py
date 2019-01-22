@@ -2,6 +2,7 @@
 import datetime
 import re
 import os
+from copy import deepcopy
 from dataclasses import dataclass, field
 from itertools import combinations, product
 from typing import List, Dict
@@ -156,6 +157,10 @@ class Batch:
 
     def __repr__(self):
         return "{}-Batch {}".format(self.machine, self.id)
+
+    def __copy__(self):
+        batch_obj = Batch(**self.__dict__)
+        return batch_obj
 
     def find_scan(self, id):
         scans = [scan for scan in self.scans if scan.id == id]
@@ -340,6 +345,23 @@ class Batch:
                 print("Index {} failed to fit!".format(index))
         opt_df = pd.DataFrame(data)
         return opt_df
+
+    def search_frequency(self, frequency, tol=0.001):
+        """
+        Search the Batch scans for a particular frequency, and return
+        any scans that lie within the tolerance window
+        :param frequency: float specifying frequency to search
+        :param tol: float decimal percentage to use for the search tolerance
+        :return new_batch: a new Batch object with selected scans
+        """
+        upper = frequency * (1 + tol)
+        lower = frequency * (1 - tol)
+        scans = [
+            scan for scan in self.scans if lower <= scan.cavity_frequency <= upper
+        ]
+        #new_batch = deepcopy(self)
+        #new_batch.scans = scans
+        return scans
 
 
 @dataclass
@@ -668,7 +690,7 @@ class Scan:
         )
         return trace
 
-    def fit_cavity(self, plot=True):
+    def fit_cavity(self, plot=True, verbose=False):
         """
         Perform a fit to the cavity spectrum. Uses a paired Gaussian model
         that minimizes the number of fitting parameters.
@@ -678,7 +700,7 @@ class Scan:
         y = self.spectrum["Intensity"].dropna().values
         x = self.spectrum["Frequency (MHz)"].dropna().values
         model = fitting.PairGaussianModel()
-        result = model.fit_pair(x, y)
+        result = model.fit_pair(x, y, verbose=verbose)
         self.spectrum["Fit"] = result.best_fit
         self.fit = result
         self.fit.frequency = self.fit.best_values["x0"]
@@ -718,7 +740,6 @@ class Scan:
             ].values
         signal = np.average(np.sort(peaks)[:2])
         return signal / noise
-
 
 
 def parse_scan(filecontents):
