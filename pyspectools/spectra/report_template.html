@@ -16,14 +16,7 @@
 
 <div>
     <h2> Peak statistics </h2>
-    <hr>
-    <p> A total of {{ num_peaks }} were detected above the noise RMS. </p>
-    <p> There were {{ num_artifacts }} artifacts removed at these frequencies: {{ artifacts }} </p>
-    <p> Using CDMS/JPL catalogs, {{ num_splat }} were assigned to {{ num_splat_mol }} molecules ({{ splat_percent }}%). </p>
-    <p> Using local SPCAT catalogs, {{ num_cat }} were assigned to {{ num_cat_mol }} molecules ({{ cat_percent }}%). </p>
-    <p> Using .lin catalogs, {{ num_lin }} were assigned to {{ num_lin_mol }} molecules ({{ lin_percent }}%). </p>
-    <p> {{ num_uline }} lines remain elusive. </p>
-    <hr>
+    {{ plotly_breakdown }}
 </div>
 
 <div>

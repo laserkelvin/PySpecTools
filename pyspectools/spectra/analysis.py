@@ -13,7 +13,7 @@ from sklearn.metrics import silhouette_samples
 from pyspectools import fitting
 
 
-def fit_line_profile(spec_df, center, width, intensity,
+def fit_line_profile(spec_df, center, width=None, intensity=None,
         verbose=False, freq_col="Frequency", int_col="Intensity"):
     """ 
         Somewhat high level function that wraps lmfit for
@@ -30,15 +30,17 @@ def fit_line_profile(spec_df, center, width, intensity,
         min=center * 0.9997,
         max=center * 1.0003
     )
-    params["height"].set(
-        intensity,
-        min=0.
-        )
-    params["sigma"].set(
-        width,
-        min=width * 0.95,
-        max=width * 1.05
-        )
+    if intensity:
+        params["height"].set(
+            intensity,
+            min=0.
+            )
+    if width:
+        params["sigma"].set(
+            width,
+            min=width * 0.95,
+            max=width * 1.05
+            )
     # Slice up a small chunk in frequency space; 0.5% of the
     # center frequency to allow for broad lineshapes
     freq_range = [center * offset for offset in [0.9995, 1.0005]]

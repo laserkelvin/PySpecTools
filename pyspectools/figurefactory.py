@@ -293,7 +293,6 @@ def overlay_dr_spectrum(dataframe, progressions, freq_col="Frequency", int_col="
             hoverinfo="name+x",
             name="Progression {}".format(index)
         )
-
     return fig
 
 
@@ -364,6 +363,22 @@ def dr_network_diagram(connections, **kwargs):
     return fig, connected
 
 
+def init_plotly_subplot(nrows, ncols, **kwargs):
+    """
+    Initialize a Plotly subplot.
+    :param nrows: number of rows for the subplot
+    :param ncols: number of columns for the subplot
+    :return: plotly FigureWidget object
+    """
+    subplot = tools.make_subplots(
+        rows=nrows,
+        cols=ncols,
+        **kwargs
+    )
+    fig = go.FigureWidget(subplot)
+    return fig
+
+
 def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency", int_col="Intensity"):
     """
     Create a Loomis-Wood style plot via a list of frequencies, and a broadband
@@ -391,15 +406,14 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency",
     nplots = len(frequencies)
 
     titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
-    subplot = tools.make_subplots(
-        rows=nplots,
-        cols=1,
-        shared_xaxes=True,
-        vertical_spacing=0.15,
-        subplot_titles=titles,
+    fig = init_plotly_subplot(
+        nrows=nplots, ncols=1,
+        **{
+            "subplot_titles": titles,
+            "vertical_spacing": 0.15,
+            "shared_xaxes": True
+        }
     )
-    fig = go.FigureWidget(subplot)
-
     for index, frequency in enumerate(frequencies):
         # Calculate the offset frequency
         dataframe["Offset " + str(index)] = dataframe[freq_col] - frequency

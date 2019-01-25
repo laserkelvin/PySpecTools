@@ -18,12 +18,11 @@ from periodictable import formula
 from plotly.offline import plot
 from plotly import graph_objs as go
 
-from pyspectools import routines, parsers
+from pyspectools import routines, parsers, figurefactory
 from pyspectools import fitting
 from pyspectools import units
 from pyspectools.astro import analysis as aa
 from pyspectools.spectra import analysis
-from pyspectools import parsers
 
 
 @dataclass
@@ -72,6 +71,7 @@ class Assignment:
     interference: bool = False
     weighting: float = 0.0
     source: str = "Catalog"
+    public: bool = True
 
     def __eq__(self, other):
         """ Dunder method for comparing molecules.
@@ -263,7 +263,7 @@ class AssignmentSession:
         self.assignments = list()
         self.ulines = list()
         self.umols = list()
-        self.umol_counter = self.umol_gen()
+        #self.umol_counter = self.umol_gen()
         # Default settings for columns
         if freq_col not in self.data.columns:
             self.freq_col = self.data.columns[0]
@@ -297,9 +297,10 @@ class AssignmentSession:
             :return peaks_df: dataframe containing peaks
         """
         if threshold is None:
-            # Set the threshold as 10% of the baseline + 1sigma. The peak_find function will
+            # Set the threshold as 20% of the baseline + 1sigma. The peak_find function will
             # automatically weed out the rest.
-            threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std()) * 0.1
+            threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std()) * 0.2
+            print("Peak detection threshold is: {}".format(threshold))
         peaks_df = analysis.peak_find(
             self.data,
             freq_col=self.freq_col,
@@ -479,7 +480,8 @@ class AssignmentSession:
                     print("Attempting to fit line profile...")
                     fit_results = analysis.fit_line_profile(
                         self.data,
-                        frequency
+                        frequency,
+
                     )
                     # Pass the fitted parameters into Assignment object
                     ass_dict["fit"] = fit_results.best_values
@@ -633,7 +635,7 @@ class AssignmentSession:
             if sliced_catalog is not None:
                 display(HTML(sliced_catalog.to_html()))
                 if auto is False:
-                    index = int(raw_input("Please choose a candidate by index."))
+                    index = int(input("Please choose a candidate by index."))
                 elif auto is True:
                     index = 0
                 if index in sliced_catalog.index:
@@ -677,9 +679,6 @@ class AssignmentSession:
         :param molecule: optional str specifying the name of the molecule
         """
         counter = 0
-        if molecule is None:
-            # If no name is supplied, use the next class attribute counter
-            molecule = next(self.umol_counter)
         for freq, scan_id in zip(frequencies, ids):
             uline_freqs = np.array([uline.frequency for uline in self.ulines])
             nearest, index = routines.find_nearest(uline_freqs, freq)
@@ -966,14 +965,8 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
         )
         self.table = ass_df
-        self.profiles = profiles_df
         # Dump assignments to disk
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
-        profiles_df.to_csv(
-            "reports/{0}-profiles.csv".format(self.session.experiment),
-            index=False
-            )
-
         # Update the uline peak list with only unassigned stuff
         self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
         # Dump Uline data to disk
@@ -1104,7 +1097,7 @@ class AssignmentSession:
         fig.layout["xaxis"]["title"] = "Frequency (MHz)"
         fig.layout["xaxis"]["tickformat"] = ".,"
 
-        fig.add_scatter(
+        fig.add_scattergl(
             x=self.data[self.freq_col],
             y=self.data[self.int_col],
             name="Experiment",
@@ -1133,7 +1126,7 @@ class AssignmentSession:
                 columns=["Frequency", "Intensity"]
                 )
 
-            fig.add_scatter(
+            fig.add_scattergl(
                 x=self.simulated["Frequency"],
                 y=self.simulated["Intensity"],
                 name="Simulated spectrum"
@@ -1149,7 +1142,6 @@ class AssignmentSession:
 
         return fig
 
-
     def create_html_report(self, filepath=None):
         """
         Function for generating an HTML report for sharing.
@@ -1162,38 +1154,122 @@ class AssignmentSession:
         with open(template_path) as read_file:
             template = Template(read_file.read())
         html_dict = dict()
-        total_lines = len(self.ulines) + len(self.assignments)
+        # The assigned molecules table
         reduced_table = self.table[
             ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
         ]
-        artifacts = reduced_table.loc[reduced_table["name"] == "Artifact"]
-        splat = reduced_table.loc[reduced_table["source"] == "CDMS/JPL"]
-        cats = reduced_table.loc[reduced_table["source"] == "Catalog"]
-        lins = reduced_table.loc[reduced_table["source"] == "Line file"]
-        html_dict["num_peaks"] = total_lines
-        html_dict["num_artifacts"] = len(artifacts)
-        html_dict["artifacts"] = artifacts["frequency"].values
-        html_dict["num_splat"] = len(splat)
-        html_dict["num_splat_mol"] = len(splat["formula"].unique())
-        html_dict["splat_percent"] = (len(splat) / total_lines) * 100.
-        html_dict["num_cat"] = len(cats)
-        html_dict["num_cat_mol"] = len(cats["formula"].unique())
-        html_dict["cat_percent"] = (len(cats) / total_lines) * 100.
-        html_dict["num_lin"] = len(lins)
-        html_dict["num_lin_mol"] = len(lins["formula"].unique())
-        html_dict["lin_percent"] = (len(lins) / total_lines) * 100.
         html_dict["assignments_table"] = reduced_table.to_html()
-        html_dict["num_uline"] = len(self.ulines)
+        # The unidentified features table
         uline_df = pd.DataFrame(
             [[uline.frequency, uline.intensity] for uline in self.ulines], columns=["Frequency", "Intensity"]
         )
         html_dict["uline_table"] = uline_df.to_html()
+        # Plotly displays of the spectral feature breakdown and whatnot
+        html_dict["plotly_breakdown"] = plot(self.plot_breakdown(), output_type="div")
         html_dict["plotly_figure"] = plot(self.plot_assigned(), output_type="div")
+        # Render the template with Jinja and save the HTML report
         output = template.render(session=self.session, **html_dict)
         if filepath is None:
             filepath = "reports/{}-summary.html".format(self.session.experiment)
         with open(filepath, "w+") as write_file:
             write_file.write(output)
+
+    def plot_breakdown(self):
+        """
+        Generate a pie chart to summarize the breakdown of spectral features.
+        :return: Plotly FigureWidget object
+        """
+        fig = figurefactory.init_plotly_subplot(
+            nrows=1, ncols=2,
+            **{"subplot_titles": ("Reference Breakdown", "Intensity Breakdown")}
+        )
+        fig.layout["title"] = "Spectral Feature Breakdown"
+        fig.layout["showlegend"] = False
+        reduced_table = self.table[
+            ["frequency", "intensity", "formula",
+             "name", "catalog_frequency", "deviation",
+             "ustate_energy", "source", "public"]
+        ]
+        artifacts = reduced_table.loc[reduced_table["name"] == "Artifact"]
+        splat = reduced_table.loc[reduced_table["source"] == "CDMS/JPL"]
+        local = reduced_table.loc[
+            (reduced_table["source"] != "Artifact") &
+            (reduced_table["source"] != "CDMS/JPL")
+        ]
+        public = local.loc[local["public"] == True]
+        private = local.loc[local["public"] == False]
+        sources = ["Artifacts", "Splatalogue", "Published molecules", "Unpublished molecules"]
+        # Added up the total number of lines
+        total_lines = len(self.ulines) + len(self.assignments)
+        # Add up the total intensity
+        total_intensity = np.sum([uline.intensity for uline in self.ulines]) + np.sum(reduced_table["intensity"])
+        line_breakdown = [total_lines]
+        intensity_breakdown = [total_intensity]
+        for source in [artifacts, splat, public, private]:
+            line_breakdown.append(-len(source))
+            intensity_breakdown.append(-np.sum(source["intensity"]))
+        line_breakdown = np.cumsum(line_breakdown)
+        intensity_breakdown = np.cumsum(intensity_breakdown)
+        colors = ["#d7191c", "#fdae61", "#abdda4", "#2b83ba"]
+        fig.add_trace(
+            go.Scattergl(
+                x=sources,
+                y=line_breakdown,
+                fill="tozeroy",
+                hoverinfo="x+y"
+            ),
+            1,
+            1
+        )
+        fig.add_trace(
+            go.Bar(
+                x=sources,
+                y=[len(source) for source in [artifacts, splat, public, private]],
+                hoverinfo="x+y",
+                width=0.5,
+                marker={"color": colors}
+            ),
+            1,
+            1
+        )
+        fig.add_trace(
+            go.Scattergl(
+                x=sources,
+                y=intensity_breakdown,
+                fill="tozeroy",
+                hoverinfo="x+y"
+            ),
+            1,
+            2
+        )
+        fig.add_trace(
+            go.Bar(
+                x=sources,
+                y=[np.sum(source["intensity"]) for source in [artifacts, splat, public, private]],
+                hoverinfo="x+y",
+                width=0.5,
+                marker={"color": colors}
+            ),
+            1,
+            2
+        )
+        fig["layout"]["xaxis1"].update(
+            title="Source",
+            showgrid=True
+        )
+        fig["layout"]["yaxis1"].update(
+            title="Cumulative number of assignments",
+            range=[0., total_lines * 1.05]
+        )
+        fig["layout"]["xaxis2"].update(
+            title="Source",
+            showgrid=True
+        )
+        fig["layout"]["yaxis2"].update(
+            title="Cumulative intensity",
+            range=[0., total_intensity * 1.05]
+        )
+        return fig
 
     def plot_assigned(self):
         """
@@ -1209,7 +1285,7 @@ class AssignmentSession:
         fig.layout["xaxis"]["title"] = "Frequency (MHz)"
         fig.layout["xaxis"]["tickformat"] = ".2f"
 
-        fig.add_scatter(
+        fig.add_scattergl(
             x=self.data["Frequency"],
             y=self.data["Intensity"],
             name="Experiment",
@@ -1231,9 +1307,6 @@ class AssignmentSession:
             width=1.0,
             name="U-lines"
         )
-        # Store as attribute
-        self.plot = fig
-
         return fig
 
     def find_progressions(self, search=0.001, low_B=400.,
