@@ -299,13 +299,16 @@ class AssignmentSession:
         if threshold is None:
             # Set the threshold as 20% of the baseline + 1sigma. The peak_find function will
             # automatically weed out the rest.
-            threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std()) * 0.2
+            threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std() * 1.5)
+            self.threshold = threshold
             print("Peak detection threshold is: {}".format(threshold))
+        else:
+            self.threshold = threshold
         peaks_df = analysis.peak_find(
             self.data,
             freq_col=self.freq_col,
             int_col=self.int_col,
-            thres=threshold
+            thres=threshold,
         )
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
@@ -686,7 +689,7 @@ class AssignmentSession:
             # we assign it to this molecule. This is just to make sure that
             # if we sneak in some random out-of-band frequency this we won't
             # just assign it
-            if np.abs(nearest - freq) <= 0.2:
+            if np.abs(nearest - freq) <= 0.1:
                 assign_dict = {
                     "name": molecule,
                     "source": "Scan-{}".format(scan_id),
@@ -695,11 +698,28 @@ class AssignmentSession:
                     "frequency": nearest
                 }
                 self.assign_line(**assign_dict)
-                counter+=1
+                counter += 1
             else:
                 print("No U-line was sufficiently close.")
                 print("Expected: {}, Nearest: {}".format(freq, nearest))
         print("Tentatively assigned {} lines to {}.".format(counter, molecule))
+
+    def process_artifacts(self, frequencies):
+        counter = 0
+        for freq in frequencies:
+            uline_freqs = np.array([uline.frequency for uline in self.ulines])
+            nearest, index = routines.find_nearest(uline_freqs, freq)
+            if np.abs(nearest - freq) <= 0.1:
+                assign_dict = {
+                    "name": "Artifact",
+                    "index": index,
+                    "frequency": freq,
+                    "catalog_frequency": freq,
+                    "source": "Artifact"
+                }
+                self.assign_line(**assign_dict)
+                counter +=1
+        print("Removed {} lines as artifacts.".format(counter))
 
     def verify_molecules(self):
         """
@@ -993,6 +1013,7 @@ class AssignmentSession:
         # Dump data to notebook output
         for key, value in combined_dict.items():
             print(key + ":   " + str(value))
+        #self.update_database()
 
     def clean_folder(self, action=False):
         """
@@ -1154,6 +1175,8 @@ class AssignmentSession:
         with open(template_path) as read_file:
             template = Template(read_file.read())
         html_dict = dict()
+        # Say what the minimum value for peak detection is.
+        html_dict["peak_threshold"] = self.threshold
         # The assigned molecules table
         reduced_table = self.table[
             ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
@@ -1210,10 +1233,11 @@ class AssignmentSession:
             intensity_breakdown.append(-np.sum(source["intensity"]))
         line_breakdown = np.cumsum(line_breakdown)
         intensity_breakdown = np.cumsum(intensity_breakdown)
-        colors = ["#d7191c", "#fdae61", "#abdda4", "#2b83ba"]
+        labels = ["Total"] + sources
+        colors = ["#d7191c", "#fdae61", "#ffffbf", "#abdda4", "#2b83ba"]
         fig.add_trace(
             go.Scattergl(
-                x=sources,
+                x=labels,
                 y=line_breakdown,
                 fill="tozeroy",
                 hoverinfo="x+y"
@@ -1223,8 +1247,8 @@ class AssignmentSession:
         )
         fig.add_trace(
             go.Bar(
-                x=sources,
-                y=[len(source) for source in [artifacts, splat, public, private]],
+                x=labels,
+                y=[0.] + [len(source) for source in [artifacts, splat, public, private]],
                 hoverinfo="x+y",
                 width=0.5,
                 marker={"color": colors}
@@ -1234,7 +1258,7 @@ class AssignmentSession:
         )
         fig.add_trace(
             go.Scattergl(
-                x=sources,
+                x=labels,
                 y=intensity_breakdown,
                 fill="tozeroy",
                 hoverinfo="x+y"
@@ -1244,8 +1268,8 @@ class AssignmentSession:
         )
         fig.add_trace(
             go.Bar(
-                x=sources,
-                y=[np.sum(source["intensity"]) for source in [artifacts, splat, public, private]],
+                x=labels,
+                y=[0.] + [np.sum(source["intensity"]) for source in [artifacts, splat, public, private]],
                 hoverinfo="x+y",
                 width=0.5,
                 marker={"color": colors}
@@ -1404,3 +1428,21 @@ class AssignmentSession:
             filepath
         )
         print("Saved session to {}".format(filepath))
+
+    def update_database(self, dbpath=None):
+        if dbpath is None:
+            dbpath = os.path.join(
+                os.path.expanduser("~"), ".pyspectools/pyspeccatalog.csv"
+            )
+        uline_df = pd.DataFrame([uline.__dict__ for uline in self.ulines])
+        assign_df = pd.DataFrame([ass_obj.__dict__ for ass_obj in self.assignments])
+        if os.path.isfile(dbpath) is True:
+            catalog_db = pd.read_csv(dbpath)
+            new_catalog = pd.concat([catalog_db, uline_df, assign_df])
+            new_catalog.drop_duplicates(inplace=True)
+            new_catalog.reset_index(inplace=True)
+        else:
+            new_catalog = pd.concat([uline_df, assign_df])
+            new_catalog.reset_index(inplace=True)
+        new_catalog.to_csv(dbpath, index=False)
+
