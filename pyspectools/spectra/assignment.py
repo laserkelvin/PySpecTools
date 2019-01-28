@@ -193,14 +193,12 @@ class Session:
         experiment ID, composition, and guess_temperature.
         Doppler broadening can also be incorporated. 
 
-        parameters:
-        --------------
-        experiment: integer ID for experiment
-        composition: list of strings corresponding to atomic
-                     symbols
-        temperature: float temperature
-        doppler: float doppler in km/s; default value is about
-                 5 kHz at 15 GHz.
+        :param experiment: integer ID for experiment
+        :param composition: list of strings corresponding to atomic
+                            symbols
+        :param temperature: float temperature
+        :param doppler: float doppler in km/s; default value is about
+                        5 kHz at 15 GHz.
     """
     experiment: int
     composition: List[str] = field(default_factory=list)
@@ -346,12 +344,7 @@ class AssignmentSession:
 
             Raises exception error if nothing is found.
 
-            parameters:
-            ----------------
             :param frequency: float corresponding to the frequency in MHz
-
-            returns:
-            ----------------
             :return slice_df: pandas dataframe containing matches
         """
         slice_df = []
@@ -382,12 +375,7 @@ class AssignmentSession:
         """ Method to ask a simple yes/no if the frequency
             exists in either U-lines or assignments.
 
-            parameters:
-            ---------------
             :param frequency: float corresponding to frequency in MHz
-
-            returns:
-            --------------
             :return bool: True if it's in ulines/assignments, False otherwise
         """
         try:
@@ -410,6 +398,8 @@ class AssignmentSession:
             Conversely, if it's not known in Splatalogue it will defer
             assignment, flagging it as unassigned and dumping it into
             the `uline` attribute.
+
+            :param auto: bool if True the assignment process does not require user input.
         """
         if hasattr(self, "peaks") is False:
             print("Peak detection not run; running with default settings.")
@@ -509,10 +499,10 @@ class AssignmentSession:
             filtering, since there is insufficient information in a lin
             file.
 
-            Kwargs are passed into the assignment dictionary.
+            Kwargs are passed to the `assign_line` function, which provides
+            the user with additional options for flagging an Assignment
+            (e.g. public, etc.)
 
-            parameters:
-            -----------------
             :param name: str common name of the molecule
             :param formula: str chemical formula of the molecule
             :param linpath: path to line file to be parsed
@@ -602,8 +592,7 @@ class AssignmentSession:
         else:
             return None
 
-    def process_catalog(self, name, formula, catalogpath, 
-            auto=True, thres=-10., **kwargs):
+    def process_catalog(self, name, formula, catalogpath, auto=True, thres=-10., **kwargs):
         """
             Reads in a catalog (SPCAT) file and sweeps through the
             U-line list for this experiment finding coincidences.
@@ -615,10 +604,17 @@ class AssignmentSession:
             theoretical intensity and deviation from observation. In
             automatic mode, the highest weighted transition is assigned.
 
+            Kwargs are passed to the `assign_line` function, which will
+            allow the user to provide additional flags/information for
+            the Assignment object.
+
             parameters:
             ----------------
             :param name: str corresponding to common name of molecule
             :param formula: str corresponding to chemical formula
+            :param catalogpath: str filepath to the SPCAT file
+            :param auto: bool arg; if True, assignment does not require user input
+            :param thres: log10 of the theoretical intensity to use as a bottom limit
         """
         old_nulines = len(self.ulines)
         catalog_df = parsers.parse_cat(
@@ -705,6 +701,13 @@ class AssignmentSession:
         print("Tentatively assigned {} lines to {}.".format(counter, molecule))
 
     def process_artifacts(self, frequencies):
+        """
+        Function for specific for removing anomalies as "artifacts"; e.g. instrumental spurs and
+        interference, etc.
+        Assignments made this way fall under the "Artifact" category in the resulting assignment
+        tables.
+        :param frequencies: list-like with floats corresponding to artifact frequencies
+        """
         counter = 0
         for freq in frequencies:
             uline_freqs = np.array([uline.frequency for uline in self.ulines])
@@ -730,6 +733,8 @@ class AssignmentSession:
         In this mode, the search criterion for transitions are loosened w.r.t.
         upper state temperature and line intensity, as well as the peak finding
         algorithm.
+
+        TODO - need to make this actually work now...
         :return possible: dict containing dataframes for each molecule and transition
         """
         possible = dict()
@@ -846,13 +851,12 @@ class AssignmentSession:
             # If an index is supplied, pull up from uline list
             ass_obj = self.ulines[index]
         elif frequency:
-            for index, obj in enumerate(self.ulines):
-                deviation = np.abs(frequency - obj.frequency)
-                # Check that the deviation is sufficiently small
-                if deviation <= (frequency * 1e-5):
-                    # Remove from uline list
-                    ass_obj = obj
-                    frequency = ass_obj.frequency
+            uline_freqs = np.array([uline.frequency for uline in self.ulines])
+            nearest, index = routines.find_nearest(uline_freqs, frequency)
+            deviation = np.abs(frequency - nearest)
+            # Check that the deviation is at least a kilohertz
+            if deviation <= 1E-3:
+                ass_obj = self.ulines[index]
         if ass_obj:
             ass_obj.name = name
             ass_obj.uline = False
@@ -871,8 +875,6 @@ class AssignmentSession:
         """ Method for getting all the unique molecules out
             of the assignments, and tally up the counts.
 
-            returns:
-            ---------------
             :return identifications: dict containing a tally of molecules
                                      identified
         """
@@ -892,18 +894,13 @@ class AssignmentSession:
             Function for providing some astronomically relevant
             parameters by analyzing Gaussian line shapes.
 
-            parameters:
-            --------------
-            :param Q - rotational partition function at temperature
-            :param T - temperature in K
-            :param name - str name of molecule
-            :param formula - chemical formula of molecule
-            :param smiles - SMILES string for molecule
-
-            returns:
-            --------------
-            :return profile_df - pandas dataframe containing all of the
-                         analysis
+            :param Q: rotational partition function at temperature
+            :param T: temperature in K
+            :param name: str name of molecule
+            :param formula: chemical formula of molecule
+            :param smiles: SMILES string for molecule
+            :return profile_df: pandas dataframe containing all of the
+                                analysis
         """
         profile_data = list()
         if name:
@@ -1082,16 +1079,12 @@ class AssignmentSession:
             GaussianModel is used here to remain internally consistent
             with the rest of the code.
 
-            parameters:
-            ---------------
-            x - array of x values to evaluate Gaussians on
-            centers - array of Gaussian centers
-            widths - array of Gaussian widths
-            amplitudes - array of Gaussian amplitudes
-
-            returns:
-            ---------------
-            y - array of y values
+            :param x: array of x values to evaluate Gaussians on
+            :param centers: array of Gaussian centers
+            :param widths: array of Gaussian widths
+            :param amplitudes: array of Gaussian amplitudes
+            :param fake: bool indicating whether false intensities are used for the simulation
+            :return y: array of y values
         """
         y = np.zeros(len(x))
         model = GaussianModel()
@@ -1100,7 +1093,7 @@ class AssignmentSession:
                 scaling = a
             else:
                 scaling = 1.
-            y+=scaling * model.eval(
+            y += scaling * model.eval(
                 x=x,
                 center=c,
                 sigma=w,
@@ -1165,7 +1158,11 @@ class AssignmentSession:
 
     def create_html_report(self, filepath=None):
         """
-        Function for generating an HTML report for sharing.
+        Function for generating an HTML report for sharing. The HTML report is rendered with
+        Jinja2, and uses the template "report_template.html" located in the module directory.
+        The report includes interactive plots showing statistics of the assignments/ulines and
+        an overview of the spectrum. At the end of the report is a table of the assignments and
+        uline data.
         :param filepath: str path to save the report to. Defaults to reports/{id}-summary.html
         """
         from jinja2 import Template
@@ -1199,7 +1196,14 @@ class AssignmentSession:
 
     def plot_breakdown(self):
         """
-        Generate a pie chart to summarize the breakdown of spectral features.
+        Generate two charts to summarize the breakdown of spectral features.
+        The left column plot shows the number of ulines being assigned by
+        the various sources of frequency data.
+
+        Artifacts - instrumental interference, from the function `process_artifacts`
+        Splatalogue - uses the astroquery API, from the function `splat_assign_spectrum`
+        Published - local catalogs, but with the `public` kwarg flagged as True
+        Unpublished - local catalogs, but with the `public` kwarg flagged as False
         :return: Plotly FigureWidget object
         """
         fig = figurefactory.init_plotly_subplot(
@@ -1235,6 +1239,7 @@ class AssignmentSession:
         intensity_breakdown = np.cumsum(intensity_breakdown)
         labels = ["Total"] + sources
         colors = ["#d7191c", "#fdae61", "#ffffbf", "#abdda4", "#2b83ba"]
+        # Left column plot of the number of lines assigned
         fig.add_trace(
             go.Scattergl(
                 x=labels,
@@ -1245,6 +1250,7 @@ class AssignmentSession:
             1,
             1
         )
+        # Bar charts showing the number of lines from each source
         fig.add_trace(
             go.Bar(
                 x=labels,
@@ -1256,6 +1262,7 @@ class AssignmentSession:
             1,
             1
         )
+        # Right column plot of the intensity contributions
         fig.add_trace(
             go.Scattergl(
                 x=labels,
@@ -1266,6 +1273,7 @@ class AssignmentSession:
             1,
             2
         )
+        # Bar chart showing the intensity contribution from each source
         fig.add_trace(
             go.Bar(
                 x=labels,
