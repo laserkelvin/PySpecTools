@@ -12,9 +12,13 @@ import tinydb
 
 
 class SpectralCatalog(tinydb.TinyDB):
+    """
+    Grand unified experimental catalog. Stores assignment and uline information
+    across the board.
+    """
     def __init__(self, dbpath=None):
         if dbpath is None:
-            dbpath = os.path.expanduser("~/.pyspectools/pyspec.db")
+            dbpath = os.path.expanduser("~/.pyspectools/pyspec_experiment.db")
         super().__init__(dbpath)
 
     def search_frequency(self, frequency):
@@ -24,3 +28,14 @@ class SpectralCatalog(tinydb.TinyDB):
         :return:
         """
         return None
+
+
+class TheoryCatalog(tinydb.TinyDB):
+    """
+    Grand unified theory catalog.
+    """
+    def __init__(self, dbpath=None):
+        if dbpath is None:
+            dbpath = os.path.expanduser("~/.pyspectools/pyspec_theory.db")
+        super().__init__(dbpath)
+
