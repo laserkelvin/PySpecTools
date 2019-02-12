@@ -195,15 +195,27 @@ class Session:
 
         :param experiment: integer ID for experiment
         :param composition: list of strings corresponding to atomic
-                            symbols
-        :param temperature: float temperature
+                            symbols. Used for filtering out species
+                            in the Splatalogue assignment procedure.
+        :param temperature: float temperature in K. Used for filtering
+                            transitions in the automated assigment.
         :param doppler: float doppler in km/s; default value is about
-                        5 kHz at 15 GHz.
+                        5 kHz at 15 GHz. Used for simulating lineshapes and
+                        for lineshape analysis.
+        :param freq_prox: float, frequency cutoff for line assignments. If
+                          freq_abs attribute is True, this value is taken as
+                          the absolute value. Otherwise, it is a percentage of
+                          the frequency being compared.
+        :param freq_abs: bool, if True, freq_prox attribute is taken as the
+                         absolute value of frequency, otherwise as a decimal
+                         percentage of the frequency being compared
     """
     experiment: int
     composition: List[str] = field(default_factory=list)
     temperature: float = 4.0
     doppler: float = 0.01
+    freq_prox: float = 0.1
+    freq_abs: bool = True
 
     def __str__(self):
         form = "Experiment: {}, Composition: {}, Temperature: {} K".format(
@@ -219,6 +231,10 @@ class AssignmentSession:
         Wraps some high level functionality from the analysis
         module so that this can be run reproducibly in a jupyter
         notebook.
+
+        TODO - Homogenize the assignment functions to use one main
+               function, as opposed to having separate functions
+               for catalogs, lin, etc.
     """
 
     @classmethod
@@ -434,7 +450,9 @@ class AssignmentSession:
                     splat_df.drop(index, inplace=True)
             nitems = len(splat_df)
 
-            splat_df = self.calc_line_weighting(frequency, splat_df, prox=0.01)
+            splat_df = self.calc_line_weighting(
+                frequency, splat_df, prox=self.session.freq_prox, abs=self.session.freq_abs
+            )
             if splat_df is not None:
                 display(HTML(splat_df.to_html()))
                 try:
@@ -514,7 +532,9 @@ class AssignmentSession:
         for uindex, uline in enumerate(self.ulines):
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency,
-                lin_df
+                lin_df,
+                prox=self.session.freq_prox,
+                abs=self.session.freq_abs
             )
             if sliced_catalog is not None:
                 display(HTML(sliced_catalog.to_html()))
@@ -544,7 +564,7 @@ class AssignmentSession:
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
 
-    def calc_line_weighting(self, frequency, catalog_df, prox=0.0001):
+    def calc_line_weighting(self, frequency, catalog_df, prox=0.00005, abs=True):
         """
             Function for calculating the weighting factor for determining
             the likely hood of an assignment. The weighting factor is
@@ -557,6 +577,7 @@ class AssignmentSession:
             :param frequency: float observed frequency in MHz
             :param catalog_df: dataframe corresponding to catalog entries
             :param prox: optional float for frequency proximity threshold
+            :param abs: bool specifying whether prox is taken as the absolute value
 
             returns:
             ---------------
@@ -564,8 +585,12 @@ class AssignmentSession:
             If matches are found, calculate the weights and return the candidates
             in a dataframe.
         """
-        lower_freq = frequency * (1 - prox)
-        upper_freq = frequency * (1 + prox)
+        if abs is False:
+            lower_freq = frequency * (1 - prox)
+            upper_freq = frequency * (1 + prox)
+        else:
+            lower_freq = frequency - prox
+            upper_freq = frequency + prox
         sliced_catalog = catalog_df.loc[
             (catalog_df["Frequency"] >= lower_freq) & (catalog_df["Frequency"] <= upper_freq)
             ]
@@ -630,7 +655,9 @@ class AssignmentSession:
         # Loop over the uline list
         for uindex, uline in enumerate(self.ulines):
             # 0.1% of frequency
-            sliced_catalog = self.calc_line_weighting(uline.frequency, catalog_df)
+            sliced_catalog = self.calc_line_weighting(
+                uline.frequency, catalog_df, prox=self.session.freq_prox, abs=self.session.freq_abs
+            )
             if sliced_catalog is not None:
                 display(HTML(sliced_catalog.to_html()))
                 if auto is False:
@@ -685,7 +712,11 @@ class AssignmentSession:
             # we assign it to this molecule. This is just to make sure that
             # if we sneak in some random out-of-band frequency this we won't
             # just assign it
-            if np.abs(nearest - freq) <= 0.1:
+            if self.session.freq_abs is True:
+                thres = self.session.freq_prox
+            else:
+                thres = 0.1
+            if np.abs(nearest - freq) <= thres:
                 assign_dict = {
                     "name": molecule,
                     "source": "Scan-{}".format(scan_id),
