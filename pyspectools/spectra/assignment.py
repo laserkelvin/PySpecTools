@@ -253,7 +253,7 @@ class AssignmentSession:
 
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0,
-            freq_col="Frequency", int_col="Intensity"):
+            freq_col="Frequency", int_col="Intensity", **kwargs):
         """ Initialize a AssignmentSession with a pandas dataframe
             corresponding to a spectrum.
 
@@ -272,6 +272,8 @@ class AssignmentSession:
                 os.mkdir(folder)
         # Initialize a Session dataclass
         self.session = Session(experiment, composition, temperature)
+        # Update additional setttings
+        self.session.__dict__.update(**kwargs)
         self.data = exp_dataframe
         self.t_threshold = self.session.temperature * 3.
         self.assignments = list()
@@ -334,7 +336,7 @@ class AssignmentSession:
             # drop repeated frequencies
             peaks_df.drop_duplicates(["Frequency"], inplace=True)
         # Generate U-lines
-        skip = ["temperature", "doppler"]
+        skip = ["temperature", "doppler", "freq_abs", "freq_prox"]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
@@ -752,7 +754,7 @@ class AssignmentSession:
                     "source": "Artifact"
                 }
                 self.assign_line(**assign_dict)
-                counter +=1
+                counter += 1
         print("Removed {} lines as artifacts.".format(counter))
 
     def verify_molecules(self):
@@ -1209,12 +1211,38 @@ class AssignmentSession:
         reduced_table = self.table[
             ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
         ]
-        html_dict["assignments_table"] = reduced_table.to_html()
+        html_dict["assignments_table"] = reduced_table.style.bar(
+            subset=["deviation", "ustate_energy"],
+            align="mid",
+            color=['#d65f5f', '#5fba7d']
+        )\
+        .bar(
+            subset=["intensity"],
+            color="#5fba7d"
+        )\
+        .format(
+            {
+                "frequency": "{:.4f}",
+                "catalog_frequency": "{:.4f}",
+                "deviation": "{:.3f}",
+                "ustate_energy": "{:.2f}",
+                "intensity": "{:.3f}"
+            }
+        ).render()
         # The unidentified features table
         uline_df = pd.DataFrame(
             [[uline.frequency, uline.intensity] for uline in self.ulines], columns=["Frequency", "Intensity"]
         )
-        html_dict["uline_table"] = uline_df.to_html()
+        html_dict["uline_table"] = uline_df.style.bar(
+            subset=["Intensity"],
+            color='#5fba7d'
+        )\
+        .format(
+            {
+                "Frequency": "{:.4f}",
+                "Intensity": "{:.2f}"
+            }
+        ).render()
         # Plotly displays of the spectral feature breakdown and whatnot
         html_dict["plotly_breakdown"] = plot(self.plot_breakdown(), output_type="div")
         html_dict["plotly_figure"] = plot(self.plot_assigned(), output_type="div")
