@@ -370,8 +370,8 @@ class AssignmentSession:
         upper_freq = frequency * 1.001
         if hasattr(self, "table"):
             slice_df = self.table.loc[
-                (self.table["Frequency"] >= lower_freq) &
-                (self.table["Frequency"] <= upper_freq)
+                (self.table["frequency"] >= lower_freq) &
+                (self.table["frequency"] <= upper_freq)
                 ]
         # If no hits turn up, look for it in U-lines
         if len(slice_df) == 0:
@@ -696,7 +696,7 @@ class AssignmentSession:
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
 
-    def process_frequencies(self, frequencies, ids, molecule=None):
+    def process_frequencies(self, frequencies, ids, molecule=None, **kwargs):
         """
         Function to mark frequencies to belong to a single molecule, and for book-keeping's
         sake a list of ids are also required to indicate the original scan as the source
@@ -726,6 +726,7 @@ class AssignmentSession:
                     "index": index,
                     "frequency": nearest
                 }
+                assign_dict.update(**kwargs)
                 self.assign_line(**assign_dict)
                 counter += 1
             else:
@@ -889,6 +890,7 @@ class AssignmentSession:
             deviation = np.abs(frequency - nearest)
             # Check that the deviation is at least a kilohertz
             if deviation <= 1E-3:
+                print("Found U-line number {}.".format(index))
                 ass_obj = self.ulines[index]
         if ass_obj:
             ass_obj.name = name
@@ -1216,19 +1218,19 @@ class AssignmentSession:
             align="mid",
             color=['#d65f5f', '#5fba7d']
         )\
-        .bar(
-            subset=["intensity"],
-            color="#5fba7d"
-        )\
-        .format(
-            {
-                "frequency": "{:.4f}",
-                "catalog_frequency": "{:.4f}",
-                "deviation": "{:.3f}",
-                "ustate_energy": "{:.2f}",
-                "intensity": "{:.3f}"
-            }
-        ).render()
+            .bar(
+                subset=["intensity"],
+                color="#5fba7d"
+            )\
+            .format(
+                {
+                    "frequency": "{:.4f}",
+                    "catalog_frequency": "{:.4f}",
+                    "deviation": "{:.3f}",
+                    "ustate_energy": "{:.2f}",
+                    "intensity": "{:.3f}"
+                }
+            ).render()
         # The unidentified features table
         uline_df = pd.DataFrame(
             [[uline.frequency, uline.intensity] for uline in self.ulines], columns=["Frequency", "Intensity"]
@@ -1237,12 +1239,12 @@ class AssignmentSession:
             subset=["Intensity"],
             color='#5fba7d'
         )\
-        .format(
-            {
-                "Frequency": "{:.4f}",
-                "Intensity": "{:.2f}"
-            }
-        ).render()
+            .format(
+                {
+                    "Frequency": "{:.4f}",
+                    "Intensity": "{:.2f}"
+                }
+            ).render()
         # Plotly displays of the spectral feature breakdown and whatnot
         html_dict["plotly_breakdown"] = plot(self.plot_breakdown(), output_type="div")
         html_dict["plotly_figure"] = plot(self.plot_assigned(), output_type="div")
@@ -1375,6 +1377,12 @@ class AssignmentSession:
         fig.layout["title"] = "Experiment {}".format(self.session.experiment)
         fig.layout["xaxis"]["title"] = "Frequency (MHz)"
         fig.layout["xaxis"]["tickformat"] = ".2f"
+
+        # Update the peaks table
+        self.peaks = pd.DataFrame(
+            data=[[uline.frequency, uline.intensity] for uline in self.ulines],
+            columns=["Frequency", "Intensity"]
+        )
 
         fig.add_scattergl(
             x=self.data["Frequency"],
