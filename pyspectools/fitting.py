@@ -180,7 +180,7 @@ def harmonic_fitter(progressions, J_thres=0.01):
         J = (progression / approx_B) / 2.
         # We want at least half of the lines to be
         # close to being integer
-        if len(progression) > 2:
+        if len(progression) >= 2:
             if np.sum(quant_check(J, J_thres)) >= len(progression) / 1.5:
                 # Let B vary a bit
                 params["B"].set(
@@ -219,7 +219,7 @@ def harmonic_fitter(progressions, J_thres=0.01):
                     print("Index {} failed to fit.".format(index))
                     print(fit.fit_report())
             else:
-                print("Index {} failed the J test. Try loosen the threshold.")
+                print("Index {} failed the J test. Try loosen the threshold.".format(index))
         else:
             return_dict = dict()
             return_dict["RMS"] = 0.
