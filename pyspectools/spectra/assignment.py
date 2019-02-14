@@ -1408,6 +1408,102 @@ class AssignmentSession:
         )
         return fig
 
+    def stacked_plot(self, frequencies, freq_range=0.05):
+        # Update the peaks table
+        self.peaks = pd.DataFrame(
+            data=[[uline.frequency, uline.intensity] for uline in self.ulines],
+            columns=["Frequency", "Intensity"]
+        )
+        dataframe = self.data.copy()
+        # Want the frequencies in ascending order, going upwards in the plot
+        indices = np.where(
+            np.logical_and(
+                dataframe[self.freq_col].min() <= frequencies,
+                frequencies <= dataframe[self.freq_col].max()
+            )
+        )
+        # Plot only frequencies within band
+        frequencies = frequencies[indices]
+        frequencies = np.sort(frequencies)[::-1]
+        nplots = len(frequencies)
+
+        titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
+        fig = figurefactory.init_plotly_subplot(
+            nrows=nplots, ncols=1,
+            **{
+                "subplot_titles": titles,
+                "vertical_spacing": 0.15,
+                "shared_xaxes": True
+            }
+        )
+        for index, frequency in enumerate(frequencies):
+            # Calculate the offset frequency
+            dataframe["Offset " + str(index)] = dataframe[self.freq_col] - frequency
+            # Range as a fraction of the center frequency
+            freq_cutoff = freq_range * frequency
+            max_freq = frequency + freq_cutoff
+            min_freq = frequency - freq_cutoff
+            sliced_df = dataframe.loc[
+                (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
+                ]
+            sliced_peaks = self.peaks.loc[
+                (self.peaks["Frequency"] <= max_freq) & (min_freq <= self.peaks["Frequency"])
+            ]
+            sliced_peaks["Offset Frequency"] = sliced_peaks["Frequency"] - frequency
+            sliced_assignments = self.table.loc[
+                (self.table["frequency"] <= max_freq) & (min_freq <= self.table["frequency"])
+            ]
+            sliced_assignments["offset_frequency"] = sliced_assignments["catalog_frequency"] - frequency
+            # Plot the data
+            traces = list()
+            # Spectrum plot
+            traces.append(
+                    go.Scattergl(
+                    x=sliced_df["Offset " + str(index)],
+                    y=sliced_df[self.int_col],
+                    mode="lines",
+                    opacity=0.6,
+                    marker={"color": "rgb(5,113,176)"}
+                )
+            )
+            traces.append(
+                go.Bar(
+                    x=sliced_assignments["offset_frequency"],
+                    y=sliced_assignments["intensity"],
+                    width=1.0,
+                    hoverinfo="text",
+                    text=sliced_assignments["name"] + "-" + sliced_assignments["r_qnos"],
+                    name="Assignments",
+                    marker={"color": "rgb(253,174,97)"}
+                )
+            )
+            traces.append(
+                go.Bar(
+                    x=sliced_peaks["Offset Frequency"],
+                    y=sliced_peaks["Intensity"],
+                    width=1.0,
+                    name="U-lines",
+                    marker={"color": "rgb(26,150,65)"},
+                    hoverinfo="text",
+                    text=sliced_peaks["Frequency"]
+                )
+            )
+            # Plotly indexes from one because they're stupid
+            fig.add_traces(traces, [index + 1] * 3, [1] * 3)
+            fig["layout"]["xaxis1"].update(
+                range=[-freq_cutoff, freq_cutoff],
+                title="Offset frequency (MHz)",
+                showgrid=True
+            )
+            fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
+        fig["layout"].update(
+            autosize=True,
+            height=1000,
+            width=900,
+            showlegend=False
+        )
+        return fig
+
     def find_progressions(self, search=0.001, low_B=400.,
                           high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs):
         """
