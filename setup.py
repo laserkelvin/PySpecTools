@@ -75,8 +75,8 @@ setup(
         "pandas",
         "scipy",
         "matplotlib",
-        "astroquery",
-        "astropy",
+        "astroquery=0.3.8",
+        "astropy=3.0.5",
         "lmfit",
         "peakutils",
         "sklearn",
@@ -89,6 +89,7 @@ setup(
         "paramiko",
         "jinja2",
         "tqdm",
+        "tinydb",
         "networkx"
     ],
     cmdclass={
