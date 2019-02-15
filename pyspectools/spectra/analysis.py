@@ -90,18 +90,19 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
     # Get the peaks if we were just using indexes
     direct_df = spec_df.iloc[peak_indices]
     direct_df.reset_index(inplace=True)
+    direct_freqs = direct_df["Frequency"].values
     # Calculate the difference in fit vs. approximate peak
     # frequencies
     differences = np.abs(direct_df[freq_col] - frequencies)
     intensities = spec_df.iloc[peak_indices][int_col].values
     peak_df = pd.DataFrame(
-        data=list(zip(frequencies, intensities)),
-        columns=["Frequency", "Intensity"]
+        data=list(zip(frequencies, direct_freqs, intensities)),
+        columns=["Frequency", "Peak Frequencies", "Intensity"]
         )
     # Take the indexed frequencies if the fit exploded
     # and deviates significantly from the original prediction
     peak_df.update(
-        direct_df.loc[differences >= 0.5]
+        direct_df.loc[differences >= 0.2]
         )
     # Use 1sigma as the detection threshold; remove everything else!
     peak_df = peak_df.loc[
