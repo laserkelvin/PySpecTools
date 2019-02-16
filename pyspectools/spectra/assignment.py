@@ -7,6 +7,7 @@
 
 import os
 from shutil import rmtree
+from copy import copy
 from dataclasses import dataclass, field
 from typing import List, Dict
 
@@ -21,6 +22,7 @@ from plotly import graph_objs as go
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import fitting
 from pyspectools import units
+from pyspectools import database
 from pyspectools.astro import analysis as aa
 from pyspectools.spectra import analysis
 
@@ -423,6 +425,7 @@ class AssignmentSession:
             print("Peak detection not run; running with default settings.")
             self.find_peaks()
 
+        ulines = copy(self.ulines)
         for uindex, uline in enumerate(self.ulines):
             frequency = uline.frequency
             print("Searching for frequency {:,.4f}".format(frequency))
@@ -531,6 +534,7 @@ class AssignmentSession:
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
 
+        ulines = copy(self.ulines)
         for uindex, uline in enumerate(self.ulines):
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency,
@@ -550,7 +554,7 @@ class AssignmentSession:
                     assign_dict = {
                         "name": name,
                         "formula": formula,
-                        "index": uindex,
+                        "index": uline.peak_id,
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
@@ -599,19 +603,19 @@ class AssignmentSession:
         nentries = len(sliced_catalog)
         if nentries > 0:
             # Calculate probability weighting. Base is the inverse of distance
-            sliced_catalog["Deviation"] = np.abs(sliced_catalog["Frequency"] - frequency)
-            sliced_catalog["Weighting"] = (1. / sliced_catalog["Deviation"])
+            sliced_catalog.loc[:, "Deviation"] = np.abs(sliced_catalog["Frequency"] - frequency)
+            sliced_catalog.loc[:, "Weighting"] = (1. / sliced_catalog["Deviation"])
             # If intensity is included in the catalog incorporate it in
             # the weight calculation
             if "Intensity" in sliced_catalog:
-                sliced_catalog["Weighting"] *= (10 ** sliced_catalog["Intensity"])
+                sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog["Intensity"])
             elif "CDMS/JPL Intensity" in sliced_catalog:
-                sliced_catalog["Weighting"] *= (10 ** sliced_catalog["CDMS/JPL Intensity"])
+                sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog["CDMS/JPL Intensity"])
             else:
                 # If there are no recognized intensity columns, pass
                 pass
             # Normalize the weights
-            sliced_catalog["Weighting"] /= sliced_catalog["Weighting"].max()
+            sliced_catalog.loc[:, "Weighting"] /= sliced_catalog["Weighting"].max()
             # Sort by obs-calc
             sliced_catalog.sort_values(["Weighting"], ascending=False, inplace=True)
             sliced_catalog.reset_index(drop=True, inplace=True)
@@ -674,7 +678,7 @@ class AssignmentSession:
                     assign_dict = {
                         "name": name,
                         "formula": formula,
-                        "index": uindex,
+                        "index": uline.peak_id,
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
@@ -1060,6 +1064,17 @@ class AssignmentSession:
         if action is True:
             for folder in folders:
                 rmtree(folder)
+
+    def upload_database_assignments(self, dbpath=None):
+        """
+        Adds all of the entries to a specified SpectralCatalog database. The database defaults
+        to the global database stored in the home directory.
+        :param dbpath:
+        :return:
+        """
+        with database.SpectralCatalog(dbpath) as db_obj:
+            for assignment in self.assignments:
+                db_obj.add_entry(assignment)
 
     def simulate_sticks(self, catalogpath, N, Q, T, doppler=None, gaussian=False):
         """
