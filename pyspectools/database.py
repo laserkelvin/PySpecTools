@@ -33,17 +33,27 @@ class SpectralCatalog(tinydb.TinyDB):
         """
         self.close()
 
-    def add_entry(self, assignment):
+    def add_entry(self, assignment, dup_check=True):
         """
         This function adds an Assignment object to an existing database. The method will
         check for duplicates before adding.
         :param assignment:
         :return:
         """
-        if any([assignment.__dict__ == entry for entry in self.all()]) is False:
-            self.insert(assignment.__dict__)
+        add = False
+        if type(assignment) != dict:
+            new_entry = assignment.__dict__
         else:
-            warnings.warn("Entry already exists in database.")
+            new_entry = assignment
+        if dup_check is True:
+            if any([new_entry == entry for entry in self.all()]) is False:
+                add = True
+            else:
+                warnings.warn("Entry already exists in database.")
+        else:
+            add = True
+        if add is True:
+            self.insert(new_entry)
 
     def add_catalog(self, catalog_path, name, formula, **kwargs):
         """
@@ -56,29 +66,34 @@ class SpectralCatalog(tinydb.TinyDB):
         :param kwargs:
         :return:
         """
+        # check if the name and formula exists already
+        exist_df = self.search_molecule(name)
         cat_df = parsers.parse_cat(catalog_path)
+        if exist_df is not None:
+            # drop all of the entries that are already in the catalog
+            exist_freqs = exist_df["frequency"].values
+            cat_df = cat_df.loc[
+                ~cat_df["Frequency"].isin(list(exist_freqs)),
+                ]
         assign_dict = {
             "name": name,
             "formula": formula
         }
         assign_dict.update(**kwargs)
-        for index, row in cat_df.iterrows():
-            assign_dict.update(
-               **{
-                    "catalog_frequency": row["Frequency"],
-                    "catalog_intensity": row["Intensity"],
-                    "ustate_energy": row["Lower state energy"],
-                }
-            )
-            ass_obj = spectra.assignment.Assignment(**assign_dict)
-            try:
-                self.add_entry(ass_obj)
-            except:
-                print("Problem adding entry {}. Passing.".format(index))
+        # slice out only the relevant information from the dataframe
+        select_df = cat_df[["Frequency", "Intensity", "Lower state energy"]]
+        select_df.columns = ["catalog_frequency", "catalog_intensity", "ustate_energy"]
+        select_dict = select_df.to_dict(orient="records")
+        # update each line with the common data entries
+        assignments = [
+            spectra.assignment.Assignment(**line, **assign_dict).__dict__ for line in select_dict
+        ]
+        # Insert all of the documents en masse
+        self.insert_multiple(assignments)
 
     def search_frequency(self, frequency, freq_prox=0.1, freq_abs=True, dataframe=True):
         """\
-        :param frequency:
+        :param frequency: float, center frequency to search for in the database
         :param freq_prox: float, search range tolerance. If freq_abs is True, the absolute value is used (in MHz).
                           Otherwise, freq_prox is a decimal percentage of the frequency.
         :param freq_abs: bool, dictates whether the absolute value of freq_prox is used.
@@ -92,7 +107,8 @@ class SpectralCatalog(tinydb.TinyDB):
             max_freq = frequency * (1 + freq_prox)
         Entry = tinydb.Query()
         matches = self.search(
-            (Entry["frequency"] <= max_freq) & (min_freq <= Entry["frequency"])
+            (Entry["frequency"] <= max_freq) & (min_freq <= Entry["frequency"]) |
+            (Entry["catalog_frequency"] <= max_freq) & (min_freq <= Entry["catalog_frequency"])
         )
         if len(matches) != 0:
             if dataframe is True:
@@ -124,12 +140,38 @@ class SpectralCatalog(tinydb.TinyDB):
             return None
 
     def search_molecule(self, name, dataframe=True):
+        """
+        Search for a molecule in the database based on its name (not formula!).
+        Wraps the _search_field method, which will return None if nothing is found, or either a
+        pandas dataframe or a list of Assignment objects
+        :param name: str, name (not formula) of the molecule to search for
+        :param dataframe: bool, if True, returns a pandas dataframe
+        :return: matches: a dataframe or list of Assignment objects that match the search name
+        """
         matches = self._search_field("name", name, dataframe)
         return matches
 
     def search_experiment(self, exp_id, dataframe=True):
         matches = self._search_field("experiment", exp_id, dataframe)
         return matches
+
+    def search_formula(self, formula, dataframe=True):
+        matches = self._search_field("formula", formula, dataframe)
+        return matches
+
+    def _remove_field(self, field, value):
+        Entry = tinydb.Query()
+        self.remove(Entry[field] == value)
+
+    def remove_experiment(self, exp_id):
+        """
+        Remove all entries based on an experiment ID.
+        :param exp_id: int, experiment ID
+        """
+        self._remove_field("exp_id", exp_id)
+
+    def remove_molecule(self, name):
+        self._remove_field("name", name)
 
 
 class TheoryCatalog(tinydb.TinyDB):
