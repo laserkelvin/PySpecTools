@@ -252,29 +252,58 @@ class AssignmentSession:
     def load_session(cls, filepath):
         """
             Load an AssignmentSession from disk, once it has
-            been saved with the save_session method.
+            been saved with the save_session method which creates a pickle
+            file.
 
             parameters:
             --------------
-            filepath - path to the AssignmentSession file; typically
-                       in the sessions/{experiment_id}.dat
+            :param filepath - path to the AssignmentSession file; typically
+                       in the sessions/{experiment_id}.pkl
+            returns:
+            --------------
+            :return AssignmentSession object
         """
         session = routines.read_obj(filepath)
         return session
 
+    @classmethod
+    def from_ascii(
+            cls, filepath, experiment, composition=["C", "H"], delimiter="\t", temperature=4.0,
+            header=None, freq_col="Frequency", int_col="Intensity", **kwargs
+    ):
+        """
+        Create a pandas dataframe from a xy file, and create an AssignmentSession with the
+        loaded spectrum.
+        :param filepath:
+        :param experiment:
+        :param composition:
+        :param temperature:
+        :param freq_col:
+        :param int_col:
+        :param kwargs:
+        :return:
+        """
+        spec_df = pd.read_csv(filepath, delimiter=delimiter, header=header)
+        session = cls(spec_df, experiment, composition, temperature, freq_col, int_col, **kwargs)
+        return session
+
+
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0,
-            freq_col="Frequency", int_col="Intensity", **kwargs):
-        """ Initialize a AssignmentSession with a pandas dataframe
-            corresponding to a spectrum.
+            freq_col="Frequency", int_col="Intensity", **kwargs
+    ):
+        """ init method for AssignmentSession.
 
-            description of data:
+            Required arguments are necessary metadata for controlling various aspects of
+            the automated assignment procedure, as well as for reproducibility.
+
+            parameters:
             -------------------------
-            exp_dataframe - pandas dataframe with observational data in frequency/intensity
-            experiment - int ID for the experiment
-            composition - list of str corresponding to experiment composition
-            freq_col - optional arg specifying the name for the frequency column
-            int_col - optional arg specifying the name of the intensity column
+            :param exp_dataframe: pandas dataframe with observational data in frequency/intensity
+            :param experiment: int ID for the experiment
+            :param composition: list of str corresponding to elemental composition composition; e.g. ["C", "H"]
+            :param freq_col: optional str arg specifying the name for the frequency column
+            :param int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
         folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
@@ -286,6 +315,7 @@ class AssignmentSession:
         # Update additional setttings
         self.session.__dict__.update(**kwargs)
         self.data = exp_dataframe
+        # Set the temperature threshold for transitions to be 3x the set value
         self.t_threshold = self.session.temperature * 3.
         self.assignments = list()
         self.ulines = list()
@@ -1164,8 +1194,11 @@ class AssignmentSession:
 
     def calculate_assignment_statistics(self):
         """
-        Function for calculating some agreggate statistics of the assignments and u-lines.
-        :return:
+        Function for calculating some aggregate statistics of the assignments and u-lines. This
+        breaks the assignments sources up to identify what the dominant source of information was.
+        The two metrics for assignments are the number of transitions and the intensity contribution
+        assigned by a particular source.
+        :return: dict
         """
         reduced_table = self.table[
             ["frequency", "intensity", "formula",
@@ -1193,6 +1226,7 @@ class AssignmentSession:
         # Organize results into dictionary for return
         return_dict = {
             "sources": sources,
+            # These are absolute values
             "abs": {
                 "total lines": total_lines,
                 "total intensity": total_intensity,
@@ -1201,6 +1235,7 @@ class AssignmentSession:
                 "cumulative line breakdown": cum_line_breakdown,
                 "cumulative intensity breakdown": cum_int_breakdown
                 },
+            # These are the corresponding values in percentage
             "percent": {
                 "line breakdown": [(value / total_lines) * 100. for value in line_breakdown],
                 "intensity breakdown": [(value / total_intensity) * 100. for value in intensity_breakdown],
@@ -1254,7 +1289,7 @@ class AssignmentSession:
                 y=self.simulated["Intensity"],
                 name="Simulated spectrum"
                 )
-
+            # Add sticks for U-lines
             fig.add_bar(
                 x=centers,
                 y=amplitudes,
@@ -1287,6 +1322,7 @@ class AssignmentSession:
         reduced_table = self.table[
             ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
         ]
+        # Render pandas dataframe HTML with bar annotations
         html_dict["assignments_table"] = reduced_table.style.bar(
             subset=["deviation", "ustate_energy"],
             align="mid",
@@ -1483,6 +1519,22 @@ class AssignmentSession:
         return fig
 
     def stacked_plot(self, frequencies, freq_range=0.05):
+        """
+        Special implementation of the stacked_plot from the figurefactory module, adapted
+        for AssignmentSession. In this version, the assigned/u-lines are also indicated.
+
+        This function will generate a Plotly figure that stacks up the spectra as subplots,
+        with increasing frequencies going up the plot. This function was written primarily
+        to identify harmonically related lines, which in the absence of centrifugal distortion
+        should line up perfectly in the center of the plot.
+
+        Due to limitations with Plotly, there is a maximum of ~8 plots that can stacked
+        and will return an Exception if > 8 frequencies are provided.
+
+        :param frequencies: list of floats, corresponding to center frequencies
+        :param freq_range: float percentage value of each center frequency to use as cutoffs
+        :return: Plotly Figure object
+        """
         # Update the peaks table
         self.peaks = pd.DataFrame(
             data=[[uline.frequency, uline.intensity] for uline in self.ulines],
@@ -1498,6 +1550,7 @@ class AssignmentSession:
         )
         # Plot only frequencies within band
         frequencies = frequencies[indices]
+        # Sort frequencies such that plots are descending in frequency
         frequencies = np.sort(frequencies)[::-1]
         nplots = len(frequencies)
 
@@ -1578,8 +1631,10 @@ class AssignmentSession:
         )
         return fig
 
-    def find_progressions(self, search=0.001, low_B=400.,
-                          high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs):
+    def find_progressions(
+            self, search=0.001, low_B=400.,
+            high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs
+    ):
         """
             High level function for searching U-line database for
             possible harmonic progressions. Wraps the lower level function
@@ -1588,15 +1643,15 @@ class AssignmentSession:
 
             parameters:
             ---------------
-            search - threshold for determining if quantum number J is close
+            :param search - threshold for determining if quantum number J is close
                      enough to an integer/half-integer
-            low_B - minimum value for B
-            high_B - maximum value for B
-            plot - whether or not to produce a plot of the progressions
+            :param low_B - minimum value for B
+            :param high_B - maximum value for B
+            :param plot - whether or not to produce a plot of the progressions
 
             returns:
             ---------------
-            harmonic_df - dataframe containing the viable transitions
+            :param harmonic_df - dataframe containing the viable transitions
         """
         uline_frequencies = [uline.frequency for uline in self.ulines]
 
@@ -1657,12 +1712,12 @@ class AssignmentSession:
             Method to save an AssignmentSession to disk.
             
             The underlying mechanics are based on the joblib library,
-            and so there are can cross-compatibility issues particularly
+            and so there can be cross-compatibility issues particularly
             when loading from different versions of Python.
 
             parameters:
             ---------------
-            filepath - path to save the file to. By default it will go into
+            :param filepath - path to save the file to. By default it will go into
                        the sessions folder.
         """
         if filepath is None:
