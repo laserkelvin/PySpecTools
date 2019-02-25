@@ -31,26 +31,30 @@ from pyspectools.spectra import analysis
 class Assignment:
     """
         DataClass for handling assignments.
-        There should be sufficient information to store a
-        line assignment and reproduce it later in a form
+        Attributes are assigned in order to be sufficiently informative for a
+        line assignment to be unambiguous and reproduce it later in a form
         that is both machine and human readable.
 
-        parameters:
+        Attributes:
         ------------------
         name - str representing IUPAC/common name
         formula - str representing chemical formula
         smiles - str representing SMILES code (specific!)
-        frequency - float for observed frequency
+        frequency - float for observed frequency in MHz
         intensity - float for observed intensity
-        I - float for theoretical intensity
-        peak_id - int for peak id from experiment
+        catalog_frequency - float for the catalog frequency in MHz
+        catalog_intensity - float for the catalog line intensity 
+        I - float for theoretical line strength,
+        peak_id - int for peak id from specific experiment
         uline - bool flag to signal whether line is identified or not
         composition - list-like with string corresponding to experimental
                       chemical composition. SMILES syntax.
         v_qnos - list with quantum numbers for vibrational modes. Index
                  corresponds to mode, and int value to number of quanta.
                  Length should be equal to 3N-6.
+        r_qnos - str denoting rotational quantum numbers.
         experiment - int for experiment ID
+        weighting - float value for weighting factor used in the automated assignment
         fit - dict-like containing the fitted parameters and model
     """
     name: str = ""
@@ -93,6 +97,11 @@ class Assignment:
             return False
 
     def __str__(self):
+        """
+        Dunder method for representing an Assignment, which returns
+        the name of the line and the frequency
+        :return:
+        """
         return f"{self.name}, {self.frequency}"
 
     def to_file(self, filepath, format="yaml"):
@@ -125,11 +134,11 @@ class Assignment:
 
             parameters:
             ----------------
-            x - 1D array with frequencies of experiment
+            :param x: 1D array with frequencies of experiment
 
             returns:
             ----------------
-            y - 1D array of synthetic Gaussian spectrum
+            :return y: 1D array of synthetic Gaussian spectrum
         """
         model = GaussianModel()
         params = model.make_params()
@@ -1068,13 +1077,15 @@ class AssignmentSession:
     def upload_database_assignments(self, dbpath=None):
         """
         Adds all of the entries to a specified SpectralCatalog database. The database defaults
-        to the global database stored in the home directory.
-        :param dbpath:
-        :return:
+        to the global database stored in the home directory. This method will remove everything
+        in the database associated with this experiment's ID, and re-add the entries.
+        :param dbpath: str path to a SpectralCatalog database. Defaults to the system-wide catalog.
         """
         with database.SpectralCatalog(dbpath) as db_obj:
-            for assignment in self.assignments:
-                db_obj.add_entry(assignment)
+            # Tabula rasa
+            db_obj.remove_experiment(self.session.experiment)
+            ass_list = [assignment.__dict__ for assignment in self.assignments]
+            db_obj.insert_multiple(ass_list)
 
     def simulate_sticks(self, catalogpath, N, Q, T, doppler=None, gaussian=False):
         """
@@ -1150,6 +1161,54 @@ class AssignmentSession:
                 amplitude=a
                 )
         return y
+
+    def calculate_assignment_statistics(self):
+        """
+        Function for calculating some agreggate statistics of the assignments and u-lines.
+        :return:
+        """
+        reduced_table = self.table[
+            ["frequency", "intensity", "formula",
+             "name", "catalog_frequency", "deviation",
+             "ustate_energy", "source", "public"]
+        ]
+        artifacts = reduced_table.loc[reduced_table["name"] == "Artifact"]
+        splat = reduced_table.loc[reduced_table["source"] == "CDMS/JPL"]
+        local = reduced_table.loc[
+            (reduced_table["source"] != "Artifact") &
+            (reduced_table["source"] != "CDMS/JPL")
+            ]
+        public = local.loc[local["public"] == True]
+        private = local.loc[local["public"] == False]
+        sources = ["Artifacts", "Splatalogue", "Published molecules", "Unpublished molecules"]
+        # Added up the total number of lines
+        total_lines = len(self.ulines) + len(self.assignments)
+        # Add up the total intensity
+        total_intensity = np.sum([uline.intensity for uline in self.ulines]) + np.sum(reduced_table["intensity"])
+        line_breakdown = [len(source) for source in [artifacts, splat, public, private]]
+        intensity_breakdown = [np.sum(source["intensity"]) for source in [artifacts, splat, public, private]]
+        # Calculate the aggregate statistics
+        cum_line_breakdown = np.cumsum(line_breakdown)
+        cum_int_breakdown = np.cumsum(intensity_breakdown)
+        # Organize results into dictionary for return
+        return_dict = {
+            "sources": sources,
+            "abs": {
+                "total lines": total_lines,
+                "total intensity": total_intensity,
+                "line breakdown": line_breakdown,
+                "intensity breakdown": intensity_breakdown,
+                "cumulative line breakdown": cum_line_breakdown,
+                "cumulative intensity breakdown": cum_int_breakdown
+                },
+            "percent": {
+                "line breakdown": [(value / total_lines) * 100. for value in line_breakdown],
+                "intensity breakdown": [(value / total_intensity) * 100. for value in intensity_breakdown],
+                "cumulative line breakdown": [(value / total_lines) * 100. for value in cum_line_breakdown],
+                "cumulative intensity breakdown": [(value / total_intensity) * 100. for value in cum_int_breakdown]
+            }
+        }
+        return return_dict
 
     def plot_spectrum(self):
         """
