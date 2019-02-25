@@ -37,23 +37,49 @@ class Assignment:
 
         Attributes
         ----------
-        name - str representing IUPAC/common name
-        formula - str representing chemical formula
-        smiles - str representing SMILES code (specific!)
-        frequency - float for observed frequency in MHz
-        intensity - float for observed intensity
-        catalog_frequency - float for the catalog frequency in MHz
-        catalog_intensity - float for the catalog line intensity 
-        I - float for theoretical line strength,
-        peak_id - int for peak id from specific experiment
-        uline - bool flag to signal whether line is identified or not
-        composition - list-like with string corresponding to experimental
-        chemical composition. SMILES syntax.
-        v_qnos - list with quantum numbers for vibrational modes. Index corresponds to mode, and int value to number of quanta. Length should be equal to 3N-6.
-        r_qnos - str denoting rotational quantum numbers.
-        experiment - int for experiment ID
-        weighting - float value for weighting factor used in the automated assignment
-        fit - dict-like containing the fitted parameters and model
+        name : str
+            IUPAC/common name; the former is preferred to be unambiguous
+        formula : str
+            Chemical formula, or usually the stochiometry
+        smiles : str
+            SMILES code that provides a machine and human readable chemical specification
+        frequency : float
+            Observed frequency in MHz
+        intensity : float
+            Observed intensity, in whatever units the experiments are in. Examples are Jy/beam, or micro volts.
+        catalog_frequency : float
+            Catalog frequency in MHz
+        catalog_intensity : float
+            Catalog line intensity, typically in SPCAT units
+        I : float
+            Theoretical line strength; differs from the catalog line strength as it may be used for intrinsic line
+            strength S u^2
+        peak_id : int
+            Peak id from specific experiment
+        uline : bool
+            Flag to indicate whether line is identified or not
+        composition : list of str
+            A list of atomic symbols specifying what the experimental elemental composition is. Influences which
+            molecules are considered possible in the Splatalogue assignment procedure.
+        v_qnos : list of int
+            Quantum numbers for vibrational modes. Index corresponds to mode, and int value to number of quanta.
+            Length should be equal to 3N-6.
+        r_qnos : str
+            Rotational quantum numbers. TODO - better way of managing rotational quantum numbers
+        experiment : int
+            Experiment ID to use as a prefix/suffix for record keeping
+        weighting : float
+            Value for weighting factor used in the automated assignment
+        fit : dict
+            Contains the fitted parameters and model
+        ustate_energy : float
+            Energy of the upper state in Kelvin
+        intereference : bool
+            Flag to indicate if this assignment is not molecular in nature
+        source : str
+            Indicates what the source used for this assignment is
+        public : bool
+            Flag to indicate if the information for this assignment is public/published
     """
     name: str = ""
     smiles: str = ""
@@ -97,8 +123,12 @@ class Assignment:
     def __str__(self):
         """
         Dunder method for representing an Assignment, which returns
-        the name of the line and the frequency
-        :return:
+        the name of the line and the frequency.
+
+        Returns
+        -------
+        str
+            name and frequency of the Assignment
         """
         return f"{self.name}, {self.frequency}"
 
@@ -126,18 +156,21 @@ class Assignment:
         writer(filepath, self.__dict__)
 
     def get_spectrum(self, x):
-        """ Generate a synthetic peak by supplying
-            the x axis for a particular spectrum. This method
-            assumes that some fit parameters have been determined
-            previously.
+        """
+        Generate a synthetic peak by supplying
+        the x axis for a particular spectrum. This method
+        assumes that some fit parameters have been determined
+        previously.
 
-            parameters:
-            ----------------
-            :param x: 1D array with frequencies of experiment
+        Parameters
+        ----------
+        x : Numpy 1D array
+            Frequency bins from an experiment to simulate the line features.
 
-            returns:
-            ----------------
-            :return y: 1D array of synthetic Gaussian spectrum
+        Returns
+        -------
+        y : Numpy 1D array
+            Values of the synthetic Gaussian spectrum at each particular value of x
         """
         model = GaussianModel()
         params = model.make_params()
@@ -147,33 +180,38 @@ class Assignment:
 
     @classmethod
     def from_dict(obj, data_dict):
-        """ Method for generating an Assignment object
-            from a dictionary. All this method does is
-            unpack a dictionary into the __init__ method.
+        """ 
+        Method for generating an Assignment object
+        from a dictionary. All this method does is
+        unpack a dictionary into the __init__ method.
 
-            parameters:
-            ----------------
-            data_dict - dict with DataClass fields
+        Parameters
+        ----------
+        data_dict : dict
+            Dictionary containing all of the Assignment DataClass fields that are to be populated.
 
-            returns:
-            ----------------
-            Assignment object
+        Returns
+        -------
+        Assignment
+            Converted Assignment object from the input dictionary
         """
         assignment_obj = obj(**data_dict)
         return assignment_obj
 
     @classmethod
     def from_yml(obj, yaml_path):
-        """ Method for initializing an Assignment object
-            from a YAML file.
+        """
+        Method for initializing an Assignment object from a YAML file.
 
-            parameters:
-            ----------------
-            yaml_path - str path to yaml file
+        Parameters
+        ----------
+        yaml_path : str
+            path to yaml file
 
-            returns:
-            ----------------
-            Assignment object
+        Returns
+        -------
+        Assignment
+            Assignment object loaded from a YAML file.
         """
         yaml_dict = routines.read_yaml(yaml_path)
         assignment_obj = obj(**yaml_dict)
@@ -181,16 +219,18 @@ class Assignment:
 
     @classmethod
     def from_json(obj, json_path):
-        """ Method for initializing an Assignment object
-            from a JSON file.
+        """
+        Method for initializing an Assignment object from a JSON file.
 
-            parameters:
-            ----------------
-            json_path - str path to json file
+        Parameters
+        ----------
+        json_path : str
+            Path to JSON file
 
-            returns:
-            ----------------
-            Assignment object
+        Returns
+        -------
+        Assignment
+            Assignment object loaded from a JSON file.
         """
         json_dict = routines.read_json(json_path)
         assignment_obj = obj(**json_dict)
@@ -199,26 +239,28 @@ class Assignment:
 
 @dataclass
 class Session:
-    """ DataClass for a Session, which simply holds the
-        experiment ID, composition, and guess_temperature.
-        Doppler broadening can also be incorporated. 
+    """ 
+    DataClass for a Session, which simply holds the
+    experiment ID, composition, and guess_temperature.
+    Doppler broadening can also be incorporated. 
 
-        :param experiment: integer ID for experiment
-        :param composition: list of strings corresponding to atomic
-                            symbols. Used for filtering out species
-                            in the Splatalogue assignment procedure.
-        :param temperature: float temperature in K. Used for filtering
-                            transitions in the automated assigment.
-        :param doppler: float doppler in km/s; default value is about
-                        5 kHz at 15 GHz. Used for simulating lineshapes and
-                        for lineshape analysis.
-        :param freq_prox: float, frequency cutoff for line assignments. If
-                          freq_abs attribute is True, this value is taken as
-                          the absolute value. Otherwise, it is a percentage of
-                          the frequency being compared.
-        :param freq_abs: bool, if True, freq_prox attribute is taken as the
-                         absolute value of frequency, otherwise as a decimal
-                         percentage of the frequency being compared
+    Attributes
+    ----------
+     experiment : int
+        ID for experiment
+     composition : list of str
+        List of atomic symbols. Used for filtering out species in the Splatalogue assignment procedure.
+     temperature : float
+        Temperature in K. Used for filtering transitions in the automated assigment, which are 3 times this value.
+     doppler : float
+        Doppler width in km/s; default value is about 5 kHz at 15 GHz. Used for simulating lineshapes and
+        for lineshape analysis.
+     freq_prox : float
+        frequency cutoff for line assignments. If freq_abs attribute is True, this value is taken as the absolute value.
+         Otherwise, it is a percentage of the frequency being compared.
+     freq_abs : bool
+        If True, freq_prox attribute is taken as the absolute value of frequency, otherwise as a decimal percentage of
+         the frequency being compared.
     """
     experiment: int
     composition: List[str] = field(default_factory=list)
@@ -254,13 +296,14 @@ class AssignmentSession:
             been saved with the save_session method which creates a pickle
             file.
 
-            parameters:
+            Parameters
             --------------
-            :param filepath - path to the AssignmentSession file; typically
+             filepath - path to the AssignmentSession file; typically
                        in the sessions/{experiment_id}.pkl
-            returns:
+            Returns
             --------------
-            :return AssignmentSession object
+            AssignmentSession
+                Instance of the AssignmentSession loaded from disk
         """
         session = routines.read_obj(filepath)
         return session
@@ -273,13 +316,13 @@ class AssignmentSession:
         """
         Create a pandas dataframe from a xy file, and create an AssignmentSession with the
         loaded spectrum.
-        :param filepath:
-        :param experiment:
-        :param composition:
-        :param temperature:
-        :param freq_col:
-        :param int_col:
-        :param kwargs:
+         filepath:
+         experiment:
+         composition:
+         temperature:
+         freq_col:
+         int_col:
+         kwargs:
         :return:
         """
         spec_df = pd.read_csv(filepath, delimiter=delimiter, header=header)
@@ -296,13 +339,13 @@ class AssignmentSession:
             Required arguments are necessary metadata for controlling various aspects of
             the automated assignment procedure, as well as for reproducibility.
 
-            parameters:
+            Parameters
             -------------------------
-            :param exp_dataframe: pandas dataframe with observational data in frequency/intensity
-            :param experiment: int ID for the experiment
-            :param composition: list of str corresponding to elemental composition composition; e.g. ["C", "H"]
-            :param freq_col: optional str arg specifying the name for the frequency column
-            :param int_col: optional str arg specifying the name of the intensity column
+             exp_dataframe: pandas dataframe with observational data in frequency/intensity
+             experiment: int ID for the experiment
+             composition: list of str corresponding to elemental composition composition; e.g. ["C", "H"]
+             freq_col: optional str arg specifying the name for the frequency column
+             int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
         folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
@@ -344,11 +387,11 @@ class AssignmentSession:
     def find_peaks(self, threshold=None):
         """ Wrap peakutils method for detecting peaks.
 
-            parameters:
+            Parameters
             ---------------
-            :param threshold: peak detection threshold
+             threshold: peak detection threshold
 
-            returns:
+            Returns
             ---------------
             :return peaks_df: dataframe containing peaks
         """
@@ -402,7 +445,7 @@ class AssignmentSession:
 
             Raises exception error if nothing is found.
 
-            :param frequency: float corresponding to the frequency in MHz
+             frequency: float corresponding to the frequency in MHz
             :return slice_df: pandas dataframe containing matches
         """
         slice_df = []
@@ -433,7 +476,7 @@ class AssignmentSession:
         """ Method to ask a simple yes/no if the frequency
             exists in either U-lines or assignments.
 
-            :param frequency: float corresponding to frequency in MHz
+             frequency: float corresponding to frequency in MHz
             :return bool: True if it's in ulines/assignments, False otherwise
         """
         try:
@@ -457,7 +500,7 @@ class AssignmentSession:
             assignment, flagging it as unassigned and dumping it into
             the `uline` attribute.
 
-            :param auto: bool if True the assignment process does not require user input.
+             auto: bool if True the assignment process does not require user input.
         """
         if hasattr(self, "peaks") is False:
             print("Peak detection not run; running with default settings.")
@@ -564,10 +607,10 @@ class AssignmentSession:
             the user with additional options for flagging an Assignment
             (e.g. public, etc.)
 
-            :param name: str common name of the molecule
-            :param formula: str chemical formula of the molecule
-            :param linpath: path to line file to be parsed
-            :param auto: optional bool specifying which mode to run in
+             name: str common name of the molecule
+             formula: str chemical formula of the molecule
+             linpath: path to line file to be parsed
+             auto: optional bool specifying which mode to run in
         """
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
@@ -616,14 +659,14 @@ class AssignmentSession:
             observed frequency, as well as the theoretical intensity if it
             is available.
 
-            parameters:
+            Parameters
             ----------------
-            :param frequency: float observed frequency in MHz
-            :param catalog_df: dataframe corresponding to catalog entries
-            :param prox: optional float for frequency proximity threshold
-            :param abs: bool specifying whether prox is taken as the absolute value
+             frequency: float observed frequency in MHz
+             catalog_df: dataframe corresponding to catalog entries
+             prox: optional float for frequency proximity threshold
+             abs: bool specifying whether prox is taken as the absolute value
 
-            returns:
+            Returns
             ---------------
             :returns If nothing matches the frequency, returns None.
             If matches are found, calculate the weights and return the candidates
@@ -677,13 +720,13 @@ class AssignmentSession:
             allow the user to provide additional flags/information for
             the Assignment object.
 
-            parameters:
+            Parameters
             ----------------
-            :param name: str corresponding to common name of molecule
-            :param formula: str corresponding to chemical formula
-            :param catalogpath: str filepath to the SPCAT file
-            :param auto: bool arg; if True, assignment does not require user input
-            :param thres: log10 of the theoretical intensity to use as a bottom limit
+             name: str corresponding to common name of molecule
+             formula: str corresponding to chemical formula
+             catalogpath: str filepath to the SPCAT file
+             auto: bool arg; if True, assignment does not require user input
+             thres: log10 of the theoretical intensity to use as a bottom limit
         """
         old_nulines = len(self.ulines)
         catalog_df = parsers.parse_cat(
@@ -744,9 +787,9 @@ class AssignmentSession:
         sake a list of ids are also required to indicate the original scan as the source
         of the information.
 
-        :param frequencies: list of frequencies associated with a molecule
-        :param ids: list of scan IDs
-        :param molecule: optional str specifying the name of the molecule
+         frequencies: list of frequencies associated with a molecule
+         ids: list of scan IDs
+         molecule: optional str specifying the name of the molecule
         """
         counter = 0
         for freq, scan_id in zip(frequencies, ids):
@@ -782,7 +825,7 @@ class AssignmentSession:
         interference, etc.
         Assignments made this way fall under the "Artifact" category in the resulting assignment
         tables.
-        :param frequencies: list-like with floats corresponding to artifact frequencies
+         frequencies: list-like with floats corresponding to artifact frequencies
         """
         counter = 0
         for freq in frequencies:
@@ -913,12 +956,12 @@ class AssignmentSession:
             Optional kwargs will also be passed to the Assignment
             object to update any other details.
 
-            parameters:
+            Parameters
             -----------------
-            :param name: str denoting the name of the molecule
-            :param index: optional arg specifying U-line index
-            :param frequency: optional float specifying frequency to assign
-            :param kwargs: passed to update Assignment object
+             name: str denoting the name of the molecule
+             index: optional arg specifying U-line index
+             frequency: optional float specifying frequency to assign
+             kwargs: passed to update Assignment object
         """
         if index == frequency:
             raise Exception("Index/Frequency not specified!")
@@ -971,11 +1014,11 @@ class AssignmentSession:
             Function for providing some astronomically relevant
             parameters by analyzing Gaussian line shapes.
 
-            :param Q: rotational partition function at temperature
-            :param T: temperature in K
-            :param name: str name of molecule
-            :param formula: chemical formula of molecule
-            :param smiles: SMILES string for molecule
+             Q: rotational partition function at temperature
+             T: temperature in K
+             name: str name of molecule
+             formula: chemical formula of molecule
+             smiles: SMILES string for molecule
             :return profile_df: pandas dataframe containing all of the
                                 analysis
         """
@@ -1096,7 +1139,7 @@ class AssignmentSession:
 
             Requires passing a True statement to actually clean up.
 
-            :param action: bool; will only clean up when True is passed
+             action: bool; will only clean up when True is passed
         """
         folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
         if action is True:
@@ -1108,7 +1151,7 @@ class AssignmentSession:
         Adds all of the entries to a specified SpectralCatalog database. The database defaults
         to the global database stored in the home directory. This method will remove everything
         in the database associated with this experiment's ID, and re-add the entries.
-        :param dbpath: str path to a SpectralCatalog database. Defaults to the system-wide catalog.
+         dbpath: str path to a SpectralCatalog database. Defaults to the system-wide catalog.
         """
         with database.SpectralCatalog(dbpath) as db_obj:
             # Tabula rasa
@@ -1121,12 +1164,12 @@ class AssignmentSession:
         Simulates a stick spectrum with intensities in flux units (Jy) for
         a given catalog file, the column density, and the rotational partition
         function at temperature T.
-        :param catalogpath: path to SPCAT catalog file
-        :param N: column density in cm^-2
-        :param Q: partition function at temperature T
-        :param T: temperature in Kelvin
-        :param doppler: doppler width in km/s; defaults to session wide value
-        :param gaussian: bool; if True, simulates Gaussian profiles instead of sticks
+         catalogpath: path to SPCAT catalog file
+         N: column density in cm^-2
+         Q: partition function at temperature T
+         T: temperature in Kelvin
+         doppler: doppler width in km/s; defaults to session wide value
+         gaussian: bool; if True, simulates Gaussian profiles instead of sticks
         :return: if gaussian is False, returns a dataframe with sticks; if True,
                  returns a simulated Gaussian line profile spectrum
         """
@@ -1169,11 +1212,11 @@ class AssignmentSession:
             GaussianModel is used here to remain internally consistent
             with the rest of the code.
 
-            :param x: array of x values to evaluate Gaussians on
-            :param centers: array of Gaussian centers
-            :param widths: array of Gaussian widths
-            :param amplitudes: array of Gaussian amplitudes
-            :param fake: bool indicating whether false intensities are used for the simulation
+             x: array of x values to evaluate Gaussians on
+             centers: array of Gaussian centers
+             widths: array of Gaussian widths
+             amplitudes: array of Gaussian amplitudes
+             fake: bool indicating whether false intensities are used for the simulation
             :return y: array of y values
         """
         y = np.zeros(len(x))
@@ -1306,7 +1349,7 @@ class AssignmentSession:
         The report includes interactive plots showing statistics of the assignments/ulines and
         an overview of the spectrum. At the end of the report is a table of the assignments and
         uline data.
-        :param filepath: str path to save the report to. Defaults to reports/{id}-summary.html
+         filepath: str path to save the report to. Defaults to reports/{id}-summary.html
         """
         from jinja2 import Template
         template_path = os.path.join(
@@ -1530,8 +1573,8 @@ class AssignmentSession:
         Due to limitations with Plotly, there is a maximum of ~8 plots that can stacked
         and will return an Exception if > 8 frequencies are provided.
 
-        :param frequencies: list of floats, corresponding to center frequencies
-        :param freq_range: float percentage value of each center frequency to use as cutoffs
+         frequencies: list of floats, corresponding to center frequencies
+         freq_range: float percentage value of each center frequency to use as cutoffs
         :return: Plotly Figure object
         """
         # Update the peaks table
@@ -1640,17 +1683,17 @@ class AssignmentSession:
             harmonic_search, which will generate 3-4 frequency combinations
             to search.
 
-            parameters:
+            Parameters
             ---------------
-            :param search - threshold for determining if quantum number J is close
+             search - threshold for determining if quantum number J is close
                      enough to an integer/half-integer
-            :param low_B - minimum value for B
-            :param high_B - maximum value for B
-            :param plot - whether or not to produce a plot of the progressions
+             low_B - minimum value for B
+             high_B - maximum value for B
+             plot - whether or not to produce a plot of the progressions
 
-            returns:
+            Returns
             ---------------
-            :param harmonic_df - dataframe containing the viable transitions
+             harmonic_df - dataframe containing the viable transitions
         """
         uline_frequencies = [uline.frequency for uline in self.ulines]
 
@@ -1683,13 +1726,13 @@ class AssignmentSession:
             with the intention of showing where the observed frequencies
             are.
 
-            parameters:
+            Parameters
             --------------
             formula - str for chemical formula lookup
             name - str for common name
             smiles - str for unique SMILES string
 
-            returns:
+            Returns
             --------------
             pandas dataframe slice with corresponding lookup
         """
@@ -1714,9 +1757,9 @@ class AssignmentSession:
             and so there can be cross-compatibility issues particularly
             when loading from different versions of Python.
 
-            parameters:
+            Parameters
             ---------------
-            :param filepath - path to save the file to. By default it will go into
+             filepath - path to save the file to. By default it will go into
                        the sessions folder.
         """
         if filepath is None:
