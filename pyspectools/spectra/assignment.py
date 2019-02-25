@@ -35,8 +35,8 @@ class Assignment:
         line assignment to be unambiguous and reproduce it later in a form
         that is both machine and human readable.
 
-        Attributes:
-        ------------------
+        Attributes
+        ----------
         name - str representing IUPAC/common name
         formula - str representing chemical formula
         smiles - str representing SMILES code (specific!)
@@ -48,10 +48,8 @@ class Assignment:
         peak_id - int for peak id from specific experiment
         uline - bool flag to signal whether line is identified or not
         composition - list-like with string corresponding to experimental
-                      chemical composition. SMILES syntax.
-        v_qnos - list with quantum numbers for vibrational modes. Index
-                 corresponds to mode, and int value to number of quanta.
-                 Length should be equal to 3N-6.
+        chemical composition. SMILES syntax.
+        v_qnos - list with quantum numbers for vibrational modes. Index corresponds to mode, and int value to number of quanta. Length should be equal to 3N-6.
         r_qnos - str denoting rotational quantum numbers.
         experiment - int for experiment ID
         weighting - float value for weighting factor used in the automated assignment
@@ -105,15 +103,16 @@ class Assignment:
         return f"{self.name}, {self.frequency}"
 
     def to_file(self, filepath, format="yaml"):
-        """ Method to dump data to YAML format.
-            Extensions are automatically decided, but
-            can also be supplied.
+        """
+        Save an Assignment object to disk with a specified file format.
+        Defaults to YAML.
 
-            parameters:
-            --------------------
-            :param filepath: str path to yaml file
-            :param format: str denoting the syntax used for dumping.
-                     Defaults to YAML.
+        Parameters
+        ----------
+        filepath : str
+            Path to yaml file
+        format : str, optional
+            Denoting the syntax used for dumping. Defaults to YAML.
         """
         if "." not in filepath:
             if format == "json":
@@ -1730,6 +1729,16 @@ class AssignmentSession:
         print("Saved session to {}".format(filepath))
 
     def update_database(self, dbpath=None):
+        """
+
+        Parameters
+        ----------
+        dbpath
+
+        Returns
+        -------
+
+        """
         if dbpath is None:
             dbpath = os.path.join(
                 os.path.expanduser("~"), ".pyspectools/pyspeccatalog.csv"
