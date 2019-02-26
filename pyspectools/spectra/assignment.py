@@ -7,7 +7,6 @@
 
 import os
 from shutil import rmtree
-from copy import copy
 from dataclasses import dataclass, field
 from typing import List, Dict
 from collections import OrderedDict
@@ -312,21 +311,27 @@ class AssignmentSession:
     @classmethod
     def from_ascii(
             cls, filepath, experiment, composition=["C", "H"], delimiter="\t", temperature=4.0,
-            header=None, freq_col="Frequency", int_col="Intensity", **kwargs
+            col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, **kwargs
     ):
         """
-        Create a pandas dataframe from a xy file, and create an AssignmentSession with the
-        loaded spectrum.
-         filepath:
-         experiment:
-         composition:
-         temperature:
-         freq_col:
-         int_col:
-         kwargs:
-        :return:
+
+        Parameters
+        ----------
+        filepath
+        experiment
+        composition
+        delimiter
+        temperature
+        header
+        freq_col
+        int_col
+        kwargs
+
+        Returns
+        -------
+
         """
-        spec_df = pd.read_csv(filepath, delimiter=delimiter, header=header)
+        spec_df = parsers.parse_ascii(filepath, delimiter, col_names, skiprows=skiprows)
         session = cls(spec_df, experiment, composition, temperature, freq_col, int_col, **kwargs)
         return session
 
@@ -1306,6 +1311,8 @@ class AssignmentSession:
 
         if hasattr(self, "ulines"):
             labels = [uline.peak_id for uline in self.ulines.values()]
+            amplitudes = np.array([uline.intensity for uline in self.ulines.values()])
+            centers = np.array([uline.frequency for uline in self.ulines.values()])
             # Add sticks for U-lines
             fig.add_bar(
                 x=centers,
@@ -1316,12 +1323,10 @@ class AssignmentSession:
                 )
 
             if simulate is True:
-                centers = np.array([uline.frequency for uline in self.ulines.values()])
                 widths = units.dop2freq(
                     self.session.doppler,
                     centers
                     )
-                amplitudes = np.array([uline.intensity for uline in self.ulines.values()])
 
                 simulated = self.simulate_spectrum(
                     self.data[self.freq_col].values,

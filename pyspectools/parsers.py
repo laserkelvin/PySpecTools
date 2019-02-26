@@ -10,6 +10,27 @@ def parse_spectrum(filename, threshold=20.):
     return dataframe[dataframe["Intensity"] <= threshold]
 
 
+def parse_ascii(filename, delimiter="\t", names=None, header=None, skiprows=0):
+    """
+    Generic ASCII parser wrapping the pandas read_csv function.
+    Parameters
+    ----------
+    filename
+    delimiter
+    names
+    header
+    skiprows
+
+    Returns
+    -------
+
+    """
+    dataframe = pd.read_csv(
+        filename, delimiter=delimiter, names=names, header=header, skiprows=skiprows
+    )
+    return dataframe
+
+
 def parse_lin(filename):
     """
         Function to read in a line file, formatted in the SPFIT
