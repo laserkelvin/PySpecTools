@@ -90,7 +90,7 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
     # Get the peaks if we were just using indexes
     direct_df = spec_df.iloc[peak_indices]
     direct_df.reset_index(inplace=True)
-    direct_freqs = direct_df["Frequency"].values
+    direct_freqs = direct_df[freq_col].values
     # Calculate the difference in fit vs. approximate peak
     # frequencies
     differences = np.abs(direct_df[freq_col] - frequencies)

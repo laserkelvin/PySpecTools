@@ -10,6 +10,7 @@ from shutil import rmtree
 from copy import copy
 from dataclasses import dataclass, field
 from typing import List, Dict
+from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
@@ -329,7 +330,6 @@ class AssignmentSession:
         session = cls(spec_df, experiment, composition, temperature, freq_col, int_col, **kwargs)
         return session
 
-
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0,
             freq_col="Frequency", int_col="Intensity", **kwargs
@@ -360,7 +360,7 @@ class AssignmentSession:
         # Set the temperature threshold for transitions to be 3x the set value
         self.t_threshold = self.session.temperature * 3.
         self.assignments = list()
-        self.ulines = list()
+        self.ulines = OrderedDict()
         self.umols = list()
         #self.umol_counter = self.umol_gen()
         # Default settings for columns
@@ -432,8 +432,8 @@ class AssignmentSession:
             )
             # If the frequency hasn't already been done, add it
             # to the U-line pile
-            if ass_obj not in self.ulines and ass_obj not in self.assignments:
-                self.ulines.append(ass_obj)
+            if ass_obj not in self.ulines.values() and ass_obj not in self.assignments:
+                self.ulines[index] = ass_obj
         # Assign attribute
         self.peaks = peaks_df
         return peaks_df
@@ -506,8 +506,7 @@ class AssignmentSession:
             print("Peak detection not run; running with default settings.")
             self.find_peaks()
 
-        ulines = copy(self.ulines)
-        for uindex, uline in enumerate(self.ulines):
+        for uindex, uline in list(self.ulines.items()):
             frequency = uline.frequency
             print("Searching for frequency {:,.4f}".format(frequency))
             # Call splatalogue API to search for frequency
@@ -615,8 +614,7 @@ class AssignmentSession:
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
 
-        ulines = copy(self.ulines)
-        for uindex, uline in enumerate(self.ulines):
+        for uindex, uline in list(self.ulines.items()):
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency,
                 lin_df,
@@ -740,7 +738,7 @@ class AssignmentSession:
             (catalog_df["Intensity"] >= thres)
             ]
         # Loop over the uline list
-        for uindex, uline in enumerate(self.ulines):
+        for uindex, uline in list(self.ulines.items()):
             # 0.1% of frequency
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency, catalog_df, prox=self.session.freq_prox, abs=self.session.freq_abs
@@ -793,7 +791,7 @@ class AssignmentSession:
         """
         counter = 0
         for freq, scan_id in zip(frequencies, ids):
-            uline_freqs = np.array([uline.frequency for uline in self.ulines])
+            uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
             nearest, index = routines.find_nearest(uline_freqs, freq)
             # Find the nearest U-line, and if it's sufficiently close then
             # we assign it to this molecule. This is just to make sure that
@@ -829,7 +827,7 @@ class AssignmentSession:
         """
         counter = 0
         for freq in frequencies:
-            uline_freqs = np.array([uline.frequency for uline in self.ulines])
+            uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
             nearest, index = routines.find_nearest(uline_freqs, freq)
             if np.abs(nearest - freq) <= 0.1:
                 assign_dict = {
@@ -913,7 +911,7 @@ class AssignmentSession:
                     peaks["Distance"] = np.abs(peaks["Frequency"] - row["Frequency"])
                     viable_freq = peaks["Frequency"].ix[peaks["Distance"].idxmin()]
                     viable_int = peaks["Intensity"].ix[peaks["Distance"].idxmin()]
-                    uline_check = [uline_obj for  uline_obj in self.ulines if uline_obj.frequency == frequency]
+                    uline_check = [uline_obj for uline_obj in self.ulines.values() if uline_obj.frequency == frequency]
                     # If we already had a U-line of this frequency we'll mark it as assigned
                     # Set up the assignment fields
                     ass_dict = {
@@ -970,7 +968,7 @@ class AssignmentSession:
             # If an index is supplied, pull up from uline list
             ass_obj = self.ulines[index]
         elif frequency:
-            uline_freqs = np.array([uline.frequency for uline in self.ulines])
+            uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
             nearest, index = routines.find_nearest(uline_freqs, frequency)
             deviation = np.abs(frequency - nearest)
             # Check that the deviation is at least a kilohertz
@@ -986,7 +984,8 @@ class AssignmentSession:
                 frequency = ass_obj.frequency
             ass_obj.frequency = frequency
             print("{:,.4f} assigned to {}".format(frequency, name))
-            self.ulines.pop(index)
+            # Delete the line from the ulines dictionary
+            del self.ulines[index]
             self.assignments.append(ass_obj)
         else:
             raise Exception("Peak not found! Try providing an index.")
@@ -1259,7 +1258,8 @@ class AssignmentSession:
         # Added up the total number of lines
         total_lines = len(self.ulines) + len(self.assignments)
         # Add up the total intensity
-        total_intensity = np.sum([uline.intensity for uline in self.ulines]) + np.sum(reduced_table["intensity"])
+        total_intensity = np.sum([uline.intensity for uline in self.ulines.values()])
+        total_intensity += np.sum(reduced_table["intensity"])
         line_breakdown = [len(source) for source in [artifacts, splat, public, private]]
         intensity_breakdown = [np.sum(source["intensity"]) for source in [artifacts, splat, public, private]]
         # Calculate the aggregate statistics
@@ -1287,7 +1287,7 @@ class AssignmentSession:
         }
         return return_dict
 
-    def plot_spectrum(self):
+    def plot_spectrum(self, simulate=False):
         """
             Generates a Plotly figure of the spectrum. If U-lines are
             present, it will plot the simulated spectrum also.
@@ -1305,32 +1305,7 @@ class AssignmentSession:
             )
 
         if hasattr(self, "ulines"):
-            centers = np.array([uline.frequency for uline in self.ulines])
-            widths = units.dop2freq(
-                self.session.doppler,
-                centers
-                )
-            amplitudes = np.array([uline.intensity for uline in self.ulines])
-            labels = [uline.peak_id for uline in self.ulines]
-
-            simulated = self.simulate_spectrum(
-                self.data[self.freq_col].values,
-                centers,
-                widths,
-                amplitudes,
-                fake=True
-                )
-
-            self.simulated = pd.DataFrame(
-                data=list(zip(self.data[self.freq_col].values, simulated)),
-                columns=["Frequency", "Intensity"]
-                )
-
-            fig.add_scattergl(
-                x=self.simulated["Frequency"],
-                y=self.simulated["Intensity"],
-                name="Simulated spectrum"
-                )
+            labels = [uline.peak_id for uline in self.ulines.values()]
             # Add sticks for U-lines
             fig.add_bar(
                 x=centers,
@@ -1339,6 +1314,33 @@ class AssignmentSession:
                 text=labels,
                 name="Peaks"
                 )
+
+            if simulate is True:
+                centers = np.array([uline.frequency for uline in self.ulines.values()])
+                widths = units.dop2freq(
+                    self.session.doppler,
+                    centers
+                    )
+                amplitudes = np.array([uline.intensity for uline in self.ulines.values()])
+
+                simulated = self.simulate_spectrum(
+                    self.data[self.freq_col].values,
+                    centers,
+                    widths,
+                    amplitudes,
+                    fake=True
+                    )
+
+                self.simulated = pd.DataFrame(
+                    data=list(zip(self.data[self.freq_col].values, simulated)),
+                    columns=["Frequency", "Intensity"]
+                    )
+
+                fig.add_scattergl(
+                    x=self.simulated["Frequency"],
+                    y=self.simulated["Intensity"],
+                    name="Simulated spectrum"
+                    )
 
         return fig
 
@@ -1385,7 +1387,7 @@ class AssignmentSession:
             ).render()
         # The unidentified features table
         uline_df = pd.DataFrame(
-            [[uline.frequency, uline.intensity] for uline in self.ulines], columns=["Frequency", "Intensity"]
+            [[uline.frequency, uline.intensity] for uline in self.ulines.values()], columns=["Frequency", "Intensity"]
         )
         html_dict["uline_table"] = uline_df.style.bar(
             subset=["Intensity"],
@@ -1442,7 +1444,8 @@ class AssignmentSession:
         # Added up the total number of lines
         total_lines = len(self.ulines) + len(self.assignments)
         # Add up the total intensity
-        total_intensity = np.sum([uline.intensity for uline in self.ulines]) + np.sum(reduced_table["intensity"])
+        total_intensity = np.sum([uline.intensity for uline in self.ulines.values()])
+        total_intensity += np.sum(reduced_table["intensity"])
         line_breakdown = [total_lines]
         intensity_breakdown = [total_intensity]
         for source in [artifacts, splat, public, private]:
@@ -1532,7 +1535,7 @@ class AssignmentSession:
 
         # Update the peaks table
         self.peaks = pd.DataFrame(
-            data=[[uline.frequency, uline.intensity] for uline in self.ulines],
+            data=[[uline.frequency, uline.intensity] for uline in self.ulines.values()],
             columns=["Frequency", "Intensity"]
         )
 
@@ -1579,7 +1582,7 @@ class AssignmentSession:
         """
         # Update the peaks table
         self.peaks = pd.DataFrame(
-            data=[[uline.frequency, uline.intensity] for uline in self.ulines],
+            data=[[uline.frequency, uline.intensity] for uline in self.ulines.values()],
             columns=["Frequency", "Intensity"]
         )
         dataframe = self.data.copy()
@@ -1695,7 +1698,7 @@ class AssignmentSession:
             ---------------
              harmonic_df - dataframe containing the viable transitions
         """
-        uline_frequencies = [uline.frequency for uline in self.ulines]
+        uline_frequencies = [uline.frequency for uline in self.ulines.values()]
 
         progressions = analysis.harmonic_finder(
             uline_frequencies,
@@ -1786,7 +1789,7 @@ class AssignmentSession:
             dbpath = os.path.join(
                 os.path.expanduser("~"), ".pyspectools/pyspeccatalog.csv"
             )
-        uline_df = pd.DataFrame([uline.__dict__ for uline in self.ulines])
+        uline_df = pd.DataFrame([uline.__dict__ for uline in self.ulines.values()])
         assign_df = pd.DataFrame([ass_obj.__dict__ for ass_obj in self.assignments])
         if os.path.isfile(dbpath) is True:
             catalog_db = pd.read_csv(dbpath)
