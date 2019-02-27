@@ -298,8 +298,9 @@ class AssignmentSession:
 
             Parameters
             --------------
-             filepath - path to the AssignmentSession file; typically
-                       in the sessions/{experiment_id}.pkl
+            filepath : str
+                path to the AssignmentSession pickle file; typically in the sessions/{experiment_id}.pkl
+
             Returns
             --------------
             AssignmentSession
@@ -317,19 +318,28 @@ class AssignmentSession:
 
         Parameters
         ----------
-        filepath
-        experiment
-        composition
-        delimiter
-        temperature
-        header
-        freq_col
-        int_col
+        filepath : str
+            Filepath to the ASCII spectrum
+        experiment : int
+            Integer identifier for the experiment
+        composition : list of str
+            List of atomic symbols, representing the atomic composition of the experiment
+        delimiter : str
+            Delimiter character used in the ASCII file. For example, "\t", "\s", ","
+        temperature : float
+            Rotational temperature in Kelvin used for the experiment
+        header : list of str, optional
+            Names of the columns
+        freq_col : str
+            Name of the column to be used for the frequency axis
+        int_col : str
+            Name of the column to be used for the intensity axis
         kwargs
+            Additional kwargs are passed onto initializing the Session class
 
         Returns
         -------
-
+        AssignmentSession
         """
         spec_df = parsers.parse_ascii(filepath, delimiter, col_names, skiprows=skiprows)
         session = cls(spec_df, experiment, composition, temperature, freq_col, int_col, **kwargs)
@@ -353,7 +363,7 @@ class AssignmentSession:
              int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
-        folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
+        folders = ["assignment_objs", "queries", "sessions", "clean", "figures", "reports"]
         for folder in folders:
             if os.path.isdir(folder) is False:
                 os.mkdir(folder)
@@ -380,9 +390,12 @@ class AssignmentSession:
 
     def umol_gen(self):
         """
-        Method for keeping track of what unidentified molecule
-        we're up to
-        :return: generator for a formatted string to name unidentified molecules
+        Method for keeping track of what unidentified molecule we're up to. Currently not used.
+
+        Yields
+        ------
+        str
+            Formatted as "UMol_XXX"
         """
         counter = 1
         while counter <= 200:
@@ -390,15 +403,26 @@ class AssignmentSession:
             counter+=1
 
     def find_peaks(self, threshold=None):
-        """ Wrap peakutils method for detecting peaks.
+        """
+            Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
+            The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
+
+            The function works by finding regions of the intensity where the first derivative goes to zero
+            and changes sign. This gives peak frequency/intensities from the digitized spectrum, which is
+            then "refined" by interpolating over each peak and fitting a Gaussian to determine the peak.
+
+            The peaks are then returned as a pandas DataFrame, which can also be accessed in the peaks_df
+            attribute of AssignmentSession.
 
             Parameters
-            ---------------
-             threshold: peak detection threshold
+            ----------
+             threshold: float or None
+                Peak detection threshold. If None, will take 1.5 times the noise RMS.
 
             Returns
-            ---------------
-            :return peaks_df: dataframe containing peaks
+            -------
+            peaks_df : dataframe
+                Pandas dataframe with Frequency/Intensity columns, corresponding to peaks
         """
         if threshold is None:
             # Set the threshold as 20% of the baseline + 1sigma. The peak_find function will
@@ -444,18 +468,24 @@ class AssignmentSession:
         return peaks_df
 
     def search_frequency(self, frequency):
-        """ Method for searching a frequency in the spectrum.
-            Gives information relevant to whether it's a U-line
-            or assigned.
+        """
+        Function for searching the experiment for a particular frequency. The search range is defined by
+        the Session attribute freq_prox, and will first look for the frequency in the assigned features
+        if any have been made. The routine will then look for it in the U-lines.
 
-            Raises exception error if nothing is found.
+        Parameters
+        ----------
+        frequency : float
+            Center frequency in MHz
 
-             frequency: float corresponding to the frequency in MHz
-            :return slice_df: pandas dataframe containing matches
+        Returns
+        -------
+        dataframe
+            Pandas dataframe with the matches
         """
         slice_df = []
-        lower_freq = frequency * 0.999
-        upper_freq = frequency * 1.001
+        lower_freq = frequency * (1. - self.session.freq_prox)
+        upper_freq = frequency * (1 + self.session.freq_prox)
         if hasattr(self, "table"):
             slice_df = self.table.loc[
                 (self.table["frequency"] >= lower_freq) &
@@ -478,11 +508,20 @@ class AssignmentSession:
             return slice_df
 
     def in_experiment(self, frequency):
-        """ Method to ask a simple yes/no if the frequency
-            exists in either U-lines or assignments.
+        """
+        Method to ask a simple yes/no if the frequency exists in either U-lines or assignments.
 
-             frequency: float corresponding to frequency in MHz
-            :return bool: True if it's in ulines/assignments, False otherwise
+        Parameters
+        ----------
+        frequency : float
+            Center frequency to search for in MHz
+
+        Returns
+        -------
+        True
+            If the frequency is present in the experiment
+        False
+            If the frequency does not exist
         """
         try:
             slice_df = self.search_frequency(frequency)
@@ -494,6 +533,17 @@ class AssignmentSession:
             return False
 
     def splat_assign_spectrum(self, auto=False):
+        """
+        Alias for `process_splatalogue`. Function will be removed in a later version.
+
+        Parameters
+        ----------
+        auto : bool
+            Specifies whether the assignment procedure is automatic.
+        """
+        self.process_splatalogue(auto=auto)
+
+    def process_splatalogue(self, auto=False):
         """ Function that will provide an "interface" for interactive
             line assignment in a notebook environment.
 
@@ -505,7 +555,10 @@ class AssignmentSession:
             assignment, flagging it as unassigned and dumping it into
             the `uline` attribute.
 
-             auto: bool if True the assignment process does not require user input.
+        Parameters
+        ----------
+         auto: bool
+             If True the assignment process does not require user input, otherwise will prompt user.
         """
         if hasattr(self, "peaks") is False:
             print("Peak detection not run; running with default settings.")
@@ -611,10 +664,16 @@ class AssignmentSession:
             the user with additional options for flagging an Assignment
             (e.g. public, etc.)
 
-             name: str common name of the molecule
-             formula: str chemical formula of the molecule
-             linpath: path to line file to be parsed
-             auto: optional bool specifying which mode to run in
+            Parameters
+            ----------
+             name: str
+                Common name of the molecule
+             formula: str
+                Chemical formula of the molecule
+             linpath: str
+                Path to line file to be parsed
+             auto: bool, optional
+                Specify whether assignment is non-interactive.
         """
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
@@ -664,16 +723,21 @@ class AssignmentSession:
 
             Parameters
             ----------------
-             frequency: float observed frequency in MHz
-             catalog_df: dataframe corresponding to catalog entries
-             prox: optional float for frequency proximity threshold
-             abs: bool specifying whether prox is taken as the absolute value
+             frequency : float
+                Observed frequency in MHz
+             catalog_df : dataframe
+                Pandas dataframe containing the catalog data entries
+             prox: float, optional
+                Frequency proximity threshold
+             abs: bool
+                Specifies whether argument prox is taken as the absolute value
 
             Returns
             ---------------
-            :returns If nothing matches the frequency, returns None.
-            If matches are found, calculate the weights and return the candidates
-            in a dataframe.
+            None
+                If nothing matches the frequency, returns None.
+            dataframe
+                If matches are found, calculate the weights and return the candidates in a dataframe.
         """
         if abs is False:
             lower_freq = frequency * (1 - prox)
@@ -725,11 +789,16 @@ class AssignmentSession:
 
             Parameters
             ----------------
-             name: str corresponding to common name of molecule
-             formula: str corresponding to chemical formula
-             catalogpath: str filepath to the SPCAT file
-             auto: bool arg; if True, assignment does not require user input
-             thres: log10 of the theoretical intensity to use as a bottom limit
+             name : str
+                Corresponds to common name of molecule
+             formula : str
+                Chemical formula or stochiometry
+             catalogpath : str
+                Filepath to the SPCAT file
+             auto : bool, optional
+                If True, assignment does not require user input
+             thres : float
+                log10 of the theoretical intensity to use as a bottom limit
         """
         old_nulines = len(self.ulines)
         catalog_df = parsers.parse_cat(
@@ -790,6 +859,8 @@ class AssignmentSession:
         sake a list of ids are also required to indicate the original scan as the source
         of the information.
 
+        Parameters
+        ----------
          frequencies: list of frequencies associated with a molecule
          ids: list of scan IDs
          molecule: optional str specifying the name of the molecule
@@ -844,108 +915,7 @@ class AssignmentSession:
                 }
                 self.assign_line(**assign_dict)
                 counter += 1
-        print("Removed {} lines as artifacts.".format(counter))
-
-    def verify_molecules(self):
-        """
-        Function that is run following the splatalogue assignment routine. This will
-        go through all of the assigned species, and using the weakest line as basis,
-        search for other possible transitions that have not already been assigned.
-
-        In this mode, the search criterion for transitions are loosened w.r.t.
-        upper state temperature and line intensity, as well as the peak finding
-        algorithm.
-
-        TODO - need to make this actually work now...
-        :return possible: dict containing dataframes for each molecule and transition
-        """
-        possible = dict()
-        counter = 0
-        ass_df = pd.DataFrame(
-            [ass_obj.__dict__ for ass_obj in self.assignments]
-        )
-        # this gets a DataFrame with the highest upper state energies for each unique molecule
-        high_df = ass_df.sort_values(["ustate_energy"], ascending=False).drop_duplicates(["name"])
-        for mol_index, mol_row in high_df.iterrows():
-            possible[mol_row["name"]] = dict()
-            splat_df = analysis.search_molecule(
-                mol_row["name"],
-                [
-                    self.data[self.freq_col].min(),
-                    self.data[self.freq_col].max()
-                ]
-            )
-            assigned_df = ass_df.loc[ass_df["name"] == mol_row["name"]]
-            # Loosen the temperature and intensity criterion criterion
-            filtered_df = splat_df.loc[
-                (splat_df["E_U (K)"] <= mol_row["ustate_energy"] * 2.)
-            ]
-            if mol_row["catalog_intensity"] != 0.:
-                # If catalog intensity was known previously, we'll also filter out the
-                # intensities too
-                filtered_df = filtered_df.loc[
-                    filtered_df["CDMS/JPL Intensity"] >= mol_row["catalog_intensity"] * 1.5
-                ]
-            # Get only the transitions that haven't been assigned already
-            mask = [freq not in assigned_df["catalog_frequency"].values for freq in filtered_df["Frequency"].values]
-            filtered_df = filtered_df.loc[mask]
-            """
-                Loop over each molecular frequency, and slice up a bit of the observed spectrum to look for
-                peaks again.
-            """
-            for index, row in filtered_df.iterrows():
-                frequency = row["Frequency"]
-                min_freq = frequency - 4.
-                max_freq = frequency + 4.
-                spectrum_slice = self.data.loc[
-                    (self.data[self.freq_col] >= min_freq) &
-                    (self.data[self.freq_col] <= max_freq)
-                ]
-                spectrum_slice.reset_index(inplace=True, drop=True)
-                # Find peaks in the region of interest with a dynamic threshold for detection
-                peaks = analysis.peak_find(
-                    spectrum_slice, self.freq_col, self.int_col, thres=spectrum_slice[self.int_col].max() * 0.2
-                )
-                if len(peaks) > 0:
-                    print("Found {} peaks between {} and {} MHz.".format(len(peaks), min_freq, max_freq))
-                    # Remove peaks that have already been picked up in ulines/assigned
-                    assigned_check = [peak_freq not in ass_df["frequency"] for peak_freq in peaks["Frequency"].values]
-                    # If the lines were in any of the lists, they would return True. We want lines that
-                    # aren't in the lists
-                    peaks = peaks.loc[assigned_check]
-                    peaks["Distance"] = np.abs(peaks["Frequency"] - row["Frequency"])
-                    viable_freq = peaks["Frequency"].ix[peaks["Distance"].idxmin()]
-                    viable_int = peaks["Intensity"].ix[peaks["Distance"].idxmin()]
-                    uline_check = [uline_obj for uline_obj in self.ulines.values() if uline_obj.frequency == frequency]
-                    # If we already had a U-line of this frequency we'll mark it as assigned
-                    # Set up the assignment fields
-                    ass_dict = {
-                        "uline": False,
-                        "frequency": frequency,
-                        "intensity": viable_int,
-                        "name": mol_row["name"],
-                        "catalog_frequency": viable_freq,
-                        "catalog_intensity": row["CDMS/JPL Intensity"],
-                        "formula": row["Species"],
-                        "r_qnos": row["Resolved QNs"],
-                        "ustate_energy": row["E_U (K)"],
-                        "source": "Post-CDMS/JPL",
-                        "deviation": frequency - viable_freq
-                    }
-                    if len(uline_check) > 0:
-                        ass_dict["index"] = uline_check[0].peak_id
-                        self.assign_line(**ass_dict)
-                    else:
-                        # We create the assignment object directly because the U-line may not have
-                        # already been there
-                        self.assignments.append(
-                            Assignment(**ass_dict)
-                        )
-                    print("Assigned ")
-                    counter+=1
-                possible[mol_row["name"]][frequency] = peaks
-        print("Assigned a total of {} peaks".format(counter))
-        return possible
+        print("Removed {} lines as artifacts.".format(counter)
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
