@@ -915,7 +915,7 @@ class AssignmentSession:
                 }
                 self.assign_line(**assign_dict)
                 counter += 1
-        print("Removed {} lines as artifacts.".format(counter)
+        print("Removed {} lines as artifacts.".format(counter))
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
@@ -1125,7 +1125,12 @@ class AssignmentSession:
         Adds all of the entries to a specified SpectralCatalog database. The database defaults
         to the global database stored in the home directory. This method will remove everything
         in the database associated with this experiment's ID, and re-add the entries.
-         dbpath: str path to a SpectralCatalog database. Defaults to the system-wide catalog.
+
+        Parameters
+        ----------
+        dbpath : str, optional
+            path to a SpectralCatalog database. Defaults to the system-wide catalog.
+
         """
         with database.SpectralCatalog(dbpath) as db_obj:
             # Tabula rasa
@@ -1138,12 +1143,23 @@ class AssignmentSession:
         Simulates a stick spectrum with intensities in flux units (Jy) for
         a given catalog file, the column density, and the rotational partition
         function at temperature T.
-         catalogpath: path to SPCAT catalog file
-         N: column density in cm^-2
-         Q: partition function at temperature T
-         T: temperature in Kelvin
-         doppler: doppler width in km/s; defaults to session wide value
-         gaussian: bool; if True, simulates Gaussian profiles instead of sticks
+
+        Parameters
+        ----------
+         catalogpath : str
+            path to SPCAT catalog file
+         N : float
+            column density in cm^-2
+         Q : float
+            partition function at temperature T
+         T : float
+            temperature in Kelvin
+         doppler : float, optional
+            doppler width in km/s; defaults to session wide value
+         gaussian : bool, optional
+                   if True, simulates Gaussian profiles instead of sticks
+         Returns
+         -------
         :return: if gaussian is False, returns a dataframe with sticks; if True,
                  returns a simulated Gaussian line profile spectrum
         """
