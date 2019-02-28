@@ -106,7 +106,7 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
         )
     # Use 1sigma as the detection threshold; remove everything else!
     peak_df = peak_df.loc[
-        peak_df["Intensity"] >= spec_df[int_col].mean() + spec_df[int_col].std()
+        peak_df["Intensity"] >= thres
         ]
     peak_df.reset_index(drop=True, inplace=True)
     return peak_df

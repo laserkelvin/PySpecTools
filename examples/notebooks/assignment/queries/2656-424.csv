@@ -1,0 +1,3 @@
+Species,Chemical Name,Meas Freq-GHz,Freq-GHz,Resolved QNs,CDMS/JPL Intensity,E_U (K),Frequency,Deviation,Weighting
+C6H,"1,3,5-Hexatriynyl",,12.4759262,"J=9/2-7/2,&Omega;=3/2,l=e",-5.1361,1.39712,12475.9262,0.027885870566024096,1.0
+C6H,"1,3,5-Hexatriynyl",,12.4760477,"J=9/2-7/2,&Omega;=3/2,F=4-3,l=e",-5.3887,1.39713,12476.047700000001,0.09361412943508185,0.16651095218070913

@@ -1,0 +1,3 @@
+Species,Chemical Name,Meas Freq-GHz,Freq-GHz,Resolved QNs,CDMS/JPL Intensity,E_U (K),Frequency,Deviation,Weighting
+c-HCCCHv=0,Cyclopropenylidene,18.343143,,"1(1,0)-1(0,1)",-5.0514,3.23012,18343.143,0.007918440514913527,1.0
+c-HCCCHv=0,Cyclopropenylidene,18.343143,,"1(1,0)-1(0,1)",-5.0771,3.23012,18343.143,0.007918440514913527,0.9425404555789753

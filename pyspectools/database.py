@@ -99,6 +99,7 @@ class SpectralCatalog(tinydb.TinyDB):
         :param freq_abs: bool, dictates whether the absolute value of freq_prox is used.
         :return:
         """
+        frequency = float(frequency)
         if freq_abs is True:
             min_freq = frequency - freq_prox
             max_freq = frequency + freq_prox

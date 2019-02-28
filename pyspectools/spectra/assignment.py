@@ -13,6 +13,7 @@ from collections import OrderedDict
 
 import numpy as np
 import pandas as pd
+from tqdm.autonotebook import tqdm
 from lmfit.models import GaussianModel
 from IPython.display import display, HTML
 from periodictable import formula
@@ -564,7 +565,7 @@ class AssignmentSession:
             print("Peak detection not run; running with default settings.")
             self.find_peaks()
 
-        for uindex, uline in list(self.ulines.items()):
+        for uindex, uline in tqdm(list(self.ulines.items())):
             frequency = uline.frequency
             print("Searching for frequency {:,.4f}".format(frequency))
             # Call splatalogue API to search for frequency
@@ -678,7 +679,7 @@ class AssignmentSession:
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
 
-        for uindex, uline in list(self.ulines.items()):
+        for uindex, uline in tqdm(list(self.ulines.items())):
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency,
                 lin_df,
@@ -815,7 +816,7 @@ class AssignmentSession:
             (catalog_df["Intensity"] >= thres)
             ]
         # Loop over the uline list
-        for uindex, uline in list(self.ulines.items()):
+        for uindex, uline in tqdm(list(self.ulines.items())):
             # 0.1% of frequency
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency, catalog_df, prox=self.session.freq_prox, abs=self.session.freq_abs
@@ -935,41 +936,39 @@ class AssignmentSession:
         """
         old_nulines = len(self.ulines)
         db = database.SpectralCatalog(dbpath)
-        for uindex, uline in list(self.ulines.items()):
+        for uindex, uline in tqdm(list(self.ulines.items())):
             catalog_df = db.search_frequency(uline.frequency, self.session.freq_prox, self.session.freq_abs)
-            catalog_df["frequency"].replace(0., np.nan, inplace=True)
-            catalog_df["frequency"].fillna(catalog_df["catalog_frequency"], inplace=True)
-            if len(catalog_df) > 0:
-                sliced_catalog = self.calc_line_weighting(
-                    uline.frequency,
-                    catalog_df,
-                    prox=self.session.freq_prox,
-                    abs=self.session.freq_abs,
-                    freq_col="frequency"
-                )
-                display(HTML(sliced_catalog.to_html()))
-                if auto is False:
-                    index = int(input("Please choose a candidate by index."))
-                elif auto is True:
-                    index = 0
-                if index in catalog_df.index:
-                    select_df = catalog_df.iloc[index]
-                    # Create an approximate quantum number string
-                    assign_dict = {
-                        "name": select_df["name"],
-                        "formula": select_df["formula"],
-                        "index": uline.peak_id,
-                        "frequency": uline.frequency,
-                        "catalog_frequency": select_df["frequency"],
-                        "source": "Database",
-                        "deviation": uline.frequency - select_df["frequency"]
-                    }
-                    # Pass whatever extra stuff
-                    assign_dict.update(**kwargs)
-                    # Use assign_line function to mark peak as assigned
-                    self.assign_line(**assign_dict)
-                else:
-                    raise IndexError("Invalid index chosen for assignment.")
+            if catalog_df is not None:
+                catalog_df["frequency"].replace(0., np.nan, inplace=True)
+                catalog_df["frequency"].fillna(catalog_df["catalog_frequency"], inplace=True)
+                if len(catalog_df) > 0:
+                    sliced_catalog = self.calc_line_weighting(
+                        uline.frequency,
+                        catalog_df,
+                        prox=self.session.freq_prox,
+                        abs=self.session.freq_abs,
+                        freq_col="frequency"
+                    )
+                    display(HTML(sliced_catalog.to_html()))
+                    if auto is False:
+                        index = int(input("Please choose a candidate by index."))
+                    elif auto is True:
+                        index = 0
+                    if index in catalog_df.index:
+                        select_df = catalog_df.iloc[index]
+                        # Create an approximate quantum number string
+                        new_dict = {
+                            "index": uline.peak_id,
+                            "frequency": uline.frequency,
+                            "source": "Database",
+                            "deviation": uline.frequency - select_df["frequency"]
+                        }
+                        assign_dict = select_df.to_dict()
+                        assign_dict.update(**new_dict)
+                        # Use assign_line function to mark peak as assigned
+                        self.assign_line(**assign_dict)
+                    else:
+                        raise IndexError("Invalid index chosen for assignment.")
         # Update the internal table
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]

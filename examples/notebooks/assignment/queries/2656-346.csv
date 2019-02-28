@@ -1,0 +1,3 @@
+Species,Chemical Name,Meas Freq-GHz,Freq-GHz,Resolved QNs,CDMS/JPL Intensity,E_U (K),Frequency,Deviation,Weighting
+C4Hv=0,"1,3-Butadiynyl radical",,9.5080063,"N=1-0,J=3/2-1/2,F=1-1",-7.3879,0.45617,9508.0063,0.01700338308728533,1.0
+C4Hv=0,"1,3-Butadiynyl radical",9.508005,,"N=1-0,J=3/2-1/2,F=1-1",-7.4175,0.45631,9508.005000000001,0.018303383085367386,0.8677686777085206
