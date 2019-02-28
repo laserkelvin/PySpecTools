@@ -713,7 +713,10 @@ class AssignmentSession:
         print("Prior number of ulines: {}".format(old_nulines))
         print("Current number of ulines: {}".format(len(self.ulines)))
 
-    def calc_line_weighting(self, frequency, catalog_df, prox=0.00005, abs=True):
+    def calc_line_weighting(
+            self, frequency, catalog_df, prox=0.00005,
+            abs=True, freq_col="Frequency", int_col="Intensity"
+    ):
         """
             Function for calculating the weighting factor for determining
             the likely hood of an assignment. The weighting factor is
@@ -746,17 +749,17 @@ class AssignmentSession:
             lower_freq = frequency - prox
             upper_freq = frequency + prox
         sliced_catalog = catalog_df.loc[
-            (catalog_df["Frequency"] >= lower_freq) & (catalog_df["Frequency"] <= upper_freq)
+            (catalog_df[freq_col] >= lower_freq) & (catalog_df[freq_col] <= upper_freq)
             ]
         nentries = len(sliced_catalog)
         if nentries > 0:
             # Calculate probability weighting. Base is the inverse of distance
-            sliced_catalog.loc[:, "Deviation"] = np.abs(sliced_catalog["Frequency"] - frequency)
+            sliced_catalog.loc[:, "Deviation"] = np.abs(sliced_catalog[freq_col] - frequency)
             sliced_catalog.loc[:, "Weighting"] = (1. / sliced_catalog["Deviation"])
             # If intensity is included in the catalog incorporate it in
             # the weight calculation
-            if "Intensity" in sliced_catalog:
-                sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog["Intensity"])
+            if int_col in sliced_catalog:
+                sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog[int_col])
             elif "CDMS/JPL Intensity" in sliced_catalog:
                 sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog["CDMS/JPL Intensity"])
             else:
@@ -916,6 +919,64 @@ class AssignmentSession:
                 self.assign_line(**assign_dict)
                 counter += 1
         print("Removed {} lines as artifacts.".format(counter))
+
+    def process_db(self, auto=True, dbpath=None):
+        """
+        Function for assigning peaks based on a local database file.
+        The database is controlled with the SpectralCatalog class, which will handle all of the searching.
+
+        Parameters
+        ----------
+        auto : bool, optional
+            If True, the assignments are made automatically.
+        dbpath : str or None, optional
+            Filepath to the local database. If none is supplied, uses the default value from the user's home directory.
+
+        """
+        old_nulines = len(self.ulines)
+        db = database.SpectralCatalog(dbpath)
+        for uindex, uline in list(self.ulines.items()):
+            catalog_df = db.search_frequency(uline.frequency, self.session.freq_prox, self.session.freq_abs)
+            catalog_df["frequency"].replace(0., np.nan, inplace=True)
+            catalog_df["frequency"].fillna(catalog_df["catalog_frequency"], inplace=True)
+            if len(catalog_df) > 0:
+                sliced_catalog = self.calc_line_weighting(
+                    uline.frequency,
+                    catalog_df,
+                    prox=self.session.freq_prox,
+                    abs=self.session.freq_abs,
+                    freq_col="frequency"
+                )
+                display(HTML(sliced_catalog.to_html()))
+                if auto is False:
+                    index = int(input("Please choose a candidate by index."))
+                elif auto is True:
+                    index = 0
+                if index in catalog_df.index:
+                    select_df = catalog_df.iloc[index]
+                    # Create an approximate quantum number string
+                    assign_dict = {
+                        "name": select_df["name"],
+                        "formula": select_df["formula"],
+                        "index": uline.peak_id,
+                        "frequency": uline.frequency,
+                        "catalog_frequency": select_df["frequency"],
+                        "source": "Database",
+                        "deviation": uline.frequency - select_df["frequency"]
+                    }
+                    # Pass whatever extra stuff
+                    assign_dict.update(**kwargs)
+                    # Use assign_line function to mark peak as assigned
+                    self.assign_line(**assign_dict)
+                else:
+                    raise IndexError("Invalid index chosen for assignment.")
+        # Update the internal table
+        ass_df = pd.DataFrame(
+            data=[ass_obj.__dict__ for ass_obj in self.assignments]
+        )
+        self.table = ass_df
+        print("Prior number of ulines: {}".format(old_nulines))
+        print("Current number of ulines: {}".format(len(self.ulines)))
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
@@ -1120,7 +1181,7 @@ class AssignmentSession:
             for folder in folders:
                 rmtree(folder)
 
-    def upload_database_assignments(self, dbpath=None):
+    def update_database(self, dbpath=None):
         """
         Adds all of the entries to a specified SpectralCatalog database. The database defaults
         to the global database stored in the home directory. This method will remove everything
@@ -1753,8 +1814,8 @@ class AssignmentSession:
 
             Parameters
             ---------------
-             filepath - path to save the file to. By default it will go into
-                       the sessions folder.
+             filepath - str
+                Path to save the file to. By default it will go into the sessions folder.
         """
         if filepath is None:
             filepath = "./sessions/{}.pkl".format(self.session.experiment)
@@ -1764,31 +1825,3 @@ class AssignmentSession:
             filepath
         )
         print("Saved session to {}".format(filepath))
-
-    def update_database(self, dbpath=None):
-        """
-
-        Parameters
-        ----------
-        dbpath
-
-        Returns
-        -------
-
-        """
-        if dbpath is None:
-            dbpath = os.path.join(
-                os.path.expanduser("~"), ".pyspectools/pyspeccatalog.csv"
-            )
-        uline_df = pd.DataFrame([uline.__dict__ for uline in self.ulines.values()])
-        assign_df = pd.DataFrame([ass_obj.__dict__ for ass_obj in self.assignments])
-        if os.path.isfile(dbpath) is True:
-            catalog_db = pd.read_csv(dbpath)
-            new_catalog = pd.concat([catalog_db, uline_df, assign_df])
-            new_catalog.drop_duplicates(inplace=True)
-            new_catalog.reset_index(inplace=True)
-        else:
-            new_catalog = pd.concat([uline_df, assign_df])
-            new_catalog.reset_index(inplace=True)
-        new_catalog.to_csv(dbpath, index=False)
-
