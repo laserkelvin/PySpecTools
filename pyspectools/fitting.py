@@ -13,6 +13,8 @@ import numpy as np
 import pandas as pd
 import peakutils
 from tqdm.autonotebook import tqdm
+from scipy import sparse
+from scipy.sparse.linalg import spsolve
 
 from pyspectools import lineshapes
 
@@ -233,3 +235,46 @@ def harmonic_fitter(progressions, J_thres=0.01):
     )
     full_df.sort_values(["RMS", "B", "D"], ascending=False, inplace=True)
     return full_df, fit_objs
+
+
+def baseline_als(y, lam=1e4, p=0.01, niter=10):
+    """
+        Function for performing an iterative baseline
+        fitting using the asymmetric least squares algorithm.
+
+        This refers to the paper:
+        "Baseline Correction with Asymmetric Least Squares Smoothing"
+        by Eilers and Boelens (2005).
+
+        The code is taken from a Stack Overflow question:
+        https://stackoverflow.com/a/29185844
+
+        According to the paper, the tested values are:
+        0.001 <= p <= 0.1 for positive peaks
+        1e2 <= lam <= 1e9
+
+        Parameters:
+        --------------
+        y : numpy 1D array
+            Data used to fit the baseline
+        lam : float
+            Tuning factor for penalty function that offsets the difference cost function
+        p : float
+            Weighting factor for the cost function
+
+        Returns:
+        --------------
+        z : numpy 1D array
+            Array containing the baseline values
+    """
+    L = len(y)
+    D = sparse.diags([1, -2, 1], [0, -1, -2], shape=(L, L - 2))
+    # Initialize a set of weights
+    w = np.ones(L)
+    # Iterate for a set number of times to fit baseline
+    for i in range(niter):
+        W = sparse.spdiags(w, 0, L, L)
+        Z = W + lam * D.dot(D.transpose())
+        z = spsolve(Z, w * y)
+        w = p * (y > z) + (1 - p) * (y < z)
+    return z
