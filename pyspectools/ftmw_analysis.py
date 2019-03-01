@@ -1581,3 +1581,13 @@ def predict_prolate_series(progressions, J_thres=0.1):
         }
     return predictions
 
+
+@dataclass
+class BlackchirpExperiment:
+    exp_id: int
+    fid_start: int = 0
+    fid_end: int = -1
+    ft_min: float = 0.
+    ft_max: float = 40000.
+    ft_filter: str = "boxcar"
+

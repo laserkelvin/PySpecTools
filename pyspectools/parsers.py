@@ -1,4 +1,8 @@
 
+import os
+import struct
+from glob import glob
+
 import pandas as pd
 import numpy as np
 
@@ -104,3 +108,60 @@ def parse_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf)
         (cat_df["Intensity"].astype(float) >= threshold)          # or lack thereof
         ]
     return cat_df
+
+
+def parse_blackchirp(dir_path):
+    """
+    Function for reading in a Blackchirp experiment. The required input should point to the directory
+    containing the Blackchirp files with the correct extensions: .hdr, .tdt, and .fid
+
+    Parameters
+    ----------
+    dir_path - str
+        Filepath pointing to the directory containing the Blackchirp experiment files.
+
+    """
+    # read in header information
+    hdr_file = glob(os.path.join(dir_path, "*.hdr"))
+    header = dict()
+    try:
+        hdr_file = hdr_file[0]
+    except IndexError:
+        raise Exception("Header file is missing!")
+    with open(hdr_file) as hdr:
+        for line in hdr:
+            if not line:
+                continue
+            l = line.split("\t")
+            if not l or len(l) < 3:
+                continue
+
+            key = l[0].strip()
+            value = l[1].strip()
+            unit = l[2].strip()
+
+            header[key] = {"value": value, "unit": unit}
+
+    fid_files = glob(os.path.join(dir_path, "*.fid"))
+    if len(fid_files) < 1:
+        raise Exception("No FID files present!")
+    else:
+        for file in fid_files:
+            with open(file, "rb") as fidfile:
+                buffer = fidfile.read(4)
+                ms_len = struct.unpack(">I", buffer)
+                buffer = fidfile.read(ms_len[0])
+                magic_string = buffer.decode('ascii')
+                if not magic_string.startswith("BCFID"):
+                    raise ValueError("Could not read magic string from {}".format(fidfile.name))
+
+                l = magic_string.split("v")
+                if len(l) < 2:
+                    raise ValueError("Could not determine version number from magic string {}".format(magic_string))
+
+                version = l[1]
+
+                buffer = fidfile.read(4)
+                fidlist_size = struct.unpack(">I", buffer)[0]
+                for i in range(0, fidlist_size):
+            self.fid_list.append(BlackChirpFid(version, fidfile))
