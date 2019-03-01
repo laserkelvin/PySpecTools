@@ -2,6 +2,7 @@
 import datetime
 import re
 import os
+from copy import deepcopy
 from dataclasses import dataclass, field
 from itertools import combinations, product
 from typing import List, Dict
@@ -11,13 +12,14 @@ import numpy as np
 import peakutils
 from matplotlib import pyplot as plt
 from scipy import signal as spsig
-from scipy.stats import chisquare
 import plotly.graph_objs as go
 from tqdm.autonotebook import tqdm
+import networkx as nx
 from ipywidgets import interactive, VBox, HBox
+from lmfit.models import LinearModel
 
 from pyspectools import routines
-from pyspectools import figurefactory
+from pyspectools import figurefactory as ff
 from pyspectools import fitting
 from pyspectools.spectra import analysis
 
@@ -87,6 +89,28 @@ class Batch:
 
     @classmethod
     def from_remote(cls, root_path, batch_id, assay, machine, ssh_obj=None):
+        """
+        Create a Batch object by retrieving a QtFTM batch file from a remote
+        location. The user must provide a path to the root directory of the
+        batch type, e.g. /home/data/QtFTM/batch/, and the corresponding
+        batch type ID. Additionally, the type of batch must be specified to
+        determine the type of analysis required.
+
+        Optionally, the user can provide a reference to a RemoteClient object
+        from `pyspectools.routines`. If none is provided, a RemoteClient object
+        will be created with public key authentication (if available), otherwise
+        the user will be queried for a hostname, username, and password.
+
+        Keep in mind this method can be slow as every scan is downloaded. I
+        recommend creating this once, then saving a local copy for subsequent
+        analysis.
+        :param root_path: str path to the batch type root directory
+        :param batch_id: int or str value for the batch number
+        :param assay: str the batch type
+        :param machine: str reference the machine used for the batch
+        :param ssh_obj: `RemoteClient` object
+        :return:
+        """
         if ssh_obj is None:
             default_keypath = os.path.join(
                 os.path.expanduser("~"),
@@ -131,6 +155,20 @@ class Batch:
         else:
             return batch_obj
 
+    def __repr__(self):
+        return "{}-Batch {}".format(self.machine, self.id)
+
+    def __copy__(self):
+        batch_obj = Batch(**self.__dict__)
+        return batch_obj
+
+    def find_scan(self, id):
+        scans = [scan for scan in self.scans if scan.id == id]
+        if len(scans) == 0:
+            raise Exception("No scans were found.")
+        else:
+            return scans[0]
+
     def get_scans(self, root_path, ids):
         """
         Function to create Scan objects for all of the scans in
@@ -140,16 +178,16 @@ class Batch:
         :param src: str optional specifying whether a remote or local path is used
         """
         root_path = root_path.replace("batch", "scans")
-        path_list = [
+        path_list = tqdm([
             os.path.join(root_path, "*", "*", str(scan_id) + ".txt") for scan_id in ids
-        ]
+        ])
         if hasattr(self, "remote") is True:
             scans = [Scan.from_remote(path, self.remote) for path in path_list]
         else:
             scans = [Scan.from_qtftm(path) for path in path_list]
         self.scans = scans
 
-    def process_dr(self, depletion=0.6):
+    def process_dr(self, significance=16.):
         """
         Function to batch process all of the DR measurements.
         :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
@@ -164,13 +202,33 @@ class Batch:
         # Find the cavity frequencies that DR was performed on
         progressions = self.split_progression_batch()
         dr_dict = dict()
-        for index, progression in enumerate(tqdm(progressions)):
-            scans = [scan for scan in self.scans if scan.id in progression]
-            ref = scans.pop(0)
-            ref_fit = ref.fit_cavity(plot=False)
-            roi, ref_x, ref_y = ref.get_line_roi()
-            connections = [scan for scan in scans if scan.is_depleted(ref, roi, depletion)]
-            dr_dict[index] = connections
+        counter = 0
+        for index, progression in tqdm(progressions.items()):
+            ref = progression.pop(0)
+            try:
+                ref_fit = ref.fit_cavity(plot=False)
+                roi, ref_x, ref_y = ref.get_line_roi()
+                signal = [np.sum(ref_y, axis=0)]
+                sigma = np.average(
+                    [np.std(scan.spectrum["Intensity"].iloc[roi]) for scan in progression]
+                ) * significance
+                connections = [scan for scan in progression if scan.is_depleted(ref, roi, sigma)]
+                if len(connections) > 1:
+                    counter += len(connections)
+                    signal.extend(
+                        [np.sum(scan.spectrum["Intensity"].iloc[roi], axis=0) for scan in connections]
+                    )
+                    dr_dict[index] = {
+                        "frequencies": [scan.dr_frequency for scan in connections],
+                        "ids": [scan.id for scan in connections],
+                        "cavity": ref.fit.frequency,
+                        "signal": signal,
+                        "expected": np.sum(ref_y) - sigma
+                    }
+            except ValueError:
+                print("Progression {} could not be fit; ignoring.".format(index))
+        print("Possible depletions detected in these indexes: {}".format(list(dr_dict.keys())))
+        print("There are {} possible depletions.".format(counter))
         return dr_dict
 
     def split_progression_batch(self):
@@ -190,10 +248,11 @@ class Batch:
                 counter += 1
         return progressions
 
-    def interactive_progression_batch(self):
+    def interactive_dr_batch(self):
         """
-        Create an interactive widget slider with a Plotly figure. The slider will update
-        the progression plotted.
+        Create an interactive widget slider with a Plotly figure. The batch will be split
+        up into "subbatches" by the cavity frequency and whether or not the scan IDs are
+        consecutive.
         :return vbox: VBox object with the Plotly figure and slider objects
         """
         progressions = self.split_progression_batch()
@@ -203,7 +262,7 @@ class Batch:
         def update_figure(index):
             fig.data = []
             fig.add_traces([scan.scatter_trace() for scan in progressions[index]])
-        index_slider = interactive(update_figure, index=(0, len(progressions), 1))
+        index_slider = interactive(update_figure, index=(0, len(progressions) - 1, 1))
         vbox = VBox((fig, index_slider))
         vbox.layout.align_items = "center"
         return vbox
@@ -245,6 +304,64 @@ class Batch:
         if hasattr(self, "remote"):
             delattr(self, "remote")
         routines.save_obj(self, filepath, **kwargs)
+
+    def create_dr_network(self, scans):
+        """
+        Take a list of scans, and generate a NetworkX Graph object
+        for analysis and plotting.
+        :param scans: list of scan IDs to connect
+        :return fig: Plotly FigureWidget object
+        """
+        connections = [
+            [np.floor(scan.cavity_frequency), np.floor(scan.dr_frequency)] for scan in self.scans if scan.id in scans
+        ]
+        fig, self.progressions = ff.dr_network_diagram(connections)
+        return fig
+
+    def find_optimum_scans(self, thres=0.8):
+        """
+
+        :param thres:
+        :return:
+        """
+        progressions = self.split_progression_batch()
+        data = list()
+        for index, progression in tqdm(progressions.items()):
+            snrs = [scan.calc_snr(thres=thres) for scan in progression]
+            best_scan = progression[np.argmax(snrs)]
+            try:
+                fit_result = best_scan.fit_cavity(plot=False)
+                if fit_result.best_values["w"] < 0.049:
+                    data.append(
+                        {
+                            "frequency": np.round(fit_result.best_values["x0"], 4),
+                            "snr": np.max(snrs),
+                            "scan": best_scan.id,
+                            "attenuation": best_scan.cavity_atten,
+                            "index": index
+                        }
+                    )
+            except ValueError:
+                print("Index {} failed to fit!".format(index))
+        opt_df = pd.DataFrame(data)
+        return opt_df
+
+    def search_frequency(self, frequency, tol=0.001):
+        """
+        Search the Batch scans for a particular frequency, and return
+        any scans that lie within the tolerance window
+        :param frequency: float specifying frequency to search
+        :param tol: float decimal percentage to use for the search tolerance
+        :return new_batch: a new Batch object with selected scans
+        """
+        upper = frequency * (1 + tol)
+        lower = frequency * (1 - tol)
+        scans = [
+            scan for scan in self.scans if lower <= scan.cavity_frequency <= upper
+        ]
+        #new_batch = deepcopy(self)
+        #new_batch.scans = scans
+        return scans
 
 
 @dataclass
@@ -297,6 +414,9 @@ class Scan:
         new_scan.__class__ = self.__class__
         new_scan.__dict__.update(self.__dict__)
         return new_scan
+
+    def __repr__(self):
+        return str(self.id)
 
     def average(self, others):
         """
@@ -488,8 +608,9 @@ class Scan:
         process_dict = {key: value for key, value in self.__dict__.items() if key in process_list}
         # Override with user settings
         process_dict.update(**kwargs)
-        self.spectrum = fid2fft(self.fid.copy(), 1. / self.fid_spacing, frequencies, **process_dict)
-        self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": self.fid})
+        temp_fid = np.copy(self.fid)
+        self.spectrum = fid2fft(temp_fid, 1. / self.fid_spacing, frequencies, **process_dict)
+        self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": temp_fid})
 
     def within_time(self, date_range):
         """
@@ -515,7 +636,7 @@ class Scan:
             late = datetime.datetime(9999, 1, 1)
         return early <= self.date <= late
 
-    def is_depleted(self, ref, roi=None, p_thres=0.5):
+    def is_depleted(self, ref, roi=None, depletion=None):
         """
         Function for determining if the signal in this Scan is less
         than that of another scan. This is done by a simple comparison
@@ -535,13 +656,21 @@ class Scan:
         """
         y_ref = ref.spectrum["Intensity"].values
         y_obs = self.spectrum["Intensity"].values
+        self.ref_freq = ref.fit.frequency
+        self.ref_id = ref.id
         if roi:
             y_ref = y_ref[roi]
             y_obs = y_obs[roi]
-        chisq, p_value = chisquare(
-            y_obs, y_ref
-        )
-        return (chisq, p_value), p_value <= p_thres
+        # This doesn't work, or is not particularly discriminating.
+        #chisq, p_value = chisquare(
+        #    y_obs, y_ref
+        #)
+        if depletion is None:
+            sigma = np.std(y_obs, axis=0) * 16.
+        else:
+            sigma = depletion
+        expected = np.sum(y_ref, axis=0) - sigma
+        return np.sum(y_obs, axis=0) <= expected
 
     def scatter_trace(self):
         """
@@ -561,19 +690,20 @@ class Scan:
         )
         return trace
 
-    def fit_cavity(self, plot=True):
+    def fit_cavity(self, plot=True, verbose=False):
         """
         Perform a fit to the cavity spectrum. Uses a paired Gaussian model
         that minimizes the number of fitting parameters.
         :param plot: bool specify whether a Plotly figure is made
         :return: Model Fit result
         """
-        y = self.spectrum["Intensity"].values
-        x = self.spectrum["Frequency (MHz)"].values
+        y = self.spectrum["Intensity"].dropna().values
+        x = self.spectrum["Frequency (MHz)"].dropna().values
         model = fitting.PairGaussianModel()
-        result = model.fit_pair(x, y)
+        result = model.fit_pair(x, y, verbose=verbose)
         self.spectrum["Fit"] = result.best_fit
         self.fit = result
+        self.fit.frequency = self.fit.best_values["x0"]
         if plot is True:
             fig = go.FigureWidget()
             fig.layout["xaxis"]["title"] = "Frequency (MHz)"
@@ -595,6 +725,21 @@ class Scan:
         _, high_end = routines.find_nearest(x, params["x0"] + params["xsep"] + params["w"] * 4.)
         index = list(range(low_end, high_end))
         return index, x[low_end:high_end], y[low_end:high_end]
+
+    def calc_snr(self, noise=None, thres=0.6):
+        if noise is None:
+            # Get the last 10 points at the end and at the beginning
+            noise = np.average(
+                [
+                    self.spectrum["Intensity"].iloc[-10:],
+                    self.spectrum["Intensity"].iloc[:10]
+                ]
+            )
+        peaks = self.spectrum["Intensity"].iloc[
+            peakutils.indexes(self.spectrum["Intensity"], thres=thres, thres_abs=True)
+            ].values
+        signal = np.average(np.sort(peaks)[:2])
+        return signal / noise
 
 
 def parse_scan(filecontents):
@@ -705,14 +850,15 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     :return: freq_df - pandas dataframe with the FFT spectrum
     """
     # Remove DC
-    fid-=np.average(fid)
+    new_fid = fid - np.average(fid)
     if "delay" in kwargs:
-        fid[:int(kwargs["delay"])] = 0.
+        delay = int(kwargs["delay"] / (1. / rate) / 1e6)
+        new_fid[:delay] = 0.
     # Zero-pad the FID
     if "zeropad" in kwargs:
         if kwargs["zeropad"] is True:
             # Pad the FID with zeros to get higher resolution
-            fid = np.append(fid, np.zeros(len(fid)))
+            fid = np.append(new_fid, np.zeros(len(new_fid)))
             # Since we've padded with zeros, we'll have to update the
             # frequency array
             frequencies = spsig.resample(frequencies, len(frequencies) * 2)
@@ -720,27 +866,28 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     if "window" in kwargs:
         available = ["blackmanharris", "blackman", "boxcar", "gaussian", "hanning", "bartlett"]
         if (kwargs["window"] != "") and (kwargs["window"] in available):
-            fid*=spsig.get_window(kwargs["window"], len(fid))
+            new_fid*=spsig.get_window(kwargs["window"], len(new_fid))
     # Apply an exponential filter on the FID
     if "exp" in kwargs:
         if kwargs["exp"] > 0.:
-            fid*=spsig.exponential(len(fid), tau=kwargs["exp"])
+            new_fid*=spsig.exponential(len(new_fid), tau=kwargs["exp"])
     # Apply a bandpass filter on the FID
     if ("filter" in kwargs) and (len(kwargs["filter"]) == 2):
         low, high = sorted(kwargs["filter"])
         if low < high:
-            fid = apply_butter_filter(
-                fid,
+            new_fid = apply_butter_filter(
+                new_fid,
                 low,
                 high,
                 rate
             )
     # Perform the FFT
-    fft = np.fft.fft(fid)
+    fft = np.fft.fft(new_fid)
     # Get the real part of the FFT
-    real_fft = np.abs(fft[:int(len(fid) / 2)]) / len(fid) * 1e3
+    real_fft = np.abs(fft[:int(len(new_fid) / 2)]) / len(new_fid) * 1e3
     frequencies = spsig.resample(frequencies, len(real_fft))
     # For some reason, resampling screws up the frequency ordering...
+    real_fft = real_fft[np.argsort(frequencies)]
     frequencies = np.sort(frequencies)
     # Package into a pandas dataframe
     freq_df = pd.DataFrame({"Frequency (MHz)": frequencies, "Intensity": real_fft})
@@ -951,6 +1098,7 @@ def categorize_frequencies(frequencies, nshots=50, intensities=None,
 
     return ftb_str
 
+
 def calculate_integration_times(intensity, nshots=50):
     """
         Method for calculating the expected integration time
@@ -969,6 +1117,7 @@ def calculate_integration_times(intensity, nshots=50):
     norm_int = intensity / np.max(intensity)
     shot_counts = np.round(nshots / norm_int).astype(int)
     return shot_counts
+
 
 class AssayBatch:
     @classmethod
@@ -1398,3 +1547,37 @@ class AssayBatch:
             filepath
             )
         print("Saved session to {}".format(filepath))
+
+
+def predict_prolate_series(progressions, J_thres=0.1):
+    fit_df, fits = fitting.harmonic_fitter(progressions, J_thres)
+    J_model = LinearModel()
+    BJ_model = fitting.BJModel()
+    predictions = dict()
+    for index, row in fit_df.iterrows():
+        row = row.dropna()
+        J_values = row[[col for col in row.keys() if "J" in str(col)]].values
+        if len(J_values) > 2:
+            J_fit = J_model.fit(data=J_values, x=np.arange(len(J_values)))
+            J_predicted = J_fit.eval(x=np.arange(-10, 10, 1))
+            BJ_params = row[["B", "D"]].values
+            freq_predicted = BJ_model.eval(J=J_predicted, B=BJ_params[0], D=BJ_params[1])
+        elif len(J_values) == 2:
+            frequencies = row[[2, 4]].values
+            approx_B = np.abs(np.diff(frequencies))
+            next_freq = np.max(frequencies) + approx_B
+            low_freq = np.min(frequencies) - approx_B
+            freq_predicted = np.concatenate(
+                (frequencies, [next_freq, low_freq]),
+                axis=None
+            )
+            freq_predicted = np.sort(freq_predicted)
+            J_predicted = freq_predicted / approx_B
+        # Filter out negative frequencies
+        freq_predicted = freq_predicted[0. < freq_predicted]
+        predictions[index] = {
+            "predicted_freq": freq_predicted,
+            "predicted_J": J_predicted,
+        }
+    return predictions
+

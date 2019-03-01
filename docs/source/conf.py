@@ -27,7 +27,7 @@ author = 'Kelvin Lee'
 # The short X.Y version
 version = ''
 # The full version, including alpha/beta/rc tags
-release = '3.1.0'
+release = '3.3.0'
 
 
 # -- General configuration ---------------------------------------------------
@@ -40,11 +40,15 @@ release = '3.1.0'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
+    'sphinx.ext.mathjax',
+    'nbsphinx',
     'sphinx.ext.autodoc',
     'sphinx.ext.intersphinx',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
+    'sphinx.ext.napoleon',
+    'sphinx.ext.autosummary'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -69,7 +73,7 @@ language = None
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns = ['_build', '**.ipynb_checkpoints']
 
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = None
@@ -80,7 +84,7 @@ pygments_style = None
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'nature'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -119,7 +123,7 @@ latex_elements = {
 
     # The font size ('10pt', '11pt' or '12pt').
     #
-     'pointsize': '10pt',
+     'pointsize': '12pt',
 
     # Additional stuff for the LaTeX preamble.
     #

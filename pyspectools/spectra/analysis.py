@@ -13,7 +13,7 @@ from sklearn.metrics import silhouette_samples
 from pyspectools import fitting
 
 
-def fit_line_profile(spec_df, center, width, intensity,
+def fit_line_profile(spec_df, center, width=None, intensity=None,
         verbose=False, freq_col="Frequency", int_col="Intensity"):
     """ 
         Somewhat high level function that wraps lmfit for
@@ -30,15 +30,17 @@ def fit_line_profile(spec_df, center, width, intensity,
         min=center * 0.9997,
         max=center * 1.0003
     )
-    params["height"].set(
-        intensity,
-        min=0.
-        )
-    params["sigma"].set(
-        width,
-        min=width * 0.95,
-        max=width * 1.05
-        )
+    if intensity:
+        params["height"].set(
+            intensity,
+            min=0.
+            )
+    if width:
+        params["sigma"].set(
+            width,
+            min=width * 0.95,
+            max=width * 1.05
+            )
     # Slice up a small chunk in frequency space; 0.5% of the
     # center frequency to allow for broad lineshapes
     freq_range = [center * offset for offset in [0.9995, 1.0005]]
@@ -88,22 +90,23 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
     # Get the peaks if we were just using indexes
     direct_df = spec_df.iloc[peak_indices]
     direct_df.reset_index(inplace=True)
+    direct_freqs = direct_df[freq_col].values
     # Calculate the difference in fit vs. approximate peak
     # frequencies
     differences = np.abs(direct_df[freq_col] - frequencies)
     intensities = spec_df.iloc[peak_indices][int_col].values
     peak_df = pd.DataFrame(
-        data=list(zip(frequencies, intensities)),
-        columns=["Frequency", "Intensity"]
+        data=list(zip(frequencies, direct_freqs, intensities)),
+        columns=["Frequency", "Peak Frequencies", "Intensity"]
         )
     # Take the indexed frequencies if the fit exploded
     # and deviates significantly from the original prediction
     peak_df.update(
-        direct_df.loc[differences >= 0.5]
+        direct_df.loc[differences >= 0.2]
         )
     # Use 1sigma as the detection threshold; remove everything else!
     peak_df = peak_df.loc[
-        peak_df["Intensity"] >= spec_df[int_col].mean() + spec_df[int_col].std()
+        peak_df["Intensity"] >= thres
         ]
     peak_df.reset_index(drop=True, inplace=True)
     return peak_df

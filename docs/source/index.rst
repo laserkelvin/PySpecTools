@@ -8,44 +8,17 @@ Welcome to PySpecTools's documentation!
 
 .. toctree::
    :maxdepth: 2
+   :toctree: _autosummary
    :caption: Contents:
 
    setuptools
    buildanduploadsphinx
 
-PySpectools main
-================
-.. automodule:: pyspectools
-   :members:
-
-
-PySpectools autofit
-===================
-.. automodule:: pyspectools.autofit
-   :members:
-
-
-PySpectools doubleresonance
-===========================
-.. automodule:: pyspectools.doubleresonance
-   :members:
-
-
-PySpectools doubleresonance
-===========================
-.. automodule:: pyspectools.doubleresonance
-   :members:
 
 
 PySpectools figurefactory
 =========================
 .. automodule:: pyspectools.figurefactory
-   :members:
-
-
-PySpectools fitting
-===================
-.. automodule:: pyspectools.fitting
    :members:
 
 
@@ -73,21 +46,21 @@ PySpectools spectra.assignment
    :members:
 
 
-PySpectools spectra.database
+PySpectools database
 ============================
-.. automodule:: pyspectools.spectra.database
+.. automodule:: pyspectools.database
    :members:
 
 
-PySpectools spectra.parsers
+PySpectools parsers
 ===========================
-.. automodule:: pyspectools.spectra.parsers
+.. automodule:: pyspectools.parsers
    :members:
 
 
-PySpectools spectra.plotting
-============================
-.. automodule:: pyspectools.spectra.plotting
+PySpectools routines
+===========================
+.. automodule:: pyspectools.routines
    :members:
 
 

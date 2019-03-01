@@ -29,7 +29,7 @@ def parse_data(filepath):
     average = np.zeros(len(df["Frequency"]))
     for index, column in enumerate(df):
         if "Frequency" not in str(column) and "BS" not in str(column):
-            dr[str(column) + "-N"] = df[column]
+            df[str(column) + "-N"] = df[column]
             # Make sure the baseline is the same for all of the
             # spectra - subtract off the "noise average"
             # and offset by 1 to make it easily convertible into

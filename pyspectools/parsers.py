@@ -7,7 +7,30 @@ def parse_spectrum(filename, threshold=20.):
     dataframe = pd.read_csv(
         filename, delimiter="\t", names=["Frequency", "Intensity"], skiprows=1
     )
+    dataframe.dropna(inplace=True)
     return dataframe[dataframe["Intensity"] <= threshold]
+
+
+def parse_ascii(filename, delimiter="\t", names=None, header=None, skiprows=0):
+    """
+    Generic ASCII parser wrapping the pandas read_csv function.
+    Parameters
+    ----------
+    filename
+    delimiter
+    names
+    header
+    skiprows
+
+    Returns
+    -------
+
+    """
+    dataframe = pd.read_csv(
+        filename, delimiter=delimiter, names=names, header=header, skiprows=skiprows
+    )
+    dataframe.dropna(inplace=True)
+    return dataframe
 
 
 def parse_lin(filename):

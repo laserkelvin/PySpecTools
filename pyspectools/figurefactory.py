@@ -1,9 +1,16 @@
 
-import matplotlib as mpl
-from matplotlib import pyplot as plt
-from matplotlib.ticker import FuncFormatter
-from matplotlib.offsetbox import AnnotationBbox, OffsetImage
+
 import numpy as np
+import networkx as nx
+from matplotlib import pyplot as plt
+from matplotlib.offsetbox import AnnotationBbox, OffsetImage
+from matplotlib import colors as cl
+from plotly import graph_objs as go
+from plotly.offline import plot
+from plotly import tools
+
+from pyspectools import routines
+
 
 """
     Commonly used formatting options
@@ -257,3 +264,461 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
 
     return fig, ax
 
+
+def overlay_dr_spectrum(dataframe, progressions, freq_col="Frequency", int_col="Intensity", **kwargs):
+    layout = define_layout("Frequency (MHz)", "Intensity")
+    fig = go.FigureWidget(layout=layout)
+
+    fig.add_scattergl(
+        x=dataframe[freq_col],
+        y=dataframe[int_col],
+        name="Observation",
+        opacity=0.4
+    )
+
+    colors = generate_colors(len(progressions), cmap=plt.cm.tab10)
+    level = 2.
+
+    for index, (progression, color) in enumerate(zip(progressions, colors)):
+        mask = np.where(progression <= np.max(dataframe[freq_col]))
+        progression = progression[mask]
+        indices = np.array([routines.find_nearest(dataframe[freq_col], freq) for freq in progression])
+        indices = indices[:,1]
+        y = dataframe[int_col].iloc[indices] * 1.2
+        fig.add_scattergl(
+            x=progression,
+            y=y,
+            marker={"color": color},
+            mode="markers+lines",
+            hoverinfo="name+x",
+            name="Progression {}".format(index)
+        )
+    return fig
+
+
+def dr_network_diagram(connections, **kwargs):
+    """
+    Use NetworkX to create a graph with nodes corresponding to cavity
+    frequencies, and vertices as DR connections.
+    The color map can be specified by passing kwargs.
+    :param connections: list of 2-tuples corresponding to pairs of connections
+    :return
+    """
+    graph = nx.Graph()
+    nodes = [graph.add_node(frequency) for frequency in np.unique(connections)]
+    vertices = [graph.add_edge(*pair) for pair in connections]
+    # Generate positions based on the shell layout that's typical of DR connections
+    # Frequencies are sorted in anti-clockwise order, starting at 3 o'clock
+    positions = nx.shell_layout(graph)
+
+    color_kwarg = {"cmap": plt.cm.tab10}
+    if "cmap" in kwargs:
+        color_kwarg.update(**kwargs)
+
+    coords = np.array(list(positions.values()))
+    connected = list(nx.connected_components(graph))
+    colors = generate_colors(len(connected), **color_kwarg)
+
+    fig_layout = {
+        "height": 700.,
+        "width": 700.,
+        "autosize": True,
+        "xaxis": {
+            "showgrid": False,
+            "zeroline": False,
+            "ticks": "",
+            "showticklabels": False
+        },
+        "yaxis": {
+            "showgrid": False,
+            "zeroline": False,
+            "ticks": "",
+            "showticklabels": False
+        },
+        "showlegend": False,
+    }
+    fig = go.FigureWidget(layout=fig_layout)
+    # Draw the nodes
+    fig.add_scattergl(
+        x=coords[:,0],
+        y=coords[:,1],
+        text=list(np.unique(connections)),
+        hoverinfo="text",
+        mode="markers"
+    )
+    # Draw the vertices
+    for connectivity, color in zip(connected, colors):
+        # Get all of the coordinates associated with edges within a series
+        # of connections
+        coords = np.array([positions[node] for node in sorted(connectivity)])
+        fig.add_scattergl(
+            x=coords[:,0],
+            y=coords[:,1],
+            mode="lines",
+            hoverinfo=None,
+            name="",
+            opacity=0.4,
+            marker={"color": color}
+        )
+    return fig, connected
+
+
+def init_plotly_subplot(nrows, ncols, **kwargs):
+    """
+    Initialize a Plotly subplot.
+    :param nrows: number of rows for the subplot
+    :param ncols: number of columns for the subplot
+    :return: plotly FigureWidget object
+    """
+    subplot = tools.make_subplots(
+        rows=nrows,
+        cols=ncols,
+        **kwargs
+    )
+    fig = go.FigureWidget(subplot)
+    return fig
+
+
+def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency", int_col="Intensity"):
+    """
+    Create a Loomis-Wood style plot via a list of frequencies, and a broadband
+    spectrum. The keyword freq_range will use a percentage of the center
+    frequency to extend the frequency range that gets plotted.
+    :param dataframe: pandas DataFrame
+    :param frequencies: iterable with float frequencies to use as centers
+    :param freq_range: decimal percentage to specify the range to plot
+    :param freq_col: str name for the column to use as the frequency axis
+    :param int_col: str name for the column to use as the intensity axis
+    :return fig: Plotly FigureWidget with the subplots
+    """
+    plot_func = go.Scattergl
+
+    # Want the frequencies in ascending order, going upwards in the plot
+    indices = np.where(
+        np.logical_and(
+            dataframe[freq_col].min() <= frequencies,
+            frequencies <= dataframe[freq_col].max()
+        )
+    )
+    # Plot only frequencies within band
+    frequencies = frequencies[indices]
+    frequencies = np.sort(frequencies)[::-1]
+    nplots = len(frequencies)
+
+    titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
+    fig = init_plotly_subplot(
+        nrows=nplots, ncols=1,
+        **{
+            "subplot_titles": titles,
+            "vertical_spacing": 0.15,
+            "shared_xaxes": True
+        }
+    )
+    for index, frequency in enumerate(frequencies):
+        # Calculate the offset frequency
+        dataframe["Offset " + str(index)] = dataframe[freq_col] - frequency
+        # Range as a fraction of the center frequency
+        freq_cutoff = freq_range * frequency
+        sliced_df = dataframe.loc[
+            (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
+        ]
+        # Plot the data
+        trace = plot_func(
+            x=sliced_df["Offset " + str(index)],
+            y=sliced_df[int_col],
+            mode="lines"
+        )
+        # Plotly indexes from one because they're stupid
+        fig.add_trace(trace, index + 1, 1)
+        fig["layout"]["xaxis1"].update(
+            range=[-freq_cutoff, freq_cutoff],
+            title="Offset frequency (MHz)",
+            showgrid=True
+        )
+        fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
+    fig["layout"].update(
+        autosize=True,
+        height=1000,
+        width=900,
+        showlegend=False
+    )
+    return fig
+
+
+def plot_catchirp(chirpdf, catfiles=None):
+    """ Function to perform interactive analysis with a chirp spectrum, as well
+        as any reference .cat files you may want to provide.
+        This is not designed to replace SPECData analysis, but simply to
+        perform some interactive viewing of the data.
+
+        The argument `catfiles` is supplied as a dictionary; where the keys are
+        the names of the species, and the items are the paths to the .cat files
+    """
+
+    # Generate the experimental plot first
+    plots = list()
+    exp_trace = go.Scattergl(
+        x=chirpdf["Frequency"],
+        y=chirpdf["Intensity"],
+        name="Experiment"
+    )
+
+    plots.append(exp_trace)
+    if catfiles is not None:
+        # Generate the color palette, and remove the alpha value from RGBA
+        color_palette = generate_colors(len(catfiles))
+        # Loop over each of the cat files
+        for color, species in zip(color_palette, catfiles):
+            species_df = pc.pick_pickett(catfiles[species])
+            plots.append(
+                go.Bar(
+                    x=species_df["Frequency"],
+                    y=species_df["Intensity"] / species_df["Intensity"].min(),
+                    name=species,
+                    marker={
+                        # Convert the matplotlib rgb color to hex code
+                        "color": color
+                    },
+                    width=1.,
+                    opacity=0.6,
+                    yaxis="y2"
+                )
+            )
+    layout = go.Layout(
+        autosize=False,
+        height=600,
+        width=900,
+        xaxis={"title": "Frequency (MHz)"},
+        paper_bgcolor="#f0f0f0",
+        plot_bgcolor="#f0f0f0",
+        yaxis={"title": ""},
+        yaxis2={
+            "title": "",
+            "side": "right",
+            "overlaying": "y",
+            "range": [0., 1.]
+        }
+    )
+    fig = go.FigureWidget(data=plots, layout=layout)
+
+    return fig
+
+
+def plot_df(dataframe, cols=None, **kwargs):
+    """ Function that wraps around the lower level function plot_column.
+        Will plot every column in a dataframe against the Frequency, unless
+        specific column names are provided.
+
+        Input arguments:
+        dataframe - pandas dataframe object, with every column as intensity
+        except "Frequency"
+        cols - NoneType or tuple-like: if None, every column is plotted.
+        Alternatively, an iterable is provided to specify which columns are
+        plotted.
+        Optional arguments are passed into define_layout, which will define
+        the axis labels, or into the color map generation
+    """
+    if cols is None:
+        cols = [key for key in dataframe.keys() if key != "Frequency"]
+    if len(cols) < 4:
+        colors = ["#66c2a5", "#fc8d62"]
+    else:
+        colors = generate_colors(len(cols), **kwargs)
+    # Generate the plotly traces
+    traces = [
+        plot_column(dataframe, col, color=color) for col, color in zip(cols, colors)
+    ]
+    layout = define_layout(**kwargs)
+    # Generate figure object
+    figure = go.Figure(data=traces, layout=layout)
+    iplot(figure)
+    return figure
+
+
+def plot_assignment(spec_df, assignments_df, col="Intensity"):
+    """ Function for plotting spectra with assignments. The assumption is that
+        the assignments routines are ran prior too this, and so the function
+        simply takes a dataframe of chosen molecules and plots them alongside
+        the experimental spectrum, color coded by the molecule
+
+        Input argument:
+        spec_df - dataframe holding the experimental data
+        assignments_df - dataframe produced from running assignments
+    """
+    # Get a list of unique molecules
+    molecules = assignments_df["Chemical Name"].unique()
+    # The ttal number of traces are the number of unique molecules, the traces
+    # in the experimental data minus the frequency column
+    nitems = len(molecules) + 1
+    colors = color_iterator(nitems)
+    traces = list()
+    # Loop over the experimental data
+    traces.append(
+        plot_column(
+            spec_df,
+            col,
+            color=next(colors)
+        )
+    )
+    # Loop over the assignments
+    for molecule in molecules:
+        sliced_df = assignments_df.loc[assignments_df["Chemical Name"] == molecule]
+        traces.append(
+            plot_bar_assignments(
+                sliced_df,
+                next(colors)
+            )
+        )
+    layout = define_layout()
+    layout["yaxis"] = {
+        "title": "Experimental Intensity"
+    }
+    # Specify a second y axis for the catalog intensity
+    layout["yaxis2"] = {
+        "title": "CDMS/JPL Intensity",
+        "overlaying": "y",
+        "side": "right",
+        "type": "log",
+        "autorange": True
+    }
+    figure = go.Figure(data=traces, layout=layout)
+    plot(figure)
+    return figure
+
+
+def generate_colors(n, cmap=plt.cm.Spectral, hex=True):
+    """
+    Generate a linearly spaced color series using a colormap from
+    Matplotlib. The colors can be returned as either RGB values
+    or as hex-codes using the `hex` flag.
+    :param n: number of colors to generate
+    :param cmap: Matplotlib colormap object
+    :param hex: bool specifying whether the return format are hex-codes or RGB
+    :return:
+    """
+    colormap = cmap(np.linspace(0., 1., n))
+    if hex is True:
+        colors = [cl.rgb2hex(color) for color in colormap]
+    else:
+        colors = colormap
+    return colors
+
+
+def color_iterator(n, **kwargs):
+    """ Simple generator that will yield a different color each time.
+        This is primarily designed when multiple plot types are expected.
+
+        Input arguements:
+        n - number of plots
+        Optional kwargs are passed into generate_colors
+    """
+    index = 0
+    colors = generate_colors(n, **kwargs)
+    while index < n:
+        yield colors[index]
+        index += 1
+
+
+def plot_bar_assignments(species_df, color="#fc8d62"):
+    """ Function to generate a bar plot trace for a chemical species.
+        These plots will be placed in the second y axis!
+
+        Input arguments:
+        species_df - a slice of an assignments dataframe, containing only
+        one unique species
+        Optional argument color is a hex code color; if nothing is given
+        it just defaults to whatever
+    """
+    # We just want one of the molecules, not their life's story
+    molecule = species_df["Chemical Name"].unique()[0]
+    trace = go.Bar(
+        x=species_df["Combined"],
+        y=10**species_df["CDMS/JPL Intensity"],
+        name=molecule,
+        text=species_df["Resolved QNs"],
+        marker={
+            "color": color
+            },
+        width=0.25,
+        yaxis="y2",
+        opacity=0.9
+    )
+    return trace
+
+
+def plot_column(dataframe, col, name=None, color=None, layout=None):
+    """ A low level function for plotting a specific column of
+        data in a pandas dataframe. This will assume that there
+        is a column named "Frequency" in the dataframe.
+
+        If a layout is not supplied, then the function will
+        return a Plotly scatter object to be combined with other
+        data. If a layout is given, then the data will be plot
+        up directly.
+
+        Input arguments:
+        dataframe - pandas dataframe object
+        col - str specifying the column used to plot
+        layout - optional argument; if specified a plotly plot will be
+        produced.
+    """
+    # If no legend name is provided, use the column
+    if name is None:
+        name = col
+    # Generate the scatter plot
+    if color is None:
+        color = "#1c9099"
+    trace = go.Scatter(
+        x=dataframe["Frequency"],
+        y=dataframe[col],
+        name=name,
+        marker={
+            "color": color
+        }
+    )
+    # If a layout is supplied, plot the figure
+    if layout:
+        figure = go.Figure(
+            data=[trace],
+            layout=layout
+        )
+        iplot(figure)
+    else:
+        return trace
+
+
+def define_layout(xlabel="", ylabel=""):
+    """ Function for generating a layout for plotly.
+        Some degree of customization is provided, but generally sticking
+        with not having to fuss around with plots.
+
+        Input arguments:
+        x/ylabel - str for what the x and y labels are to be
+    """
+    layout = go.Layout(
+        xaxis={"title": xlabel, "tickformat": ".,"},
+        yaxis={"title": ylabel},
+        autosize=True,
+        height=650.,
+        width=850.,
+        paper_bgcolor="#ffffff",
+        plot_bgcolor="#ffffff",
+        font=dict(family='Roboto', size=14, color='#000000'),
+        annotations=list()
+    )
+    return layout
+
+
+def save_plot(fig, filename, js=True):
+    """
+        Method for exporting a plotly figure with interactivity.
+        This method does inject the plotly.js code by default, and so will
+        result in relatively large files. Use `save_html` instead.
+    """
+    plot(
+        fig,
+        filename=filename,
+        show_link=False,
+        auto_open=False,
+        include_plotlyjs=js
+    )

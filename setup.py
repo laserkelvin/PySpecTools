@@ -64,7 +64,7 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="3.2.0",
+    version="3.3.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
@@ -75,8 +75,8 @@ setup(
         "pandas",
         "scipy",
         "matplotlib",
-        "astroquery",
-        "astropy",
+        "astroquery==0.3.8",
+        "astropy==3.0.5",
         "lmfit",
         "peakutils",
         "sklearn",
@@ -88,7 +88,9 @@ setup(
         "ruamel.yaml",
         "paramiko",
         "jinja2",
-        "tqdm"
+        "tqdm",
+        "tinydb",
+        "networkx"
     ],
     cmdclass={
         "develop": PostInstallCommand,
