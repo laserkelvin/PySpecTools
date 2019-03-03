@@ -164,4 +164,5 @@ def parse_blackchirp(dir_path):
                 buffer = fidfile.read(4)
                 fidlist_size = struct.unpack(">I", buffer)[0]
                 for i in range(0, fidlist_size):
+                    pass
             self.fid_list.append(BlackChirpFid(version, fidfile))

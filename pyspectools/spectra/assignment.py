@@ -937,6 +937,7 @@ class AssignmentSession:
         old_nulines = len(self.ulines)
         db = database.SpectralCatalog(dbpath)
         for uindex, uline in tqdm(list(self.ulines.items())):
+            print("Searching database for {:.4f}".format(uline.frequency))
             catalog_df = db.search_frequency(uline.frequency, self.session.freq_prox, self.session.freq_abs)
             if catalog_df is not None:
                 catalog_df["frequency"].replace(0., np.nan, inplace=True)
