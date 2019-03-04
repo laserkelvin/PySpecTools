@@ -1759,7 +1759,7 @@ class AssignmentSession:
             high_B=high_B
         )
 
-        fit_df = fitting.harmonic_fitter(progressions)
+        fit_df = fitting.harmonic_fitter(progressions, J_thres=search)[0]
 
         self.harmonic_fits = fit_df
 
