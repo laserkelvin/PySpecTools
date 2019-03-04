@@ -426,6 +426,8 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
     # Determine clusters based on the RMS, B, and D
     # similarities
     print("Fitting the Affinity Propagation model.")
+    # Remove occurrences of NaN in the three columns
+    progression_df.dropna(subset=["RMS", "B", "D"], inplace=True)
     ap_obj.fit(progression_df[["RMS", "B", "D"]])
     print("Fit complete.")
     progression_df["Cluster indices"] = ap_obj.labels_
