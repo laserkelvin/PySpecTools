@@ -6,8 +6,6 @@ import numpy as np
 
 plt.style.use("seaborn")
 
-init_notebook_mode(connected=False)
-
 
 def static_comparison(frequencies, sample_on_df, sample_off_df, window_size=0.0001):
     """
