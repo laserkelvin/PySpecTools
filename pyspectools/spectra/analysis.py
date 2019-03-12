@@ -6,15 +6,18 @@ import pandas as pd
 import peakutils
 from astropy import units as u
 from astroquery.splatalogue import Splatalogue
-from lmfit import models
+from lmfit import models, MinimizerException
 from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import silhouette_samples
+from uncertainties import ufloat
 
 from pyspectools import fitting
 
 
 def fit_line_profile(spec_df, center, width=None, intensity=None,
-        verbose=False, freq_col="Frequency", int_col="Intensity"):
+        verbose=False, freq_col="Frequency", int_col="Intensity",
+        fit_func=models.GaussianModel, sigma=2
+        ):
     """ 
         Somewhat high level function that wraps lmfit for
         fitting Gaussian lineshapes to a spectrum.
@@ -22,7 +25,7 @@ def fit_line_profile(spec_df, center, width=None, intensity=None,
         For a given guess center and optional intensity,
         the 
     """
-    model = models.GaussianModel()
+    model = fit_func()
     params = model.make_params()
     # Set up boundary conditions for the fit
     params["center"].set(
@@ -53,9 +56,44 @@ def fit_line_profile(spec_df, center, width=None, intensity=None,
         params=params,
         x=slice_df[freq_col],
     )
-    if verbose is True:
-        print(fit_results.fit_report())
-    return fit_results
+    if fit_results.success is True:
+        if verbose is True:
+            print(fit_results.fit_report())
+        names = list(fit_results.best_values.keys())
+        fit_values = np.array([fit_results.best_values[key] for key in names])
+        # Estimate standard error based on covariance matrix
+        try:
+            variance = np.sqrt(np.diag(fit_results.covar))
+        except ValueError:
+            variance = np.zeros(len(fit_values))
+        percentage = (variance / fit_values) * 100.
+        # In the instance where standard errors are large, we need to work out confidence intervals explicitly
+        if len(percentage[percentage >= 5.]) > 0:
+            # If using a Gaussian line profile, we can do extra statistics
+            if verbose is True:
+                print("Large covariance detected; working out confidence intervals.")
+            try:
+                ci = fit_results.conf_interval()
+                # Get the index corresponding to the right amount of sigma. Indices run 0 - 3 for one side, giving
+                # 3, 2, 1 and 0 sigma values
+                uncer = fit_values - np.array([ci[key][sigma - 1][1] for key in names])
+            except MinimizerException:
+                # Instances where changing a parameter does not affect the residuals at all; i.e. the cost function
+                # is too flat w.r.t. to a parameter. In these cases we can't evaluate confidence intervals, and instead
+                # we'll simply use the standard error of mean
+                uncer = variance * sigma
+        else:
+            # Otherwise, use the standard error of the mean as the uncertainty, multiplied by
+            # the number of "sigma"
+            uncer = variance * sigma
+        # This bit is just formatting: format into a paired list then flatten
+        summary_dict = {
+            name: ufloat(value, uncertainty) for value, uncertainty, name in zip(fit_values, uncer, names)
+        }
+        summary_dict["Chi squared"] = fit_results.chisqr
+        return fit_results, summary_dict
+    else:
+        return None, None
 
 
 def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
@@ -171,39 +209,43 @@ def search_center_frequency(frequency, width=0.5):
     """
     min_freq = frequency - width
     max_freq = frequency + width
-    splat_df = Splatalogue.query_lines(
-        min_freq*u.MHz,
-        max_freq*u.MHz,
-        line_lists=["CDMS", "JPL"]
-    ).to_pandas()
-    # These are the columns wanted
-    columns = [
-        "Species",
-        "Chemical Name",
-        "Meas Freq-GHz(rest frame,redshifted)",
-        "Freq-GHz(rest frame,redshifted)",
-        "Resolved QNs",
-        "CDMS/JPL Intensity",
-        "E_U (K)"
-        ]
-    # Take only what we want
-    splat_df = splat_df[columns]
-    splat_df.columns = [
-        "Species",
-        "Chemical Name",
-        "Meas Freq-GHz",
-        "Freq-GHz",
-        "Resolved QNs",
-        "CDMS/JPL Intensity",
-        "E_U (K)"
-        ]
-    # Now we combine the frequency measurements
-    splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
-    # Replace missing experimental data with calculated
-    splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
-    # Convert to MHz
-    splat_df["Frequency"] *= 1000.
-    return splat_df
+    try:
+        splat_df = Splatalogue.query_lines(
+            min_freq*u.MHz,
+            max_freq*u.MHz,
+            line_lists=["CDMS", "JPL"]
+        ).to_pandas()
+        # These are the columns wanted
+        columns = [
+            "Species",
+            "Chemical Name",
+            "Meas Freq-GHz(rest frame,redshifted)",
+            "Freq-GHz(rest frame,redshifted)",
+            "Resolved QNs",
+            "CDMS/JPL Intensity",
+            "E_U (K)"
+            ]
+        # Take only what we want
+        splat_df = splat_df[columns]
+        splat_df.columns = [
+            "Species",
+            "Chemical Name",
+            "Meas Freq-GHz",
+            "Freq-GHz",
+            "Resolved QNs",
+            "CDMS/JPL Intensity",
+            "E_U (K)"
+            ]
+        # Now we combine the frequency measurements
+        splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
+        # Replace missing experimental data with calculated
+        splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+        # Convert to MHz
+        splat_df["Frequency"] *= 1000.
+        return splat_df
+    except:
+        print("Could not parse Splatalogue table at {:,.4f}".format(frequency))
+        return None
 
 
 def assign_peaks(spec_df, frequencies, **kwargs):

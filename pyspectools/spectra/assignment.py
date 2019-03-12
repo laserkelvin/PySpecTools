@@ -429,7 +429,9 @@ class AssignmentSession:
             # If we have performed the shift before, copy back the unshifted data
             self.data.loc[:, self.freq_col] = self.data.loc[:, "Laboratory Frame"]
         doppler_offset = units.dop2freq(value, self.data["Laboratory Frame"].values)
+        # Offset the values
         self.data.loc[:, self.freq_col] += doppler_offset
+        self.session.velocity = value
 
     def find_peaks(self, threshold=None):
         """
@@ -477,7 +479,7 @@ class AssignmentSession:
             # drop repeated frequencies
             peaks_df.drop_duplicates(["Frequency"], inplace=True)
         # Generate U-lines
-        skip = ["temperature", "doppler", "freq_abs", "freq_prox"]
+        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "velocity"]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
@@ -597,87 +599,83 @@ class AssignmentSession:
             frequency = uline.frequency
             print("Searching for frequency {:,.4f}".format(frequency))
             # Call splatalogue API to search for frequency
-            splat_df = analysis.search_center_frequency(frequency, width=0.1)
-            # Filter out lines that are way too unlikely on grounds of temperature
-            splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.t_threshold]
-            # Filter out quack elemental compositions
-            for index, row in splat_df.iterrows():
-                # Convert the string into a chemical formula object
-                try:
-                    clean_formula = row["Species"].split("v=")[0]
-                    for prefix in ["l-", "c-"]:
-                        clean_formula = clean_formula.replace(prefix, "")
-                    formula_obj = formula(clean_formula)
-                    # Check if proposed molecule contains atoms not
-                    # expected in composition
-                    comp_check = all(
-                        str(atom) in self.session.composition for atom in formula_obj.atoms
-                    )
-                    if comp_check is False:
-                        # If there are crazy things in the mix, forget about it
-                        print("Molecule " + clean_formula + " rejected.")
-                        splat_df.drop(index, inplace=True)
-                except:
-                    print("Could not parse molecule " + clean_formula + " rejected.")
-                    splat_df.drop(index, inplace=True)
-            nitems = len(splat_df)
-
-            splat_df = self.calc_line_weighting(
-                frequency, splat_df, prox=self.session.freq_prox, abs=self.session.freq_abs
-            )
-            if splat_df is not None:
-                display(HTML(splat_df.to_html()))
-                try:
-                    print("Observed frequency is {:,.4f}".format(frequency))
-                    if auto is False:
-                        # If not automated, we need a human to look at frequencies
-                        # Print the dataframe for notebook viewing
-                        splat_index = int(
-                            input(
-                                "Please choose an assignment index: 0 - " + str(nitems - 1)
-                            )
-                        )
-                    else:
-                        # If automated, choose closest frequency
-                        splat_index = 0
-
-                    ass_df = splat_df.iloc[[splat_index]]
-                    splat_df.to_csv(
-                        "queries/{0}-{1}.csv".format(self.session.experiment, uindex), index=False
-                    )
-                    ass_dict = {
-                        "uline": False,
-                        "index": uindex,
-                        "frequency": frequency,
-                        "name": ass_df["Chemical Name"][0],
-                        "catalog_frequency": ass_df["Frequency"][0],
-                        "catalog_intensity": ass_df["CDMS/JPL Intensity"][0],
-                        "formula": ass_df["Species"][0],
-                        "r_qnos": ass_df["Resolved QNs"][0],
-                        "ustate_energy": ass_df["E_U (K)"][0],
-                        "weighting": ass_df["Weighting"][0],
-                        "source": "CDMS/JPL",
-                        "deviation": frequency - ass_df["Frequency"][0]
-                    }
-                    # Perform a Voigt profile fit
-                    print("Attempting to fit line profile...")
-                    fit_results = analysis.fit_line_profile(
-                        self.data,
-                        frequency,
-
-                    )
-                    # Pass the fitted parameters into Assignment object
-                    ass_dict["fit"] = fit_results.best_values
-                    # Need support to convert common name to SMILES
-                    self.assign_line(**ass_dict)
-                except ValueError:
-                    # If nothing matches, keep in the U-line
-                    # pile.
-                    print("Deferring assignment")
+            if self.session.freq_abs is True:
+                width = self.session.freq_prox
             else:
-                # Throw into U-line pile if no matches at all
-                print("No species known for {:,.4f}".format(frequency))
-            display(HTML("<hr>"))
+                width = self.session.freq_prox * frequency
+            splat_df = analysis.search_center_frequency(frequency, width=width)
+            if splat_df is not None:
+                # Filter out lines that are way too unlikely on grounds of temperature
+                splat_df = splat_df.loc[splat_df["E_U (K)"] <= self.t_threshold]
+                # Filter out quack elemental compositions
+                for index, row in splat_df.iterrows():
+                    # Convert the string into a chemical formula object
+                    try:
+                        clean_formula = row["Species"].split("v=")[0]
+                        for prefix in ["l-", "c-"]:
+                            clean_formula = clean_formula.replace(prefix, "")
+                        formula_obj = formula(clean_formula)
+                        # Check if proposed molecule contains atoms not
+                        # expected in composition
+                        comp_check = all(
+                            str(atom) in self.session.composition for atom in formula_obj.atoms
+                        )
+                        if comp_check is False:
+                            # If there are crazy things in the mix, forget about it
+                            print("Molecule " + clean_formula + " rejected.")
+                            splat_df.drop(index, inplace=True)
+                    except:
+                        print("Could not parse molecule " + clean_formula + " rejected.")
+                        splat_df.drop(index, inplace=True)
+                nitems = len(splat_df)
+
+                splat_df = self.calc_line_weighting(
+                    frequency, splat_df, prox=self.session.freq_prox, abs=self.session.freq_abs
+                )
+                if splat_df is not None:
+                    display(HTML(splat_df.to_html()))
+                    try:
+                        print("Observed frequency is {:,.4f}".format(frequency))
+                        if auto is False:
+                            # If not automated, we need a human to look at frequencies
+                            # Print the dataframe for notebook viewing
+                            splat_index = int(
+                                input(
+                                    "Please choose an assignment index: 0 - " + str(nitems - 1)
+                                )
+                            )
+                        else:
+                            # If automated, choose closest frequency
+                            splat_index = 0
+
+                        ass_df = splat_df.iloc[[splat_index]]
+                        splat_df.to_csv(
+                            "queries/{0}-{1}.csv".format(self.session.experiment, uindex), index=False
+                        )
+                        ass_dict = {
+                            "uline": False,
+                            "index": uindex,
+                            "frequency": frequency,
+                            "name": ass_df["Chemical Name"][0],
+                            "catalog_frequency": ass_df["Frequency"][0],
+                            "catalog_intensity": ass_df["CDMS/JPL Intensity"][0],
+                            "formula": ass_df["Species"][0],
+                            "r_qnos": ass_df["Resolved QNs"][0],
+                            "ustate_energy": ass_df["E_U (K)"][0],
+                            "weighting": ass_df["Weighting"][0],
+                            "source": "CDMS/JPL",
+                            "deviation": frequency - ass_df["Frequency"][0]
+                        }
+                        # Need support to convert common name to SMILES
+                        self.assign_line(**ass_dict)
+                    except ValueError:
+                        # If nothing matches, keep in the U-line
+                        # pile.
+                        print("Deferring assignment")
+                else:
+                    # Throw into U-line pile if no matches at all
+                    print("No species known for {:,.4f}".format(frequency))
+                display(HTML("<hr>"))
         print("Processed {} lines.".format(uindex))
 
     def process_lin(self, name, formula, linpath, auto=True, **kwargs):
@@ -1072,7 +1070,7 @@ class AssignmentSession:
         }
         return self.identifications
 
-    def analyze_molecule(self, Q, T, name=None, formula=None, smiles=None):
+    def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None):
         """
             Function for providing some astronomically relevant
             parameters by analyzing Gaussian line shapes.
@@ -1089,59 +1087,73 @@ class AssignmentSession:
         if name:
             selector = "name"
             value = name
-        if formula:
+        elif formula:
             selector = "formula"
             value = formula
-        if smiles:
+        elif smiles:
             selector = "smiles"
             value = smiles
+        else:
+            raise Exception("No valid selector specified! Please give a name, formula, or SMILES code.")
         # Loop over all of the assignments
+        mol_data = list()
         for ass_obj in self.assignments:
             # If the assignment matches the criteria
             # we perform the analysis
             if ass_obj.__dict__[selector] == value:
-                # Get width estimate
+                # Get width estimate based on the Doppler velocity
                 width = units.dop2freq(
                     self.session.doppler,
                     ass_obj.frequency
                     )
                 # Perform a Gaussian fit
-                fit_report = analysis.fit_line_profile(
+                fit_result, summary = analysis.fit_line_profile(
                     self.data,
                     ass_obj.frequency,
                     width,
                     ass_obj.intensity,
                     freq_col=self.freq_col,
-                    int_col=self.int_col
+                    int_col=self.int_col,
+                    verbose=True
                     )
-                # Add the profile parameters to list
-                profile_dict = aa.lineprofile_analysis(
-                        fit_report,
-                        ass_obj.I,
-                        Q,
-                        T,
-                        ass_obj.ustate_energy
-                        )
-                profile_data.append(profile_dict)
-                ass_obj.fit = fit_report
-                ass_obj.N = profile_dict["N cm$^{-2}$"]
-        if len(profile_data) > 0:
+                # If the fit actually converged and worked
+                if fit_result:
+                    # Calculate the offset frequency, which is the basis of the VLSR calculation
+                    summary["Frequency offset"] = ass_obj.catalog_frequency - fit_result.best_values["center"]
+                    summary["Doppler velocity"] = units.freq2vel(
+                        ass_obj.catalog_frequency,
+                        summary["Frequency offset"]
+                    )
+                    if Q is not None and T is not None:
+                        # Add the profile parameters to list
+                        profile_dict = aa.lineprofile_analysis(
+                            fit_result,
+                                ass_obj.I,
+                                Q,
+                                T,
+                                ass_obj.ustate_energy
+                                )
+                        ass_obj.N = profile_dict["N cm$^{-2}$"]
+                        summary.update(profile_dict)
+                    ass_obj.fit = fit_result
+                    mol_data.append(summary)
+        if len(mol_data) > 0:
             profile_df = pd.DataFrame(
-                data=profile_data
+                data=mol_data
                 )
-            sim_y = self.simulate_spectrum(
-                self.data[self.freq_col],
-                profile_df["frequency"].values,
-                profile_df["width"].values,
-                profile_df["amplitude"].values
-                )
-            sim_df = pd.DataFrame(
-                data=list(zip(
-                    self.data[self.freq_col].values,
-                    sim_y
-                    ))
-                )
-            return profile_df, sim_df
+            #sim_y = self.simulate_spectrum(
+            #    self.data[self.freq_col],
+            #    profile_df["frequency"].values,
+            #    profile_df["width"].values,
+            #    profile_df["amplitude"].values
+            #    )
+            #sim_df = pd.DataFrame(
+            #    data=list(zip(
+            #        self.data[self.freq_col].values,
+            #        sim_y
+            #        ))
+            #    )
+            return profile_df
         else:
             print("No molecules found!")
             return None
