@@ -2,7 +2,7 @@
 import datetime
 import re
 import os
-from copy import deepcopy
+import struct
 from dataclasses import dataclass, field
 from itertools import combinations, product
 from typing import List, Dict
@@ -22,6 +22,7 @@ from pyspectools import routines
 from pyspectools import figurefactory as ff
 from pyspectools import fitting
 from pyspectools.spectra import analysis
+from pyspectools import parsers
 
 
 def parse_specdata(filename):
@@ -827,6 +828,64 @@ def parse_scan(filecontents):
     return data
 
 
+def perform_fft(fid, spacing, start=0, stop=-1, window="boxcar"):
+    """
+    Perform an FFT on an FID to get the frequency domain spectrum.
+    All of the arguments are optional, and provide control over how the FFT is performed, as well as post-processing
+    parameters like window functions and zero-padding.
+
+    This is based on the FFT code by Kyle Crabtree, with modifications to fit this dataclass.
+
+    Parameters
+    ----------
+    fid - Numpy 1D array
+        Array holding the values of the FID
+    spacing - float
+        Time spacing between FID points in microseconds
+    start - int, optional
+        Starting index for the FID array to perform the FFT
+    stop - int, optional
+        End index for the FID array to perform the FFT
+    zpf - int, optional
+        Pad the FID with zeros to nth nearest power of 2
+    window - str
+        Specify the window function used to process the FID. Defaults to boxcar, which is effectively no filtering.
+        The names of the window functions available can be found at:
+        https://docs.scipy.org/doc/scipy/reference/signal.windows.html
+
+    Returns
+    -------
+    """
+    fid = np.copy(fid)
+    if window is not None and window in spsig.windows.__all__:
+        window_f = spsig.windows.get_window(window, fid.size)
+        fid *= window_f
+    else:
+        raise Exception("Specified window function is not implemented in SciPy!")
+    # Set values to zero up to starting index
+    fid[:start] = 0.
+    if stop < 0:
+        # If we're using negative indexes
+        fid[fid.size + stop:] = 0.
+    else:
+        # Otherwise, index with a positive number
+        fid[stop:] = 0.
+    # Perform the FFT
+    fft = np.fft.rfft(fid)
+    read_length = len(fid) // 2 + 1
+    df = 1. / fid.size / spacing
+    # Generate the frequency array
+    frequency = np.linspace(
+        0.,
+        self.header["sideband"] * df,
+        read_length
+    )
+    frequency += self.header["probe_freq"]
+    fft[(frequency >= f_max) & (frequency <= f_min)] = 0.
+    fft *= 1000.
+    return frequency, fft
+
+
 def fid2fft(fid, rate, frequencies, **kwargs):
     """
     Process an FID by performing an FFT to yield the frequency domain
@@ -864,13 +923,12 @@ def fid2fft(fid, rate, frequencies, **kwargs):
             frequencies = spsig.resample(frequencies, len(frequencies) * 2)
     # Apply a window function to the FID
     if "window" in kwargs:
-        available = ["blackmanharris", "blackman", "boxcar", "gaussian", "hanning", "bartlett"]
-        if (kwargs["window"] != "") and (kwargs["window"] in available):
-            new_fid*=spsig.get_window(kwargs["window"], len(new_fid))
+        if kwargs["window"] in spsig.windows.__all__:
+            new_fid *= spsig.get_window(kwargs["window"], new_fid.size)
     # Apply an exponential filter on the FID
     if "exp" in kwargs:
         if kwargs["exp"] > 0.:
-            new_fid*=spsig.exponential(len(new_fid), tau=kwargs["exp"])
+            new_fid *= spsig.exponential(len(new_fid), tau=kwargs["exp"])
     # Apply a bandpass filter on the FID
     if ("filter" in kwargs) and (len(kwargs["filter"]) == 2):
         low, high = sorted(kwargs["filter"])
@@ -882,16 +940,17 @@ def fid2fft(fid, rate, frequencies, **kwargs):
                 rate
             )
     # Perform the FFT
-    fft = np.fft.fft(new_fid)
-    # Get the real part of the FFT
+    fft = np.fft.rfft(new_fid)
+    # Get the real part of the FFT, and only the non-duplicated side
     real_fft = np.abs(fft[:int(len(new_fid) / 2)]) / len(new_fid) * 1e3
-    frequencies = spsig.resample(frequencies, len(real_fft))
+    frequencies = spsig.resample(frequencies, real_fft.size)
     # For some reason, resampling screws up the frequency ordering...
     real_fft = real_fft[np.argsort(frequencies)]
     frequencies = np.sort(frequencies)
     # Package into a pandas dataframe
     freq_df = pd.DataFrame({"Frequency (MHz)": frequencies, "Intensity": real_fft})
     return freq_df
+
 
 
 def butter_bandpass(low, high, rate, order=1):
@@ -1019,10 +1078,10 @@ def neu_categorize_frequencies(frequencies, intensities=None, nshots=50, **kwarg
 
     param_dict.update(kwargs)
     for freq, shot in zip(frequencies, shotcounts):
-        ftb_string+=generate_ftb_str(freq, shot, **param_dict)
+        ftb_string += generate_ftb_str(freq, shot, **param_dict)
         if "magnet" in kwargs:
             param_dict["magnet"] = "true"
-            ftb_string+=generate_ftb_str(freq, shot, **param_dict)
+            ftb_string += generate_ftb_str(freq, shot, **param_dict)
 
 
 def categorize_frequencies(frequencies, nshots=50, intensities=None, 
@@ -1328,7 +1387,7 @@ class AssayBatch:
                 param_df["dipole"] = row["Dipole"]
             param_df["magnet"] = "false"
             param_df["skiptune"] = "false"
-            ftb_str+=generate_ftb_line(
+            ftb_str += generate_ftb_line(
                 row["Frequency"],
                 row["Shots"],
                 **param_df
@@ -1336,7 +1395,7 @@ class AssayBatch:
             # Turn on the magnet
             param_df["skiptune"] = "true"
             param_df["magnet"] = "true"
-            ftb_str+=generate_ftb_line(
+            ftb_str += generate_ftb_line(
                 row["Frequency"],
                 row["Shots"],
                 **param_df
@@ -1374,7 +1433,7 @@ class AssayBatch:
             # Only do DR if the DR frequency is significantly different from
             # the cavity frequency
             if np.abs(combo[1][0] - freq) >= 100.:
-                ftb_str+=generate_ftb_line(
+                ftb_str += generate_ftb_line(
                     freq,
                     nshots,
                     **{
@@ -1590,4 +1649,164 @@ class BlackchirpExperiment:
     ft_min: float = 0.
     ft_max: float = 40000.
     ft_filter: str = "boxcar"
+    freq_offset: float = 0.
+    fids: List = field(default_factory=list)
+    header: Dict = field(default_factory=dict)
 
+    @classmethod
+    def from_dir(cls, filepath):
+        exp_id, header, fids, timedata = parsers.parse_blackchirp(filepath)
+        exp_obj = cls(
+            exp_id=exp_id,
+            header=header,
+            fids=fids
+        )
+        return exp_obj
+
+    def process_ffts(self, weighting=None):
+        """
+        Batch perform FFTs on all of the FIDs. The end result is a Pandas DataFrame with the Frequency and Intensity
+        data, where the intensity is just the weighted co-average of all the FFTs. By default, every FID is equally
+        weighted. 
+        Parameters
+        ----------
+        weighting
+
+        Returns
+        -------
+
+        """
+        weight_factors = {index: 1. for index in range(len(self.fids))}
+        if weighting:
+            weight_factors.update(**weighting)
+        # Work out the frequency bins
+        frequency = self.fids[0].determine_frequencies()
+        # Weight the FIDs
+        weighted_fids = [self.fids[index][1] * weight for index, weight in weight_factors.items()]
+        averaged = np.sum(weighted_fids) / np.sum([weight for weight in weight_factors.values()])
+        # Calculate the sample rate; inverse of the spacing, converted back to seconds
+        rate = 1. / self.header["spacing"] / 1e6
+        fid2fft(averaged, rate, frequency)
+
+
+
+        spectrum_df = pd.DataFrame({"Frequency": fft_data[0][0] + self.freq_offset, "Intensity": averaged})
+        self.spectrum = spectrum_df
+        return spectrum_df
+
+
+@dataclass
+class BlackChirpFid:
+    xy_data: np.array
+    header: Dict = field(default_factory=dict)
+
+    @classmethod
+    def from_binary(cls, filepath):
+        """
+        Create a BlackChirp FID object from a binary BlackChirp FID file.
+
+        Parameters
+        ----------
+        filepath - str
+            Filepath to the BlackChirp .fid file
+
+        Returns
+        -------
+        BlackChirpFid object
+        """
+        param_dict, xy_data, _ = parsers.read_binary_fid(filepath)
+        fid_obj = cls(xy_data, param_dict)
+        return fid_obj
+
+    def to_pickle(self, filepath, **kwargs):
+        """
+        Save the Blackchirp FID to a pickle file.
+
+        Parameters
+        ----------
+        filepath - str
+            Filepath to save the FID to
+        kwargs - dict-like
+            Additional keyword arguments that are passed to the
+            pickle function.
+
+        """
+        routines.save_obj(self, filepath, **kwargs)
+
+    def perform_fft(self, start=0, stop=-1, window="boxcar", f_min=0., f_max=30000.):
+        """
+        Perform an FFT on the current FID to get the frequency domain spectrum.
+        All of the arguments are optional, and provide control over how the FFT is performed, as well as post-processing
+        parameters like window functions and zero-padding.
+
+        This is based on the FFT code by Kyle Crabtree, with modifications to fit this dataclass.
+
+        Parameters
+        ----------
+        start - int, optional
+            Starting index for the FID array to perform the FFT
+        stop - int, optional
+            End index for the FID array to perform the FFT
+        zpf - int, optional
+            Pad the FID with zeros to nth nearest power of 2
+        window - str
+            Specify the window function used to process the FID. Defaults to boxcar, which is effectively no filtering.
+            The names of the window functions available can be found at:
+            https://docs.scipy.org/doc/scipy/reference/signal.windows.html
+        f_min - float
+            Specify the minimum frequency in the spectrum; everything below this value is set to zero
+        f_max - float
+            Specify the maximum frequency in the spectrum; everything above this value is set to zero
+
+        Returns
+        -------
+        """
+        fid = np.copy(self.xy_data[1])
+        if window is not None and window in spsig.windows.__all__:
+            window_f = spsig.windows.get_window(window, fid.size)
+            fid *= window_f
+        else:
+            raise Exception("Specified window function is not implemented in SciPy!")
+        # Set values to zero up to starting index
+        fid[:start] = 0.
+        if stop < 0:
+            # If we're using negative indexes
+            fid[fid.size + stop:] = 0.
+        else:
+            # Otherwise, index with a positive number
+            fid[stop:] = 0.
+        # Perform the FFT
+        fft = np.fft.rfft(fid)
+        read_length = len(fid) // 2 + 1
+        df = 1. / fid.size / self.header["spacing"]
+        # Generate the frequency array
+        frequency = np.linspace(
+            0.,
+            self.header["sideband"] * df,
+            read_length
+        )
+        frequency += self.header["probe_freq"]
+        fft[(frequency >= f_max) & (frequency <= f_min)] = 0.
+        fft *= 1000.
+        return frequency, fft
+    
+    def determine_frequencies(self):
+        """
+        Calculate the frequency bins for the FFT.
+
+        Returns
+        -------
+        frequency - numpy 1D array
+            Array containing the frequency bins (x values)
+        """
+        fid = self.xy_data[1]
+        df = 1. / fid.size / self.header["spacing"]
+        read_length = len(fid) // 2 + 1
+        # Generate the frequency array
+        frequency = np.linspace(
+            0.,
+            self.header["sideband"] * df,
+            read_length
+        )
+        frequency += self.header["probe_freq"]
+        return frequency

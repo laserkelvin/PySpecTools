@@ -6,6 +6,8 @@ from glob import glob
 import pandas as pd
 import numpy as np
 
+from pyspectools import ftmw_analysis as fa
+
 def parse_spectrum(filename, threshold=20.):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
     dataframe = pd.read_csv(
@@ -121,11 +123,12 @@ def parse_blackchirp(dir_path):
         Filepath pointing to the directory containing the Blackchirp experiment files.
 
     """
-    # read in header information
+    # Read in header information
     hdr_file = glob(os.path.join(dir_path, "*.hdr"))
     header = dict()
     try:
         hdr_file = hdr_file[0]
+        exp_id = hdr_file.split("/")[-1].split(".")[0]
     except IndexError:
         raise Exception("Header file is missing!")
     with open(hdr_file) as hdr:
@@ -142,10 +145,12 @@ def parse_blackchirp(dir_path):
 
             header[key] = {"value": value, "unit": unit}
 
+    # Locate all the FIDs
     fid_files = glob(os.path.join(dir_path, "*.fid"))
     if len(fid_files) < 1:
         raise Exception("No FID files present!")
     else:
+        fid_list = list()
         for file in fid_files:
             with open(file, "rb") as fidfile:
                 buffer = fidfile.read(4)
@@ -164,5 +169,132 @@ def parse_blackchirp(dir_path):
                 buffer = fidfile.read(4)
                 fidlist_size = struct.unpack(">I", buffer)[0]
                 for i in range(0, fidlist_size):
-                    pass
-            self.fid_list.append(BlackChirpFid(version, fidfile))
+                    # Create a BlackChirpFid object
+                    fid_list.append(
+                        fa.BlackChirpFid.from_binary(fidfile)
+                    )
+
+    time_data = dict()
+    tdt_file = glob(os.path.join(dir_path, "*.tdt"))
+    try:
+        tdt_file = tdt_file[0]
+    except IndexError:
+        raise Exception("Time stamp data is missing!")
+    with open(tdt_file) as tdt:
+        look_for_header = True
+        header_list = []
+        for line in tdt:
+            print(line)
+            if line.strip() == "":
+                continue
+            if line.startswith('#') and "PlotData" in line:
+                look_for_header = True
+                header_list = []
+                continue
+            if line.startswith('#'):
+                continue
+
+            l = line.split('\t')
+            if len(l) < 1:
+                continue
+
+            if look_for_header is True:
+                for i in range(0, len(l)):
+                    name = ""
+                    l2 = str(l[i]).split('_')
+                    for j in range(0, len(l2) - 1):
+                        name += str(l2[j]).strip()
+                    time_data[name] = []
+                    header_list.append(name)
+                look_for_header = False
+            else:
+                for i in range(0, len(l)):
+                    time_data[header_list[i]].append(str(l[i]).strip())
+    return exp_id, header, fid_list, time_data
+
+
+def read_binary_fid(filepath):
+    """
+    Read in a binary Blackchirp FID file. This is based on the original code by Kyle Crabtree, with some minor
+    perfomance improvements by Kelvin Lee. The only difference is most of the for loops for reading the points
+    have been replaced by numpy broadcasts.
+
+    Parameters
+    ----------
+    filepath - str
+        Filepath to the Blackchirp .fid file
+
+    Returns
+    -------
+    param_dict - dict
+        Contains header information about the FID, such as the number of shots, point spacing, etc.
+    xy_data - 2-tuple of numpy 1D array
+        Contains two columns; xy_data[0] is the time data in microseconds, and xy_data[1] is the
+        signal.
+    raw_data - numpy 1D array
+        Contains the raw, uncorrected ADC sums. The signal data is converted from this by scaling
+        it with the multiplication factor v_mult.
+
+    """
+    with open(filepath) as read_file:
+        read_str = ">3dqHbI"
+        d = struct.unpack(
+            read_str,
+            read_file.read(struct.calcsize(read_str))
+        )
+        spacing = d[0] * 1e6
+        probe_freq = d[1]
+        v_mult = d[2]
+        shots = d[3]
+        if d[4] == 1:
+            sideband = -1.0
+        else:
+            sideband = 1.0
+        point_size = d[5]
+        size = d[6]
+
+        param_dict = {
+            "spacing": spacing,
+            "probe_freq": probe_freq,
+            "v_mult": v_mult,
+            "shots": shots,
+            "point_size": point_size,
+            "size": size,
+            "sideband": sideband
+        }
+
+        if point_size == 2:
+            read_string = '>' + str(size) + 'h'
+            dat = struct.unpack(
+                read_string,
+                read_file.read(
+                    struct.calcsize(read_string))
+            )
+        elif point_size == 3:
+            for i in range(0, size):
+                chunk = read_file.read(3)
+                dat = struct.unpack(
+                    '>i', (b'\0' if chunk[0] < 128 else b'\xff') + chunk)[0]
+        elif point_size == 4:
+            read_string = '>' + str(size) + 'i'
+            dat = struct.unpack(
+                read_string,
+                read_file.read(
+                    struct.calcsize(read_string))
+            )
+        elif point_size == 8:
+            read_string = '>' + str(size) + 'q'
+            dat = struct.unpack(
+                read_string,
+                read_file.read(
+                    struct.calcsize(read_string))
+            )
+        else:
+            raise ValueError("Invalid point size: "
+                             + str(point_size))
+        # Now read in the data with broadcasting
+        raw_data = np.array(dat[:size])
+        data = raw_data * v_mult / shots
+        x_data = np.linspace(0., size * spacing, int(size))
+        xy_data = np.vstack((x_data, data))
+    return param_dict, xy_data, raw_data
