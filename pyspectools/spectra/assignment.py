@@ -256,6 +256,8 @@ class Session:
      doppler : float
         Doppler width in km/s; default value is about 5 kHz at 15 GHz. Used for simulating lineshapes and
         for lineshape analysis.
+    rv : float
+        Radial velocity of the source in km/s; used to offset the frequency spectrum
      freq_prox : float
         frequency cutoff for line assignments. If freq_abs attribute is True, this value is taken as the absolute value.
          Otherwise, it is a percentage of the frequency being compared.
@@ -267,6 +269,7 @@ class Session:
     composition: List[str] = field(default_factory=list)
     temperature: float = 4.0
     doppler: float = 0.01
+    velocity: float = 0.
     freq_prox: float = 0.1
     freq_abs: bool = True
 
@@ -312,7 +315,7 @@ class AssignmentSession:
 
     @classmethod
     def from_ascii(
-            cls, filepath, experiment, composition=["C", "H"], delimiter="\t", temperature=4.0,
+            cls, filepath, experiment, composition=["C", "H"], delimiter="\t", temperature=4.0, velocity=0.,
             col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, **kwargs
     ):
         """
@@ -343,11 +346,11 @@ class AssignmentSession:
         AssignmentSession
         """
         spec_df = parsers.parse_ascii(filepath, delimiter, col_names, skiprows=skiprows)
-        session = cls(spec_df, experiment, composition, temperature, freq_col, int_col, **kwargs)
+        session = cls(spec_df, experiment, composition, temperature, velocity, freq_col, int_col, **kwargs)
         return session
 
     def __init__(
-            self, exp_dataframe, experiment, composition, temperature=4.0,
+            self, exp_dataframe, experiment, composition, temperature=4.0, velocity=0.,
             freq_col="Frequency", int_col="Intensity", **kwargs
     ):
         """ init method for AssignmentSession.
@@ -369,7 +372,7 @@ class AssignmentSession:
             if os.path.isdir(folder) is False:
                 os.mkdir(folder)
         # Initialize a Session dataclass
-        self.session = Session(experiment, composition, temperature)
+        self.session = Session(experiment, composition, temperature, velocity=velocity)
         # Update additional setttings
         self.session.__dict__.update(**kwargs)
         self.data = exp_dataframe
@@ -388,6 +391,8 @@ class AssignmentSession:
             self.int_col = self.data.columns[1]
         else:
             self.int_col = int_col
+        if velocity != 0.:
+            self.set_velocity(velocity)
 
     def umol_gen(self):
         """
@@ -402,6 +407,29 @@ class AssignmentSession:
         while counter <= 200:
             yield "UMol_{:03.d}".format(counter)
             counter+=1
+
+    def set_velocity(self, value):
+        """
+        Set the radial velocity offset for the spectrum. The velocity is specified in km/s, and is set up
+        such that the notation is positive velocity yields a redshifted spectrum (i.e. moving towards us).
+
+        This method should be used to change the velocity, as it will automatically re-calculate the dataframe
+        frequency column to the new velocity.
+
+        Parameters
+        ----------
+        value : float
+            Velocity in km/s
+        """
+
+        # Assume that if this is the first time we're performing a frequency offset, make a copy of the data
+        if "Laboratory Frame" not in self.data.columns:
+            self.data.loc[:, "Laboratory Frame"] = self.data.loc[:, self.freq_col]
+        else:
+            # If we have performed the shift before, copy back the unshifted data
+            self.data.loc[:, self.freq_col] = self.data.loc[:, "Laboratory Frame"]
+        doppler_offset = units.dop2freq(value, self.data["Laboratory Frame"].values)
+        self.data.loc[:, self.freq_col] += doppler_offset
 
     def find_peaks(self, threshold=None):
         """
