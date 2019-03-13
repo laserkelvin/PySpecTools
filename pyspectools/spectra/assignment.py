@@ -19,6 +19,7 @@ from IPython.display import display, HTML
 from periodictable import formula
 from plotly.offline import plot
 from plotly import graph_objs as go
+from uncertainties import ufloat
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import fitting
@@ -1070,7 +1071,7 @@ class AssignmentSession:
         }
         return self.identifications
 
-    def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None):
+    def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None, chi_thres=10.):
         """
             Function for providing some astronomically relevant
             parameters by analyzing Gaussian line shapes.
@@ -1083,7 +1084,6 @@ class AssignmentSession:
             :return profile_df: pandas dataframe containing all of the
                                 analysis
         """
-        profile_data = list()
         if name:
             selector = "name"
             value = name
@@ -1110,7 +1110,7 @@ class AssignmentSession:
                 fit_result, summary = analysis.fit_line_profile(
                     self.data,
                     ass_obj.frequency,
-                    width,
+                    #width,
                     ass_obj.intensity,
                     freq_col=self.freq_col,
                     int_col=self.int_col,
@@ -1118,8 +1118,11 @@ class AssignmentSession:
                     )
                 # If the fit actually converged and worked
                 if fit_result:
-                    # Calculate the offset frequency, which is the basis of the VLSR calculation
-                    summary["Frequency offset"] = ass_obj.catalog_frequency - fit_result.best_values["center"]
+                    # Calculate what the lab frame frequency would be in order to calculate the frequency offset
+                    lab_freq = fit_result.best_values["center"] + units.dop2freq(
+                        self.session.velocity, fit_result.best_values["center"]
+                    )
+                    summary["Frequency offset"] = lab_freq - ass_obj.catalog_frequency
                     summary["Doppler velocity"] = units.freq2vel(
                         ass_obj.catalog_frequency,
                         summary["Frequency offset"]
@@ -1141,19 +1144,22 @@ class AssignmentSession:
             profile_df = pd.DataFrame(
                 data=mol_data
                 )
-            #sim_y = self.simulate_spectrum(
-            #    self.data[self.freq_col],
-            #    profile_df["frequency"].values,
-            #    profile_df["width"].values,
-            #    profile_df["amplitude"].values
-            #    )
-            #sim_df = pd.DataFrame(
-            #    data=list(zip(
-            #        self.data[self.freq_col].values,
-            #        sim_y
-            #        ))
-            #    )
-            return profile_df
+            # Sort the dataframe by ascending order of chi square - better fits are at the top
+            profile_df.sort_values(["Chi squared"], inplace=True)
+            # Threshold the dataframe to ensure good statistics
+            profile_df = profile_df.loc[profile_df["Chi squared"] <= chi_thres]
+            # Calculate the weighted average VLSR based on the goodness-of-fit
+            profile_df.loc[:, "Weight"] = profile_df["Chi squared"].max() / profile_df["Chi squared"].values
+            weighted_avg = np.sum(profile_df["Weight"] * profile_df["Doppler velocity"]) / np.sum(profile_df["Weight"])
+            # Calculate the weighted standard deviation
+            stdev = np.sum(profile_df["Weight"] * (profile_df["Doppler velocity"] - weighted_avg)**2) / \
+                           np.sum(profile_df["Weight"])
+            print(
+                "Calculated VLSR: {:.3f}+/-{:.3f} based on {} samples.".format(
+                    weighted_avg, stdev, len(profile_df)
+                )
+            )
+            return profile_df, ufloat(weighted_avg, stdev)
         else:
             print("No molecules found!")
             return None
