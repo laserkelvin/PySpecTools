@@ -1,8 +1,8 @@
 """
     assignment.py
 
-    Contains dataclass routines for tracking assignments
-    in broadband spectra.
+    Contains the Assignment, AssignmentSession, and Session classes that are designed to handle and assist
+    the assignment of broadband spectra from the laboratory or astronomical observations.
 """
 
 import os
@@ -10,6 +10,7 @@ from shutil import rmtree
 from dataclasses import dataclass, field
 from typing import List, Dict
 from collections import OrderedDict
+import logging
 
 import numpy as np
 import pandas as pd
@@ -312,12 +313,14 @@ class AssignmentSession:
                 Instance of the AssignmentSession loaded from disk
         """
         session = routines.read_obj(filepath)
+        session.init_logging()
+        session.logger.info("Reloading session: {}".format(filepath))
         return session
 
     @classmethod
     def from_ascii(
             cls, filepath, experiment, composition=["C", "H"], delimiter="\t", temperature=4.0, velocity=0.,
-            col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, **kwargs
+            col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, verbose=True, **kwargs
     ):
         """
 
@@ -347,12 +350,12 @@ class AssignmentSession:
         AssignmentSession
         """
         spec_df = parsers.parse_ascii(filepath, delimiter, col_names, skiprows=skiprows)
-        session = cls(spec_df, experiment, composition, temperature, velocity, freq_col, int_col, **kwargs)
+        session = cls(spec_df, experiment, composition, temperature, velocity, freq_col, int_col, verbose, **kwargs)
         return session
 
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0, velocity=0.,
-            freq_col="Frequency", int_col="Intensity", **kwargs
+            freq_col="Frequency", int_col="Intensity", verbose=True, **kwargs
     ):
         """ init method for AssignmentSession.
 
@@ -368,7 +371,7 @@ class AssignmentSession:
              int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
-        folders = ["assignment_objs", "queries", "sessions", "clean", "figures", "reports"]
+        folders = ["assignment_objs", "queries", "sessions", "clean", "figures", "reports", "logs"]
         for folder in folders:
             if os.path.isdir(folder) is False:
                 os.mkdir(folder)
@@ -382,6 +385,8 @@ class AssignmentSession:
         self.assignments = list()
         self.ulines = OrderedDict()
         self.umols = list()
+        self.verbose = verbose
+        self.init_logging()
         #self.umol_counter = self.umol_gen()
         # Default settings for columns
         if freq_col not in self.data.columns:
@@ -409,6 +414,37 @@ class AssignmentSession:
             yield "UMol_{:03.d}".format(counter)
             counter+=1
 
+    def init_logging(self):
+        """
+        Set up the logging formatting and files. The levels are defined in the dictionary mapping, and so new
+        levels and their warning level should be defined there. Additional log files can be added in the
+        log_handlers dictionary. In the other routines, the logger attribute should be used.
+        """
+        mapping = {
+            "debug": logging.DEBUG,
+            "warning": logging.WARNING,
+            "analysis": logging.INFO,
+            "stream": logging.INFO
+        }
+        self.logger = logging.getLogger("{} log".format(self.session.experiment))
+        self.logger.setLevel(logging.DEBUG)
+        # Define file handlers for each type of log
+        self.log_handlers = {
+            "analysis": logging.FileHandler("./logs/{}-analysis.log".format(self.session.experiment)),
+            "warning": logging.FileHandler("./logs/{}-warnings.log".format(self.session.experiment)),
+            "debug": logging.FileHandler("./logs/{}-debug.log".format(self.session.experiment))
+        }
+        if self.verbose is True:
+            self.log_handlers["stream"] = logging.StreamHandler()
+        # Set up the formatting and the level definitions
+        for key, handler in self.log_handlers.items():
+            handler.setFormatter(
+                logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
+            )
+            # do not redefine the default warning levels
+            handler.setLevel(mapping[key])
+            self.logger.addHandler(handler)
+
     def set_velocity(self, value):
         """
         Set the radial velocity offset for the spectrum. The velocity is specified in km/s, and is set up
@@ -433,6 +469,7 @@ class AssignmentSession:
         # Offset the values
         self.data.loc[:, self.freq_col] += doppler_offset
         self.session.velocity = value
+        self.logger.info("Set the session velocity to {}.".format(value))
 
     def find_peaks(self, threshold=None):
         """
@@ -460,31 +497,24 @@ class AssignmentSession:
             # Set the threshold as 20% of the baseline + 1sigma. The peak_find function will
             # automatically weed out the rest.
             threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std() * 1.5)
-            self.threshold = threshold
-            print("Peak detection threshold is: {}".format(threshold))
-        else:
-            self.threshold = threshold
+        self.threshold = threshold
+        self.logger.info("Peak detection threshold is: {}".format(threshold))
         peaks_df = analysis.peak_find(
             self.data,
             freq_col=self.freq_col,
             int_col=self.int_col,
             thres=threshold,
         )
+        self.logger.info("Found {} peaks in total.".format(len(peaks_df)))
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
-        if hasattr(self, "peaks") is True:
-            # If we've looked for peaks previously
-            # we don't have to re-add the U-line to
-            # the list
-            peaks_df = pd.concat([peaks_df, self.peaks])
-            # drop repeated frequencies
-            peaks_df.drop_duplicates(["Frequency"], inplace=True)
         # Generate U-lines
         skip = ["temperature", "doppler", "freq_abs", "freq_prox", "velocity"]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
         for index, row in peaks_df.iterrows():
+            self.logger.info("Added U-line {}, frequency {}".format(index, row[self.freq_col]))
             ass_obj = Assignment(
                 frequency=row[self.freq_col],
                 intensity=row[self.int_col],
@@ -497,6 +527,7 @@ class AssignmentSession:
                 self.ulines[index] = ass_obj
         # Assign attribute
         self.peaks = peaks_df
+        self.peaks.to_csv("./outputs/{}-peaks.csv".format(self.session.experiment), index=False)
         return peaks_df
 
     def search_frequency(self, frequency):
@@ -593,12 +624,12 @@ class AssignmentSession:
              If True the assignment process does not require user input, otherwise will prompt user.
         """
         if hasattr(self, "peaks") is False:
-            print("Peak detection not run; running with default settings.")
+            self.logger.warning("Peak detection not run; running with default settings.")
             self.find_peaks()
-
+        self.logger.info("Beginning Splatalogue lookup on {} lines.".format(len(self.peaks)))
         for uindex, uline in tqdm(list(self.ulines.items())):
             frequency = uline.frequency
-            print("Searching for frequency {:,.4f}".format(frequency))
+            self.logger.info("Searching for frequency {:,.4f}".format(frequency))
             # Call splatalogue API to search for frequency
             if self.session.freq_abs is True:
                 width = self.session.freq_prox
@@ -623,10 +654,10 @@ class AssignmentSession:
                         )
                         if comp_check is False:
                             # If there are crazy things in the mix, forget about it
-                            print("Molecule " + clean_formula + " rejected.")
+                            self.logger.info("Molecule " + clean_formula + " rejected.")
                             splat_df.drop(index, inplace=True)
                     except:
-                        print("Could not parse molecule " + clean_formula + " rejected.")
+                        self.logger.info("Could not parse molecule " + clean_formula + " rejected.")
                         splat_df.drop(index, inplace=True)
                 nitems = len(splat_df)
 
@@ -634,9 +665,12 @@ class AssignmentSession:
                     frequency, splat_df, prox=self.session.freq_prox, abs=self.session.freq_abs
                 )
                 if splat_df is not None:
-                    display(HTML(splat_df.to_html()))
+                    self.logger.info("Found {} candidates for frequency {:,.4f}, index {}.".format(
+                        len(splat_df), frequency, uindex)
+                    )
+                    if self.verbose is True:
+                        display(HTML(splat_df.to_html()))
                     try:
-                        print("Observed frequency is {:,.4f}".format(frequency))
                         if auto is False:
                             # If not automated, we need a human to look at frequencies
                             # Print the dataframe for notebook viewing
@@ -648,7 +682,7 @@ class AssignmentSession:
                         else:
                             # If automated, choose closest frequency
                             splat_index = 0
-
+                        self.logger.info("Index {} was chosen.".format(splat_index))
                         ass_df = splat_df.iloc[[splat_index]]
                         splat_df.to_csv(
                             "queries/{0}-{1}.csv".format(self.session.experiment, uindex), index=False
@@ -672,12 +706,11 @@ class AssignmentSession:
                     except ValueError:
                         # If nothing matches, keep in the U-line
                         # pile.
-                        print("Deferring assignment")
+                        self.logger.info("Deferring assignment for index {}.".format(uindex))
                 else:
                     # Throw into U-line pile if no matches at all
-                    print("No species known for {:,.4f}".format(frequency))
-                display(HTML("<hr>"))
-        print("Processed {} lines.".format(uindex))
+                    self.logger.info("No species known for {:,.4f}".format(frequency))
+        self.logger.info("Splatalogue search finished.")
 
     def process_lin(self, name, formula, linpath, auto=True, **kwargs):
         """
@@ -706,6 +739,7 @@ class AssignmentSession:
         old_nulines = len(self.ulines)
         lin_df = parsers.parse_lin(linpath)
 
+        self.logger.info("Processing .lin file for {}, filepath: {}".format(name, linpath))
         for uindex, uline in tqdm(list(self.ulines.items())):
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency,
@@ -714,7 +748,8 @@ class AssignmentSession:
                 abs=self.session.freq_abs
             )
             if sliced_catalog is not None:
-                display(HTML(sliced_catalog.to_html()))
+                if self.verbose is True:
+                    display(HTML(sliced_catalog.to_html()))
                 if auto is False:
                     index = int(input("Please choose a candidate by index"))
                 elif auto is True:
@@ -738,8 +773,9 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
         )
         self.table = ass_df
-        print("Prior number of ulines: {}".format(old_nulines))
-        print("Current number of ulines: {}".format(len(self.ulines)))
+        self.logger.info("Prior number of ulines: {}".format(old_nulines))
+        self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
+        self.logger.info("Finished looking up lin file.")
 
     def calc_line_weighting(
             self, frequency, catalog_df, prox=0.00005,
@@ -832,6 +868,7 @@ class AssignmentSession:
                 log10 of the theoretical intensity to use as a bottom limit
         """
         old_nulines = len(self.ulines)
+        self.logger.info("Processing catalog for {}, catalog path: {}".format(name, catalogpath))
         catalog_df = parsers.parse_cat(
             catalogpath,
             self.data[self.freq_col].min(),
@@ -849,7 +886,8 @@ class AssignmentSession:
                 uline.frequency, catalog_df, prox=self.session.freq_prox, abs=self.session.freq_abs
             )
             if sliced_catalog is not None:
-                display(HTML(sliced_catalog.to_html()))
+                if self.verbose is True:
+                    display(HTML(sliced_catalog.to_html()))
                 if auto is False:
                     index = int(input("Please choose a candidate by index."))
                 elif auto is True:
@@ -881,8 +919,9 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
         )
         self.table = ass_df
-        print("Prior number of ulines: {}".format(old_nulines))
-        print("Current number of ulines: {}".format(len(self.ulines)))
+        self.logger.info("Prior number of ulines: {}".format(old_nulines))
+        self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
+        self.logger.info("Finished looking up catalog.")
 
     def process_frequencies(self, frequencies, ids, molecule=None, **kwargs):
         """
@@ -897,6 +936,7 @@ class AssignmentSession:
          molecule: optional str specifying the name of the molecule
         """
         counter = 0
+        self.logger.info("Processing {} frequencies for molecule {}.".format(len(frequencies), molecule))
         for freq, scan_id in zip(frequencies, ids):
             uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
             nearest, index = routines.find_nearest(uline_freqs, freq)
@@ -920,9 +960,9 @@ class AssignmentSession:
                 self.assign_line(**assign_dict)
                 counter += 1
             else:
-                print("No U-line was sufficiently close.")
-                print("Expected: {}, Nearest: {}".format(freq, nearest))
-        print("Tentatively assigned {} lines to {}.".format(counter, molecule))
+                self.logger.info("No U-line was sufficiently close.")
+                self.logger.info("Expected: {}, Nearest: {}".format(freq, nearest))
+        self.logger.info("Tentatively assigned {} lines to {}.".format(counter, molecule))
 
     def process_artifacts(self, frequencies):
         """
@@ -933,6 +973,7 @@ class AssignmentSession:
          frequencies: list-like with floats corresponding to artifact frequencies
         """
         counter = 0
+        self.logger.info("Processing artifacts.")
         for freq in frequencies:
             uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
             nearest, index = routines.find_nearest(uline_freqs, freq)
@@ -946,7 +987,7 @@ class AssignmentSession:
                 }
                 self.assign_line(**assign_dict)
                 counter += 1
-        print("Removed {} lines as artifacts.".format(counter))
+        self.logger.info("Removed {} lines as artifacts.".format(counter))
 
     def process_db(self, auto=True, dbpath=None):
         """
@@ -963,8 +1004,9 @@ class AssignmentSession:
         """
         old_nulines = len(self.ulines)
         db = database.SpectralCatalog(dbpath)
+        self.logger.info("Processing local database: {}".format(dbpath))
         for uindex, uline in tqdm(list(self.ulines.items())):
-            print("Searching database for {:.4f}".format(uline.frequency))
+            self.logger.info("Searching database for {:.4f}".format(uline.frequency))
             catalog_df = db.search_frequency(uline.frequency, self.session.freq_prox, self.session.freq_abs)
             if catalog_df is not None:
                 catalog_df["frequency"].replace(0., np.nan, inplace=True)
@@ -977,7 +1019,8 @@ class AssignmentSession:
                         abs=self.session.freq_abs,
                         freq_col="frequency"
                     )
-                    display(HTML(sliced_catalog.to_html()))
+                    if self.verbose is True:
+                        display(HTML(sliced_catalog.to_html()))
                     if auto is False:
                         index = int(input("Please choose a candidate by index."))
                     elif auto is True:
@@ -1002,8 +1045,9 @@ class AssignmentSession:
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
         )
         self.table = ass_df
-        print("Prior number of ulines: {}".format(old_nulines))
-        print("Current number of ulines: {}".format(len(self.ulines)))
+        self.logger.info("Prior number of ulines: {}".format(old_nulines))
+        self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
+        self.logger.info("Finished processing local database.")
 
     def assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
@@ -1036,7 +1080,7 @@ class AssignmentSession:
             deviation = np.abs(frequency - nearest)
             # Check that the deviation is at least a kilohertz
             if deviation <= 1E-3:
-                print("Found U-line number {}.".format(index))
+                self.logger.info("Found U-line number {}.".format(index))
                 ass_obj = self.ulines[index]
         if ass_obj:
             ass_obj.name = name
@@ -1046,7 +1090,7 @@ class AssignmentSession:
             if frequency is None:
                 frequency = ass_obj.frequency
             ass_obj.frequency = frequency
-            print("{:,.4f} assigned to {}".format(frequency, name))
+            self.logger.info("{:,.4f} assigned to {}".format(frequency, name))
             # Delete the line from the ulines dictionary
             del self.ulines[index]
             self.assignments.append(ass_obj)
@@ -1101,20 +1145,15 @@ class AssignmentSession:
             # If the assignment matches the criteria
             # we perform the analysis
             if ass_obj.__dict__[selector] == value:
-                # Get width estimate based on the Doppler velocity
-                width = units.dop2freq(
-                    self.session.doppler,
-                    ass_obj.frequency
-                    )
-                # Perform a Gaussian fit
+                # Perform a Gaussian fit whilst supplying as much information as we can
+                # The width is excluded because it changes significantly between line profiles
                 fit_result, summary = analysis.fit_line_profile(
                     self.data,
-                    ass_obj.frequency,
-                    #width,
-                    ass_obj.intensity,
+                    center=ass_obj.frequency,
+                    intensity=ass_obj.intensity,
                     freq_col=self.freq_col,
                     int_col=self.int_col,
-                    verbose=True
+                    logger=self.logger
                     )
                 # If the fit actually converged and worked
                 if fit_result:
@@ -1140,6 +1179,7 @@ class AssignmentSession:
                         summary.update(profile_dict)
                     ass_obj.fit = fit_result
                     mol_data.append(summary)
+        # If there are successful analyses performed, format the results
         if len(mol_data) > 0:
             profile_df = pd.DataFrame(
                 data=mol_data
@@ -1154,14 +1194,14 @@ class AssignmentSession:
             # Calculate the weighted standard deviation
             stdev = np.sum(profile_df["Weight"] * (profile_df["Doppler velocity"] - weighted_avg)**2) / \
                            np.sum(profile_df["Weight"])
-            print(
+            self.logger.info(
                 "Calculated VLSR: {:.3f}+/-{:.3f} based on {} samples.".format(
                     weighted_avg, stdev, len(profile_df)
                 )
             )
             return profile_df, ufloat(weighted_avg, stdev)
         else:
-            print("No molecules found!")
+            self.logger.info("No molecules found, or fits were unsuccessful!")
             return None
 
     def finalize_assignments(self):
@@ -1210,8 +1250,7 @@ class AssignmentSession:
         self.create_html_report()
         # Dump data to notebook output
         for key, value in combined_dict.items():
-            print(key + ":   " + str(value))
-        #self.update_database()
+            self.logger.info(key + ":   " + str(value))
 
     def clean_folder(self, action=False):
         """
@@ -1220,7 +1259,11 @@ class AssignmentSession:
 
             Requires passing a True statement to actually clean up.
 
-             action: bool; will only clean up when True is passed
+            Parameters
+            ----------
+
+            action : bool
+                If True, folders will be deleted. If False (default) nothing is done.
         """
         folders = ["assignment_objs", "queries", "sessions", "clean", "reports"]
         if action is True:
@@ -1865,9 +1908,11 @@ class AssignmentSession:
         """
         if filepath is None:
             filepath = "./sessions/{}.pkl".format(self.session.experiment)
+        self.logger.info("Saving session to {}".format(filepath))
+        if hasattr(self, "log_handlers"):
+            del self.log_handlers
         # Save to disk
         routines.save_obj(
             self,
             filepath
         )
-        print("Saved session to {}".format(filepath))

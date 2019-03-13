@@ -254,7 +254,8 @@ def save_obj(obj, filepath, **kwargs):
         filepath - filepath to save to
     """
     settings = {
-        "compress": ("gzip", 6)
+        "compress": ("gzip", 6),
+        "protocol": 4
         }
     settings.update(kwargs)
     joblib.dump(obj, filepath, **settings)

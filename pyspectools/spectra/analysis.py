@@ -14,9 +14,8 @@ from uncertainties import ufloat
 from pyspectools import fitting
 
 
-def fit_line_profile(spec_df, center, width=None, intensity=None,
-        verbose=False, freq_col="Frequency", int_col="Intensity",
-        fit_func=models.GaussianModel, sigma=2
+def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Frequency", int_col="Intensity",
+        fit_func=models.GaussianModel, sigma=2, logger=None
         ):
     """ 
         Somewhat high level function that wraps lmfit for
@@ -33,6 +32,8 @@ def fit_line_profile(spec_df, center, width=None, intensity=None,
         min=center * 0.9997,
         max=center * 1.0003
     )
+    if logger:
+        logger.info("Guess center: {:,.4f}.".format(center))
     if intensity:
         params["height"].set(
             intensity,
@@ -56,9 +57,9 @@ def fit_line_profile(spec_df, center, width=None, intensity=None,
         params=params,
         x=slice_df[freq_col],
     )
+    if logger:
+        logger.debug(fit_results.fit_report())
     if fit_results.success is True:
-        if verbose is True:
-            print(fit_results.fit_report())
         names = list(fit_results.best_values.keys())
         fit_values = np.array([fit_results.best_values[key] for key in names])
         # Estimate standard error based on covariance matrix
@@ -70,8 +71,8 @@ def fit_line_profile(spec_df, center, width=None, intensity=None,
         # In the instance where standard errors are large, we need to work out confidence intervals explicitly
         if len(percentage[percentage >= 5.]) > 0:
             # If using a Gaussian line profile, we can do extra statistics
-            if verbose is True:
-                print("Large covariance detected; working out confidence intervals.")
+            if logger:
+                logger.warning("Large covariance detected; working out confidence intervals.")
             try:
                 ci = fit_results.conf_interval()
                 # Get the index corresponding to the right amount of sigma. Indices run 0 - 3 for one side, giving
@@ -81,6 +82,8 @@ def fit_line_profile(spec_df, center, width=None, intensity=None,
                 # Instances where changing a parameter does not affect the residuals at all; i.e. the cost function
                 # is too flat w.r.t. to a parameter. In these cases we can't evaluate confidence intervals, and instead
                 # we'll simply use the standard error of mean
+                if logger:
+                    logger.warning("Confidence intervals could not be evaluated, defaulting to standard error of mean.")
                 uncer = variance * sigma
         else:
             # Otherwise, use the standard error of the mean as the uncertainty, multiplied by
