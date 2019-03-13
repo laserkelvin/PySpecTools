@@ -91,7 +91,6 @@ setup(
         "tqdm",
         "tinydb",
         "networkx",
-        "loguru"
     ],
     cmdclass={
         "develop": PostInstallCommand,

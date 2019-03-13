@@ -426,6 +426,7 @@ class AssignmentSession:
             "analysis": logging.INFO,
             "stream": logging.INFO
         }
+        logging.captureWarnings(True)
         self.logger = logging.getLogger("{} log".format(self.session.experiment))
         self.logger.setLevel(logging.DEBUG)
         # Define file handlers for each type of log
@@ -1141,10 +1142,11 @@ class AssignmentSession:
             raise Exception("No valid selector specified! Please give a name, formula, or SMILES code.")
         # Loop over all of the assignments
         mol_data = list()
-        for ass_obj in self.assignments:
+        for index, ass_obj in enumerate(self.assignments):
             # If the assignment matches the criteria
             # we perform the analysis
             if ass_obj.__dict__[selector] == value:
+                self.logger.info("Performing line profile analysis on assignment index {}.".format(index))
                 # Perform a Gaussian fit whilst supplying as much information as we can
                 # The width is excluded because it changes significantly between line profiles
                 fit_result, summary = analysis.fit_line_profile(

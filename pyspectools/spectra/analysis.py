@@ -33,7 +33,7 @@ def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Freq
         max=center * 1.0003
     )
     if logger:
-        logger.info("Guess center: {:,.4f}.".format(center))
+        logger.debug("Guess center: {:,.4f}.".format(center))
     if intensity:
         params["height"].set(
             intensity,
@@ -78,7 +78,7 @@ def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Freq
                 # Get the index corresponding to the right amount of sigma. Indices run 0 - 3 for one side, giving
                 # 3, 2, 1 and 0 sigma values
                 uncer = fit_values - np.array([ci[key][sigma - 1][1] for key in names])
-            except MinimizerException:
+            except (MinimizerException, ValueError):
                 # Instances where changing a parameter does not affect the residuals at all; i.e. the cost function
                 # is too flat w.r.t. to a parameter. In these cases we can't evaluate confidence intervals, and instead
                 # we'll simply use the standard error of mean
