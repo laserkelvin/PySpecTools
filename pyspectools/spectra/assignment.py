@@ -1228,7 +1228,10 @@ class AssignmentSession:
         # Dump assignments to disk
         ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
         # Update the uline peak list with only unassigned stuff
-        self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
+        try:
+            self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
+        except KeyError:
+            self.logger.warning("Could not compare assignments with peak table - ignoring for now.")
         # Dump Uline data to disk
         self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
 
