@@ -722,3 +722,22 @@ def save_plot(fig, filename, js=True):
         auto_open=False,
         include_plotlyjs=js
     )
+
+
+def cfa_cmap(nsteps):
+    """
+    Generate a Matplotlib colormap with the CfA branding colors. Performs a linear interpolation from the CfA red to
+    the so-called CfA violet.
+
+    Parameters
+    ----------
+    nsteps - int
+        Number of steps to take in the interpolation; i.e. number of colors to return
+
+    Returns
+    -------
+    LinearSegementedColormap instance
+    """
+    colors = [(141, 0 , 52), (43, 53, 117)]
+    cm = cl.LinearSegmentedColormap("cfa", colors, N=nsteps)
+    return cm
