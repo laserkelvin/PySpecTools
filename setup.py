@@ -30,6 +30,12 @@ class PostInstallCommand(install):
                 "./pyspectools/templates",
                 os.path.expanduser("~") + "/.pyspectools/templates"
             )
+            # Copy over matplotlib stylesheets
+            for sheet in os.listdir("./pyspectools/mpl_stylesheets"):
+                shutil.copy2(
+                    sheet,
+                    os.path.expanduser("~") + "/.config/matplotlib/stylelib/" + sheet
+                )
         except FileExistsError:
             pass
 
@@ -64,7 +70,7 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="3.4.0",
+    version="3.4.1",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),

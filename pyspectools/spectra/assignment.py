@@ -83,6 +83,8 @@ class Assignment:
             Indicates what the source used for this assignment is
         public : bool
             Flag to indicate if the information for this assignment is public/published
+        velocity : float
+            Velocity of the source used to make the assignment in km/s
     """
     name: str = ""
     smiles: str = ""
@@ -105,6 +107,7 @@ class Assignment:
     weighting: float = 0.0
     source: str = "Catalog"
     public: bool = True
+    velocity: float = 0.
 
     def __eq__(self, other):
         """ Dunder method for comparing molecules.
@@ -172,14 +175,13 @@ class Assignment:
 
         Returns
         -------
-        y : Numpy 1D array
-            Values of the synthetic Gaussian spectrum at each particular value of x
+        Numpy 1D array
+            Values of the model function spectrum at each particular value of x
         """
-        model = GaussianModel()
-        params = model.make_params()
-        params.update(self.fit)
-        y = model.eval(params, x=x)
-        return y
+        if hasattr(self, "fit"):
+            return self.fit.eval(x=x)
+        else:
+            raise Exception("get_spectrum() with no fit data available!")
 
     @classmethod
     def from_dict(obj, data_dict):
@@ -313,7 +315,7 @@ class AssignmentSession:
                 Instance of the AssignmentSession loaded from disk
         """
         session = routines.read_obj(filepath)
-        session.init_logging()
+        session._init_logging()
         session.logger.info("Reloading session: {}".format(filepath))
         return session
 
@@ -364,10 +366,14 @@ class AssignmentSession:
 
             Parameters
             -------------------------
-             exp_dataframe: pandas dataframe with observational data in frequency/intensity
-             experiment: int ID for the experiment
-             composition: list of str corresponding to elemental composition composition; e.g. ["C", "H"]
-             freq_col: optional str arg specifying the name for the frequency column
+             exp_dataframe : pandas dataframe
+                Dataframe with observational data in frequency/intensity
+             experiment : int
+                ID for the experiment
+             composition : list of str
+                Corresponds to elemental composition composition; e.g. ["C", "H"]. Used for splatalogue analysis.
+             freq_col : str, optional
+                Specifying the name for the frequency column
              int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
@@ -386,7 +392,7 @@ class AssignmentSession:
         self.ulines = OrderedDict()
         self.umols = list()
         self.verbose = verbose
-        self.init_logging()
+        self._init_logging()
         #self.umol_counter = self.umol_gen()
         # Default settings for columns
         if freq_col not in self.data.columns:
@@ -414,7 +420,7 @@ class AssignmentSession:
             yield "UMol_{:03.d}".format(counter)
             counter+=1
 
-    def init_logging(self):
+    def _init_logging(self):
         """
         Set up the logging formatting and files. The levels are defined in the dictionary mapping, and so new
         levels and their warning level should be defined there. Additional log files can be added in the
@@ -510,26 +516,51 @@ class AssignmentSession:
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
         # Generate U-lines
-        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "velocity"]
-        selected_session = {
-            key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
-            }
-        for index, row in peaks_df.iterrows():
-            self.logger.info("Added U-line {}, frequency {}".format(index, row[self.freq_col]))
-            ass_obj = Assignment(
-                frequency=row[self.freq_col],
-                intensity=row[self.int_col],
-                peak_id=index,
-                **selected_session
-            )
-            # If the frequency hasn't already been done, add it
-            # to the U-line pile
-            if ass_obj not in self.ulines.values() and ass_obj not in self.assignments:
-                self.ulines[index] = ass_obj
+        self.df2ulines(peaks_df, self.freq_col, self.int_col)
         # Assign attribute
         self.peaks = peaks_df
         self.peaks.to_csv("./outputs/{}-peaks.csv".format(self.session.experiment), index=False)
         return peaks_df
+
+    def df2ulines(self, dataframe, freq_col=None, int_col=None):
+        """
+        Add a dataframe of frequency and intensities to the session U-line dictionary. This function provides more
+        manual control over what can be processed in the assignment pipeline, as not everything can be picked
+        up by the peak finding algorithm.
+
+        Parameters
+        ----------
+        dataframe : pandas dataframe
+            Dataframe containing a frequency and intensity column to add to the uline list.
+        freq_col : None or str
+            Specify column to use for frequencies. If None, uses the session value freq_col.
+        int_col : None or str
+            Specify column to use for intensities. If None, uses the session value int_col.
+        """
+        if freq_col is None:
+            freq_col = self.freq_col
+        if int_col is None:
+            int_col = self.int_col
+        self.logger.info("Adding additional U-lines based on user dataframe.")
+        # This number is used to work out the index to carry on from
+        total_num = len(self.assignments) + len(self.ulines)
+        self.logger.info("So far, there are {} line entries in this session.".format(total_num))
+        # Set up session information to be passed in the U-line
+        skip = ["temperature", "doppler", "freq_abs", "freq_prox"]
+        selected_session = {
+            key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
+            }
+        for index, row in dataframe.iterrows():
+            self.logger.info("Added U-line {}, frequency {:,.4f}".format(index + total_num + 1, row[freq_col]))
+            ass_obj = Assignment(
+                frequency=row[freq_col],
+                intensity=row[int_col],
+                peak_id=index + total_num + 1,
+                **selected_session
+            )
+            if ass_obj not in self.ulines.values() and ass_obj not in self.assignments:
+                self.ulines[index + total_num] = ass_obj
+        self.logger.info("There are now {} line entries in this session.".format(total_num + index))
 
     def search_frequency(self, frequency):
         """
@@ -703,7 +734,7 @@ class AssignmentSession:
                             "deviation": frequency - ass_df["Frequency"][0]
                         }
                         # Need support to convert common name to SMILES
-                        self.assign_line(**ass_dict)
+                        self._assign_line(**ass_dict)
                     except ValueError:
                         # If nothing matches, keep in the U-line
                         # pile.
@@ -769,7 +800,7 @@ class AssignmentSession:
                         "deviation": uline.frequency - select_df["Frequency"]
                     }
                     assign_dict.update(**kwargs)
-                    self.assign_line(**assign_dict)
+                    self._assign_line(**assign_dict)
         ass_df = pd.DataFrame(
             data=[ass_obj.__dict__ for ass_obj in self.assignments]
         )
@@ -912,7 +943,7 @@ class AssignmentSession:
                     # Pass whatever extra stuff
                     assign_dict.update(**kwargs)
                     # Use assign_line function to mark peak as assigned
-                    self.assign_line(**assign_dict)
+                    self._assign_line(**assign_dict)
                 else:
                     raise IndexError("Invalid index chosen for assignment.")
         # Update the internal table
@@ -958,7 +989,7 @@ class AssignmentSession:
                     "frequency": nearest
                 }
                 assign_dict.update(**kwargs)
-                self.assign_line(**assign_dict)
+                self._assign_line(**assign_dict)
                 counter += 1
             else:
                 self.logger.info("No U-line was sufficiently close.")
@@ -978,6 +1009,7 @@ class AssignmentSession:
         for freq in frequencies:
             uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
             nearest, index = routines.find_nearest(uline_freqs, freq)
+            self.logger.info("Found ")
             if np.abs(nearest - freq) <= 0.1:
                 assign_dict = {
                     "name": "Artifact",
@@ -986,7 +1018,7 @@ class AssignmentSession:
                     "catalog_frequency": freq,
                     "source": "Artifact"
                 }
-                self.assign_line(**assign_dict)
+                self._assign_line(**assign_dict)
                 counter += 1
         self.logger.info("Removed {} lines as artifacts.".format(counter))
 
@@ -1038,7 +1070,7 @@ class AssignmentSession:
                         assign_dict = select_df.to_dict()
                         assign_dict.update(**new_dict)
                         # Use assign_line function to mark peak as assigned
-                        self.assign_line(**assign_dict)
+                        self._assign_line(**assign_dict)
                     else:
                         raise IndexError("Invalid index chosen for assignment.")
         # Update the internal table
@@ -1050,7 +1082,7 @@ class AssignmentSession:
         self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
         self.logger.info("Finished processing local database.")
 
-    def assign_line(self, name, index=None, frequency=None, **kwargs):
+    def _assign_line(self, name, index=None, frequency=None, **kwargs):
         """ Mark a transition as assigned, and dump it into
             the assignments list attribute.
 
@@ -1252,7 +1284,7 @@ class AssignmentSession:
             "sessions/{0}.yml".format(self.session.experiment),
             "yaml"
         )
-        self.create_html_report()
+        self._create_html_report()
         # Dump data to notebook output
         for key, value in combined_dict.items():
             self.logger.info(key + ":   " + str(value))
@@ -1490,7 +1522,7 @@ class AssignmentSession:
 
         return fig
 
-    def create_html_report(self, filepath=None):
+    def _create_html_report(self, filepath=None):
         """
         Function for generating an HTML report for sharing. The HTML report is rendered with
         Jinja2, and uses the template "report_template.html" located in the module directory.
