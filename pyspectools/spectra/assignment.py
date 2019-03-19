@@ -1130,6 +1130,51 @@ class AssignmentSession:
         else:
             raise Exception("Peak not found! Try providing an index.")
 
+    def blank_spectrum(self, noise, noise_std, window=1.):
+        """
+        Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
+        and standard deviation of the noise, typically estimated by picking a region free of spectral features.
+
+        Parameters
+        ----------
+        noise - float
+            Average noise value for the spectrum. Typically measured by choosing a region void of spectral lines.
+        noise_std - float
+            Standard deviation for the spectrum noise.
+        window - float
+            Value to use for the range to blank. This region blanked corresponds to frequency+/-window.
+
+        Returns
+        -------
+        """
+        sources = ["CDMS/JPL", "Literature", "New"]
+        slices = [
+            self.table.loc[self.table["source"] == "CDMS/JPL"],
+            self.table.loc[(self.table["source"] != "CDMS/JPL") & (self.table["public"] == True)],
+            self.table.loc[(self.table["source"] != "CDMS/JPL") & (self.table["public"] == False)]
+        ]
+        for index, (df, source) in enumerate(zip(slices, sources)):
+            try:
+                if len(df) > 0:
+                    if index == 0:
+                        reference = self.int_col
+                    else:
+                        reference = last_source
+                    blanked_spectrum = analysis.blank_spectrum(
+                        self.data,
+                        df["frequency"].values,
+                        noise,
+                        noise_std,
+                        self.freq_col,
+                        reference,
+                        window,
+                        df=False
+                    )
+                    self.data[source] = blanked_spectrum
+                    last_source = source
+            except (KeyError, ValueError):
+                self.logger.warning("Could not blank spectrum {} with {}.".format(last_source, source))
+
     def get_assigned_names(self):
         """ Method for getting all the unique molecules out
             of the assignments, and tally up the counts.

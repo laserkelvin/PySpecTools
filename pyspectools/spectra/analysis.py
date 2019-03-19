@@ -579,3 +579,58 @@ def find_series(combo, frequencies, search=0.005):
             # Return the closest value to the predicted center
             candidates.append(nearest_neighbours[np.argmin(np.abs(guess - nearest_neighbours))])
     return candidates
+
+
+def blank_spectrum(
+        spectrum_df, frequencies, noise, noise_std, freq_col="Frequency", int_col="Intensity", window=1.,
+        df=True
+):
+    """
+    Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
+    noise corresponding to the average noise floor and standard deviation.
+
+    Parameters
+    ----------
+    spectrum_df - pandas DataFrame
+        Pandas DataFrame containing the spectral data
+    frequencies - iterable of floats
+        An iterable containing the center frequencies to blank
+    noise - float
+        Average noise value for the spectrum. Typically measured by choosing a region void of spectral lines.
+    noise_std - float
+        Standard deviation for the spectrum noise.
+    freq_col - str
+        Name of the column in spectrum_df to use for the frequency axis
+    int_col - str
+        Name of the column in spectrum_df to use for the intensity axis
+    window - float
+        Value to use for the range to blank. This region blanked corresponds to frequency+/-window.
+    df - bool
+        If True, returns a copy of the Pandas Dataframe with the blanked intensity.
+        If False, returns a numpy 1D array corresponding to the blanked intensity.
+
+    Returns
+    -------
+    new_spec - pandas DataFrame or numpy 1D array
+        If df is True, Pandas DataFrame with the intensity regions blanked.
+        If df is False, numpy 1D array
+    """
+    new_spec = spectrum_df.copy()
+    for frequency in frequencies:
+        # Reset the random number generator seed
+        np.random.seed()
+        # Work out the length of the noise window we have to create
+        length = len(
+            new_spec.loc[(new_spec[freq_col] >= frequency - window) & (new_spec[freq_col] <= frequency + window)]
+        )
+        # Create Gaussian noise for this region
+        noise_array = np.random.normal(noise, noise_std, length)
+        # Blank the region of interest with the noise
+        new_spec.loc[
+            (new_spec[freq_col] >= frequency - window) & (new_spec[freq_col] <= frequency + window),
+            int_col
+        ] = noise_array
+    if df is True:
+        return new_spec
+    else:
+        return new_spec[int_col].values
