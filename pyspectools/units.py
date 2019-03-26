@@ -27,6 +27,22 @@ def kappa(A, B, C):
     return (2*B - A - C) / (A - C)
 
 
+def inertial_defect(A, B, C):
+    """
+    Calculate the inertial defect of a molecule with a set of A, B, and C rotational constants.
+
+    Parameters
+    ----------
+    A, B, C - float
+        Rotational constant along the respective principal axis in units of MHz.
+
+    Returns
+    -------
+    inertial defect - float
+    """
+    return 505379. * (1 / C - 1 / B - 1 / A)
+
+
 def rotcon2pmi(rotational_constant):
     """ Convert rotational constants in units of MHz to
         Inertia, in units of amu A^2.
