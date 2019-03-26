@@ -1291,48 +1291,51 @@ class AssignmentSession:
             Creates summary pandas dataframes as self.table and self.profiles,
             which correspond to the assignments and fitted line profiles respectively.
         """
-        for ass_obj in self.assignments:
-            # Dump all the assignments into YAML format
-            ass_obj.to_file(
-                "assignment_objs/{}-{}".format(ass_obj.experiment, ass_obj.peak_id),
+        if len(self.assignments) > 0:
+            for ass_obj in self.assignments:
+                # Dump all the assignments into YAML format
+                ass_obj.to_file(
+                    "assignment_objs/{}-{}".format(ass_obj.experiment, ass_obj.peak_id),
+                    "yaml"
+                )
+            # Convert all of the assignment data into a CSV file
+            ass_df = pd.DataFrame(
+                data=[ass_obj.__dict__ for ass_obj in self.assignments]
+            )
+            self.table = ass_df
+            # Dump assignments to disk
+            ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
+            # Update the uline peak list with only unassigned stuff
+            try:
+                self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
+            except KeyError:
+                self.logger.warning("Could not compare assignments with peak table - ignoring for now.")
+            # Dump Uline data to disk
+            self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
+
+            tally = self.get_assigned_names()
+            combined_dict = {
+                "assigned_lines": len(self.assignments),
+                "ulines": len(self.ulines),
+                "peaks": self.peaks[self.freq_col].values,
+                "num_peaks": len(self.peaks[self.freq_col]),
+                "tally": tally,
+                "unique_molecules": self.names,
+                "num_unique": len(self.names)
+            }
+            # Combine Session information
+            combined_dict.update(self.session.__dict__)
+            # Dump to disk
+            routines.dump_yaml(
+                "sessions/{0}.yml".format(self.session.experiment),
                 "yaml"
             )
-        # Convert all of the assignment data into a CSV file
-        ass_df = pd.DataFrame(
-            data=[ass_obj.__dict__ for ass_obj in self.assignments]
-        )
-        self.table = ass_df
-        # Dump assignments to disk
-        ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
-        # Update the uline peak list with only unassigned stuff
-        try:
-            self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
-        except KeyError:
-            self.logger.warning("Could not compare assignments with peak table - ignoring for now.")
-        # Dump Uline data to disk
-        self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
-
-        tally = self.get_assigned_names()
-        combined_dict = {
-            "assigned_lines": len(self.assignments),
-            "ulines": len(self.ulines),
-            "peaks": self.peaks[self.freq_col].values,
-            "num_peaks": len(self.peaks[self.freq_col]),
-            "tally": tally,
-            "unique_molecules": self.names,
-            "num_unique": len(self.names)
-        }
-        # Combine Session information
-        combined_dict.update(self.session.__dict__)
-        # Dump to disk
-        routines.dump_yaml(
-            "sessions/{0}.yml".format(self.session.experiment),
-            "yaml"
-        )
-        self._create_html_report()
-        # Dump data to notebook output
-        for key, value in combined_dict.items():
-            self.logger.info(key + ":   " + str(value))
+            self._create_html_report()
+            # Dump data to notebook output
+            for key, value in combined_dict.items():
+                self.logger.info(key + ":   " + str(value))
+        else:
+            self.logger.warning("No assignments made in this session - nothing to finalize!")
 
     def clean_folder(self, action=False):
         """
