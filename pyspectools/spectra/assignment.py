@@ -579,8 +579,12 @@ class AssignmentSession:
             Pandas dataframe with the matches
         """
         slice_df = []
-        lower_freq = frequency * (1. - self.session.freq_prox)
-        upper_freq = frequency * (1 + self.session.freq_prox)
+        if self.session.freq_abs is False:
+            lower_freq = frequency * (1. - self.session.freq_prox)
+            upper_freq = frequency * (1 + self.session.freq_prox)
+        else:
+            lower_freq = frequency - self.session.freq_prox
+            upper_freq = frequency + self.session.freq_prox
         if hasattr(self, "table"):
             slice_df = self.table.loc[
                 (self.table["frequency"] >= lower_freq) &
@@ -588,18 +592,13 @@ class AssignmentSession:
                 ]
         # If no hits turn up, look for it in U-lines
         if len(slice_df) == 0:
-            print("No assignment found; searching U-lines")
-            slice_df = self.peaks.loc[
-                (self.peaks["Frequency"] >= lower_freq) &
-                (self.peaks["Frequency"] <= upper_freq)
-                ]
-            if len(slice_df) == 0:
-                raise Exception("Frequency not found in U-lines.")
-            else:
-                print("Found U-lines.")
-                return slice_df
+            self.logger.info("No assignment found; searching U-lines")
+            ulines = np.array([[index, uline.frequency] for index, uline in self.ulines.items()])
+            nearest, array_index = routines.find_nearest(ulines[:,1], frequency)
+            uline_index = int(ulines[array_index, 0])
+            return nearest, uline_index
         else:
-            print("Found assignments.")
+            self.logger.info("Found assignments.")
             return slice_df
 
     def in_experiment(self, frequency):
@@ -792,7 +791,7 @@ class AssignmentSession:
                     assign_dict = {
                         "name": name,
                         "formula": formula,
-                        "index": uline.peak_id,
+                        "index": uindex,
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
@@ -932,7 +931,7 @@ class AssignmentSession:
                     assign_dict = {
                         "name": name,
                         "formula": formula,
-                        "index": uline.peak_id,
+                        "index": uindex,
                         "frequency": uline.frequency,
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
@@ -1062,7 +1061,7 @@ class AssignmentSession:
                         select_df = catalog_df.iloc[index]
                         # Create an approximate quantum number string
                         new_dict = {
-                            "index": uline.peak_id,
+                            "index": uindex,
                             "frequency": uline.frequency,
                             "source": "Database",
                             "deviation": uline.frequency - select_df["frequency"]
@@ -1126,6 +1125,12 @@ class AssignmentSession:
             self.logger.info("{:,.4f} assigned to {}".format(frequency, name))
             # Delete the line from the ulines dictionary
             del self.ulines[index]
+            self.logger.info("Removed U-line index {}.".format(index))
+            # Remove from peaks dataframe
+            #nearest, array_index = routines.find_nearest(self.peaks["Frequency"].values, frequency)
+            #self.logger.info(self.peaks.iloc[array_index])
+            #self.peaks.drop(array_index, inplace=True)
+            #self.logger.info("Removed {:,.4f}, index {} from peaks table.".format(nearest, array_index))
             self.assignments.append(ass_obj)
         else:
             raise Exception("Peak not found! Try providing an index.")
@@ -1134,6 +1139,9 @@ class AssignmentSession:
         """
         Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
         and standard deviation of the noise, typically estimated by picking a region free of spectral features.
+
+        The spectra are sequentially blanked - online catalogs first, followed by literature species, finally the
+        private assignments.
 
         Parameters
         ----------
@@ -1509,6 +1517,11 @@ class AssignmentSession:
                 "intensity breakdown": [(value / total_intensity) * 100. for value in intensity_breakdown],
                 "cumulative line breakdown": [(value / total_lines) * 100. for value in cum_line_breakdown],
                 "cumulative intensity breakdown": [(value / total_intensity) * 100. for value in cum_int_breakdown]
+            },
+            "molecules": {
+                "CDMS/JPL": {name: len(splat.loc[splat["name"] == name]) for name in splat["name"].unique()},
+                "Published": {name: len(public.loc[public["name"] == name]) for name in public["name"].unique()},
+                "Unpublished": {name: len(private.loc[private["name"] == name]) for name in private["name"].unique()}
             }
         }
         return return_dict
@@ -1780,10 +1793,11 @@ class AssignmentSession:
             text=self.table["name"] + "-" + self.table["r_qnos"],
             name="Assignments"
         )
+        ulines = np.array([[uline.intensity, uline.frequency] for index, uline in self.ulines.items()])
 
         fig.add_bar(
-            x=self.peaks["Frequency"],
-            y=self.peaks["Intensity"],
+            x=ulines[:,1],
+            y=ulines[:,0],
             width=1.0,
             name="U-lines"
         )
