@@ -1,5 +1,6 @@
 
 import numpy as np
+from lmfit.models import LinearModel
 
 from pyspectools import units
 from pyspectools.parsers import parse_cat
@@ -8,7 +9,7 @@ from pyspectools.astro import conversions
 from pyspectools.astro import radiative
 
 
-def lineprofile_analysis(fit, I, Q, T, E):
+def lineprofile_analysis(fit, I, Q, T, E_lower):
     """
         Low-level function to provide some analysis
         based on a fitted line profile and some theoretical
@@ -30,7 +31,11 @@ def lineprofile_analysis(fit, I, Q, T, E):
         data_dict - dict results of lineprofile analysis
     """
     # Calculate intrinsic line strength
-    S = radiative.I2S(I, Q, fit.best_values["center"], E, T)
+    S = radiative.I2S(I, Q, fit.best_values["center"], E_lower, T)
+    E_upper = radiative.calc_E_upper(
+        fit.best_values["center"],
+        E_lower
+    )
     # FWHM
     fwhm = gaussian_fwhm(fit.best_values["sigma"])
     # Analytic integration of a Gaussian
@@ -52,6 +57,7 @@ def lineprofile_analysis(fit, I, Q, T, E):
         S,
         fit.best_values["center"]
         )
+    L = calculate_L(integral, fit.best_values["center"], S)
     data_dict = {
         "frequency": fit.best_values["center"],
         "peak height": height,
@@ -59,8 +65,10 @@ def lineprofile_analysis(fit, I, Q, T, E):
         "width": fit.best_values["sigma"],
         "fwhm": fwhm,
         "integral": integral,
+        "E upper": E_upper,
         "S $\mu^2$": S,
-        "N cm$^{-2}$": N
+        "N cm$^{-2}$": N,
+        "L": L
         }
     return data_dict
 
@@ -106,3 +114,55 @@ def simulate_catalog(catalogpath, N, Q, T, doppler=10.):
         catalog_df["Doppler Shifts"]
     )
     return catalog_df
+
+
+def calculate_L(W, frequency, S):
+    """
+    Calculate L, which is subsequently used to perform rotational temperature analysis.
+
+    Parameters
+    ----------
+    W - float
+        Integrated flux of a line
+    frequency - float
+        Frequency of a transition in MHz
+    S - float
+        Intrinsic linestrength of the transition
+
+    Returns
+    -------
+    L - float
+    """
+    L = (2.04e20 * W) / (S * frequency**3)
+    return L
+
+
+def rotational_temperature_analysis(L, E_upper):
+    """
+    Function that will perform a rotational temperature analysis. This will perform a least-squares fit of log(L),
+    which is related to the theoretical line strength and integrated flux, and the upper state energy for the same
+    transition.
+
+    Parameters
+    ----------
+    L - 1D array
+        Value L related to the line and theoretical line strength
+    E_upper - 1D array
+        The upper state energy in wavenumbers.
+
+    Returns
+    -------
+    ModelResult - object
+        Result of the least-squares fit
+    """
+    # Convert the upper state energy
+    E_upper *= units.kbcm
+    logL = np.log(L)
+    model = LinearModel()
+    params = model.make_params()
+    result = model.fit(
+        x=E_upper,
+        y=logL,
+        params=params
+    )
+    return result

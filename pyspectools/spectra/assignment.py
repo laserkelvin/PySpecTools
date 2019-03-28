@@ -1183,7 +1183,7 @@ class AssignmentSession:
             except (KeyError, ValueError):
                 self.logger.warning("Could not blank spectrum {} with {}.".format(last_source, source))
 
-    def get_assigned_names(self):
+    def _get_assigned_names(self):
         """ Method for getting all the unique molecules out
             of the assignments, and tally up the counts.
 
@@ -1203,16 +1203,31 @@ class AssignmentSession:
 
     def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None, chi_thres=10.):
         """
-            Function for providing some astronomically relevant
-            parameters by analyzing Gaussian line shapes.
+        Function for providing some astronomically relevant parameters by analyzing Gaussian line shapes.
 
-             Q: rotational partition function at temperature
-             T: temperature in K
-             name: str name of molecule
-             formula: chemical formula of molecule
-             smiles: SMILES string for molecule
-            :return profile_df: pandas dataframe containing all of the
-                                analysis
+        Parameters
+        ----------
+        Q - float
+            Partition function at temperature T
+        T - float
+            Temperature in Kelvin
+        name - str, optional
+            Name of the molecule to perform the analysis on. Can be used as a selector.
+        formula - str, optional
+            Chemical formula of the molecule to perform the analysis on. Can be used as a selector.
+        smiles - str, optional
+            SMILES code of the molecule to perform the analysis on. Can be used as a selector,
+        chi_thres - float
+            Threshold for the Chi Squared value to consider fits for statistics. Any instances of fits with Chi
+            squared values above this value will not be used to calculate line profile statistics.
+
+        Returns
+        -------
+        return_data - list
+            First element is the profile dataframe, and second element is the fitted velocity.
+            If a rotational temperature analysis is also performed, the third element will be the least-squares
+            regression.
+
         """
         if name:
             selector = "name"
@@ -1286,7 +1301,17 @@ class AssignmentSession:
                     weighted_avg, stdev, len(profile_df)
                 )
             )
-            return profile_df, ufloat(weighted_avg, stdev)
+            return_data = [profile_df, ufloat(weighted_avg, stdev)]
+            # If there's data to perform a rotational temperature analysis, then do it!
+            if "L" in profile_df.columns:
+                self.logger.info("Performing rotational temperature analysis.")
+                rot_temp = aa.rotational_temperature_analysis(
+                    profile_df["L"],
+                    profile_df["E upper"]
+                )
+                self.logger.info(rot_temp.fit_report())
+                return_data.append(rot_temp)
+            return return_data
         else:
             self.logger.info("No molecules found, or fits were unsuccessful!")
             return None
@@ -1321,7 +1346,7 @@ class AssignmentSession:
             # Dump Uline data to disk
             self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
 
-            tally = self.get_assigned_names()
+            tally = self._get_assigned_names()
             combined_dict = {
                 "assigned_lines": len(self.assignments),
                 "ulines": len(self.ulines),

@@ -35,11 +35,26 @@ def parse_str(filepath):
 
 
 def I2S(I, Q, frequency, E_lower, T=300.):
-    """ Function for converting intensity (in nm^2 MHz) to the
-        transition dipole moment S_ij \mu^2
-        Takes as input the simulated intensity and partition
-        function at a particular temperature, usually 300 K,
-        as well as the lower state energy and the transition frequency.
+    """
+    Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.
+
+    Parameters
+    ----------
+    I - float
+        The log of the transition intensity, typically given in catalog files
+    Q - float
+        Partition function at specified temperature T
+    frequency - float
+        Frequency of the transition in MHz
+    E_lower - float
+        ENergy of the lower state in wavenumbers
+    T - float
+        Temperature in Kelvin
+
+    Returns
+    -------
+    siju - float
+        Value of the intrinsic linestrength
     """
     E_upper = calc_E_upper(frequency, E_lower)
     # top part of the equation
@@ -54,15 +69,41 @@ def I2S(I, Q, frequency, E_lower, T=300.):
 
 
 def calc_E_upper(frequency, E_lower):
-    # Calculate the upper state energy in wavenumbers.
-    # Frequency is supplied in units of MHz, and E_lower in wavenumbers
+    """
+    Calculate the upper state energy, for a given lower state energy and the frequency of the transition.
+
+    Parameters
+    ----------
+    frequency - float
+        Frequency of the transition in MHz
+    E_lower - float
+        Lower state energy in wavenumbers
+
+    Returns
+    -------
+    E_upper - float
+        Upper state energy in wavenumbers
+    """
     transition_freq = MHz2cm(frequency)
     return transition_freq + E_lower
 
 
 def boltzmann_factor(E, T):
-    # Calculate the Boltzmann factor for a particular energy and temperature
-    # Boltzmann's constant in units of wavenumber Kelvin
+    """
+    Calculate the Boltzmann weighting for a given state and temperature.
+
+    Parameters
+    ----------
+    E - float
+        State energy in wavenumbers
+    T - float
+        Temperature in Kelvin
+
+    Returns
+    -------
+    boltzmann_factor - float
+        Unitless Boltzmann factor for the state
+    """
     return np.exp(-E / (kbcm * T))
 
 
