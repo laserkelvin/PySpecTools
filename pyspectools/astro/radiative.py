@@ -108,20 +108,55 @@ def boltzmann_factor(E, T):
 
 
 def approx_Q_linear(B, T):
-    # Approximate expression for the rotational partition function
-    # for a linear molecule
-    return 2.0837e4 * (T / B)
+    """
+    Approximate rotational partition function for a linear molecule.
+
+    Parameters
+    ----------
+    B - float
+        Rotational constant in MHz.
+    T - float
+        Temperature in Kelvin.
+
+    Returns
+    -------
+    Q - float
+        Rotational partition function at temperature T.
+    """
+    Q = 2.0837e4 * (T / B)
+    return Q
 
 
 def approx_Q_top(A, B, T, sigma=1, C=None):
-    # Approximate expression for rotational partition function
-    # of an (a)symmetric top from Gordy&Cook, p.g.57, eq 3.68
-    # Symmetric and asymmetric tops differ by B and C being unique
-    # or not
+    """
+    Approximate expression for the (a)symmetric top partition function. The expression is adapted from Gordy and Cook,
+    p.g. 57 equation 3.68. By default, the prolate top is used if the C constant is not specified, where B = C.
+    Oblate case can also be specified if A = C.
+
+    Parameters
+    ----------
+    A - float
+        Rotational constant for the A principal axis, in MHz.
+    B - float
+        Rotational constant for the B principal axis, in MHz.
+    T - float
+        Temperature in Kelvin
+    sigma - int
+        Rotational level degeneracy; i.e. spin statistics
+    C - float, optional
+        Rotational constant for the C principal axis, in MHz. Defaults to None, which will reduce to the prolate
+        top case.
+
+    Returns
+    -------
+    Q - float
+        Partition function for the molecule at temperature T
+    """
     if C is None:
         # For a symmetric top, B = C
         C = B
-    return (5.34e6 / sigma) * (T**3. / (A * B * C))**0.5
+    Q = (5.34e6 / sigma) * (T**3. / (A * B * C))**0.5
+    return Q
 
 
 def einsteinA(S, frequency):
