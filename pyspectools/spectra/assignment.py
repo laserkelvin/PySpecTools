@@ -138,6 +138,64 @@ class Assignment:
         """
         return f"{self.name}, {self.frequency}"
 
+    def calc_intensity(self, Q, T=300.):
+        """
+        Convert linestrength into intensity.
+
+        Parameters
+        ----------
+        Q - float
+            Partition function for the molecule at temperature T
+        T - float
+            Temperature to calculate the intensity at in Kelvin
+
+        Returns
+        -------
+        I - float
+            log10 of the intensity in SPCAT format
+        """
+        # Take the frequency value to calculate I
+        frequency = max([self.frequency, self.catalog_frequency])
+        I = units.S2I(
+            self.intensity,
+            Q,
+            frequency,
+            units.calc_E_lower(frequency, self.ustate_energy),
+            T
+        )
+        self.I = I
+        return I
+
+
+    def calc_linestrength(self, Q, T=300.):
+        """
+        Convert intensity into linestrength.
+
+        Parameters
+        ----------
+        Q - float
+            Partition function for the molecule at temperature T
+        T - float
+            Temperature to calculate the intensity at in Kelvin
+
+        Returns
+        -------
+        intensity - float
+            intrinsic linestrength of the transition
+        """
+        # Take the frequency value to calculate I
+        frequency = max([self.frequency, self.catalog_frequency])
+        intensity = units.I2S(
+            self.I,
+            Q,
+            frequency,
+            units.calc_E_lower(frequency, self.ustate_energy),
+            T
+        )
+        self.intensity = intensity
+        return intensity
+
+
     def to_file(self, filepath, format="yaml"):
         """
         Save an Assignment object to disk with a specified file format.
