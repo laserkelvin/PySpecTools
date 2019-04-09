@@ -10,6 +10,8 @@ import os
 import warnings
 
 import tinydb
+from tinydb.middlewares import CachingMiddleware
+from tinydb.storages import JSONStorage
 import pandas as pd
 
 from pyspectools import parsers
@@ -24,7 +26,13 @@ class SpectralCatalog(tinydb.TinyDB):
     def __init__(self, dbpath=None):
         if dbpath is None:
             dbpath = os.path.expanduser("~/.pyspectools/pyspec_experiment.db")
-        super().__init__(dbpath, sort_keys=True, indent=4, separators=(',', ': '))
+        super().__init__(
+            dbpath,
+            sort_keys=True,
+            indent=4,
+            separators=(',', ': '),
+            storage=CachingMiddleware(JSONStorage)
+        )
 
     def __exit__(self, exc_type, exc_value, traceback):
         """
@@ -37,8 +45,14 @@ class SpectralCatalog(tinydb.TinyDB):
         """
         This function adds an Assignment object to an existing database. The method will
         check for duplicates before adding.
-        :param assignment:
-        :return:
+
+        Parameters
+        ----------
+        assignment - Assignment object
+            Reference to an Assignment object
+        dup_check - bool, optional
+            If True (default), will check to make sure the Assignment object doesn't already exist in
+            the database.
         """
         add = False
         if type(assignment) != dict:
