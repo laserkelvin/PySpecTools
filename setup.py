@@ -70,14 +70,14 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="3.4.1",
+    version="3.4.2",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
     include_package_data=True,
     author_email="kin_long_kelvin.lee@cfa.harvard.edu",
     install_requires=[
-        "numpy>=1.15",
+        "numpy>=1.16",
         "pandas",
         "scipy",
         "matplotlib",

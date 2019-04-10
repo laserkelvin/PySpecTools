@@ -309,23 +309,27 @@ class Session:
 
     Attributes
     ----------
-     experiment : int
+    experiment : int
         ID for experiment
-     composition : list of str
+    composition : list of str
         List of atomic symbols. Used for filtering out species in the Splatalogue assignment procedure.
-     temperature : float
+    temperature : float
         Temperature in K. Used for filtering transitions in the automated assigment, which are 3 times this value.
-     doppler : float
+    doppler : float
         Doppler width in km/s; default value is about 5 kHz at 15 GHz. Used for simulating lineshapes and
         for lineshape analysis.
     rv : float
         Radial velocity of the source in km/s; used to offset the frequency spectrum
-     freq_prox : float
+    freq_prox : float
         frequency cutoff for line assignments. If freq_abs attribute is True, this value is taken as the absolute value.
-         Otherwise, it is a percentage of the frequency being compared.
-     freq_abs : bool
+        Otherwise, it is a percentage of the frequency being compared.
+    freq_abs : bool
         If True, freq_prox attribute is taken as the absolute value of frequency, otherwise as a decimal percentage of
-         the frequency being compared.
+        the frequency being compared.
+    baseline : float
+        Baseline level of signal used for intensity calculations and peak detection
+    noise_rms : float
+        RMS of the noise used for intensity calculations and peak detection
     """
     experiment: int
     composition: List[str] = field(default_factory=list)
@@ -334,6 +338,8 @@ class Session:
     velocity: float = 0.
     freq_prox: float = 0.1
     freq_abs: bool = True
+    baseline: float = 0.
+    noise_rms: float = 0.
 
     def __str__(self):
         form = "Experiment: {}, Composition: {}, Temperature: {} K".format(
@@ -536,7 +542,51 @@ class AssignmentSession:
         self.session.velocity = value
         self.logger.info("Set the session velocity to {}.".format(value))
 
-    def find_peaks(self, threshold=None):
+    def detect_noise_floor(self, region=None):
+        """
+        Set the noise parameters for the current spectrum. Control over what "defines" the noise floor
+        is specified with the parameter region. By default, if region is None then the function will
+        perform an initial peak find using 1% of the maximum intensity as the threshold. The noise region
+        will be established based on the largest gap between peaks, i.e. hopefully capturing as little
+        features in the statistics as possible.
+
+        Parameters
+        ----------
+        region - 2-tuple or None, optional
+            If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
+            in frequency to use for noise statistics.
+
+        Returns
+        -------
+        baseline - float
+            Value of the noise floor
+        rms - float
+            Noise RMS/standard deviation
+        """
+        if region is None:
+            # Perform rudimentary peak detection
+            threshold = 0.01 * self.data[self.int_col].max()
+            peaks_df = analysis.peak_find(
+                self.data,
+                freq_col=self.freq_col,
+                int_col=self.int_col,
+                thres=threshold,
+            )
+            # find largest gap in data
+            index = np.argmax(np.diff(peaks_df["Frequency"]))
+            # Define region as the largest gap
+            region = peaks_df.iloc[index:index+2]["Frequency"].values
+        noise_df = self.data.loc[
+            self.data[self.freq_col].between(*region)
+        ]
+        # Calculate statistics
+        baseline = np.average(noise_df[self.int_col])
+        rms = np.std(noise_df[self.int_col])
+        self.session.noise_rms = rms
+        self.session.baseline = baseline
+        return baseline, rms
+
+    def find_peaks(self, threshold=None, region=None):
         """
             Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
             The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
@@ -552,6 +602,9 @@ class AssignmentSession:
             ----------
              threshold: float or None
                 Peak detection threshold. If None, will take 1.5 times the noise RMS.
+             region - 2-tuple or None, optional
+                If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
+                in frequency to use for noise statistics.
 
             Returns
             -------
@@ -559,9 +612,10 @@ class AssignmentSession:
                 Pandas dataframe with Frequency/Intensity columns, corresponding to peaks
         """
         if threshold is None:
-            # Set the threshold as 20% of the baseline + 1sigma. The peak_find function will
-            # automatically weed out the rest.
-            threshold = (self.data[self.int_col].mean() + self.data[self.int_col].std() * 1.5)
+            # Use a quasi-intelligent method of determining the noise floor
+            # and ultimately using noise + 1 sigma
+            baseline, rms = self.detect_noise_floor(region)
+            threshold = baseline + rms
         self.threshold = threshold
         self.logger.info("Peak detection threshold is: {}".format(threshold))
         peaks_df = analysis.peak_find(
@@ -570,6 +624,8 @@ class AssignmentSession:
             int_col=self.int_col,
             thres=threshold,
         )
+        # Shift the peak intensities down by the noise baseline
+        peaks_df.loc[:, self.int_col] = peaks_df[self.int_col] - self.session.baseline
         self.logger.info("Found {} peaks in total.".format(len(peaks_df)))
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
@@ -604,7 +660,7 @@ class AssignmentSession:
         total_num = len(self.assignments) + len(self.ulines)
         self.logger.info("So far, there are {} line entries in this session.".format(total_num))
         # Set up session information to be passed in the U-line
-        skip = ["temperature", "doppler", "freq_abs", "freq_prox"]
+        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline"]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
