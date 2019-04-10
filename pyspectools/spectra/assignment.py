@@ -1750,7 +1750,7 @@ class AssignmentSession:
             ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
         ]
         # Render pandas dataframe HTML with bar annotations
-        html_dict["assignments_table"] = reduced_table.style.bar(
+        reduced_table_html = reduced_table.style.bar(
             subset=["deviation", "ustate_energy"],
             align="mid",
             color=['#d65f5f', '#5fba7d']
@@ -1767,7 +1767,18 @@ class AssignmentSession:
                     "ustate_energy": "{:.2f}",
                     "intensity": "{:.3f}"
                 }
-            ).render()
+            ).set_table_attributes("""class = "durr" id="assignment-table" """)\
+            .render(classes=""" "durr" id="assignment-table" """)
+        reduced_table_html += """
+        <script src="https://code.jquery.com/jquery-1.12.4.js" type="text/javascript"></script>
+        <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js" type="text/javascript"></script>
+        <script type="text/javascript">
+        $(document).ready(function() {
+          $('#assignment-table').DataTable();
+        });
+        </script>
+        """
+        html_dict["assignments_table"] = reduced_table_html
         # The unidentified features table
         uline_df = pd.DataFrame(
             [[uline.frequency, uline.intensity] for uline in self.ulines.values()], columns=["Frequency", "Intensity"]
