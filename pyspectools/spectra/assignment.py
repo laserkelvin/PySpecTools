@@ -576,6 +576,7 @@ class AssignmentSession:
             index = np.argmax(np.diff(peaks_df["Frequency"]))
             # Define region as the largest gap
             region = peaks_df.iloc[index:index+2]["Frequency"].values
+        self.logger.info("Noise region defined as {} to {}.".format(*region))
         noise_df = self.data.loc[
             self.data[self.freq_col].between(*region)
         ]
@@ -584,9 +585,11 @@ class AssignmentSession:
         rms = np.std(noise_df[self.int_col])
         self.session.noise_rms = rms
         self.session.baseline = baseline
+        self.logger.info("Baseline signal set to {}.".format(baseline))
+        self.logger.info("Noise RMS set to {}.".format(rms))
         return baseline, rms
 
-    def find_peaks(self, threshold=None, region=None):
+    def find_peaks(self, threshold=None, region=None, sigma=6):
         """
             Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
             The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
@@ -605,6 +608,8 @@ class AssignmentSession:
              region - 2-tuple or None, optional
                 If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
                 in frequency to use for noise statistics.
+             sigma - float, optional
+                Defines the number of sigma (noise RMS) above the baseline to use as the peak detection threshold.
 
             Returns
             -------
@@ -615,7 +620,7 @@ class AssignmentSession:
             # Use a quasi-intelligent method of determining the noise floor
             # and ultimately using noise + 1 sigma
             baseline, rms = self.detect_noise_floor(region)
-            threshold = baseline + rms
+            threshold = baseline + (rms * sigma)
         self.threshold = threshold
         self.logger.info("Peak detection threshold is: {}".format(threshold))
         peaks_df = analysis.peak_find(
