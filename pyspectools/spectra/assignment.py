@@ -10,6 +10,7 @@ from shutil import rmtree
 from dataclasses import dataclass, field
 from typing import List, Dict
 from collections import OrderedDict
+from copy import deepcopy
 import logging
 
 import numpy as np
@@ -469,6 +470,33 @@ class AssignmentSession:
             self.int_col = int_col
         if velocity != 0.:
             self.set_velocity(velocity)
+
+    def __truediv__(self, other, copy=True):
+        """
+        Method to divide the spectral intensity of the current experiment by another.
+
+        If the copy keyword is True, this method creates a deep copy of the current experiment and returns the copy
+        with the updated intensities. Otherwise, the spectrum of the current experiment is modified.
+
+        Parameters
+        ----------
+        other - AssignmentSession object
+            Other AssignmentSession object to compare spectra with. Acts as denominator.
+        copy - bool, optional
+            If True, returns a copy of the experiment, with the ID number added
+
+        Returns
+        -------
+        new_experiment - AssignmentSession object
+            Generated new experiment with the divided spectrum, if copy is True
+        """
+        if copy is True:
+            new_experiment = deepcopy(self)
+            new_experiment.data[:, self.int_col] = new_experiment[self.int_col] / other.data[other.int_col]
+            new_experiment.session.id += other.session.id
+            return new_experiment
+        else:
+            self.data[:, self.int_col] = self.data[self.int_col] / other.data[other.int_col]
 
     def umol_gen(self):
         """

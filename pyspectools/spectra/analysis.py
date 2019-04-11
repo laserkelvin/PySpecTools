@@ -634,3 +634,21 @@ def blank_spectrum(
         return new_spec
     else:
         return new_spec[int_col].values
+
+def compare_experiments(experiments, thres_prox=0.1, thres_abs=True):
+    """
+    TODO - Write this damn function
+    Parameters
+    ----------
+    experiments - tuple-like
+        Iterable list/tuple of AssignmentSession objects.
+    thres_prox - float, optional
+        Proximity in frequency units for determining if peaks are the same. If thres-abs is False, this value is treated
+        as a percentage of the center frequency
+    thres_abs
+
+    Returns
+    -------
+
+    """
+    return None
