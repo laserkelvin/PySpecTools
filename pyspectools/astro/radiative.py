@@ -47,7 +47,7 @@ def I2S(I, Q, frequency, E_lower, T=300.):
     frequency - float
         Frequency of the transition in MHz
     E_lower - float
-        ENergy of the lower state in wavenumbers
+        Energy of the lower state in wavenumbers
     T - float
         Temperature in Kelvin
 
