@@ -1,6 +1,7 @@
 
 import os
 from glob import glob
+from dataclasses import dataclass
 import pickle
 import shutil
 
@@ -17,7 +18,7 @@ from pyspectools.spcat import *
 from pyspectools.parsefit import *
 from pyspectools import parsers
 
-class molecule:
+class MoleculeFit:
     """ Class for handling the top level of a Pickett simulation.
         Inspired by PGopher, the `molecule` class stores information about
         whether we're dealing with a diatomic or polyatomic, number of lines
@@ -34,14 +35,14 @@ class molecule:
     def from_json(cls, json_filepath):
         # Generate a molecule from a specified JSON file
         json_data = read_json(json_filepath)
-        species = molecule(json_data)
+        species = MoleculeFit(json_data)
         return species
 
     @classmethod
     def from_yaml(cls, yaml_filepath):
         # Generate a molecule object from a YAML file
         yaml_data = read_yaml(yaml_filepath)
-        species = molecule(yaml_data)
+        species = MoleculeFit(yaml_data)
         return species
 
     @classmethod
@@ -108,10 +109,6 @@ class molecule:
         # files.
         self.initialize(options)
         self.interactive = False              # Interactive plotting option
-
-##########################################
-############# Class methods ##############
-##########################################
 
     def initialize(self, options=None):
         """ Method that will rewrite the .par and .int files, after updating
@@ -642,3 +639,65 @@ class molecule:
             if self.properties["comment"] is not None:
                 line += " /" + self.properties["comment"]
             return line
+
+
+@dataclass
+class QuantumNumber:
+    """
+    Class for a Quantum Number.
+    """
+    name: str
+    value: int
+    upper: bool = False
+
+    def __repr__(self):
+        return str(self.value)
+
+    def generate_number(self, max=5, seed=None):
+        """
+        Generate a random quantum number
+        Parameters
+        ----------
+        max
+
+        Returns
+        -------
+        value - int
+            Random value of quantum number
+        """
+        _ = np.random.seed(seed)
+        self.value = np.random.randint(0, max)
+        return self.value
+
+
+@dataclass
+class Transition:
+    frequency: float
+    quantum_numbers: None
+    uncertainty: float = 0.
+
+    def generate_quantum_numbers(self, trans_type="a"):
+        trans_types = ["a", "b", "c", "none"]
+        if trans_type not in trans_types:
+            raise Exception("Transition type not coded!")
+        rules = {
+            "a": {
+                    "J": 1,
+                    "Ka": 0,
+                    "Kc": 1
+                },
+            "b": {
+                
+            }
+            }
+        quant_types = [quantum_number["name"] for quantum_number in self.quantum_numbers]
+
+
+
+@dataclass
+class AutoFitSession:
+    filename: str
+    maxN: int = 0
+    maxJ: int = 0
+    maxF: int = 0
+

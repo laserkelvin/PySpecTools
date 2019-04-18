@@ -84,7 +84,7 @@ def pickett_molecule(json_filepath=None):
         copy_template()
         raise FileNotFoundError("No input file specified.")
     json_data = read_json(json_filepath)
-    molecule_object = pp.molecule(json_data)
+    molecule_object = pp.MoleculeFit(json_data)
     return molecule_object
 
 
