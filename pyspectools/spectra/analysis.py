@@ -12,6 +12,7 @@ from sklearn.metrics import silhouette_samples
 from uncertainties import ufloat
 
 from pyspectools import fitting
+from pyspectools import routines
 
 
 def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Frequency", int_col="Intensity",
@@ -652,3 +653,40 @@ def compare_experiments(experiments, thres_prox=0.1, thres_abs=True):
 
     """
     return None
+
+
+def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
+    """
+    Function to remove a set of artifacts found in a blank spectrum.
+
+    Parameters
+    ----------
+    on_exp - AssignmentSession object
+        Experiment with the sample on; i.e. contains molecular features
+    off_exp - AssignmentSession object
+        Experiment with no sample; i.e. only artifacts
+    thres - float, optional
+        Threshold in absolute frequency units to match
+    freq_col - str, optional
+        Column specifying frequency in the pandas dataframes
+
+    Returns
+    -------
+    candidates - dict
+        Dictionary with keys corresponding to the uline index, and
+        values the frequency
+    """
+    # check to make sure peaks are found
+    for obj in [on_exp, off_exp]:
+        if hasattr(obj, "peaks") is False:
+            raise Exception("{} has no peaks!".format(obj.__name__))
+
+    ufreqs = np.array([uline.frequency for uline in on_exp.ulines])
+    candidates = dict()
+    for _, row in off_exp.peaks.iterrows():
+        min_freq = row[freq_col] - thres
+        max_freq = row[freq_col] + thres
+        value, index = routines.find_nearest(ufreqs, row[freq_col])
+        if min_freq <= value <= max_freq:
+            candidates[index] = value
+    return candidates

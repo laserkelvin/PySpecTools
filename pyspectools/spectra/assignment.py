@@ -2099,6 +2099,27 @@ class AssignmentSession:
         )
         return fig
 
+    def match_artifacts(self, artifact_exp, threshold=0.05):
+        """
+        Remove artifacts based on another experiment which has the blank
+        sample - i.e. only artifacts.
+
+        The routine will simple match peaks found in the artifact
+        experiment, and assign all coincidences in the present experiment
+        as artifacts.
+
+        Parameters
+        ----------
+        artifact_exp - AssignmentSession object
+            Experiment with no sample present
+        threshold - float, optional
+            Threshold in absolute frequency units for matching
+        """
+        matches = analysis.match_artifacts(self, artifact_exp, threshold)
+        self.process_artifacts([freq for index, freq in matches.items()])
+        for index, freq in matches.items():
+            self.logger.info("Removed {} peak as artifact.".format(freq))
+
     def find_progressions(
             self, search=0.001, low_B=400.,
             high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs
