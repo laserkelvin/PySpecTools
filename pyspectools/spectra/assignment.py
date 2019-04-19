@@ -1973,7 +1973,7 @@ class AssignmentSession:
             y=self.table["intensity"],
             width=1.0,
             hoverinfo="text",
-            text=self.table["name"] + "-" + self.table["r_qnos"],
+            text=self.table["name"].astype(str) + "-" + self.table["r_qnos"].astype(str),
             name="Assignments"
         )
         ulines = np.array([[uline.intensity, uline.frequency] for index, uline in self.ulines.items()])
