@@ -227,7 +227,8 @@ def search_center_frequency(frequency, width=0.5):
             "Freq-GHz(rest frame,redshifted)",
             "Resolved QNs",
             "CDMS/JPL Intensity",
-            "E_U (K)"
+            "E_U (K)",
+            "E_L (K)"
             ]
         # Take only what we want
         splat_df = splat_df[columns]
@@ -238,7 +239,8 @@ def search_center_frequency(frequency, width=0.5):
             "Freq-GHz",
             "Resolved QNs",
             "CDMS/JPL Intensity",
-            "E_U (K)"
+            "E_U (K)",
+            "E_L (K)"
             ]
         # Now we combine the frequency measurements
         splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
@@ -247,7 +249,7 @@ def search_center_frequency(frequency, width=0.5):
         # Convert to MHz
         splat_df["Frequency"] *= 1000.
         return splat_df
-    except:
+    except IndexError:
         print("Could not parse Splatalogue table at {:,.4f}".format(frequency))
         return None
 

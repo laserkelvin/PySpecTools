@@ -55,7 +55,7 @@ class Assignment:
             Catalog frequency in MHz
         catalog_intensity : float
             Catalog line intensity, typically in SPCAT units
-        I : float
+        S : float
             Theoretical line strength; differs from the catalog line strength as it may be used for intrinsic line
             strength S u^2
         peak_id : int
@@ -78,6 +78,8 @@ class Assignment:
             Contains the fitted parameters and model
         ustate_energy : float
             Energy of the upper state in Kelvin
+        lstate_energy: float
+            Energy of the lower state in Kelvin
         intereference : bool
             Flag to indicate if this assignment is not molecular in nature
         source : str
@@ -95,7 +97,7 @@ class Assignment:
     catalog_intensity: float = 0.0
     deviation: float = 0.0
     intensity: float = 0.0
-    I: float = 0.0
+    S: float = 0.0
     peak_id: int = 0
     experiment: int = 0
     uline: bool = True
@@ -104,6 +106,7 @@ class Assignment:
     r_qnos: str = ""
     fit: Dict = field(default_factory=dict)
     ustate_energy: float = 0.0
+    lstate_energy: float = 0.0
     interference: bool = False
     weighting: float = 0.0
     source: str = "Catalog"
@@ -164,7 +167,7 @@ class Assignment:
             units.calc_E_lower(frequency, self.ustate_energy),
             T
         )
-        self.I = I
+        self.S = I
         return I
 
 
@@ -187,7 +190,7 @@ class Assignment:
         # Take the frequency value to calculate I
         frequency = max([self.frequency, self.catalog_frequency])
         intensity = units.I2S(
-            self.I,
+            self.S,
             Q,
             frequency,
             units.calc_E_lower(frequency, self.ustate_energy),
@@ -821,10 +824,22 @@ class AssignmentSession:
                 for index, row in splat_df.iterrows():
                     # Convert the string into a chemical formula object
                     try:
-                        clean_formula = row["Species"].split("v=")[0]
-                        for prefix in ["l-", "c-"]:
-                            clean_formula = clean_formula.replace(prefix, "")
+                        # Clean vibrational state and torsional specification
+                        cation_flag = False
+                        clean_formula = row["Species"].split("v")[0]
+                        # Remove labels
+                        for label in ["l-", "c-", "t-", ",", "-gauche", "cis-", "trans-", "trans", "anti", "sym", "="]:
+                            clean_formula = clean_formula.replace(label, "")
+                        # Remove the torsional states
+                        clean_formula = clean_formula.split("-")[-1]
+                        # These are typically charged, and the chemical fomrula parsing does not play well
+                        if "+" in clean_formula:
+                            cation_flag = True
+                            clean_formula = clean_formula.replace("+", "")
                         formula_obj = formula(clean_formula)
+                        # Add the charge back on
+                        if cation_flag is True:
+                            clean_formula += "+"
                         # Check if proposed molecule contains atoms not
                         # expected in composition
                         comp_check = all(
@@ -835,7 +850,7 @@ class AssignmentSession:
                             self.logger.info("Molecule " + clean_formula + " rejected.")
                             splat_df.drop(index, inplace=True)
                     except:
-                        self.logger.info("Could not parse molecule " + clean_formula + " rejected.")
+                        self.logger.warning("Could not parse molecule " + clean_formula + " rejected.")
                         splat_df.drop(index, inplace=True)
                 nitems = len(splat_df)
 
@@ -874,6 +889,7 @@ class AssignmentSession:
                             "catalog_intensity": ass_df["CDMS/JPL Intensity"][0],
                             "formula": ass_df["Species"][0],
                             "r_qnos": ass_df["Resolved QNs"][0],
+                            #"S": ass_df["$S_{ij}^2 D^2$"][0],
                             "ustate_energy": ass_df["E_U (K)"][0],
                             "weighting": ass_df["Weighting"][0],
                             "source": "CDMS/JPL",

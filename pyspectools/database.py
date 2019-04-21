@@ -91,7 +91,7 @@ class SpectralCatalog(tinydb.TinyDB):
                 ]
         assign_dict = {
             "name": name,
-            "formula": formula
+            "formula": formula,
         }
         assign_dict.update(**kwargs)
         # slice out only the relevant information from the dataframe
