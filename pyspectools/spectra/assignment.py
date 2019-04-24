@@ -1380,7 +1380,7 @@ class AssignmentSession:
         if filepath is None:
             filepath = "./ftb/{}-ulines.ftb".format(self.session.experiment)
         lines = ""
-        for uline in self.ulines:
+        for index, uline in self.ulines.items():
             lines += fa.generate_ftb_line(
                 uline.frequency,
                 shots,
