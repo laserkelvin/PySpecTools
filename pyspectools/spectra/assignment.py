@@ -24,6 +24,7 @@ from plotly import graph_objs as go
 from uncertainties import ufloat
 
 from pyspectools import routines, parsers, figurefactory
+from pyspectools import ftmw_analysis as fa
 from pyspectools import fitting
 from pyspectools import units
 from pyspectools import database
@@ -445,7 +446,7 @@ class AssignmentSession:
              int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
-        folders = ["assignment_objs", "queries", "sessions", "clean", "figures", "reports", "logs"]
+        folders = ["assignment_objs", "queries", "sessions", "clean", "figures", "reports", "logs", "outputs", "ftb"]
         for folder in folders:
             if os.path.isdir(folder) is False:
                 os.mkdir(folder)
@@ -1363,6 +1364,31 @@ class AssignmentSession:
             name: names.count(name) for name in self.names
         }
         return self.identifications
+
+    def create_uline_ftb_batch(self, filepath=None, shots=500, dipole=1.):
+        """
+        Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
+        frequencies.
+
+        Parameters
+        ----------
+        shots - int
+            Number of shots to integrate on each frequency
+        dipole - float
+            Dipole moment in Debye attenuation target for each frequency
+        """
+        if filepath is None:
+            filepath = "./ftb/{}-ulines.ftb".format(self.session.experiment)
+        lines = ""
+        for uline in self.ulines:
+            lines += fa.generate_ftb_line(
+                uline.frequency,
+                shots,
+                **{"dipole": dipole}
+            )
+        with open(filepath, "w+") as write_file:
+            write_file.write(lines)
+
 
     def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None, chi_thres=10.):
         """
