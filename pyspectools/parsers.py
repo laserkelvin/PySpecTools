@@ -298,3 +298,26 @@ def read_binary_fid(filepath):
         x_data = np.linspace(0., size * spacing, int(size))
         xy_data = np.vstack((x_data, data))
     return param_dict, xy_data, raw_data
+
+
+def parse_fit(filepath):
+    fit_dict = dict()
+    with open(filepath) as read_file:
+        lines = read_file.readlines()
+    for index, line in enumerate(lines):
+        # Read the obs - calc on individual lines
+        if "EXP.FREQ." in line:
+            stop_flag = False
+            entry_index = 1
+            line_dict = dict()
+            while stop_flag is False:
+                entry = lines[index + entry_index].split()
+                if entry[0] == "NORMALIZED":
+                    stop_flag = True
+                else:
+                    line_dict[entry_index] = float(entry[-3])
+                    entry_index += 1
+        fit_dict["line rms"] = line_dict
+        if "NEW PARAMETER" in line:
+            stop_flag = False
+            entry_index = 1

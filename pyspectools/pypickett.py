@@ -649,55 +649,126 @@ class QuantumNumber:
     name: str
     value: int
     upper: bool = False
+    max: int = 10
+    min: int = 0
 
     def __repr__(self):
         return str(self.value)
 
-    def generate_number(self, max=5, seed=None):
-        """
-        Generate a random quantum number
-        Parameters
-        ----------
-        max
+    def __str__(self):
+        return str(self.value)
 
-        Returns
-        -------
-        value - int
-            Random value of quantum number
+    def roll(self, seed=None):
         """
-        _ = np.random.seed(seed)
-        self.value = np.random.randint(0, max)
-        return self.value
+        Generate a random value for the current quantum number.
+        """
+        np.random.seed(seed)
+        self.value = np.random.randint(
+            self.min,
+            self.max,
+            1
+        )
 
 
 @dataclass
 class Transition:
     frequency: float
     quantum_numbers: None
-    uncertainty: float = 0.
+    uncertainty: float = 0.005
 
-    def generate_quantum_numbers(self, trans_type="a"):
-        trans_types = ["a", "b", "c", "none"]
-        if trans_type not in trans_types:
-            raise Exception("Transition type not coded!")
-        rules = {
-            "a": {
-                    "J": 1,
-                    "Ka": 0,
-                    "Kc": 1
-                },
-            "b": {
-                
-            }
-            }
-        quant_types = [quantum_number["name"] for quantum_number in self.quantum_numbers]
+    def generate_quantum_numbers(self, n_numbers, qmin=0, qmax=10, seed=None):
+        """
+        Generate a set of quantum numbers for the transition. The routine
+        will initialize a set of random quantum numbers, with a length specified
+        by the user, corresponding to half of the full set (i.e. only upper or
+        lower state numbers).
 
+        Parameters
+        ----------
+        n_numbers: int
+            The number of quantum numbers necessary to describe a state.
+        qmin: int, optional
+            The lowest value the quantum numbers can take.
+        qmax: int, optional
+            The highest value the quantum numbers can take.
+        seed: None, optional
+            Value to use to seed the random number generator prior
+            to generation.
+
+        Returns
+        -------
+        qnos: 2-tuple
+            2-tuple, first element is an array with the lower state quantum numbers
+            and the second element is the upper state.
+        """
+        _ = np.random.seed(seed)
+        # Generate a NumPy array of random integers between the specified
+        # range
+        lower = np.random.randint(
+            qmin,
+            qmax + 1,
+            n_numbers
+        )
+        # Generate the upper state change in quantum numbers; +/-1 or 0
+        # for each number
+        delta = np.random.randint(
+            -3,
+            3,
+            n_numbers
+        )
+        # Create the upper state quantum numbers from lower state
+        upper = lower + delta
+        # Set the negative quantum numbers to zero
+        upper[upper < 0] = 0
+        self.quantum_numbers = [lower, upper]
+        return self.quantum_numbers
+
+
+    def __str__(self):
+        """
+        Method to format the quantum numbers into lin file format.
+
+        Returns
+        -------
+        line: str
+            Upper and lower state quantum numbers formatted into lin
+            format.
+        """
+        line = "  {upper} {lower}                 {frequency}     {uncertainty}"
+        format_dict = {
+            "upper": self.quantum_numbers[1].join("  "),
+            "lower": self.quantum_numbers[0].join("  "),
+            "frequency": self.frequency,
+            "uncertainty": self.uncertainty
+        }
+        return line.format(**format_dict)
 
 
 @dataclass
 class AutoFitSession:
     filename: str
-    maxN: int = 0
-    maxJ: int = 0
-    maxF: int = 0
+    frequencies: None
+    rms_target: float = 1.
+    qmin: int = 0
+    qmax: int = 10
+    niter: int = 10000
+    nprocesses: int = 1
+
+    def __post_init__(self):
+        if os.path.exists(filename + ".var") is False:
+            raise Exception(".var file does not exist!")
+        with open(filename + ".var") as read_file:
+            self.var = read_file.readlines()
+        self.setup_folders()
+
+    def setup_folders(self):
+        """
+        Function that generates the folders for the parallelization step;
+        each worker gets their own folder.
+        """
+        for num in range(self.nprocesses):
+            if os.path.exists(str(num)) is False:
+                os.mkdir(str(num))
+
+    def
 
