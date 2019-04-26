@@ -773,6 +773,7 @@ class AutoFitSession:
     rms_target: float = 1.
     niter: int = 10000
     nprocesses: int = 1
+    verbose: int = 0
 
     @classmethod
     def from_yml(cls, filepath):
@@ -920,13 +921,14 @@ class AutoFitSession:
             nprocesses = self.nprocesses
         pool = joblib.Parallel(
             n_jobs=nprocesses,
+            verbose=self.verbose,
         )
         iterator = range(niter)
         if headless is False:
             iterator = tqdm(iterator)
         # Distribute and run the quantum number testing
         results = pool(
-            joblib.delayed(self._iteration)(i) for i in iterator)
+            joblib.delayed(self._iteration)(i) for i in iterator
         )
         self.results = results
         return results
