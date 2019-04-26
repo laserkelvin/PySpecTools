@@ -301,7 +301,26 @@ def read_binary_fid(filepath):
 
 
 def parse_fit(filepath):
-    fit_dict = dict()
+    """
+    Function to parse the output of an SPFIT .fit file. This version of the code is barebones compared to the
+    previous iteration, which provides more feedback. This version simply returns a dictionary containing the
+    obs - calc for each line, the fitted parameters, and the microwave RMS.
+
+    Parameters
+    ----------
+    filepath: str
+        Filepath to the .fit file to parse.
+
+    Returns
+    -------
+    fit_dict: dict
+        Dictionary containing the parsed data.
+    """
+    fit_dict = {
+        "o-c": {},
+        "parameters": {},
+        "rms": None
+    }
     with open(filepath) as read_file:
         lines = read_file.readlines()
     for index, line in enumerate(lines):
@@ -315,9 +334,27 @@ def parse_fit(filepath):
                 if entry[0] == "NORMALIZED":
                     stop_flag = True
                 else:
+                    # Read in the error
                     line_dict[entry_index] = float(entry[-3])
                     entry_index += 1
-        fit_dict["line rms"] = line_dict
+        fit_dict["o-c"] = line_dict
         if "NEW PARAMETER" in line:
             stop_flag = False
             entry_index = 1
+            param_dict = dict()
+            while stop_flag is False:
+                entry = lines[index + entry_index]
+                for bracket in ['''(''', ''')''']:
+                    entry = entry.replace(bracket, " ")
+                entry = entry.split()
+                if entry[0] != "MICROWAVE":
+                    coding = int(entry[1])
+                    param_dict[coding] = float(entry[-3])
+                    entry_index += 1
+                else:
+                    stop_flag = True
+            fit_dict["parameters"] = param_dict
+        if "MICROWAVE RMS" in line:
+            fit_dict["rms"] = float(line.split()[3])
+        return fit_dict
+

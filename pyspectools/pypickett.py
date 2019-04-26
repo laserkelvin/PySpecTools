@@ -723,7 +723,6 @@ class Transition:
         self.quantum_numbers = [lower, upper]
         return self.quantum_numbers
 
-
     def __str__(self):
         """
         Method to format the quantum numbers into lin file format.
