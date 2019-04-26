@@ -667,11 +667,10 @@ class QuantumNumber:
     def __str__(self):
         return str(self.value)
 
-    def roll(self, seed=None):
+    def roll(self):
         """
         Generate a random value for the current quantum number.
         """
-        np.random.seed(seed)
         self.value = np.random.randint(
             self.min,
             self.max,
@@ -689,7 +688,6 @@ class QuantumNumber:
             A deep copy of the current QuantumNumber instance, but also shifts the
             quantum number by a random integer.
         """
-        np.random.seed()
         delta = np.random.randint(-3, 3, 1)[0]
         new_qno = deepcopy(self)
         new_qno.value += delta
@@ -717,6 +715,7 @@ class Transition:
             self.min_values = [0 for i in range(self.n_numbers)]
         if self.uncertainty is None:
             self.uncertainty = 0.005
+        np.random.seed()
         # Initialize the quantum numbers
         self.lower_state = [
             QuantumNumber(0, min=minval, max=maxval) for minval, maxval in zip(self.min_values, self.max_values)
