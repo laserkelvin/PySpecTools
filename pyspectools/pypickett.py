@@ -4,14 +4,14 @@ from glob import glob
 from dataclasses import dataclass
 import pickle
 import shutil
+import tempfile
 
 import numpy as np
 import pandas as pd
 import stat
 from matplotlib import pyplot as plt
-from matplotlib import cm
-from matplotlib import colors
 import pprint
+import joblib
 
 from pyspectools.routines import *
 from pyspectools.spcat import *
@@ -747,27 +747,111 @@ class Transition:
 class AutoFitSession:
     filename: str
     frequencies: None
+    uncertainties: None
+    n_numbers: int
     rms_target: float = 1.
     qmin: int = 0
     qmax: int = 10
     niter: int = 10000
     nprocesses: int = 1
 
+    @classmethod
+    def from_yml(cls, filepath):
+        """
+        Class method to read the settings for an AutoFitSession via YAML file.
+        Parameters
+        ----------
+        filepath: str
+            Filepath to the YAML settings file
+
+        Returns
+        -------
+        AutoFitSession object
+        """
+        session = cls(**read_yaml(filepath))
+        return session
+
     def __post_init__(self):
         if os.path.exists(filename + ".var") is False:
-            raise Exception(".var file does not exist!")
-        with open(filename + ".var") as read_file:
-            self.var = read_file.readlines()
-        self.setup_folders()
+            raise Exception(".par file does not exist!")
+        with open(filename + ".par") as read_file:
+            self.par = read_file.readlines()
+        self.wd = os.getcwd()
+        # Setup filestructure
+        for folder in ["fits", "yml"]:
+            if os.path.exists(folder) is False:
+                os.mkdir(folder)
 
-    def setup_folders(self):
+    def _iteration(self, index):
         """
-        Function that generates the folders for the parallelization step;
-        each worker gets their own folder.
-        """
-        for num in range(self.nprocesses):
-            if os.path.exists(str(num)) is False:
-                os.mkdir(str(num))
+        Private method to perform a single iteration of the whole process. Starts by generating random quantum
+        numbers, and creates a temporary folder to run SPFIT along with the .par and .lin files.
 
-    def
+        The output .fit file is parsed, and both the parsed data and the .fit file is copied back over to
+        the working directory. An index argument will let the function be run in async while still letting
+        the specific file index be known.
+
+        Parameters
+        ----------
+        index: int
+            Index that keeps track of the file name to save the output as
+
+        Returns
+        -------
+
+        """
+        transitions = [
+            Transition(frequency, uncertainty=uncertainty) for frequency, uncertainty in zip(
+                self.frequencies, self.uncertainties
+            )
+        ]
+        # Generate the quantum numbers for each transition
+        _ = [transition.generate_quantum_numbers(self.n_numbers, self.qmin, self.qmax) for transition in transitions]
+        # Make up the lin file
+        lines = [str(transition) for transition in transitions].join("\n")
+        # Setup a temporary directory to run SPFIT in
+        with tempfile.TemporaryDirectory() as path:
+            os.chdir(path)
+            with open(self.filename + ".lin", "w+") as write_file:
+                write_file.write(lines)
+            with open(self.filename + ".par", "w+") as write_file:
+                write_file.write(self.par)
+            # Run SPFIT
+            run_spfit(self.filename)
+            # Parse the output
+            fit_dict = parsers.parse_fit(self.filename + ".fit")
+            # Copy some of the data back over
+            shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
+            dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
+            # Not sure if this is necessary, but just in case
+            os.chdir(self.wd)
+        return index, fit_dict["rms"]
+
+    def run(self, niter=None, nprocesses=None):
+        """
+        Run the search for assignments. The function wraps a private method, and is parallelized with a joblib
+        Pool.
+        Parameters
+        ----------
+        niter: int or None, optional
+            Number of iterations. If None, uses the class attribute, otherwise the user specified value.
+        nprocesses: int or None, optional
+            Number of parallel jobs to break the task into. If None, uses the class attribute.
+
+        Returns
+        -------
+        results: list
+            List of the final RMS values from individual SPFIT runs.
+        """
+        if niter is None:
+            niter = self.niter
+        if nprocesses is None:
+            nprocesses = self.nprocesses
+        pool = joblib.Parallel(
+            njobs=nprocesses,
+        )
+        results = pool()(
+            joblib.delayed(self._iteration)(i) for i in range(niter)
+        )
+        return results
 
