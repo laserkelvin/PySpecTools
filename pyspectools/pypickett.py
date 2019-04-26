@@ -677,7 +677,7 @@ class QuantumNumber:
             1
         )[0]
 
-    def spawn_upper(self):
+    def spawn_upper(self, min=-3, max=3):
         """
         Create a new QuantumNumber instance for the corresponding upper state.
         Will also shift the quantum number to a new value, +/-2,1,0.
@@ -688,7 +688,11 @@ class QuantumNumber:
             A deep copy of the current QuantumNumber instance, but also shifts the
             quantum number by a random integer.
         """
-        delta = np.random.randint(-3, 3, 1)[0]
+        # Restrict molecular parameters to +1 or 0 in upper state
+        if self.j == True:
+            max = 2
+            min = 0
+        delta = np.random.randint(min, max, 1)[0]
         new_qno = deepcopy(self)
         new_qno.value += delta
         # Can't have negative quantum numbers
@@ -702,6 +706,7 @@ class Transition:
     frequency: float
     n_numbers: int
     quantum_numbers: List = field(default_factory=list)
+    j: List = field(default_factory=list)
     lower_state: List = field(default_factory=list)
     upper_state: List = field(default_factory=list)
     max_values: List = field(default_factory=list)
@@ -715,11 +720,13 @@ class Transition:
             self.min_values = [0 for i in range(self.n_numbers)]
         if self.uncertainty is None:
             self.uncertainty = 0.005
-        np.random.seed()
         # Initialize the quantum numbers
         self.lower_state = [
             QuantumNumber(0, min=minval, max=maxval) for minval, maxval in zip(self.min_values, self.max_values)
         ]
+        if len(self.j) != 0:
+            for qno, j in zip(self.lower_state, self.j):
+                qno.j = j
 
     def random_quantum_numbers(self):
         """
@@ -768,6 +775,7 @@ class AutoFitSession:
     uncertainties: List = field(default_factory=list)
     max_values: List = field(default_factory=list)
     min_values: List = field(default_factory=list)
+    j: List = field(default_factory=list)
     method: str = "mc"
     rms_target: float = 1.
     niter: int = 10000
@@ -866,6 +874,8 @@ class AutoFitSession:
             self.frequencies,
             self.uncertainties,
         )
+        # Make sure a different seed is used to other parallel jobs
+        np.random.seed()
         # Initialize the Transition object, which handles all of the quantum numbers for a given transition
         transitions = [
             Transition(
@@ -873,7 +883,8 @@ class AutoFitSession:
                 uncertainty=uncertainty,
                 n_numbers=self.n_numbers,
                 max_values=self.max_values,
-                min_values=self.min_values
+                min_values=self.min_values,
+                j=self.j
             ) for frequency, uncertainty in pkg
         ]
         # Generate the quantum numbers for each transition
@@ -944,4 +955,3 @@ class AutoFitSession:
         if filepath is None:
             filepath = self.filename + ".pkl"
         routines.save_obj(self, filepath)
-
