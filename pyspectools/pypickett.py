@@ -806,7 +806,7 @@ class AutoFitSession:
         Loaded
         """
         cls = routines.read_obj(filepath)
-        if cls.__class__.name != "AutoFitSession":
+        if cls.__name__ != "AutoFitSession":
             raise Exception("Target file is not an AutoFitSession object!")
         else:
             return cls
