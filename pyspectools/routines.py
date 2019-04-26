@@ -10,7 +10,7 @@ import json
 import types
 from glob import glob
 
-import yaml
+import ruamel.yaml as yaml
 import numpy as np
 import joblib
 import paramiko
@@ -135,7 +135,7 @@ def dump_json(json_filepath, json_dict):
 def read_yaml(yaml_filepath):
     """ Function for reading a YAML file in as a Python dictionary """
     with open(yaml_filepath) as read_file:
-        yaml_data = yaml.load(read_file)
+        yaml_data = yaml.load(read_file, Loader=yaml.Loader)
     return yaml_data
 
 

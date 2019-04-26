@@ -1,10 +1,13 @@
 
 import os
 from glob import glob
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import pickle
 import shutil
 import tempfile
+from copy import deepcopy
+from typing import List
+from itertools import product
 
 import numpy as np
 import pandas as pd
@@ -12,8 +15,9 @@ import stat
 from matplotlib import pyplot as plt
 import pprint
 import joblib
+from tqdm.autonotebook import tqdm
 
-from pyspectools.routines import *
+from pyspectools import routines
 from pyspectools.spcat import *
 from pyspectools.parsefit import *
 from pyspectools import parsers
@@ -646,11 +650,16 @@ class QuantumNumber:
     """
     Class for a Quantum Number.
     """
-    name: str
     value: int
     upper: bool = False
     max: int = 10
     min: int = 0
+
+    def __post_init__(self):
+        if self.min is None:
+            self.min = 0
+        if self.max is None:
+            self.max = 10
 
     def __repr__(self):
         return str(self.value)
@@ -667,60 +676,69 @@ class QuantumNumber:
             self.min,
             self.max,
             1
-        )
+        )[0]
 
+    def spawn_upper(self):
+        """
+        Create a new QuantumNumber instance for the corresponding upper state.
+        Will also shift the quantum number to a new value, +/-2,1,0.
+
+        Returns
+        -------
+        QuantumNumber: object
+            A deep copy of the current QuantumNumber instance, but also shifts the
+            quantum number by a random integer.
+        """
+        np.random.seed()
+        delta = np.random.randint(-3, 3, 1)[0]
+        new_qno = deepcopy(self)
+        new_qno.value += delta
+        # Can't have negative quantum numbers
+        if new_qno.value < 0:
+            new_qno.value = 0
+        new_qno.upper = True
+        return new_qno
 
 @dataclass
 class Transition:
     frequency: float
-    quantum_numbers: None
+    n_numbers: int
+    quantum_numbers: List = field(default_factory=list)
+    lower_state: List = field(default_factory=list)
+    upper_state: List = field(default_factory=list)
+    max_values: List = field(default_factory=list)
+    min_values: List = field(default_factory=list)
     uncertainty: float = 0.005
 
-    def generate_quantum_numbers(self, n_numbers, qmin=0, qmax=10, seed=None):
+    def __post_init__(self):
+        if self.max_values is None:
+            self.max_values = [10 for i in range(self.n_numbers)]
+        if self.min_values is None:
+            self.min_values = [0 for i in range(self.n_numbers)]
+        if self.uncertainty is None:
+            self.uncertainty = 0.005
+        # Initialize the quantum numbers
+        self.lower_state = [
+            QuantumNumber(0, min=minval, max=maxval) for minval, maxval in zip(self.min_values, self.max_values)
+        ]
+
+    def random_quantum_numbers(self):
         """
-        Generate a set of quantum numbers for the transition. The routine
-        will initialize a set of random quantum numbers, with a length specified
-        by the user, corresponding to half of the full set (i.e. only upper or
-        lower state numbers).
-
-        Parameters
-        ----------
-        n_numbers: int
-            The number of quantum numbers necessary to describe a state.
-        qmin: int, optional
-            The lowest value the quantum numbers can take.
-        qmax: int, optional
-            The highest value the quantum numbers can take.
-        seed: None, optional
-            Value to use to seed the random number generator prior
-            to generation.
-
+        Create a random set of quantum numbers for a transition. First, the lower state is generated based on
+        lower and upper bounds specified by the user. A deepcopy is made for each lower state quantum number,
+        and the associated upper state number is created by shifting the lower value by a random integer between
+        -2 and 2.
         Returns
         -------
-        qnos: 2-tuple
-            2-tuple, first element is an array with the lower state quantum numbers
-            and the second element is the upper state.
+
         """
-        _ = np.random.seed(seed)
-        # Generate a NumPy array of random integers between the specified
-        # range
-        lower = np.random.randint(
-            qmin,
-            qmax + 1,
-            n_numbers
-        )
-        # Generate the upper state change in quantum numbers; +/-1 or 0
-        # for each number
-        delta = np.random.randint(
-            -3,
-            3,
-            n_numbers
-        )
-        # Create the upper state quantum numbers from lower state
-        upper = lower + delta
-        # Set the negative quantum numbers to zero
-        upper[upper < 0] = 0
-        self.quantum_numbers = [lower, upper]
+        for qno in self.lower_state:
+            qno.roll()
+        self.upper_state = [qno.spawn_upper() for qno in self.lower_state]
+        self.quantum_numbers = [
+            [str(qno) for qno in self.lower_state],
+            [str(qno) for qno in self.upper_state]
+        ]
         return self.quantum_numbers
 
     def __str__(self):
@@ -735,8 +753,8 @@ class Transition:
         """
         line = "  {upper} {lower}                 {frequency}     {uncertainty}"
         format_dict = {
-            "upper": self.quantum_numbers[1].join("  "),
-            "lower": self.quantum_numbers[0].join("  "),
+            "upper": "  ".join(self.quantum_numbers[1]),
+            "lower": "  ".join(self.quantum_numbers[0]),
             "frequency": self.frequency,
             "uncertainty": self.uncertainty
         }
@@ -746,12 +764,13 @@ class Transition:
 @dataclass
 class AutoFitSession:
     filename: str
-    frequencies: None
-    uncertainties: None
     n_numbers: int
+    frequencies: List = field(default_factory=list)
+    uncertainties: List = field(default_factory=list)
+    max_values: List = field(default_factory=list)
+    min_values: List = field(default_factory=list)
+    method: str = "mc"
     rms_target: float = 1.
-    qmin: int = 0
-    qmax: int = 10
     niter: int = 10000
     nprocesses: int = 1
 
@@ -768,21 +787,63 @@ class AutoFitSession:
         -------
         AutoFitSession object
         """
-        session = cls(**read_yaml(filepath))
+        session = cls(**routines.read_yaml(filepath))
         return session
 
+    @classmethod
+    def from_pkl(cls, filepath):
+        """
+        Function to load a previously saved Pickle instance of AutoFitSession.
+
+        Parameters
+        ----------
+        filepath: str
+            Filepath to the pickle file to load.
+
+        Returns
+        -------
+        Loaded
+        """
+        cls = routines.read_obj(filepath)
+        if cls.__class__.name != "AutoFitSession":
+            raise Exception("Target file is not an AutoFitSession object!")
+        else:
+            return cls
+
     def __post_init__(self):
-        if os.path.exists(filename + ".var") is False:
+        if self.uncertainties is None:
+            self.uncertainties = [0.005 for i, _ in enumerate(self.frequencies)]
+        if os.path.exists(self.filename + ".par") is False:
             raise Exception(".par file does not exist!")
-        with open(filename + ".par") as read_file:
+        with open(self.filename + ".par") as read_file:
             self.par = read_file.readlines()
         self.wd = os.getcwd()
         # Setup filestructure
         for folder in ["fits", "yml"]:
             if os.path.exists(folder) is False:
                 os.mkdir(folder)
+        if self.method not in ["mc", "brute"]:
+            raise Exception("Testing method not implemented!")
+        else:
+            if self.method == "mc":
+                self._iteration = self._rng
 
-    def _iteration(self, index):
+    def _brute_generator(self):
+        """
+        Create a generator that will brute force every possible combination of quantum numbers.
+        The user sets the maximum values for each quantum number, and this function will produce a
+        generator.
+
+        Returns
+        -------
+        product
+            Product generator from itertools
+        """
+        # Generate a list of lists that correspond to possible maximum values
+        values = [list(range(val + 1)) for val in self.max_values * 2]
+        return product(*values)
+
+    def _rng(self, index):
         """
         Private method to perform a single iteration of the whole process. Starts by generating random quantum
         numbers, and creates a temporary folder to run SPFIT along with the .par and .lin files.
@@ -798,36 +859,46 @@ class AutoFitSession:
 
         Returns
         -------
-
+        index, rms: 2-tuple
+            The current iteration index and the RMS for this iteration
         """
+        pkg = zip(
+            self.frequencies,
+            self.uncertainties,
+        )
+        # Initialize the Transition object, which handles all of the quantum numbers for a given transition
         transitions = [
-            Transition(frequency, uncertainty=uncertainty) for frequency, uncertainty in zip(
-                self.frequencies, self.uncertainties
-            )
+            Transition(
+                frequency,
+                uncertainty=uncertainty,
+                n_numbers=self.n_numbers,
+                max_values=self.max_values,
+                min_values=self.min_values
+            ) for frequency, uncertainty in pkg
         ]
         # Generate the quantum numbers for each transition
-        _ = [transition.generate_quantum_numbers(self.n_numbers, self.qmin, self.qmax) for transition in transitions]
+        _ = [transition.random_quantum_numbers() for transition in transitions]
         # Make up the lin file
-        lines = [str(transition) for transition in transitions].join("\n")
+        lines = "\n".join([str(transition) for transition in transitions])
         # Setup a temporary directory to run SPFIT in
         with tempfile.TemporaryDirectory() as path:
             os.chdir(path)
             with open(self.filename + ".lin", "w+") as write_file:
                 write_file.write(lines)
             with open(self.filename + ".par", "w+") as write_file:
-                write_file.write(self.par)
+                write_file.writelines(self.par)
             # Run SPFIT
-            run_spfit(self.filename)
+            routines.run_spfit(self.filename)
+            shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
             # Copy some of the data back over
-            shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
-            dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
+            routines.dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
             # Not sure if this is necessary, but just in case
             os.chdir(self.wd)
         return index, fit_dict["rms"]
 
-    def run(self, niter=None, nprocesses=None):
+    def run(self, niter=None, nprocesses=None, headless=True):
         """
         Run the search for assignments. The function wraps a private method, and is parallelized with a joblib
         Pool.
@@ -848,10 +919,28 @@ class AutoFitSession:
         if nprocesses is None:
             nprocesses = self.nprocesses
         pool = joblib.Parallel(
-            njobs=nprocesses,
+            n_jobs=nprocesses,
         )
-        results = pool()(
-            joblib.delayed(self._iteration)(i) for i in range(niter)
+        iterator = range(niter)
+        if headless is False:
+            iterator = tqdm(iterator)
+        # Distribute and run the quantum number testing
+        results = pool(
+            joblib.delayed(self._iteration)(i) for i in iterator)
         )
+        self.results = results
         return results
+
+    def save(self, filepath=None):
+        """
+        Dump the current session to disk as a Pickle file.
+
+        Parameters
+        ----------
+        filepath: str, optional
+            Filepath to save the file to. If None, uses the filename attribute plus .pkl extension
+        """
+        if filepath is None:
+            filepath = self.filename + ".pkl"
+        routines.save_obj(self, filepath)
 

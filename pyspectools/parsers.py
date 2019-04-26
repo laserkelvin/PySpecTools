@@ -331,13 +331,12 @@ def parse_fit(filepath):
             line_dict = dict()
             while stop_flag is False:
                 entry = lines[index + entry_index].split()
-                if entry[0] == "NORMALIZED":
+                if entry[0] == "NORMALIZED" or entry[0] == "Fit":
                     stop_flag = True
                 else:
                     # Read in the error
                     line_dict[entry_index] = float(entry[-3])
                     entry_index += 1
-        fit_dict["o-c"] = line_dict
         if "NEW PARAMETER" in line:
             stop_flag = False
             entry_index = 1
@@ -353,8 +352,9 @@ def parse_fit(filepath):
                     entry_index += 1
                 else:
                     stop_flag = True
-            fit_dict["parameters"] = param_dict
         if "MICROWAVE RMS" in line:
             fit_dict["rms"] = float(line.split()[3])
-        return fit_dict
+    fit_dict["o-c"] = line_dict
+    fit_dict["parameters"] = param_dict
+    return fit_dict
 
