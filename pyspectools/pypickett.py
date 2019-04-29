@@ -652,6 +652,7 @@ class QuantumNumber:
     """
     value: int
     upper: bool = False
+    j: bool = True
     max: int = 10
     min: int = 0
 
@@ -757,7 +758,7 @@ class Transition:
             Upper and lower state quantum numbers formatted into lin
             format.
         """
-        line = "  {upper} {lower}                 {frequency}     {uncertainty}"
+        line = "  {upper} {lower}                 {frequency}     {uncertainty}   1."
         format_dict = {
             "upper": "  ".join(self.quantum_numbers[1]),
             "lower": "  ".join(self.quantum_numbers[0]),
@@ -932,6 +933,7 @@ class AutoFitSession:
         pool = joblib.Parallel(
             n_jobs=nprocesses,
             verbose=self.verbose,
+            timeout=30.
         )
         iterator = range(niter)
         if headless is False:

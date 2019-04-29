@@ -63,11 +63,22 @@ def run_calbak(filename):
 
 
 def run_spfit(filename):
-    """ Runs the SPFIT program to fit the lines extracted from the .lin file """
-    process = subprocess.Popen(["spfit", filename + ".lin", filename + ".par"],
-                               stdout=subprocess.DEVNULL
-                               )
-    process.wait()
+    """
+
+    Parameters
+    ----------
+    filename
+
+    Returns
+    -------
+
+    """
+    process = subprocess.run(
+        ["spfit", filename + ".lin", filename + ".par"],
+        timeout=20.
+        )
+    if process.returncode != 0:
+        raise OSError("SPFIT failed to run.")
 
 
 def pickett_molecule(json_filepath=None):
