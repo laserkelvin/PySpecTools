@@ -871,7 +871,7 @@ class AutoFitSession:
             if os.path.exists(folder) is False:
                 os.mkdir(folder)
         if self.method not in ["mc", "bruteforce"]:
-            raise Exception("Testing method not implemented!")
+            raise Exception("Testing method {} not implemented!".format(self.method))
         else:
             if self.method == "mc":
                 self._iteration = self._rng
