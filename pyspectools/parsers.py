@@ -333,7 +333,8 @@ def parse_fit(filepath):
                 entry = lines[index + entry_index].split()
                 if entry[0] == "NORMALIZED" or entry[0] == "Fit":
                     stop_flag = True
-                elif entry[0] == "*****":
+                elif entry[1] == "NEXT" or entry[1] == "Lines":
+                    entry_index += 1
                     pass
                 else:
                     # Read in the error
