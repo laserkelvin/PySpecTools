@@ -75,7 +75,8 @@ def run_spfit(filename):
     """
     process = subprocess.run(
         ["spfit", filename + ".lin", filename + ".par"],
-        timeout=20.
+        timeout=20.,
+        capture_output=True
         )
     if process.returncode != 0:
         raise OSError("SPFIT failed to run.")
