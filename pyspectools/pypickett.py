@@ -690,7 +690,7 @@ class QuantumNumber:
             quantum number by a random integer.
         """
         # Restrict molecular parameters to +1 or 0 in upper state
-        if self.j == True:
+        if self.j:
             max = 2
             min = 0
         delta = np.random.randint(min, max, 1)[0]
@@ -701,6 +701,7 @@ class QuantumNumber:
             new_qno.value = 0
         new_qno.upper = True
         return new_qno
+
 
 @dataclass
 class Transition:
@@ -713,6 +714,40 @@ class Transition:
     max_values: List = field(default_factory=list)
     min_values: List = field(default_factory=list)
     uncertainty: float = 0.005
+
+    @classmethod
+    def from_list(cls, frequency, qnos, uncertainty=None):
+        """
+        Class method to spawn a Transition from a list of quantum numbers.
+        This takes a flat iterable (qnos), and splits it into two; the first
+        half is used for the lower state quantum numbers, and the second half
+        the upper state.
+
+        Parameters
+        ----------
+        frequency: float
+            Frequency of the transition in MHz
+        qnos: list
+            Flat list of quantum numbers, includes both lower and upper states
+        uncertainty: float or None, optional
+            Optional frequency uncertainty of the transition in MHz. Defaults to None, which uses
+            the default value of 0.005 MHz.
+
+        Returns
+        -------
+        Transition: object
+            Transition object initialized with the specifications
+        """
+        n_numbers = len(qnos)
+        half = int(n_numbers / 2)
+        trans = cls(frequency=frequency, n_numbers=n_numbers, uncertainty=uncertainty)
+        lower_state = qnos[:half]
+        upper_state = qnos[half:]
+        cls.quantum_numbers = [
+            [str(lower) for lower in lower_state],
+            [str(upper) for upper in upper_state]
+        ]
+        return cls
 
     def __post_init__(self):
         if self.max_values is None:
@@ -804,6 +839,7 @@ class AutoFitSession:
         """
         Function to load a previously saved Pickle instance of AutoFitSession.
 
+        TODO: write a check to make sure we're reading in an AutoFitSession pickle!
         Parameters
         ----------
         filepath: str
@@ -831,26 +867,58 @@ class AutoFitSession:
         for folder in ["fits", "yml", "lin"]:
             if os.path.exists(folder) is False:
                 os.mkdir(folder)
-        if self.method not in ["mc", "brute"]:
+        if self.method not in ["mc", "bruteforce"]:
             raise Exception("Testing method not implemented!")
         else:
             if self.method == "mc":
                 self._iteration = self._rng
+            elif self.method == "bruteforce":
+                self._iteration = self._brute
 
     def _brute_generator(self):
         """
-        Create a generator that will brute force every possible combination of quantum numbers.
-        The user sets the maximum values for each quantum number, and this function will produce a
+        Create a generator that will brute force every possible combination of quantum numbers for every
+        transition. The user sets the maximum values for each quantum number, and this function will produce a
         generator.
+
+        The quantum number tuple that is produced from the generator is flat, and will need to be
+        reshaped before feeding into a QuantumNumber object.
 
         Returns
         -------
-        product
-            Product generator from itertools
+        enumerate: generator
+            Product generator from itertools, wrapped around an enumerate generator
         """
-        # Generate a list of lists that correspond to possible maximum values
-        values = [list(range(val + 1)) for val in self.max_values * 2]
-        return product(*values)
+        # This bit of code is probably not very pythonic. The general gist of it is to generate
+        # a nested list since for every transition (number of frequencies), we want to systematically
+        # test every possible combination of quantum numbers.
+        possible = [list(range(val + 1)) for val in self.max_values * 2] * len(self.frequencies)
+        return enumerate(product(*possible))
+
+    def _brute(self, iteration):
+        """
+
+        Parameters
+        ----------
+        iteration
+
+        Returns
+        -------
+
+        """
+        index, qnos = iteration
+        # Set up the quantum numbers for this transition
+        transitions = [
+            Transition.from_list(
+                frequency,
+                qnos,
+                uncertainty
+            ) for frequency, uncertainty in zip(self.frequencies, self.uncertainties)
+        ]
+        # Call SPFIT and return the fit RMS
+        index, rms = self._check_spfit(index, transitions)
+        return index, rms
+
 
     def _rng(self, index):
         """
@@ -890,9 +958,22 @@ class AutoFitSession:
         ]
         # Generate the quantum numbers for each transition
         _ = [transition.random_quantum_numbers() for transition in transitions]
-        # Make up the lin file
+        index, rms = self._check_spfit(index, transitions)
+        return index, rms
+
+    def _check_spfit(self, index, transitions):
+        """
+        Driver to actually run SPFIT and parse the output of the .fit file.
+
+        Parameters
+        ----------
+        lines
+
+        Returns
+        -------
+
+        """
         lines = "\n".join([str(transition) for transition in transitions])
-        # Setup a temporary directory to run SPFIT in
         with tempfile.TemporaryDirectory() as path:
             os.chdir(path)
             with open(self.filename + ".lin", "w+") as write_file:
@@ -911,7 +992,7 @@ class AutoFitSession:
             os.chdir(self.wd)
         return index, fit_dict["rms"]
 
-    def run(self, niter=None, nprocesses=None, headless=True):
+    def run(self, niter=None, nprocesses=None, headless=True, method="mc"):
         """
         Run the search for assignments. The function wraps a private method, and is parallelized with a joblib
         Pool.
@@ -936,7 +1017,15 @@ class AutoFitSession:
             verbose=self.verbose,
             timeout=30.
         )
-        iterator = range(niter)
+        if method in ["mc", "bruteforce"]:
+            if method == "mc":
+                iterator = range(niter)
+                self._iteration = self._rng
+            elif method == "bruteforce":
+                iterator = self._brute_generator()
+                self._iteration = self._brute
+        else:
+            raise Exception("Iterator not implemented. Please choose mc or bruteforce.")
         if headless is False:
             iterator = tqdm(iterator)
         # Distribute and run the quantum number testing

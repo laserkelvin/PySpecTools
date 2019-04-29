@@ -82,6 +82,29 @@ def run_spfit(filename):
         raise OSError("SPFIT failed to run.")
 
 
+def list_chunks(target, n):
+    """
+    Split a list into a number of chunks with length n. If there are not enough elements,
+    the last chunk will finish the remaining elements.
+
+    Parameters
+    ----------
+    target: list
+        List to split into chunks
+    n: int
+        Number of elements per chunk
+
+    Returns
+    -------
+    split_list: list
+        Nested list of chunks
+    """
+    split_list = [
+        target[i:i+n] for i in range(0, len(target), n)
+    ]
+    return split_list
+
+
 def pickett_molecule(json_filepath=None):
     # Provide a JSON file with all the Pickett settings, and generate an
     # instance of the molecule class
