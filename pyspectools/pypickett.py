@@ -7,7 +7,7 @@ import shutil
 import tempfile
 from copy import deepcopy
 from typing import List
-from itertools import product
+from itertools import product, combinations_with_replacement
 
 import numpy as np
 import pandas as pd
@@ -743,11 +743,11 @@ class Transition:
         trans = cls(frequency=frequency, n_numbers=n_numbers, uncertainty=uncertainty)
         lower_state = qnos[:half]
         upper_state = qnos[half:]
-        cls.quantum_numbers = [
+        trans.quantum_numbers = [
             [str(lower) for lower in lower_state],
             [str(upper) for upper in upper_state]
         ]
-        return cls
+        return trans
 
     def __post_init__(self):
         if self.max_values is None:
@@ -763,6 +763,28 @@ class Transition:
         if len(self.j) != 0:
             for qno, j in zip(self.lower_state, self.j):
                 qno.j = j
+
+    def __repr__(self):
+        return str(self)
+
+    def __str__(self):
+        """
+        Method to format the quantum numbers into lin file format.
+
+        Returns
+        -------
+        line: str
+            Upper and lower state quantum numbers formatted into lin
+            format.
+        """
+        line = "  {upper}  {lower}                 {frequency}     {uncertainty}   1."
+        format_dict = {
+            "upper": "  ".join(self.quantum_numbers[1]),
+            "lower": "  ".join(self.quantum_numbers[0]),
+            "frequency": self.frequency,
+            "uncertainty": self.uncertainty
+        }
+        return line.format(**format_dict)
 
     def random_quantum_numbers(self):
         """
@@ -782,25 +804,6 @@ class Transition:
             [str(qno) for qno in self.upper_state]
         ]
         return self.quantum_numbers
-
-    def __str__(self):
-        """
-        Method to format the quantum numbers into lin file format.
-
-        Returns
-        -------
-        line: str
-            Upper and lower state quantum numbers formatted into lin
-            format.
-        """
-        line = "  {upper} {lower}                 {frequency}     {uncertainty}   1."
-        format_dict = {
-            "upper": "  ".join(self.quantum_numbers[1]),
-            "lower": "  ".join(self.quantum_numbers[0]),
-            "frequency": self.frequency,
-            "uncertainty": self.uncertainty
-        }
-        return line.format(**format_dict)
 
 
 @dataclass
@@ -892,8 +895,8 @@ class AutoFitSession:
         # This bit of code is probably not very pythonic. The general gist of it is to generate
         # a nested list since for every transition (number of frequencies), we want to systematically
         # test every possible combination of quantum numbers.
-        possible = [list(range(val + 1)) for val in self.max_values * 2] * len(self.frequencies)
-        return enumerate(product(*possible))
+        possible = [list(range(val + 1)) for val in self.max_values] * 2
+        return enumerate(combinations_with_replacement(product(*possible), len(self.frequencies)))
 
     def _brute(self, iteration):
         """
@@ -911,14 +914,13 @@ class AutoFitSession:
         transitions = [
             Transition.from_list(
                 frequency,
-                qnos,
+                qno,
                 uncertainty
-            ) for frequency, uncertainty in zip(self.frequencies, self.uncertainties)
+            ) for frequency, uncertainty, qno in zip(self.frequencies, self.uncertainties, qnos)
         ]
         # Call SPFIT and return the fit RMS
         index, rms = self._check_spfit(index, transitions)
         return index, rms
-
 
     def _rng(self, index):
         """
@@ -978,12 +980,12 @@ class AutoFitSession:
             os.chdir(path)
             with open(self.filename + ".lin", "w+") as write_file:
                 write_file.write(lines)
+            shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "lin/{}.lin".format(index)))
             with open(self.filename + ".par", "w+") as write_file:
                 write_file.writelines(self.par)
             # Run SPFIT
             routines.run_spfit(self.filename)
             shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
-            shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "lin/{}.lin".format(index)))
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
             # Copy some of the data back over
