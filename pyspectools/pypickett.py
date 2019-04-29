@@ -902,7 +902,7 @@ class AutoFitSession:
             # Run SPFIT
             routines.run_spfit(self.filename)
             shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
-            shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "fits/{}.lin".format(index)))
+            shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "lin/{}.lin".format(index)))
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
             # Copy some of the data back over
