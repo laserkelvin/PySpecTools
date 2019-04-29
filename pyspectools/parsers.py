@@ -337,8 +337,12 @@ def parse_fit(filepath):
                     entry_index += 1
                     pass
                 else:
-                    # Read in the error
-                    line_dict[entry_index] = float(entry[-3])
+                    # Read in the line information
+                    line_dict[entry_index] = {
+                        "o-c": float(entry[-3]),
+                        "qnos": entry[1:-5],
+                        "frequency": entry[-5]
+                    }
                     entry_index += 1
         if "NEW PARAMETER" in line:
             stop_flag = False

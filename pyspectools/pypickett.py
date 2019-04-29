@@ -828,7 +828,7 @@ class AutoFitSession:
             self.par = read_file.readlines()
         self.wd = os.getcwd()
         # Setup filestructure
-        for folder in ["fits", "yml"]:
+        for folder in ["fits", "yml", "lin"]:
             if os.path.exists(folder) is False:
                 os.mkdir(folder)
         if self.method not in ["mc", "brute"]:
@@ -902,6 +902,7 @@ class AutoFitSession:
             # Run SPFIT
             routines.run_spfit(self.filename)
             shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
+            shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "fits/{}.lin".format(index)))
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
             # Copy some of the data back over
@@ -944,6 +945,29 @@ class AutoFitSession:
         )
         self.results = results
         return results
+
+    def filter(self, nlines=1):
+        """
+        Reads in all of the YAML parsed fits, and reduces the number of possible fits
+        a person has to look through.
+
+        Parameters
+        ----------
+        nlines: int
+            Integer value for the minimum number of lines seen in the observed - calc. parse
+
+        Returns
+        -------
+        viable: dict
+            Dictionary with indexes corresponding to the fit number, and values are the parsed
+            fit dictionaries
+        """
+        fits = {index: routines.read_yaml(file) for index, file in enumerate(glob("yml/*.yml"))}
+        # Find all fits where the number of actual fitted lines exceeds nlines
+        viable = {
+            index: fit for index, fit in fits.items() if len(fit["o-c"]) >= nlines
+        }
+        return viable
 
     def save(self, filepath=None):
         """
