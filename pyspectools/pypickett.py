@@ -980,16 +980,17 @@ class AutoFitSession:
             os.chdir(path)
             with open(self.filename + ".lin", "w+") as write_file:
                 write_file.write(lines)
-            shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "lin/{}.lin".format(index)))
             with open(self.filename + ".par", "w+") as write_file:
                 write_file.writelines(self.par)
             # Run SPFIT
             routines.run_spfit(self.filename)
-            shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
-            # Copy some of the data back over
-            routines.dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
+            if fit_dict["rms"] != 0.:
+                # Copy some of the data back over
+                routines.dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
+                shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
+                shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "lin/{}.lin".format(index)))
             # Not sure if this is necessary, but just in case
             os.chdir(self.wd)
         return index, fit_dict["rms"]
