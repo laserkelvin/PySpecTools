@@ -18,6 +18,8 @@ from scipy import constants
 kbcm = constants.value("Boltzmann constant in inverse meters per kelvin") / 100.
 avo = constants.Avogadro
 eha = constants.value("Hartree energy")
+haev = constants.value("Hartree energy in eV")
+hak = constants.value("hartree-kelvin relationship")
 harm = constants.value("hartree-inverse meter relationship")
 jm = constants.value("joule-inverse meter relationship")
 
@@ -115,6 +117,39 @@ def hartree2kjmol(hartree):
     :return: converted value in kJ/mol
     """
     return hartree * (eha * avo / 1000.)
+
+
+def hartree2eV(hartree):
+    """
+    Convert Hartrees to eV.
+    Parameters
+    ----------
+    hartree: float
+        Electronic energy in Hartrees
+
+    Returns
+    -------
+    eV: float
+        Corresponding value in eV
+    """
+    return haev * hartree
+
+
+def hartree2K(hartree):
+    """
+    Convert Hartrees to temperature in Kelvin.
+
+    Parameters
+    ----------
+    hartree: float
+        Electronic energy in Hartrees
+
+    Returns
+    -------
+    kelvin: float
+        Corresponding value in Kelvin
+    """
+    return hartree * hak
 
 
 def wavenumber2kjmol(wavenumber):
