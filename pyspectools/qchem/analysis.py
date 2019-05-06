@@ -6,11 +6,14 @@ from glob import glob
 from copy import deepcopy
 import shutil
 import tempfile
+import warnings
 
 import numpy as np
 from matplotlib import pyplot as plt
+import periodictable
+from uncertainties import ufloat
 
-from pyspectools.qchem import utils, parsers
+from pyspectools.qchem import utils, parsers, multiwell
 from pyspectools import units, routines
 from pyspectools import figurefactory as ff
 
@@ -22,13 +25,16 @@ class CalculationSet:
     that together yield a closed set of thermochemistry, or a set of calculations that sum up to a single
     composite value.
     """
-    paths: List = field(default_factory=list)
+    paths: List[str] = field(default_factory=list)
     species: List = field(default_factory=list)
     total_energy: float = 0.
+    atoms: str = ""
     energies: np.array = np.array([])
     converted_energies: np.array = np.array([])
     relative_energies: np.array = np.array([])
     calculations: Dict = field(default_factory=dict)
+    products: List = field(default_factory=list)
+    reactants: List = field(default_factory=list)
 
     @classmethod
     def from_folder(cls, path, extension="log", program="g16"):
@@ -56,23 +62,51 @@ class CalculationSet:
         return calc_set
 
     def __post_init__(self):
-        for folder in ["png"]:
+        for folder in ["png", "outputs"]:
             try:
                 os.mkdir(folder)
             except FileExistsError:
                 pass
 
     def __add__(self, other):
+        if self != other:
+            warnings.warn(
+                "Atomic composition between the two sets are not the same! {} != {}".format(
+                    self._eval_formula(),
+                    other._eval_formula()
+                )
+            )
         return self.total_energy - other.total_energy
 
     def __sub__(self, other):
+        if self != other:
+            warnings.warn(
+                "Atomic composition between the two sets are not the same! {} != {}".format(
+                    self.eval_formula(),
+                    other.eval_formula()
+                )
+            )
         return self.total_energy - other.total_energy
 
-    def compare_energies(self, level="composite", conversion=None):
+    def __eq__(self, other):
+        current_formula = self.eval_formula()
+        other_formula = other.eval_formula()
+        return current_formula == other_formula
+
+    def eval_formula(self):
+        current_formula = "".join([calc.formula for index, calc in self.calculations.items()])
+        current_formula = periodictable.formula(current_formula).atoms
+        return current_formula
+
+    def compare_energies(self, index=None, level="composite", conversion=None):
         # If there are no energies set up yet, try to get them from the individual calculations
         if len(self.energies) == 0:
             self.energies = np.array([calc.__getattribute__(level) for index, calc in self.calculations.items()])
-        self.relative_energies = self.energies - self.energies.min()
+        if index is None:
+            comp = min(self.energies)
+        else:
+            comp = self.energies[index]
+        self.relative_energies = self.energies - comp
         if conversion:
             if conversion not in ["wavenumber", "kJ/mol", "eV", "K"]:
                 raise Exception("{} unit not implemented.".format(conversion))
@@ -124,16 +158,20 @@ class CalculationSet:
         """
         _ = [calc.to_png() for index, calc in self.calculations.items()]
         png_names = ["png/{}.png".format(calc.filename) for index, calc in self.calculations.items()]
+        names = [calc.filename for index, calc in self.calculations.items()]
         images = [plt.imread(file) for file in png_names]
-        nrows = int(len(png_names) / 3)
+        nrows = int(len(png_names) / 3) + 1
         ncols = 3
         fig, axarray = plt.subplots(nrows=nrows, ncols=ncols, **kwargs)
-        for index, pkg in enumerate(zip(images, axarray.reshape(-1))):
-            image, ax = pkg
+        for index, pkg in enumerate(zip(images, names, axarray.reshape(-1))):
+            image, name, ax = pkg
             ax.imshow(image)
-            ax.set_title = "Molecule index {}".format(index)
+            ax.set_title("{} - {}".format(name, index))
+        for ax in axarray.reshape(-1):
             for spine in ["top", "right", "bottom", "left"]:
                 ax.spines[spine].set_visible(False)
+            ax.set_xticks([])
+            ax.set_yticks([])
         return fig, axarray
 
     def copy_species(self, indexes):
@@ -150,15 +188,17 @@ class CalculationSet:
         new_instance
             A deepcopy of this CalculationSet with only the specified species
         """
-        new_instance = deepcopy(self)
+        new_instance = CalculationSet()
         new_instance.calculations = {
-            index: calc for index, calc in new_instance.calculations if index in indexes
+            index: calc for index, calc in self.calculations.items() if index in indexes
         }
+        new_smi = [calc.smi for index, calc in self.calculations.items() if index in indexes]
+        new_instance.species = [smi for smi in self.species if smi in new_smi]
         return new_instance
 
     def create_pes(self, width=5., x=None, **kwargs):
         """
-        Create a 
+        Create a
         Parameters
         ----------
         width
@@ -183,6 +223,17 @@ class CalculationSet:
         ax.plot(pes_x, pes_y)
 
         return fig, ax
+
+    def save(self, filepath):
+        """
+        Dump the current CalculationSet to disk as a pickle file.
+
+        Parameters
+        ----------
+        filepath: str
+            Path to the file you wish to save to.
+        """
+        routines.save_obj(self, filepath)
 
 
 @dataclass
@@ -237,6 +288,7 @@ class CalculationResult:
     opt_delta: float = 0.0
     type: str = "scf"
     filename: str = ""
+    image_path: str = ""
 
     @classmethod
     def from_yml(cls, filepath):
@@ -323,12 +375,7 @@ class CalculationResult:
         """
         Generate a PNG file by dumping the SMI to a temporary folder, converting, and copying back to the current
         working directory using obabel.
-        Returns
-        -------
-
         """
-        if shutil.which("obabel") is None:
-            raise Exception("obabel executable not found in path.")
         curdir = os.getcwd()
         with tempfile.TemporaryDirectory() as path:
             os.chdir(path)
@@ -337,3 +384,32 @@ class CalculationResult:
             utils.obabel_png("{}.smi".format(self.filename), "smi")
             shutil.copy2("{}.png".format(self.filename), os.path.join(curdir, "png/{}.png".format(self.filename)))
             os.chdir(curdir)
+
+    def to_xyz(self):
+        if self.program == "Gaussian":
+            format = "g09"
+        else:
+            format = "smi"
+        utils.obabel_xyz(self.filename, format=format)
+
+    def to_multiwell(self, state="reac", comment="", delh=0.):
+        """
+        Convert the parsed results into Multiwell format. Wraps the function
+        from the `multiwell` module, `format_multiwell`.
+
+        Parameters
+        ----------
+        state: str, optional
+            Specify which part of the reaction this structure is.
+        comment: str, optional
+            Comment line for the structure
+        delh: float, optional
+            The 0 K heat of formation, or relative energy of this point in the units
+            specified in the multiwell input file (usually kJ/mol)
+
+        Returns
+        -------
+        mw_str: str
+            String containing the formatted output
+        """
+        return multiwell.format_multiwell(self.__dict__, state, comment, delh)

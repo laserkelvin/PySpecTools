@@ -179,6 +179,8 @@ def parse_g16(filepath):
             else:
                 atom_dict[element] += 1
         molecule_string = "".join(["{}{}".format(key, value) for key, value in atom_dict.items()])
+        molecule_string = molecule_string.replace("1", "")
+        # Delete the 1s, because they're not normal
         data["formula"] = molecule_string
     if shutil.which("obabel"):
         data["smi"] = utils.obabel_smi(filepath, format="g09")
