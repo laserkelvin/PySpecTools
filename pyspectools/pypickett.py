@@ -994,7 +994,7 @@ class AutoFitSession:
             # If the RMS is improved upon, and there is more than one line fit
             if (fit_dict["rms"] < self.rms) and (len(fit_dict["o-c"]) >= self.nfit):
                 with open("{}.par".format(self.filename), "r") as read_file:
-                    self.par = read_file.read_lines()
+                    self.par = read_file.readlines()
                 self.nfit = len(fit_dict["o-c"])
                 self.rms = fit_dict["rms"]
                 update = True
