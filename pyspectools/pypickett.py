@@ -992,7 +992,7 @@ class AutoFitSession:
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
             # If the RMS is improved upon, and there is more than one line fit
-            if (fit_dict["rms"] < self.rms) and (len(fit_dict["o-c"]) >= self.nfit):
+            if (fit_dict["rms"] > 1.) and (fit_dict["rms"] < self.rms) and (len(fit_dict["o-c"]) >= self.nfit):
                 with open("{}.par".format(self.filename), "r") as read_file:
                     self.par = read_file.readlines()
                 self.nfit = len(fit_dict["o-c"])
