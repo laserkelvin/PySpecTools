@@ -817,6 +817,8 @@ class AutoFitSession:
     j: List = field(default_factory=list)
     method: str = "mc"
     rms_target: float = 1.
+    rms: float = 1e9
+    nfit: int = 0
     niter: int = 10000
     nprocesses: int = 1
     verbose: int = 0
@@ -868,7 +870,7 @@ class AutoFitSession:
             self.par = read_file.readlines()
         self.wd = os.getcwd()
         # Setup filestructure
-        for folder in ["fits", "yml", "lin"]:
+        for folder in ["fits", "yml", "lin", "success"]:
             if os.path.exists(folder) is False:
                 os.mkdir(folder)
         if self.method not in ["mc", "bruteforce"]:
@@ -978,6 +980,7 @@ class AutoFitSession:
 
         """
         lines = "\n".join([str(transition) for transition in transitions])
+        update = False
         with tempfile.TemporaryDirectory() as path:
             os.chdir(path)
             with open(self.filename + ".lin", "w+") as write_file:
@@ -988,7 +991,15 @@ class AutoFitSession:
             routines.run_spfit(self.filename)
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
-            if fit_dict["rms"] != 0. or self.debug is True:
+            # If the RMS is improved upon, and there is more than one line fit
+            if (fit_dict["rms"] < self.rms) and (len(fit_dict["o-c"]) >= self.nfit):
+                with open("{}.par".format(self.filename), "r") as read_file:
+                    self.par = read_file.read_lines()
+                self.nfit = len(fit_dict["o-c"])
+                self.rms = fit_dict["rms"]
+                update = True
+            # Dump files only if debug mode is on, or we had a successful iteration
+            if self.debug is True or update is True:
                 # Copy some of the data back over
                 routines.dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
                 shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
