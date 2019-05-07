@@ -823,6 +823,7 @@ class AutoFitSession:
     nprocesses: int = 1
     verbose: int = 0
     debug: bool = False
+    clean: bool = True
 
     @classmethod
     def from_yml(cls, filepath):
@@ -869,8 +870,14 @@ class AutoFitSession:
         with open(self.filename + ".par") as read_file:
             self.par = read_file.readlines()
         self.wd = os.getcwd()
+        if self.clean is True:
+            for dir in ["fits", "yml", "lin"]:
+                try:
+                    os.rmdir(dir)
+                except FileNotFoundError:
+                    pass
         # Setup filestructure
-        for folder in ["fits", "yml", "lin", "success"]:
+        for folder in ["fits", "yml", "lin"]:
             if os.path.exists(folder) is False:
                 os.mkdir(folder)
         if self.method not in ["mc", "bruteforce"]:
