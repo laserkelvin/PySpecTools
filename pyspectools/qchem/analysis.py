@@ -275,6 +275,7 @@ class CalculationResult:
     rel: float = 0.0
     coords: str = ""
     zpe: float = 0.0
+    anharm_zpe: float = 0.0
     elec_zpe: float = 0.0
     composite: float = 0.0
     ts: bool = False
@@ -284,7 +285,9 @@ class CalculationResult:
     anharm_freq: List[float] = field(default_factory=list)
     anharm_int: List[float] = field(default_factory=list)
     anharm_dipole: List[float] = field(default_factory=list)
+    thermo_corrections: Dict = field(default_factory=dict)
     alphas: List[float] = field(default_factory=list)
+    G3: Dict = field(default_factory=dict)
     opt_delta: float = 0.0
     type: str = "scf"
     filename: str = ""

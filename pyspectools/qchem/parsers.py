@@ -35,6 +35,7 @@ def parse_g16(filepath):
 
     """
     data = dict()
+    g3 = dict()
     harm_freq = list()
     harm_int = list()
     data["program"] = "Gaussian"
@@ -164,12 +165,30 @@ def parse_g16(filepath):
                 inten = line.split()[3:]
                 inten = [float(value) for value in inten]
                 harm_int.extend(inten)
+            if "Total Anharm  " in line:
+                data["anharm_zpe"] = float(line.split()[5])
             if "imaginary frequencies ignored" in line:
                 data["ts"] = True
             if "Predicted change in Energy=" in line:
                 data["opt_delta"] = float(line.replace("D", "E").split("=")[-1])
+            # This section parses out the G3 contributions
+            if "E(QCISD(T" in line:
+                split_line = line.split()
+                g3["QCISD(T)"] = float(split_line[1])
+                g3["Empirical"] = float(split_line[-1])
+            if "DE(Plus)" in line:
+                split_line = line.split()
+                g3["DE(Plus)"] = float(split_line[1])
+                g3["DE(2df)"] = float(split_line[-1])
+            if "Delta-G3" in line:
+                split_line = line.split()
+                g3["G3-contribution"] = float(split_line[1])
             if "G3(0 K)" in line:
                 data["composite"] = float(line.split()[2])
+                g3["G3-energy"] = float(line.split()[-1])
+            if "G3 Enthalpy" in line:
+                g3["G3-enthalpy"] = float(line.split()[2])
+                g3["G3-entropy"] = float(line.split()[-1])
     if "coords" in data:
         atom_dict = dict()
         for coord in data["coords"]:
@@ -187,6 +206,7 @@ def parse_g16(filepath):
     data["filename"] = filename
     data["harm_freq"] = harm_freq
     data["harm_int"] = harm_int
+    data["G3"] = g3
     return data
 
 

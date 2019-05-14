@@ -179,6 +179,42 @@ def wavenumber2T(wavenumber):
     return wavenumber / kbcm
 
 
+def thermal_corrections(frequencies, T, linear=True, hartree=True):
+    """
+    Calculates the thermal contributions from nuclear motion, in the same way as
+    Gaussian does.
+    Parameters
+    ----------
+    frequencies: list of floats or Numpy 1-D array
+        Iterable of vibrational frequencies in wavenumbers. Can be Harmonic or Anharmonic fundamentals.
+    T: float
+        Value of the temperature to calculate thermal corrections at
+    linear: bool, optional
+        Specifies whether molecule is linear or not. Affects the rotational contribution.
+    hartree: bool, optional
+        If True, converts the contribution into Hartrees. Otherwise, in units of Kelvin
+
+    Returns
+    -------
+    thermal: float
+        Total thermal contribution at a given temperature
+    """
+    translation = units.kbcm * T
+    rotation = units.kbcm * T
+    if linear is False:
+        rotation *= 3. / 2.
+    # Convert frequencies into vibrational temperatures
+    frequencies = np.asarray(frequencies)
+    frequencies /= units.kbcm
+    vibration = units.kbcm * np.sum(
+        frequencies * (0.5 * (1. / (np.exp(frequencies / T) - 1.)))
+    )
+    thermal = translation + rotation + vibration
+    if hartree is True:
+        thermal *= 1. / units.hartree2wavenumber(1.)
+    return thermal
+
+
 """ 
     Astronomy units 
 
