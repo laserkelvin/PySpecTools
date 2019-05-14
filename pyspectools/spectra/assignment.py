@@ -424,6 +424,13 @@ class AssignmentSession:
         session = cls(spec_df, experiment, composition, temperature, velocity, freq_col, int_col, verbose, **kwargs)
         return session
 
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        for key, handler in self.log_handlers.items():
+            handler.close()
+
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0, velocity=0.,
             freq_col="Frequency", int_col="Intensity", verbose=True, **kwargs
@@ -597,7 +604,7 @@ class AssignmentSession:
         """
         if region is None:
             # Perform rudimentary peak detection
-            threshold = 0.01 * self.data[self.int_col].max()
+            threshold = 0.2 * self.data[self.int_col].max()
             peaks_df = analysis.peak_find(
                 self.data,
                 freq_col=self.freq_col,
@@ -608,6 +615,7 @@ class AssignmentSession:
             index = np.argmax(np.diff(peaks_df["Frequency"]))
             # Define region as the largest gap
             region = peaks_df.iloc[index:index+2]["Frequency"].values
+            region = np.sort(region)
         self.logger.info("Noise region defined as {} to {}.".format(*region))
         noise_df = self.data.loc[
             self.data[self.freq_col].between(*region)
@@ -697,7 +705,7 @@ class AssignmentSession:
         total_num = len(self.assignments) + len(self.ulines)
         self.logger.info("So far, there are {} line entries in this session.".format(total_num))
         # Set up session information to be passed in the U-line
-        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline"]
+        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header"]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
