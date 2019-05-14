@@ -31,6 +31,7 @@ class PostInstallCommand(install):
                 os.path.expanduser("~") + "/.pyspectools/templates"
             )
             # Copy over matplotlib stylesheets
+
             for sheet in os.listdir("./pyspectools/mpl_stylesheets"):
                 shutil.copy2(
                     sheet,
@@ -70,7 +71,7 @@ class PostInstallCommand(install):
 
 setup(
     name="pyspectools",
-    version="3.4.5",
+    version="3.5.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),

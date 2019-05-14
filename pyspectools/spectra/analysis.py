@@ -535,7 +535,7 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
                 "RMS": cluster_data[0]
                 }
             data[index].update(fit_values)
-    return data, ap_obj
+    return data, progression_df, ap_obj
 
 
 def find_series(combo, frequencies, search=0.005):
@@ -683,7 +683,7 @@ def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
         if hasattr(obj, "peaks") is False:
             raise Exception("{} has no peaks!".format(obj.__name__))
 
-    ufreqs = np.array([uline.frequency for uline in on_exp.ulines])
+    ufreqs = np.array([uline.frequency for index, uline in on_exp.ulines.items()])
     candidates = dict()
     for _, row in off_exp.peaks.iterrows():
         min_freq = row[freq_col] - thres

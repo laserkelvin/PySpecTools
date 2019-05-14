@@ -24,7 +24,7 @@ import pandas as pd
 from scipy.constants import Avogadro
 
 # Additional modules written by yours truly
-from pyspectools.qchem import parse_cfour as pc
+from pyspectools.qchem import parsers
 from pyspectools.qchem import extrapolation as ep
 from pyspectools import routines
 
@@ -330,7 +330,7 @@ def read_heat(dir_path):
             try:
                 logname = glob(calctype + "/*.log")[0]
                 logger.info("Parsing " + logname)
-                results[calc_name] = pc(logname)
+                results[calc_name] = parsers.parse_cfour(logname)
             except IndexError:
                 logger.info("Trouble parsing " + calctype)
         else:
@@ -342,7 +342,7 @@ def read_heat(dir_path):
             for basis in calc_list:
                 # Get basis name from folder
                 name = basis.split("/")[-2]
-                results[calc_name + "-" + name] = pc(basis)
+                results[calc_name + "-" + name] = parsers.parse_cfour(basis)
     logger.info("Done reading!")
     logger.info("Dumping results to " + calcID + "-parsed.yml")
     routines.dump_yaml("yml/" + calcID + "-parsed.yml", results)

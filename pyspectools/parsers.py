@@ -360,7 +360,9 @@ def parse_fit(filepath):
                 else:
                     stop_flag = True
         if "MICROWAVE RMS" in line:
-            fit_dict["rms"] = float(line.split()[3])
+            fit_dict["microwave_rms"] = float(line.split()[3])
+        if "NEW RMS ERROR" in line:
+            fit_dict["rms"] = float(line.split()[-2])
     fit_dict["o-c"] = line_dict
     fit_dict["parameters"] = param_dict
     return fit_dict

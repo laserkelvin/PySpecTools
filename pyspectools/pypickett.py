@@ -6,7 +6,7 @@ import pickle
 import shutil
 import tempfile
 from copy import deepcopy
-from typing import List
+from typing import List, Dict
 from itertools import product, combinations_with_replacement
 
 import numpy as np
@@ -652,15 +652,17 @@ class QuantumNumber:
     """
     value: int
     upper: bool = False
+    frozen: bool = False
     j: bool = True
-    max: int = 10
-    min: int = 0
+    center: int = 1
+    width: int = 1
+    delta: None = None
 
     def __post_init__(self):
-        if self.min is None:
-            self.min = 0
-        if self.max is None:
-            self.max = 10
+        if self.center is None:
+            self.center = 1
+        if self.width is None:
+            self.width = 1
 
     def __repr__(self):
         return str(self.value)
@@ -672,13 +674,9 @@ class QuantumNumber:
         """
         Generate a random value for the current quantum number.
         """
-        self.value = np.random.randint(
-            self.min,
-            self.max,
-            1
-        )[0]
+        self.value = int(np.random.normal(self.center, self.width, 1))
 
-    def spawn_upper(self, min=-3, max=3):
+    def spawn_upper(self, center=0, width=1):
         """
         Create a new QuantumNumber instance for the corresponding upper state.
         Will also shift the quantum number to a new value, +/-2,1,0.
@@ -689,16 +687,16 @@ class QuantumNumber:
             A deep copy of the current QuantumNumber instance, but also shifts the
             quantum number by a random integer.
         """
-        # Restrict molecular parameters to +1 or 0 in upper state
-        if self.j:
-            max = 2
-            min = 0
-        delta = np.random.randint(min, max, 1)[0]
+        # If the user specified did not give a value of delta to enforce, generate it
+        if self.delta is None:
+            delta = int(np.random.normal(center, width, 1))
+        else:
+            delta = self.delta
         new_qno = deepcopy(self)
-        new_qno.value += delta
-        # Can't have negative quantum numbers
-        if new_qno.value < 0:
+        if new_qno.value + delta < 0:
             new_qno.value = 0
+        else:
+            new_qno.value += delta
         new_qno.upper = True
         return new_qno
 
@@ -711,8 +709,9 @@ class Transition:
     j: List = field(default_factory=list)
     lower_state: List = field(default_factory=list)
     upper_state: List = field(default_factory=list)
-    max_values: List = field(default_factory=list)
-    min_values: List = field(default_factory=list)
+    centers: List = field(default_factory=list)
+    widths: List = field(default_factory=list)
+    deltas: List = field(default_factory=list)
     uncertainty: float = 0.005
 
     @classmethod
@@ -750,15 +749,15 @@ class Transition:
         return trans
 
     def __post_init__(self):
-        if self.max_values is None:
-            self.max_values = [10 for i in range(self.n_numbers)]
-        if self.min_values is None:
-            self.min_values = [0 for i in range(self.n_numbers)]
+        if self.centers is None:
+            self.centers = [1 for i in range(self.n_numbers)]
+        if self.widths is None:
+            self.widths = [1 for i in range(self.n_numbers)]
         if self.uncertainty is None:
             self.uncertainty = 0.005
         # Initialize the quantum numbers
         self.lower_state = [
-            QuantumNumber(0, min=minval, max=maxval) for minval, maxval in zip(self.min_values, self.max_values)
+            QuantumNumber(0, center=center, width=width) for center, width in zip(self.centers, self.widths)
         ]
         if len(self.j) != 0:
             for qno, j in zip(self.lower_state, self.j):
@@ -812,14 +811,19 @@ class AutoFitSession:
     n_numbers: int
     frequencies: List = field(default_factory=list)
     uncertainties: List = field(default_factory=list)
-    max_values: List = field(default_factory=list)
-    min_values: List = field(default_factory=list)
+    centers: List = field(default_factory=list)
+    widths: List = field(default_factory=list)
+    deltas: List = field(default_factory=list)
     j: List = field(default_factory=list)
     method: str = "mc"
     rms_target: float = 1.
+    rms: float = 1e9
+    nfit: int = 0
     niter: int = 10000
     nprocesses: int = 1
     verbose: int = 0
+    debug: bool = False
+    clean: bool = True
 
     @classmethod
     def from_yml(cls, filepath):
@@ -866,6 +870,12 @@ class AutoFitSession:
         with open(self.filename + ".par") as read_file:
             self.par = read_file.readlines()
         self.wd = os.getcwd()
+        if self.clean is True:
+            for dir in ["fits", "yml", "lin"]:
+                try:
+                    os.rmdir(dir)
+                except FileNotFoundError:
+                    pass
         # Setup filestructure
         for folder in ["fits", "yml", "lin"]:
             if os.path.exists(folder) is False:
@@ -953,8 +963,9 @@ class AutoFitSession:
                 frequency,
                 uncertainty=uncertainty,
                 n_numbers=self.n_numbers,
-                max_values=self.max_values,
-                min_values=self.min_values,
+                centers=self.centers,
+                widths=self.widths,
+                deltas=self.deltas,
                 j=self.j
             ) for frequency, uncertainty in pkg
         ]
@@ -976,6 +987,7 @@ class AutoFitSession:
 
         """
         lines = "\n".join([str(transition) for transition in transitions])
+        update = False
         with tempfile.TemporaryDirectory() as path:
             os.chdir(path)
             with open(self.filename + ".lin", "w+") as write_file:
@@ -986,7 +998,16 @@ class AutoFitSession:
             routines.run_spfit(self.filename)
             # Parse the output
             fit_dict = parsers.parse_fit(self.filename + ".fit")
-            if fit_dict["rms"] != 0.:
+            # If the RMS is improved upon, and there is more than one line fit
+            if (fit_dict["rms"] < self.rms) or (len(fit_dict["o-c"]) >= self.nfit):
+                if fit_dict["rms"] > 0.001:
+                    with open("{}.par".format(self.filename), "r") as read_file:
+                        self.par = read_file.readlines()
+                    self.nfit = len(fit_dict["o-c"])
+                    self.rms = fit_dict["rms"]
+                    update = True
+            # Dump files only if debug mode is on, or we had a successful iteration
+            if self.debug is True or update is True:
                 # Copy some of the data back over
                 routines.dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
                 shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))

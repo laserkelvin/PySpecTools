@@ -32,7 +32,6 @@ axes.spines.bottom: True
 xtick.color: black
 ytick.color: black
 xtick.bottom: True
-xtick.major.width: 1
 ytick.left: True
 xtick.major.size: 4.
 xtick.major.width: 1.
