@@ -323,7 +323,7 @@ class Session:
     doppler : float
         Doppler width in km/s; default value is about 5 kHz at 15 GHz. Used for simulating lineshapes and
         for lineshape analysis.
-    rv : float
+    velocity : float
         Radial velocity of the source in km/s; used to offset the frequency spectrum
     freq_prox : float
         frequency cutoff for line assignments. If freq_abs attribute is True, this value is taken as the absolute value.
