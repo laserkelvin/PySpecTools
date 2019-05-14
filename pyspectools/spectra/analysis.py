@@ -535,7 +535,7 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
                 "RMS": cluster_data[0]
                 }
             data[index].update(fit_values)
-    return data, ap_obj
+    return data, progression_df, ap_obj
 
 
 def find_series(combo, frequencies, search=0.005):
