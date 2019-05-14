@@ -335,6 +335,8 @@ class Session:
         Baseline level of signal used for intensity calculations and peak detection
     noise_rms : float
         RMS of the noise used for intensity calculations and peak detection
+    noise_region : 2-tuple of floats
+        The frequency region used to define the noise floor.
     """
     experiment: int
     composition: List[str] = field(default_factory=list)
@@ -345,6 +347,7 @@ class Session:
     freq_abs: bool = True
     baseline: float = 0.
     noise_rms: float = 0.
+    noise_region: List[float] = field(default_factory=list)
 
     def __str__(self):
         form = "Experiment: {}, Composition: {}, Temperature: {} K".format(
@@ -611,20 +614,36 @@ class AssignmentSession:
                 int_col=self.int_col,
                 thres=threshold,
             )
-            # find largest gap in data
-            index = np.argmax(np.diff(peaks_df["Frequency"]))
-            # Define region as the largest gap
-            region = peaks_df.iloc[index:index+2]["Frequency"].values
-            region = np.sort(region)
-        self.logger.info("Noise region defined as {} to {}.".format(*region))
-        noise_df = self.data.loc[
-            self.data[self.freq_col].between(*region)
-        ]
+            if len(peaks_df) != 0:
+                if len(peaks_df) >= 2:
+                    # find largest gap in data
+                    index = np.argmax(np.diff(peaks_df["Frequency"]))
+                    # Define region as the largest gap
+                    region = peaks_df.iloc[index:index+2]["Frequency"].values
+                elif len(peaks_df) == 1:
+                    # in the event there's only one peak, take the stretch from the 30 MHz shift from peak to
+                    # the minimum of the spectrum
+                    region = [self.data[self.freq_col].min(), peaks_df.iloc[0]["Frequency"]]
+                # Make sure the frequencies are in ascending order
+                region = np.sort(region)
+                region[0] = region[0] + 30.
+                region[1] = region[1] - 30.
+                region = np.sort(region)
+                self.logger.info("Noise region defined as {} to {}.".format(*region))
+                noise_df = self.data.loc[
+                    self.data[self.freq_col].between(*region)
+                ]
+            elif len(peaks_df) == 0:
+                # If we haven't found any peaks, pick 100 random channels and determine the
+                # baseline from those values
+                noise_df = self.data.sample(100)
+                self.logger.warning("No obvious peaks detected; taking a statistical sample.")
         # Calculate statistics
         baseline = np.average(noise_df[self.int_col])
         rms = np.std(noise_df[self.int_col])
         self.session.noise_rms = rms
         self.session.baseline = baseline
+        self.session.noise_region = region
         self.logger.info("Baseline signal set to {}.".format(baseline))
         self.logger.info("Noise RMS set to {}.".format(rms))
         return baseline, rms
@@ -674,12 +693,15 @@ class AssignmentSession:
         self.logger.info("Found {} peaks in total.".format(len(peaks_df)))
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
-        # Generate U-lines
-        self.df2ulines(peaks_df, self.freq_col, self.int_col)
-        # Assign attribute
-        self.peaks = peaks_df
-        self.peaks.to_csv("./outputs/{}-peaks.csv".format(self.session.experiment), index=False)
-        return peaks_df
+        if len(peaks_df) != 0:
+            # Generate U-lines
+            self.df2ulines(peaks_df, self.freq_col, self.int_col)
+            # Assign attribute
+            self.peaks = peaks_df
+            self.peaks.to_csv("./outputs/{}-peaks.csv".format(self.session.experiment), index=False)
+            return peaks_df
+        else:
+            return None
 
     def df2ulines(self, dataframe, freq_col=None, int_col=None):
         """
@@ -705,7 +727,7 @@ class AssignmentSession:
         total_num = len(self.assignments) + len(self.ulines)
         self.logger.info("So far, there are {} line entries in this session.".format(total_num))
         # Set up session information to be passed in the U-line
-        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header"]
+        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header", "noise_region"]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
@@ -2193,28 +2215,22 @@ class AssignmentSession:
              harmonic_df - dataframe containing the viable transitions
         """
         uline_frequencies = [uline.frequency for uline in self.ulines.values()]
-
         progressions = analysis.harmonic_finder(
             uline_frequencies,
             search=search,
             low_B=low_B,
             high_B=high_B
         )
-
         fit_df = fitting.harmonic_fitter(progressions, J_thres=search)[0]
-
         self.harmonic_fits = fit_df
-
         # Run cluster analysis on the results
-        self.cluster_dict, self.cluster_obj = analysis.cluster_AP_analysis(
+        self.cluster_dict, self.progressions, self.cluster_obj = analysis.cluster_AP_analysis(
             self.harmonic_fits,
             sil_calc,
             refit,
             **kwargs
         )
-
         self.cluster_df = pd.DataFrame.from_dict(self.cluster_dict).T
-
         return self.cluster_df
 
     def search_species(self, formula=None, name=None, smiles=None):
