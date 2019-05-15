@@ -11,6 +11,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from collections import OrderedDict
 from copy import deepcopy
+from itertools import product
 import logging
 
 import numpy as np
@@ -1419,6 +1420,52 @@ class AssignmentSession:
         with open(filepath, "w+") as write_file:
             write_file.write(lines)
 
+    def create_uline_dr_batch(self, filepath=None, select=None, shots=25, dipole=1., gap=500.):
+        """
+        Create an FTB batch file for use in QtFTM to perform a DR experiment.
+        A list of selected frequencies can be used as the cavity frequencies, which will
+        subsequently be exhaustively DR'd against by all of the U-line frequencies
+        remaining in this experiment.
+
+        Parameters
+        ----------
+        filepath: str, optional
+            Path to save the ftb file to. Defaults to ftb/{}-dr.ftb
+        select: list of floats, optional
+            List of frequencies to use as cavity frequencies. Defaults to None, which
+            will just DR every frequency against each other.
+        shots: int, optional
+            Number of integration shots
+        dipole: float, optional
+            Dipole moment used for attenuation setting
+        gap: float, optional
+            Minimum frequency difference between cavity and DR frequency to actually perform
+            the experiment
+        """
+        if select is None:
+            cavity_freqs = [uline.frequency for index, uline in self.ulines]
+        else:
+            cavity_freqs = select
+        dr_freqs = [uline.frequency for index, uline in self.ulines]
+        lines = ""
+        for cindex, cavity in enumerate(cavity_freqs):
+            for dindex, dr in enumerate(dr_freqs):
+                if dindex == 0:
+                    lines += fa.generate_ftb_line(
+                        cavity,
+                        shots,
+                        **{"dipole": dipole, "drpower": -20}
+                    )
+                if np.abs(cavity - dr) >= gap:
+                    lines += fa.generate_ftb_line(
+                        cavity,
+                        shots,
+                        **{"dipole": dipole, "drpower": 13, "skiptune": True, "drfreq": dr}
+                    )
+        if filepath is None:
+            filepath = "ftb/{}-dr.ftb".format(self.session.experiment)
+        with open(filepath, "w+") as write_file:
+            write_file.write(lines)
 
     def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None, chi_thres=10.):
         """
