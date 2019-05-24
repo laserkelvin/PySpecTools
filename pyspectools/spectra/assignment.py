@@ -175,7 +175,6 @@ class Transition:
         self.S = I
         return I
 
-
     def calc_linestrength(self, Q, T=300.):
         """
         Convert intensity into linestrength.
@@ -203,7 +202,6 @@ class Transition:
         )
         self.intensity = intensity
         return intensity
-
 
     def to_file(self, filepath, format="yaml"):
         """
@@ -471,14 +469,11 @@ class AssignmentSession:
         self.data = exp_dataframe
         # Set the temperature threshold for transitions to be 3x the set value
         self.t_threshold = self.session.temperature * 3.
-        self.assignments = list()
-        self.ulines = OrderedDict()
         self.umols = list()
         self.verbose = verbose
         # Holds catalogs
         self.line_lists = dict()
         self._init_logging()
-        #self.umol_counter = self.umol_gen()
         # Default settings for columns
         if freq_col not in self.data.columns:
             self.freq_col = self.data.columns[0]
@@ -738,14 +733,16 @@ class AssignmentSession:
         # Set up session information to be passed in the U-line
         skip = [
             "temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header", "noise_region",
-            "composition"
+            "composition", "name"
         ]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
         # If the Peaks key has not been set up yet, we set it up now
         if "Peaks" not in self.line_lists:
-            self.line_lists["Peaks"] = LineList.from_peaks(dataframe, freq_col, int_col, **selected_session)
+            self.line_lists["Peaks"] = LineList.from_dataframe(
+                dataframe, name="Peaks", freq_col=freq_col, int_col=int_col, **selected_session
+            )
         # Otherwise, we'll just update the existing LineList
         else:
             transitions = Transition(
@@ -950,71 +947,6 @@ class AssignmentSession:
                     self.logger.info("No species known for {:,.4f}".format(frequency))
         self.logger.info("Splatalogue search finished.")
 
-    def process_lin(self, name, formula, linpath, auto=True, **kwargs):
-        """
-            Reads in a line file and sweeps through the U-line list.
-
-            Operationally, the same as the catalog and splatalogue methods,
-            but parses a line file instead. The differences are a lack of
-            filtering, since there is insufficient information in a lin
-            file.
-
-            Kwargs are passed to the `assign_line` function, which provides
-            the user with additional options for flagging an Transition
-            (e.g. public, etc.)
-
-            Parameters
-            ----------
-             name: str
-                Common name of the molecule
-             formula: str
-                Chemical formula of the molecule
-             linpath: str
-                Path to line file to be parsed
-             auto: bool, optional
-                Specify whether assignment is non-interactive.
-        """
-        old_nulines = len(self.ulines)
-        lin_df = parsers.parse_lin(linpath)
-
-        self.logger.info("Processing .lin file for {}, filepath: {}".format(name, linpath))
-        for uindex, uline in tqdm(list(self.ulines.items())):
-            sliced_catalog = self.calc_line_weighting(
-                uline.frequency,
-                lin_df,
-                prox=self.session.freq_prox,
-                abs=self.session.freq_abs
-            )
-            if sliced_catalog is not None:
-                if self.verbose is True:
-                    display(HTML(sliced_catalog.to_html()))
-                if auto is False:
-                    index = int(input("Please choose a candidate by index"))
-                elif auto is True:
-                    index = 0
-                if index in sliced_catalog.index:
-                    select_df = sliced_catalog.iloc[index]
-                    qnos = "".join(sliced_catalog["Quantum numbers"])
-                    assign_dict = {
-                        "name": name,
-                        "formula": formula,
-                        "index": uindex,
-                        "frequency": uline.frequency,
-                        "r_qnos": qnos,
-                        "catalog_frequency": select_df["Frequency"],
-                        "source": "Line file",
-                        "deviation": uline.frequency - select_df["Frequency"]
-                    }
-                    assign_dict.update(**kwargs)
-                    self._assign_line(**assign_dict)
-        ass_df = pd.DataFrame(
-            data=[ass_obj.__dict__ for ass_obj in self.assignments]
-        )
-        self.table = ass_df
-        self.logger.info("Prior number of ulines: {}".format(old_nulines))
-        self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
-        self.logger.info("Finished looking up lin file.")
-
     def calc_line_weighting(
             self, frequency, catalog_df, prox=0.00005,
             abs=True, freq_col="Frequency", int_col="Intensity"
@@ -1076,9 +1008,48 @@ class AssignmentSession:
             return None
 
     def process_linelist(self, name=None, formula=None, filepath=None, linelist=None, auto=True, thres=-10.,
-                         progressbar=True, tol=None, n_jobs=1, **kwargs,):
-        if linelist:
+                         progressbar=True, tol=None, **kwargs,):
+        """
+        General purpose function for performing line assignments using local catalog and line data. The two main ways
+        of running this function is to either provide a linelist or filepath argument. The type of linelist will be
+        checked to determine how the catalog data will be processed: if it's a string, it will be used to use
+
+
+        Parameters
+        ----------
+        name: str, optional
+            Name of the molecule being assigned. This should be specified when providing a new line list, which then
+            gets added to the experiment.
+        formula: str, optional
+            Chemical formula for the molecule being assigned. Should be added in conjuction with name.
+        filepath: str, optional
+            If a linelist is not given, a filepath can be specified corresponding to a .cat or .lin file, which will
+            be used to create a LineList object.
+        linelist: str or LineList, optional
+            Can be the name of a molecule or LineList object; the former is specified as a string which looks up the
+            experiment line_list attribute for an existing LineList object. If a LineList object is provided, the
+            function will use this directly.
+        auto: bool, optional
+            Specifies whether the assignment procedure works without intervention. If False, the user will be prompted
+            to provide a candidate index.
+        thres: float, optional
+            log Intensity cut off used to screen candidates.
+        progressbar: bool, optional
+            If True, a tqdm progressbar will indicate assignment progress.
+        tol: float, optional
+            Tolerance for making assignments. If None, the function will default to the session-wide values of
+            freq_abs and freq_prox to determine the tolerance.
+        kwargs
+            Kwargs are passed to the Transition object update when assignments are made.
+        """
+        # First case is if linelist is provided as a string corresponding to the key in the line_lists attribute
+        if type(linelist) == str:
             catalog = self.line_lists[linelist]
+        # In the event that linelist is an actual LineList object
+        elif type(linelist) == LineList:
+            catalog = linelist
+            if catalog.name not in self.line_lists:
+                self.line_lists[catalog.name] = catalog
         elif filepath:
             # If a catalog is specified, create a LineList object with this catalog. The parser is inferred from the
             # file extension.
@@ -1125,146 +1096,18 @@ class AssignmentSession:
                     chosen_idx = int(input("Please specify the candidate index.   "))
                     chosen = candidates[chosen_idx]
                 self.logger.info("Assigning {} to peak at {:.4f}.".format(chosen.name, transition.frequency))
+                # Create a copy of the Transition data from the LineList
                 assign_dict = deepcopy(chosen.__dict__)
+                # Remove the frequency and intensity keys because they're going to overwrite the peaks!
+                for key in ["frequency", "intensity"]:
+                    del assign_dict[key]
+                # Add any other additional kwargs
                 assign_dict.update(
                     **kwargs
                 )
                 self.line_lists["Peaks"].update_transition(index, **assign_dict)
                 nassigned += 1
         self.logger.info("Assigned {} new transitions to {}.".format(nassigned, name))
-
-    def process_catalog(self, name, formula, catalogpath=None, auto=True,
-                        thres=-10., progressbar=True, **kwargs):
-        """
-            Reads in a catalog (SPCAT) file and sweeps through the
-            U-line list for this experiment finding coincidences.
-
-            Similar to the splatalogue interface, lines are rejected
-            on state energy from the t_threshold attribute.
-
-            Each catalog entry will be weighted according to their
-            theoretical intensity and deviation from observation. In
-            automatic mode, the highest weighted transition is assigned.
-
-            Kwargs are passed to the `assign_line` function, which will
-            allow the user to provide additional flags/information for
-            the Transition object.
-
-            Parameters
-            ----------------
-             name : str
-                Corresponds to common name of molecule
-             formula : str
-                Chemical formula or stochiometry
-             catalogpath : str
-                Filepath to the SPCAT file
-             auto : bool, optional
-                If True, assignment does not require user input
-             thres : float
-                log10 of the theoretical intensity to use as a bottom limit
-        """
-        old_nulines = len(self.ulines)
-        self.logger.info("Processing catalog for {}, catalog path: {}".format(name, catalogpath))
-        catalog_df = parsers.parse_cat(
-            catalogpath,
-            self.data[self.freq_col].min(),
-            self.data[self.freq_col].max()
-        )
-        # Filter out the states with high energy
-        catalog_df = catalog_df.loc[
-            (catalog_df["Lower state energy"] <= self.t_threshold) &
-            (catalog_df["Intensity"] >= thres)
-            ]
-        catalog_df["Upper state energy"] = units.calc_E_upper(catalog_df["Frequency"], catalog_df["Lower state energy"])
-        # Loop over the uline list
-        iterate_list = list(self.ulines.items())
-        if progressbar is True:
-            iterate_list = tqdm(iterate_list)
-        for uindex, uline in iterate_list:
-            # 0.1% of frequency
-            sliced_catalog = self.calc_line_weighting(
-                uline.frequency, catalog_df, prox=self.session.freq_prox, abs=self.session.freq_abs
-            )
-            if sliced_catalog is not None:
-                if self.verbose is True:
-                    display(HTML(sliced_catalog.to_html()))
-                if auto is False:
-                    index = int(input("Please choose a candidate by index."))
-                elif auto is True:
-                    index = 0
-                if index in sliced_catalog.index:
-                    select_df = sliced_catalog.iloc[index]
-                    # Create an approximate quantum number string
-                    qnos = "N'={}, J'={}".format(*sliced_catalog[["N'", "J'"]].values[0])
-                    qnos += "N''={}, J''={}".format(*sliced_catalog[["N''", "J''"]].values[0])
-                    assign_dict = {
-                        "name": name,
-                        "formula": formula,
-                        "index": uindex,
-                        "frequency": uline.frequency,
-                        "lstate_energy": select_df["Lower state energy"],
-                        "ustate_energy": select_df["Upper state energy"],
-                        "r_qnos": qnos,
-                        "catalog_frequency": select_df["Frequency"],
-                        "catalog_intensity": select_df["Intensity"],
-                        "source": "Catalog",
-                        "deviation": uline.frequency - select_df["Frequency"]
-                    }
-                    # Pass whatever extra stuff
-                    assign_dict.update(**kwargs)
-                    # Use assign_line function to mark peak as assigned
-                    self._assign_line(**assign_dict)
-                else:
-                    raise IndexError("Invalid index chosen for assignment.")
-        # Update the internal table
-        ass_df = pd.DataFrame(
-            data=[ass_obj.__dict__ for ass_obj in self.assignments]
-        )
-        self.table = ass_df
-        self.logger.info("Prior number of ulines: {}".format(old_nulines))
-        self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
-        self.logger.info("Finished looking up catalog.")
-
-    def process_frequencies(self, frequencies, ids, molecule=None, **kwargs):
-        """
-        Function to mark frequencies to belong to a single molecule, and for book-keeping's
-        sake a list of ids are also required to indicate the original scan as the source
-        of the information.
-
-        Parameters
-        ----------
-         frequencies: list of frequencies associated with a molecule
-         ids: list of scan IDs
-         molecule: optional str specifying the name of the molecule
-        """
-        counter = 0
-        self.logger.info("Processing {} frequencies for molecule {}.".format(len(frequencies), molecule))
-        for freq, scan_id in zip(frequencies, ids):
-            uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
-            nearest, index = routines.find_nearest(uline_freqs, freq)
-            # Find the nearest U-line, and if it's sufficiently close then
-            # we assign it to this molecule. This is just to make sure that
-            # if we sneak in some random out-of-band frequency this we won't
-            # just assign it
-            if self.session.freq_abs is True:
-                thres = self.session.freq_prox
-            else:
-                thres = 0.1
-            if np.abs(nearest - freq) <= thres:
-                assign_dict = {
-                    "name": molecule,
-                    "source": "Scan-{}".format(scan_id),
-                    "catalog_frequency": freq,
-                    "index": index,
-                    "frequency": nearest
-                }
-                assign_dict.update(**kwargs)
-                self._assign_line(**assign_dict)
-                counter += 1
-            else:
-                self.logger.info("No U-line was sufficiently close.")
-                self.logger.info("Expected: {}, Nearest: {}".format(freq, nearest))
-        self.logger.info("Tentatively assigned {} lines to {}.".format(counter, molecule))
 
     def process_artifacts(self, frequencies):
         """
@@ -1352,60 +1195,6 @@ class AssignmentSession:
         self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
         self.logger.info("Finished processing local database.")
 
-    def _assign_line(self, name, index=None, frequency=None, **kwargs):
-        """ Mark a transition as assigned, and dump it into
-            the assignments list attribute.
-
-            The two methods for doing this is to supply either:
-                1. U-line index
-                2. U-line frequency
-            One way or the other, the U-line Transition object
-            will be updated to signify the new assignment.
-            Optional kwargs will also be passed to the Transition
-            object to update any other details.
-
-            Parameters
-            -----------------
-             name: str denoting the name of the molecule
-             index: optional arg specifying U-line index
-             frequency: optional float specifying frequency to assign
-             kwargs: passed to update Transition object
-        """
-        if index == frequency:
-            raise Exception("Index/Frequency not specified!")
-        ass_obj = None
-        if index:
-            # If an index is supplied, pull up from uline list
-            ass_obj = self.ulines[index]
-        elif frequency:
-            uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
-            nearest, index = routines.find_nearest(uline_freqs, frequency)
-            deviation = np.abs(frequency - nearest)
-            # Check that the deviation is at least a kilohertz
-            if deviation <= 1E-3:
-                self.logger.info("Found U-line number {}.".format(index))
-                ass_obj = self.ulines[index]
-        if ass_obj:
-            ass_obj.name = name
-            ass_obj.uline = False
-            # Unpack anything else
-            ass_obj.__dict__.update(**kwargs)
-            if frequency is None:
-                frequency = ass_obj.frequency
-            ass_obj.frequency = frequency
-            self.logger.info("{:,.4f} assigned to {}".format(frequency, name))
-            # Delete the line from the ulines dictionary
-            del self.ulines[index]
-            self.logger.info("Removed U-line index {}.".format(index))
-            # Remove from peaks dataframe
-            #nearest, array_index = routines.find_nearest(self.peaks["Frequency"].values, frequency)
-            #self.logger.info(self.peaks.iloc[array_index])
-            #self.peaks.drop(array_index, inplace=True)
-            #self.logger.info("Removed {:,.4f}, index {} from peaks table.".format(nearest, array_index))
-            self.assignments.append(ass_obj)
-        else:
-            raise Exception("Peak not found! Try providing an index.")
-
     def blank_spectrum(self, noise, noise_std, window=1.):
         """
         Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
@@ -1461,7 +1250,7 @@ class AssignmentSession:
             :return identifications: dict containing a tally of molecules
                                      identified
         """
-        names = [ass_obj.name for ass_obj in self.assignments]
+        names = [ass_obj.name for ass_obj in self.line_lists["Peaks"].get_assignments()]
         # Get unique names
         seen = set()
         seen_add = seen.add
@@ -1479,15 +1268,17 @@ class AssignmentSession:
 
         Parameters
         ----------
-        shots - int
+        filepath: str or None, optional
+            Path to save the .ftb file to. If None, defaults to the session ID.
+        shots: int
             Number of shots to integrate on each frequency
-        dipole - float
+        dipole: float
             Dipole moment in Debye attenuation target for each frequency
         """
         if filepath is None:
             filepath = "./ftb/{}-ulines.ftb".format(self.session.experiment)
         lines = ""
-        for index, uline in self.ulines.items():
+        for index, uline in enumerate(self.line_lists["Peaks"].get_ulines()):
             lines += fa.generate_ftb_line(
                 uline.frequency,
                 shots,
@@ -1518,11 +1309,12 @@ class AssignmentSession:
             Minimum frequency difference between cavity and DR frequency to actually perform
             the experiment
         """
+        ulines = self.line_lists["Peaks"].get_ulines()
         if select is None:
-            cavity_freqs = [uline.frequency for index, uline in self.ulines]
+            cavity_freqs = [uline.frequency for uline in ulines]
         else:
             cavity_freqs = select
-        dr_freqs = [uline.frequency for index, uline in self.ulines]
+        dr_freqs = [uline.frequency for uline in ulines]
         lines = ""
         for cindex, cavity in enumerate(cavity_freqs):
             for dindex, dr in enumerate(dr_freqs):
@@ -1666,20 +1458,23 @@ class AssignmentSession:
             Creates summary pandas dataframes as self.table and self.profiles,
             which correspond to the assignments and fitted line profiles respectively.
         """
-        if len(self.assignments) > 0:
-            for ass_obj in self.assignments:
+        assignments = self.line_lists["Peaks"].get_assignments()
+        ulines = self.line_lists["Peaks"].get_ulines()
+        if len(assignments) > 0:
+            for obj in assignments:
                 # Dump all the assignments into YAML format
-                ass_obj.to_file(
-                    "assignment_objs/{}-{}".format(ass_obj.experiment, ass_obj.peak_id),
+                obj.to_file(
+                    "assignment_objs/{}-{}".format(obj.experiment, obj.peak_id),
                     "yaml"
                 )
+                obj.deviation = obj.catalog_frequency - obj.frequency
             # Convert all of the assignment data into a CSV file
-            ass_df = pd.DataFrame(
-                data=[ass_obj.__dict__ for ass_obj in self.assignments]
+            assignment_df = pd.DataFrame(
+                data=[obj.__dict__ for obj in assignments]
             )
-            self.table = ass_df
+            self.table = assignment_df
             # Dump assignments to disk
-            ass_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
+            assignment_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
             # Update the uline peak list with only unassigned stuff
             try:
                 self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
@@ -1690,8 +1485,8 @@ class AssignmentSession:
 
             tally = self._get_assigned_names()
             combined_dict = {
-                "assigned_lines": len(self.assignments),
-                "ulines": len(self.ulines),
+                "assigned_lines": len(assignments),
+                "ulines": len(ulines),
                 "peaks": self.peaks[self.freq_col].values,
                 "num_peaks": len(self.peaks[self.freq_col]),
                 "tally": tally,
@@ -1857,7 +1652,7 @@ class AssignmentSession:
         private = local.loc[local["public"] == False]
         sources = ["Artifacts", "Splatalogue", "Published molecules", "Unpublished molecules"]
         # Added up the total number of lines
-        total_lines = len(self.ulines) + len(self.assignments)
+        total_lines = len(self.line_lists["Peaks"])
         # Add up the total intensity
         total_intensity = np.sum([uline.intensity for uline in self.ulines.values()])
         total_intensity += np.sum(reduced_table["intensity"])
@@ -1910,10 +1705,11 @@ class AssignmentSession:
             opacity=0.6
             )
 
-        if hasattr(self, "ulines"):
-            labels = [uline.peak_id for uline in self.ulines.values()]
-            amplitudes = np.array([uline.intensity for uline in self.ulines.values()])
-            centers = np.array([uline.frequency for uline in self.ulines.values()])
+        if "Peaks" in self.line_lists:
+            ulines = self.line_lists["Peaks"].get_ulines()
+            labels = list(range(len(ulines)))
+            amplitudes = np.array([uline.intensity for uline in ulines])
+            centers = np.array([uline.frequency for uline in ulines])
             # Add sticks for U-lines
             fig.add_bar(
                 x=centers,
@@ -2002,8 +1798,9 @@ class AssignmentSession:
         """
         html_dict["assignments_table"] = reduced_table_html
         # The unidentified features table
+        ulines = self.line_lists["Peaks"].get_ulines()
         uline_df = pd.DataFrame(
-            [[uline.frequency, uline.intensity] for uline in self.ulines.values()], columns=["Frequency", "Intensity"]
+            [[uline.frequency, uline.intensity] for uline in ulines], columns=["Frequency", "Intensity"]
         )
         html_dict["uline_table"] = uline_df.style.bar(
             subset=["Intensity"],
@@ -2058,9 +1855,11 @@ class AssignmentSession:
         private = local.loc[local["public"] == False]
         sources = ["Artifacts", "Splatalogue", "Published molecules", "Unpublished molecules"]
         # Added up the total number of lines
-        total_lines = len(self.ulines) + len(self.assignments)
+        ulines = self.line_lists["Peaks"].get_ulines()
+        assignments = self.line_lists["Peaks"].get_assignments()
+        total_lines = len(ulines) + len(assignments)
         # Add up the total intensity
-        total_intensity = np.sum([uline.intensity for uline in self.ulines.values()])
+        total_intensity = np.sum([uline.intensity for uline in ulines])
         total_intensity += np.sum(reduced_table["intensity"])
         line_breakdown = [total_lines]
         intensity_breakdown = [total_intensity]
@@ -2151,7 +1950,7 @@ class AssignmentSession:
 
         # Update the peaks table
         self.peaks = pd.DataFrame(
-            data=[[uline.frequency, uline.intensity] for uline in self.ulines.values()],
+            data=[[uline.frequency, uline.intensity] for uline in self.line_lists["Peaks"].get_ulines()],
             columns=["Frequency", "Intensity"]
         )
 
@@ -2170,7 +1969,7 @@ class AssignmentSession:
             text=self.table["name"].astype(str) + "-" + self.table["r_qnos"].astype(str),
             name="Assignments"
         )
-        ulines = np.array([[uline.intensity, uline.frequency] for index, uline in self.ulines.items()])
+        ulines = np.array([[uline.intensity, uline.frequency] for uline in self.line_lists["Peaks"].get_ulines()])
 
         fig.add_bar(
             x=ulines[:,1],
@@ -2469,6 +2268,10 @@ class LineList:
             Chemical formula of the molecule
         filepath: str
             Path to the catalog file.
+        min_freq: float, optional
+            Minimum frequency in MHz for the frequency cutoff
+        max_freq: float, optional
+            Maximum frequency in MHz for the frequency cutoff
         kwargs: optional
             Additional attributes that are passed into the Transition objects.
 
@@ -2501,18 +2304,56 @@ class LineList:
         return linelist_obj
 
     @classmethod
-    def from_peaks(cls, peaks_df, freq_col="Frequency", int_col="Intensity", **kwargs):
+    def from_dataframe(cls, dataframe, name="Peaks", freq_col="Frequency", int_col="Intensity", **kwargs):
+        """
+        Specialized class method for creating a LineList object from a Pandas Dataframe. This method is called by
+        the AssignmentSession.df2ulines function to generate a Peaks LineList during peak detection.
+
+        Parameters
+        ----------
+        dataframe: pandas DataFrame
+            DataFrame containing frequency and intensity information
+        freq_col: str, optional
+            Name of the frequency column
+        int_col: str, optional
+            Name of the intensity column
+        kwargs
+            Optional settings are passed into the creation of Transition objects.
+
+        Returns
+        -------
+        LineList
+        """
         transitions = Transition(
-            frequency=peaks_df[freq_col],
-            intensity=peaks_df[int_col],
+            frequency=dataframe[freq_col],
+            intensity=dataframe[int_col],
             uline=True,
             **kwargs
         )
-        linelist_obj = cls(name="Peaks", transitions=list(transitions))
+        linelist_obj = cls(name=name, transitions=list(transitions))
         return linelist_obj
 
     @classmethod
-    def from_lin(cls, name, formula, linpath, **kwargs):
+    def from_lin(cls, name, linpath, formula="", **kwargs):
+        """
+        Generate a LineList object from a .lin file. This method should be used for intermediate assignments, when one
+        does not know what the identity of a molecule is but has measured some frequency data.
+
+        Parameters
+        ----------
+        name: str
+            Name of the molecule
+        linpath: str
+            File path to the .lin file.
+        formula: str, optional
+            Chemical formula of the molecule if known.
+        kwargs
+            Additional kwargs are passed into the Transition objects.
+
+        Returns
+        -------
+        LineList
+        """
         lin_df = parsers.parse_lin(linpath)
         transitions = Transition(
             name=name,
@@ -2520,10 +2361,37 @@ class LineList:
             catalog_frequency=lin_df["Frequency"],
             catalog_intensity=lin_df["Intensity"],
             uline=False,
+            source="Line file",
             **kwargs
         )
         linelist_obj = cls(name, formula, filepath=linpath, transitions=list(transitions))
         return linelist_obj
+
+    @classmethod
+    def from_artifacts(cls, frequencies, **kwargs):
+        """
+        Specialized class method for creating a LineList object specifically for artifacts/RFI. These Transitions are
+        specially flagged as Artifacts.
+
+        Parameters
+        ----------
+        frequencies: iterable of floats
+            List or array of floats corresponding to known artifact frequencies.
+        kwargs
+            Kwargs are passed into the Transition object creation.
+
+        Returns
+        -------
+        LineList
+        """
+        transitions = Transition(
+            name="Artifact",
+            catalog_frequency=np.asarray(frequencies),
+            uline=False,
+            source="Artifact",
+            **kwargs
+        )
+        linelist_obj = cls(name="Artifacts", transitions=list(transitions))
 
     def to_dataframe(self):
         """
