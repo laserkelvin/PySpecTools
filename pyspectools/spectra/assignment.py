@@ -23,6 +23,7 @@ from periodictable import formula
 from plotly.offline import plot
 from plotly import graph_objs as go
 from uncertainties import ufloat
+from jinja2 import Template
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import ftmw_analysis as fa
@@ -33,6 +34,7 @@ from pyspectools.astro import analysis as aa
 from pyspectools.spectra import analysis
 
 
+@np.vectorize
 @dataclass
 class Transition:
     """
@@ -1059,7 +1061,7 @@ class AssignmentSession:
             sliced_catalog["Weighting"] = analysis.line_weighting(
                 frequency, sliced_catalog[freq_col], column
             )
-            # Normalize the weights
+            # Normalize and sort the weights only if there are more than one candidates
             if nentries > 1:
                 sliced_catalog.loc[:, "Weighting"] /= sliced_catalog["Weighting"].max()
                 # Sort by obs-calc
@@ -1110,6 +1112,7 @@ class AssignmentSession:
             (catalog_df["Lower state energy"] <= self.t_threshold) &
             (catalog_df["Intensity"] >= thres)
             ]
+        catalog_df["Upper state energy"] = units.calc_E_upper(catalog_df["Frequency"], catalog_df["Lower state energy"])
         # Loop over the uline list
         iterate_list = list(self.ulines.items())
         if progressbar is True:
@@ -1137,6 +1140,7 @@ class AssignmentSession:
                         "index": uindex,
                         "frequency": uline.frequency,
                         "lstate_energy": select_df["Lower state energy"],
+                        "ustate_energy": select_df["Upper state energy"],
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
                         "catalog_intensity": select_df["Intensity"],
@@ -1892,7 +1896,6 @@ class AssignmentSession:
         uline data.
          filepath: str path to save the report to. Defaults to reports/{id}-summary.html
         """
-        from jinja2 import Template
         template_path = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), "report_template.html"
         )
@@ -2341,3 +2344,126 @@ class AssignmentSession:
             self,
             filepath
         )
+
+
+@dataclass
+class LineList:
+    """
+        Class for handling and homogenizing all of the possible line lists: from peaks to assignments to catalog files.
+
+        Attributes
+        ----------
+        name: str, optional
+            Name of the line list. Can be used to identify the molecule, or to simply state the purpose of the list.
+        formula: str, optional
+            Chemical formula for the molecule, if applicable.
+        smi: str, optional
+            SMILES representation of the molecule, if applicable.
+        filecontents: str, optional
+            String representation of the file contents used to make the line list.
+        filepath: str, optional
+            Path to the file used to make the list.
+        transitions: list, optional
+            A designated list for holding Transition objects. This is the bulk of the information for a given
+            line list.
+    """
+    name: str = ""
+    formula: str = ""
+    smi: str = ""
+    filecontents: str = ""
+    filepath: str = ""
+    transitions: List = field(default_factory=list)
+    frequencies: List[float] = field(default_factory=list)
+
+    def __str__(self):
+        return "Name: {}, Formula: {}, Number of entries: {}".format(self.name, self.formula, len(self.transitions))
+
+    def __post_init__(self):
+        if len(self.transitions) != 0:
+            self.frequencies = [obj.freq for obj in self.transitions]
+
+    @classmethod
+    def from_catalog(cls, name, formula, filepath, **kwargs):
+        """
+        Create a Line List object from an SPCAT catalog.
+        Parameters
+        ----------
+        name: str
+            Name of the molecule the catalog belongs to
+        formula: str
+            Chemical formula of the molecule
+        filepath: str
+            Path to the catalog file.
+        kwargs: optional
+            Additional attributes that are passed into the Transition objects.
+
+        Returns
+        -------
+        linelist_obj
+            Instance of LineList with the digested catalog.
+        """
+        catalog_df = parsers.parse_cat(filepath)
+        # Create a formatted quantum number string
+        catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
+            *catalog_df[["N'", "J'", "N''", "J''"]].values
+        )
+        # Calculate E upper to have a complete set of data
+        catalog_df["Upper state energy"] = units.calc_E_upper(catalog_df["Frequency"], catalog_df["Lower state energy"])
+        # Vectorized generation of all the Transition objects
+        transitions = Transition(
+            catalog_frequency=catalog_df["Frequency"],
+            catalog_intensity=catalog_df["Intensity"],
+            lstate_energy=catalog_df["Lower state energy"],
+            ustate_energy=catalog_df["Upper state energy"],
+            r_qnos=catalog_df["qno"],
+            source="Catalog",
+            name=name,
+            formula=formula,
+            **kwargs
+        )
+        linelist_obj = cls(name, formula, filepath=filepath, transitions=list(transitions))
+        return linelist_obj
+
+    @classmethod
+    def from_peaks(cls, peaks_df, freq_col="Frequency", int_col="Intensity", **kwargs):
+        transitions = Transition(
+            frequency=peaks_df[freq_col],
+            intensity=peaks_df[int_col],
+            uline=True,
+            **kwargs
+        )
+        linelist_obj = cls(transitions=list(transitions))
+        return linelist_obj
+
+    def to_dataframe(self):
+        """
+        Convert the transition data into a Pandas DataFrame.
+        Returns
+        -------
+        dataframe
+            Pandas Dataframe with all of the transitions in the line list.
+        """
+        list_rep = [obj.__dict__ for obj in self.transitions]
+        return pd.DataFrame(list_rep)
+
+    def find_nearest(self, frequency, tol=1e-3):
+        """
+        Look up transitions to find the nearest in frequency to the query. If the matched frequency is within a
+        tolerance, then the function will return the corresponding Transition. Otherwise, it returns None.
+        Parameters
+        ----------
+        frequency: float
+            Frequency in MHz to search for.
+        tol: float, optional
+            Maximum tolerance for the deviation from the LineList frequency and query frequency
+
+        Returns
+        -------
+        Transition object or None
+        """
+        match_freq, index = routines.find_nearest(self.frequencies, frequency)
+        deviation = np.abs(frequency - match_freq)
+        if deviation <= tol:
+            return self.transitions[index]
+        else:
+            return None
