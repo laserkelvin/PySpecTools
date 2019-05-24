@@ -1069,7 +1069,7 @@ class AssignmentSession:
         else:
             return None
 
-    def process_catalog(self, name, formula, catalogpath, auto=True, thres=-10., **kwargs):
+    def process_catalog(self, name, formula, catalogpath, auto=True, thres=-10., progressbar=True, **kwargs):
         """
             Reads in a catalog (SPCAT) file and sweeps through the
             U-line list for this experiment finding coincidences.
@@ -1111,7 +1111,10 @@ class AssignmentSession:
             (catalog_df["Intensity"] >= thres)
             ]
         # Loop over the uline list
-        for uindex, uline in tqdm(list(self.ulines.items())):
+        iterate_list = list(self.ulines.items())
+        if progressbar is True:
+            iterate_list = tqdm(iterate_list)
+        for uindex, uline in iterate_list:
             # 0.1% of frequency
             sliced_catalog = self.calc_line_weighting(
                 uline.frequency, catalog_df, prox=self.session.freq_prox, abs=self.session.freq_abs
@@ -1133,6 +1136,7 @@ class AssignmentSession:
                         "formula": formula,
                         "index": uindex,
                         "frequency": uline.frequency,
+                        "lstate_energy": select_df["Lower state energy"],
                         "r_qnos": qnos,
                         "catalog_frequency": select_df["Frequency"],
                         "catalog_intensity": select_df["Intensity"],
