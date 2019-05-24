@@ -1059,55 +1059,61 @@ class AssignmentSession:
                 func = LineList.from_lin
             else:
                 raise Exception("File extension for reference line list not recognized!")
-            linelist = func(name=name, formula=formula, filepath=filepath)
+            linelist = func(
+                name=name, formula=formula, filepath=filepath,
+                min_freq=self.data[self.freq_col].min(), max_freq=self.data[self.freq_col].max()
+            )
             if name not in self.line_lists:
                 self.line_lists[name] = linelist
         else:
             raise Exception("Please specify an internal or external line list!")
-        nassigned = 0
-        iterator = enumerate(self.line_lists["Peaks"].get_ulines())
-        if progressbar is True:
-            iterator = tqdm(iterator)
-        # Loop over all of the U-lines
-        for index, transition in iterator:
-            # If no value of tolerance is provided, determine from the session
-            if tol is None:
-                if self.session.freq_abs is True:
-                    tol = self.session.freq_prox
-                else:
-                    tol = (1. - self.session.freq_prox) * transition.frequency
-            can_pkg = linelist.find_candidates(
-                transition.frequency,
-                lstate_threshold=self.t_threshold,
-                freq_tol=tol,
-                int_tol=thres
-            )
-            # If there are actual candidates instead of NoneType, we can process it.
-            if can_pkg is not None:
-                candidates, weighting = can_pkg
-                ncandidates = len(candidates)
-                self.logger.info("Found {} possible matches.".format(ncandidates))
-                # If auto mode or if there's just one candidate, just take the highest weighting
-                if auto is True or ncandidates == 1:
-                    chosen = candidates[weighting.argmax()]
-                else:
-                    for cand_idx, candidate in enumerate(candidates):
-                        print(cand_idx, candidate)
-                    chosen_idx = int(input("Please specify the candidate index.   "))
-                    chosen = candidates[chosen_idx]
-                self.logger.info("Assigning {} to peak at {:.4f}.".format(chosen.name, transition.frequency))
-                # Create a copy of the Transition data from the LineList
-                assign_dict = deepcopy(chosen.__dict__)
-                # Remove the frequency and intensity keys because they're going to overwrite the peaks!
-                for key in ["frequency", "intensity"]:
-                    del assign_dict[key]
-                # Add any other additional kwargs
-                assign_dict.update(
-                    **kwargs
+        if linelist is not None:
+            nassigned = 0
+            iterator = enumerate(self.line_lists["Peaks"].get_ulines())
+            if progressbar is True:
+                iterator = tqdm(iterator)
+            # Loop over all of the U-lines
+            for index, transition in iterator:
+                # If no value of tolerance is provided, determine from the session
+                if tol is None:
+                    if self.session.freq_abs is True:
+                        tol = self.session.freq_prox
+                    else:
+                        tol = (1. - self.session.freq_prox) * transition.frequency
+                can_pkg = linelist.find_candidates(
+                    transition.frequency,
+                    lstate_threshold=self.t_threshold,
+                    freq_tol=tol,
+                    int_tol=thres
                 )
-                self.line_lists["Peaks"].update_transition(index, **assign_dict)
-                nassigned += 1
-        self.logger.info("Assigned {} new transitions to {}.".format(nassigned, name))
+                # If there are actual candidates instead of NoneType, we can process it.
+                if can_pkg is not None:
+                    candidates, weighting = can_pkg
+                    ncandidates = len(candidates)
+                    self.logger.info("Found {} possible matches.".format(ncandidates))
+                    # If auto mode or if there's just one candidate, just take the highest weighting
+                    if auto is True or ncandidates == 1:
+                        chosen = candidates[weighting.argmax()]
+                    else:
+                        for cand_idx, candidate in enumerate(candidates):
+                            print(cand_idx, candidate)
+                        chosen_idx = int(input("Please specify the candidate index.   "))
+                        chosen = candidates[chosen_idx]
+                    self.logger.info("Assigning {} to peak at {:.4f}.".format(chosen.name, transition.frequency))
+                    # Create a copy of the Transition data from the LineList
+                    assign_dict = deepcopy(chosen.__dict__)
+                    # Remove the frequency and intensity keys because they're going to overwrite the peaks!
+                    for key in ["frequency", "intensity"]:
+                        del assign_dict[key]
+                    # Add any other additional kwargs
+                    assign_dict.update(
+                        **kwargs
+                    )
+                    self.line_lists["Peaks"].update_transition(index, **assign_dict)
+                    nassigned += 1
+            self.logger.info("Assigned {} new transitions to {}.".format(nassigned, name))
+        else:
+            self.logger.warn("LineList was empty, and no lines were assigned.")
 
     def process_artifacts(self, frequencies):
         """
@@ -2257,7 +2263,7 @@ class LineList:
             self.catalog_frequencies = [obj.catalog_frequency for obj in self.transitions]
 
     @classmethod
-    def from_catalog(cls, name, formula, filepath, min_freq=0., max_freq=1e6, **kwargs):
+    def from_catalog(cls, name, formula, filepath, min_freq=0., max_freq=1e12, **kwargs):
         """
         Create a Line List object from an SPCAT catalog.
         Parameters
@@ -2280,28 +2286,31 @@ class LineList:
         linelist_obj
             Instance of LineList with the digested catalog.
         """
-        catalog_df = parsers.parse_cat(filepath, min_freq, max_freq)
-        # Create a formatted quantum number string
-        catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
-            *catalog_df[["N'", "J'", "N''", "J''"]].values
-        )
-        # Calculate E upper to have a complete set of data
-        catalog_df["Upper state energy"] = units.calc_E_upper(catalog_df["Frequency"], catalog_df["Lower state energy"])
-        # Vectorized generation of all the Transition objects
-        transitions = Transition(
-            catalog_frequency=catalog_df["Frequency"],
-            catalog_intensity=catalog_df["Intensity"],
-            lstate_energy=catalog_df["Lower state energy"],
-            ustate_energy=catalog_df["Upper state energy"],
-            r_qnos=catalog_df["qno"],
-            source="Catalog",
-            name=name,
-            formula=formula,
-            uline=False,
-            **kwargs
-        )
-        linelist_obj = cls(name, formula, filepath=filepath, transitions=list(transitions))
-        return linelist_obj
+        catalog_df = parsers.parse_cat(filepath, low_freq=min_freq, high_freq=max_freq)
+        try:
+            # Create a formatted quantum number string
+            catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
+                *catalog_df[["N'", "J'", "N''", "J''"]].values
+            )
+            # Calculate E upper to have a complete set of data
+            catalog_df["Upper state energy"] = units.calc_E_upper(catalog_df["Frequency"], catalog_df["Lower state energy"])
+            # Vectorized generation of all the Transition objects
+            transitions = Transition(
+                catalog_frequency=catalog_df["Frequency"],
+                catalog_intensity=catalog_df["Intensity"],
+                lstate_energy=catalog_df["Lower state energy"],
+                ustate_energy=catalog_df["Upper state energy"],
+                r_qnos=catalog_df["qno"],
+                source="Catalog",
+                name=name,
+                formula=formula,
+                uline=False,
+                **kwargs
+            )
+            linelist_obj = cls(name, formula, filepath=filepath, transitions=list(transitions))
+            return linelist_obj
+        except IndexError:
+            return None
 
     @classmethod
     def from_dataframe(cls, dataframe, name="Peaks", freq_col="Frequency", int_col="Intensity", **kwargs):
