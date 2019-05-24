@@ -692,3 +692,11 @@ def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
         if min_freq <= value <= max_freq:
             candidates[index] = value
     return candidates
+
+
+def line_weighting(frequency, catalog_frequency, intensity=None):
+    deviation = np.abs(frequency - catalog_frequency)
+    weighting = np.reciprocal(deviation)
+    if intensity is not None:
+        weighting *= 10.**intensity
+    return weighting

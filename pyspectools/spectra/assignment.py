@@ -1,7 +1,7 @@
 """
-    assignment.py
+    transition.py
 
-    Contains the Assignment, AssignmentSession, and Session classes that are designed to handle and assist
+    Contains the Transition, AssignmentSession, and Session classes that are designed to handle and assist
     the assignment of broadband spectra from the laboratory or astronomical observations.
 """
 
@@ -34,7 +34,7 @@ from pyspectools.spectra import analysis
 
 
 @dataclass
-class Assignment:
+class Transition:
     """
         DataClass for handling assignments.
         Attributes are assigned in order to be sufficiently informative for a
@@ -134,13 +134,13 @@ class Assignment:
 
     def __str__(self):
         """
-        Dunder method for representing an Assignment, which returns
+        Dunder method for representing an Transition, which returns
         the name of the line and the frequency.
 
         Returns
         -------
         str
-            name and frequency of the Assignment
+            name and frequency of the Transition
         """
         return f"{self.name}, {self.frequency}"
 
@@ -204,7 +204,7 @@ class Assignment:
 
     def to_file(self, filepath, format="yaml"):
         """
-        Save an Assignment object to disk with a specified file format.
+        Save an Transition object to disk with a specified file format.
         Defaults to YAML.
 
         Parameters
@@ -261,7 +261,7 @@ class Assignment:
 
         Returns
         -------
-        Assignment
+        Transition
             Converted Assignment object from the input dictionary
         """
         assignment_obj = obj(**data_dict)
@@ -279,7 +279,7 @@ class Assignment:
 
         Returns
         -------
-        Assignment
+        Transition
             Assignment object loaded from a YAML file.
         """
         yaml_dict = routines.read_yaml(yaml_path)
@@ -298,7 +298,7 @@ class Assignment:
 
         Returns
         -------
-        Assignment
+        Transition
             Assignment object loaded from a JSON file.
         """
         json_dict = routines.read_json(json_path)
@@ -615,29 +615,35 @@ class AssignmentSession:
                 int_col=self.int_col,
                 thres=threshold,
             )
-            if len(peaks_df) != 0:
-                if len(peaks_df) >= 2:
-                    # find largest gap in data
-                    index = np.argmax(np.diff(peaks_df["Frequency"]))
-                    # Define region as the largest gap
-                    region = peaks_df.iloc[index:index+2]["Frequency"].values
-                elif len(peaks_df) == 1:
-                    # in the event there's only one peak, take the stretch from the 30 MHz shift from peak to
-                    # the minimum of the spectrum
-                    region = [self.data[self.freq_col].min(), peaks_df.iloc[0]["Frequency"]]
-                # Make sure the frequencies are in ascending order
-                region = np.sort(region)
+            if len(peaks_df) >= 2:
+                # find largest gap in data, including the edges of the spectrum
+                freq_values = list(peaks_df["Frequency"].values)
+                freq_values.extend(
+                    [self.data[self.freq_col].min(), self.data[self.freq_col].max()]
+                    )
+                # sort the values
+                freq_values = sorted(freq_values)
+                self.logger.info("Possible noise regio:")
+                self.logger.info(freq_values)
+                index = np.argmax(np.diff(freq_values))
+                # Define region as the largest gap
+                region = freq_values[index:index+2]
+                # Add a 30 MHz offset to either end of the spectrum
                 region[0] = region[0] + 30.
                 region[1] = region[1] - 30.
+                # Make sure the frequencies are in ascending order
                 region = np.sort(region)
                 self.logger.info("Noise region defined as {} to {}.".format(*region))
                 noise_df = self.data.loc[
                     self.data[self.freq_col].between(*region)
                 ]
-            elif len(peaks_df) == 0:
-                # If we haven't found any peaks, pick 100 random channels and determine the
+                if len(noise_df) < 50:
+                    noise_df = self.data.sample(int(len(self.data) * 0.1))
+                    self.logger.warning("Noise region too small; taking a statistical sample.")
+            else:
+                # If we haven't found any peaks, sample 10% of random channels and determine the
                 # baseline from those values
-                noise_df = self.data.sample(100)
+                noise_df = self.data.sample(int(len(self.data) * 0.1))
                 self.logger.warning("No obvious peaks detected; taking a statistical sample.")
         # Calculate statistics
         baseline = np.average(noise_df[self.int_col])
@@ -734,7 +740,7 @@ class AssignmentSession:
             }
         for index, row in dataframe.iterrows():
             self.logger.info("Added U-line {}, frequency {:,.4f}".format(index + total_num + 1, row[freq_col]))
-            ass_obj = Assignment(
+            ass_obj = Transition(
                 frequency=row[freq_col],
                 intensity=row[int_col],
                 peak_id=index + total_num + 1,
@@ -826,7 +832,7 @@ class AssignmentSession:
             Basic functionality is looping over a series of peaks,
             which will query splatalogue for known transitions in the
             vicinity. If the line is known in Splatalogue, it will
-            throw it into an Assignment object and flag it as known.
+            throw it into an Transition object and flag it as known.
             Conversely, if it's not known in Splatalogue it will defer
             assignment, flagging it as unassigned and dumping it into
             the `uline` attribute.
@@ -948,7 +954,7 @@ class AssignmentSession:
             file.
 
             Kwargs are passed to the `assign_line` function, which provides
-            the user with additional options for flagging an Assignment
+            the user with additional options for flagging an Transition
             (e.g. public, etc.)
 
             Parameters
@@ -1039,26 +1045,25 @@ class AssignmentSession:
             lower_freq = frequency - prox
             upper_freq = frequency + prox
         sliced_catalog = catalog_df.loc[
-            (catalog_df[freq_col] >= lower_freq) & (catalog_df[freq_col] <= upper_freq)
+                catalog_df[freq_col].between(lower_freq, upper_freq)
             ]
         nentries = len(sliced_catalog)
         if nentries > 0:
-            # Calculate probability weighting. Base is the inverse of distance
-            sliced_catalog.loc[:, "Deviation"] = np.abs(sliced_catalog[freq_col] - frequency)
-            sliced_catalog.loc[:, "Weighting"] = (1. / sliced_catalog["Deviation"])
-            # If intensity is included in the catalog incorporate it in
-            # the weight calculation
             if int_col in sliced_catalog:
-                sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog[int_col])
+                column = sliced_catalog[int_col]
             elif "CDMS/JPL Intensity" in sliced_catalog:
-                sliced_catalog.loc[:, "Weighting"] *= (10 ** sliced_catalog["CDMS/JPL Intensity"])
+                column = sliced_catalog["CDMS/JPL Intensity"]
             else:
-                # If there are no recognized intensity columns, pass
-                pass
+                column = None
+            # Vectorized function for calculating the line weighting
+            sliced_catalog["Weighting"] = analysis.line_weighting(
+                frequency, sliced_catalog[freq_col], column
+            )
             # Normalize the weights
-            sliced_catalog.loc[:, "Weighting"] /= sliced_catalog["Weighting"].max()
-            # Sort by obs-calc
-            sliced_catalog.sort_values(["Weighting"], ascending=False, inplace=True)
+            if nentries > 1:
+                sliced_catalog.loc[:, "Weighting"] /= sliced_catalog["Weighting"].max()
+                # Sort by obs-calc
+                sliced_catalog.sort_values(["Weighting"], ascending=False, inplace=True)
             sliced_catalog.reset_index(drop=True, inplace=True)
             return sliced_catalog
         else:
@@ -1078,7 +1083,7 @@ class AssignmentSession:
 
             Kwargs are passed to the `assign_line` function, which will
             allow the user to provide additional flags/information for
-            the Assignment object.
+            the Transition object.
 
             Parameters
             ----------------
@@ -1283,9 +1288,9 @@ class AssignmentSession:
             The two methods for doing this is to supply either:
                 1. U-line index
                 2. U-line frequency
-            One way or the other, the U-line Assignment object
+            One way or the other, the U-line Transition object
             will be updated to signify the new assignment.
-            Optional kwargs will also be passed to the Assignment
+            Optional kwargs will also be passed to the Transition
             object to update any other details.
 
             Parameters
@@ -1293,7 +1298,7 @@ class AssignmentSession:
              name: str denoting the name of the molecule
              index: optional arg specifying U-line index
              frequency: optional float specifying frequency to assign
-             kwargs: passed to update Assignment object
+             kwargs: passed to update Transition object
         """
         if index == frequency:
             raise Exception("Index/Frequency not specified!")
