@@ -247,6 +247,32 @@ def copy_template():
         print("Edit the .json input file and re-run the script.")
 
 
+def flatten_list(input_list):
+    """
+    Takes a nested list of values and flattens it. The code is written as a try/except that makes the assumption
+    that the data is a list/tuple/array, and in the case that it isn't will simply append the item to the
+    output instead.
+
+    Parameters
+    ----------
+    input_list: list
+        List of values, where some of the elements are lists
+
+    Returns
+    -------
+    output_list: list
+        Flattened version of input_list
+    """
+    output_list = list()
+    for value in input_list:
+        try:
+            output_list.extend(value)
+        # Ask for forgiveness
+        except TypeError:
+            output_list.append(value)
+    return output_list
+
+
 def list_directories():
     return [directory for directory in os.listdir() if os.path.isdir(directory)]
 
