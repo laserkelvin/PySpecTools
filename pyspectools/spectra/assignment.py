@@ -24,6 +24,7 @@ from plotly.offline import plot
 from plotly import graph_objs as go
 from uncertainties import ufloat
 from jinja2 import Template
+from joblib import Parallel, delayed
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import ftmw_analysis as fa
@@ -397,7 +398,7 @@ class AssignmentSession:
     @classmethod
     def from_ascii(
             cls, filepath, experiment, composition=["C", "H"], delimiter="\t", temperature=4.0, velocity=0.,
-            col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, verbose=True, **kwargs
+            col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, verbose=False, **kwargs
     ):
         """
 
@@ -474,6 +475,8 @@ class AssignmentSession:
         self.ulines = OrderedDict()
         self.umols = list()
         self.verbose = verbose
+        # Holds catalogs
+        self.line_lists = dict()
         self._init_logging()
         #self.umol_counter = self.umol_gen()
         # Default settings for columns
@@ -731,26 +734,27 @@ class AssignmentSession:
             freq_col = self.freq_col
         if int_col is None:
             int_col = self.int_col
-        self.logger.info("Adding additional U-lines based on user dataframe.")
-        # This number is used to work out the index to carry on from
-        total_num = len(self.assignments) + len(self.ulines)
-        self.logger.info("So far, there are {} line entries in this session.".format(total_num))
+        self.logger.info("Modifying the experiment LineList.")
         # Set up session information to be passed in the U-line
-        skip = ["temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header", "noise_region"]
+        skip = [
+            "temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header", "noise_region",
+            "composition"
+        ]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
             }
-        for index, row in dataframe.iterrows():
-            self.logger.info("Added U-line {}, frequency {:,.4f}".format(index + total_num + 1, row[freq_col]))
-            ass_obj = Transition(
-                frequency=row[freq_col],
-                intensity=row[int_col],
-                peak_id=index + total_num + 1,
+        # If the Peaks key has not been set up yet, we set it up now
+        if "Peaks" not in self.line_lists:
+            self.line_lists["Peaks"] = LineList.from_peaks(dataframe, freq_col, int_col, **selected_session)
+        # Otherwise, we'll just update the existing LineList
+        else:
+            transitions = Transition(
+                frequency=dataframe[freq_col],
+                intensity=dataframe[int_col],
                 **selected_session
             )
-            if ass_obj not in self.ulines.values() and ass_obj not in self.assignments:
-                self.ulines[index + total_num] = ass_obj
-        self.logger.info("There are now {} line entries in this session.".format(total_num + index))
+            self.line_lists["Peaks"].update_linelist(transitions)
+        self.logger.info("There are now {} line entries in this session.".format(len(self.line_lists["Peaks"])))
 
     def search_frequency(self, frequency):
         """
@@ -1071,7 +1075,66 @@ class AssignmentSession:
         else:
             return None
 
-    def process_catalog(self, name, formula, catalogpath, auto=True, thres=-10., progressbar=True, **kwargs):
+    def process_linelist(self, name=None, formula=None, filepath=None, linelist=None, auto=True, thres=-10.,
+                         progressbar=True, tol=None, n_jobs=1, **kwargs,):
+        if linelist:
+            catalog = self.line_lists[linelist]
+        elif filepath:
+            # If a catalog is specified, create a LineList object with this catalog. The parser is inferred from the
+            # file extension.
+            if ".cat" in filepath:
+                func = LineList.from_catalog
+            elif ".lin" in filepath:
+                func = LineList.from_lin
+            else:
+                raise Exception("File extension for reference line list not recognized!")
+            linelist = func(name=name, formula=formula, filepath=filepath)
+            if name not in self.line_lists:
+                self.line_lists[name] = linelist
+        else:
+            raise Exception("Please specify an internal or external line list!")
+        nassigned = 0
+        iterator = enumerate(self.line_lists["Peaks"].get_ulines())
+        if progressbar is True:
+            iterator = tqdm(iterator)
+        # Loop over all of the U-lines
+        for index, transition in iterator:
+            # If no value of tolerance is provided, determine from the session
+            if tol is None:
+                if self.session.freq_abs is True:
+                    tol = self.session.freq_prox
+                else:
+                    tol = (1. - self.session.freq_prox) * transition.frequency
+            can_pkg = linelist.find_candidates(
+                transition.frequency,
+                lstate_threshold=self.t_threshold,
+                freq_tol=tol,
+                int_tol=thres
+            )
+            # If there are actual candidates instead of NoneType, we can process it.
+            if can_pkg is not None:
+                candidates, weighting = can_pkg
+                ncandidates = len(candidates)
+                self.logger.info("Found {} possible matches.".format(ncandidates))
+                # If auto mode or if there's just one candidate, just take the highest weighting
+                if auto is True or ncandidates == 1:
+                    chosen = candidates[weighting.argmax()]
+                else:
+                    for cand_idx, candidate in enumerate(candidates):
+                        print(cand_idx, candidate)
+                    chosen_idx = int(input("Please specify the candidate index.   "))
+                    chosen = candidates[chosen_idx]
+                self.logger.info("Assigning {} to peak at {:.4f}.".format(chosen.name, transition.frequency))
+                assign_dict = deepcopy(chosen.__dict__)
+                assign_dict.update(
+                    **kwargs
+                )
+                self.line_lists["Peaks"].update_transition(index, **assign_dict)
+                nassigned += 1
+        self.logger.info("Assigned {} new transitions to {}.".format(nassigned, name))
+
+    def process_catalog(self, name, formula, catalogpath=None, auto=True,
+                        thres=-10., progressbar=True, **kwargs):
         """
             Reads in a catalog (SPCAT) file and sweeps through the
             U-line list for this experiment finding coincidences.
@@ -2374,16 +2437,28 @@ class LineList:
     filepath: str = ""
     transitions: List = field(default_factory=list)
     frequencies: List[float] = field(default_factory=list)
+    catalog_frequencies: List[float] = field(default_factory=list)
 
     def __str__(self):
-        return "Name: {}, Formula: {}, Number of entries: {}".format(self.name, self.formula, len(self.transitions))
+        return "Line list for: {}, Formula: {}, Number of entries: {}".format(
+            self.name, self.formula, len(self.transitions)
+        )
+
+    def __repr__(self):
+        return "Line list name: {}, Number of entries: {}".format(
+            self.name, len(self.transitions)
+        )
+
+    def __len__(self):
+        return len(self.transitions)
 
     def __post_init__(self):
         if len(self.transitions) != 0:
-            self.frequencies = [obj.freq for obj in self.transitions]
+            self.frequencies = [obj.frequency for obj in self.transitions]
+            self.catalog_frequencies = [obj.catalog_frequency for obj in self.transitions]
 
     @classmethod
-    def from_catalog(cls, name, formula, filepath, **kwargs):
+    def from_catalog(cls, name, formula, filepath, min_freq=0., max_freq=1e6, **kwargs):
         """
         Create a Line List object from an SPCAT catalog.
         Parameters
@@ -2402,7 +2477,7 @@ class LineList:
         linelist_obj
             Instance of LineList with the digested catalog.
         """
-        catalog_df = parsers.parse_cat(filepath)
+        catalog_df = parsers.parse_cat(filepath, min_freq, max_freq)
         # Create a formatted quantum number string
         catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
             *catalog_df[["N'", "J'", "N''", "J''"]].values
@@ -2419,6 +2494,7 @@ class LineList:
             source="Catalog",
             name=name,
             formula=formula,
+            uline=False,
             **kwargs
         )
         linelist_obj = cls(name, formula, filepath=filepath, transitions=list(transitions))
@@ -2432,7 +2508,21 @@ class LineList:
             uline=True,
             **kwargs
         )
-        linelist_obj = cls(transitions=list(transitions))
+        linelist_obj = cls(name="Peaks", transitions=list(transitions))
+        return linelist_obj
+
+    @classmethod
+    def from_lin(cls, name, formula, linpath, **kwargs):
+        lin_df = parsers.parse_lin(linpath)
+        transitions = Transition(
+            name=name,
+            formula=formula,
+            catalog_frequency=lin_df["Frequency"],
+            catalog_intensity=lin_df["Intensity"],
+            uline=False,
+            **kwargs
+        )
+        linelist_obj = cls(name, formula, filepath=linpath, transitions=list(transitions))
         return linelist_obj
 
     def to_dataframe(self):
@@ -2450,6 +2540,7 @@ class LineList:
         """
         Look up transitions to find the nearest in frequency to the query. If the matched frequency is within a
         tolerance, then the function will return the corresponding Transition. Otherwise, it returns None.
+
         Parameters
         ----------
         frequency: float
@@ -2467,3 +2558,100 @@ class LineList:
             return self.transitions[index]
         else:
             return None
+
+    def find_candidates(self, frequency, lstate_threshold=4., freq_tol=1e-1, int_tol=-10.):
+        """
+        Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
+        that meet three criteria: the lower state energy, the catalog intensity, and the frequency distance.
+
+        If no candidates are found, the function will return None. Otherwise, it will return the list of transitions
+        and a list of associated normalized weights.
+
+        Parameters
+        ----------
+        frequency: float
+            Frequency in MHz to try and match.
+        lstate_threshold: float, optional
+            Lower state energy threshold in Kelvin
+        freq_tol: float, optional
+            Frequency tolerance in MHz for matching two frequencies
+        int_tol: float, optional
+            log Intensity threshold
+
+        Returns
+        -------
+        transitions, weighting or None
+            If candidates are found, lists of the transitions and the associated weights are returned.
+            Otherwise, returns None
+        """
+        # first threshold the temperature
+        transitions = [
+            obj for obj in self.transitions if all(
+                [
+                    obj.lstate_energy <= lstate_threshold,
+                    obj.catalog_intensity >= int_tol,
+                    abs(obj.catalog_frequency - frequency) <= freq_tol]
+            )
+        ]
+        # If there are candidates, calculate the weights associated with each transition
+        if len(transitions) != 0:
+            transition_frequencies = np.array([obj.catalog_frequency for obj in transitions])
+            transition_intensities = np.array([obj.catalog_intensity for obj in transitions])
+            # If there are actually no catalog intensities, it should sum up to zero in which case we won't
+            # use the intensities in the weight factors
+            if np.sum(transition_intensities) == 0.:
+                transition_intensities = None
+            weighting = analysis.line_weighting(frequency, transition_frequencies, transition_intensities)
+            return transitions, weighting
+        else:
+            return None
+
+    def update_transition(self, index, **kwargs):
+        """
+        Function for updating a specific Transition object within the Line List.
+
+        Parameters
+        ----------
+        index: int
+            Index for the list Transition object
+        kwargs: optional
+            Updates to the Transition object
+        """
+        self.transitions[index].__dict__.update(**kwargs)
+
+    def update_linelist(self, transition_objs):
+        """
+        Adds transitions to a LineList if they do not exist in the list already.
+
+        Parameters
+        ----------
+        transition_objs: list
+            List of Transition objects
+        """
+        self.transitions.extend(
+            [obj for obj in transition_objs if obj not in self.transitions]
+        )
+
+    def get_ulines(self):
+        """
+        Function for retrieving unidentified lines in a Line List.
+
+        Returns
+        -------
+        uline_objs: list
+            List of all of the transition objects where the uline flag is set to True.
+        """
+        uline_objs = [obj for obj in self.transitions if obj.uline is True]
+        return uline_objs
+
+    def get_assignments(self):
+        """
+        Function for retrieving assigned lines in a Line List.
+
+        Returns
+        -------
+        assign_objs: list
+            List of all of the transition objects where the uline flag is set to False.
+        """
+        assign_objs = [obj for obj in self.transitions if obj.uline is False]
+        return assign_objs
