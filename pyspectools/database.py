@@ -43,15 +43,15 @@ class SpectralCatalog(tinydb.TinyDB):
 
     def add_entry(self, assignment, dup_check=True):
         """
-        This function adds an Assignment object to an existing database. The method will
+        This function adds an Transition object to an existing database. The method will
         check for duplicates before adding.
 
         Parameters
         ----------
-        assignment - Assignment object
-            Reference to an Assignment object
+        assignment - Transition object
+            Reference to an Transition object
         dup_check - bool, optional
-            If True (default), will check to make sure the Assignment object doesn't already exist in
+            If True (default), will check to make sure the Transition object doesn't already exist in
             the database.
         """
         add = False
@@ -71,9 +71,9 @@ class SpectralCatalog(tinydb.TinyDB):
 
     def add_catalog(self, catalog_path, name, formula, **kwargs):
         """
-        Load a SPCAT catalog file into the database. Creates independent Assignment objects
-        from each line of the catalog file. Kwargs are passed into the Assignment object,
-        which will allow additional settings for the Assignment object to be accessed.
+        Load a SPCAT catalog file into the database. Creates independent Transition objects
+        from each line of the catalog file. Kwargs are passed into the Transition object,
+        which will allow additional settings for the Transition object to be accessed.
         :param catalog_path:
         :param name:
         :param formula:
@@ -100,7 +100,7 @@ class SpectralCatalog(tinydb.TinyDB):
         select_dict = select_df.to_dict(orient="records")
         # update each line with the common data entries
         assignments = [
-            spectra.assignment.Assignment(**line, **assign_dict).__dict__ for line in select_dict
+            spectra.assignment.Transition(**line, **assign_dict).__dict__ for line in select_dict
         ]
         # Insert all of the documents en masse
         self.insert_multiple(assignments)
@@ -137,7 +137,7 @@ class SpectralCatalog(tinydb.TinyDB):
         """
         Function for querying the database for a particular field and value.
         The option dataframe specifies whether the matches are returned as a
-        pandas datafarame, or as a list of Assignment objects.
+        pandas datafarame, or as a list of Transition objects.
         :param field: str field to query
         :param value: value to compare with
         :param dataframe: bool, if True will return the matches as a pandas dataframe.
@@ -149,7 +149,7 @@ class SpectralCatalog(tinydb.TinyDB):
                 df = pd.DataFrame(matches)
                 return df
             else:
-                objects = [spectra.assignment.Assignment(**data) for data in matches]
+                objects = [spectra.transition.Transition(**data) for data in matches]
                 return objects
         else:
             return None
@@ -158,10 +158,10 @@ class SpectralCatalog(tinydb.TinyDB):
         """
         Search for a molecule in the database based on its name (not formula!).
         Wraps the _search_field method, which will return None if nothing is found, or either a
-        pandas dataframe or a list of Assignment objects
+        pandas dataframe or a list of Transition objects
         :param name: str, name (not formula) of the molecule to search for
         :param dataframe: bool, if True, returns a pandas dataframe
-        :return: matches: a dataframe or list of Assignment objects that match the search name
+        :return: matches: a dataframe or list of Transition objects that match the search name
         """
         matches = self._search_field("name", name, dataframe)
         return matches

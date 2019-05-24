@@ -22,7 +22,7 @@ spectroscopy data. The main sorts of functionality are:
    - Fitting of lineshapes (e.g. Lorentizan second-derivative profiles)
    - Fourier-filtering
    - Double resonance fitting
-4. Analysis of broad band spectra with the `AssignmentSession` and `Assignment` classes.
+4. Analysis of broad band spectra with the `AssignmentSession` and `Transition` classes.
    These classes, combined with Jupyter notebooks, provide a way to assign spectra
    reproducibly; astronomical and laboratory broadband spectra are supported.
 5. Autofit routines are available for a set of special cases, like linear/prolate
