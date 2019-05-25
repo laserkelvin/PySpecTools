@@ -9,7 +9,6 @@ import os
 from shutil import rmtree
 from dataclasses import dataclass, field
 from typing import List, Dict
-from collections import OrderedDict
 from copy import deepcopy
 from itertools import product
 import logging
@@ -35,7 +34,6 @@ from pyspectools.astro import analysis as aa
 from pyspectools.spectra import analysis
 
 
-@np.vectorize
 @dataclass
 class Transition:
     """
@@ -433,8 +431,9 @@ class AssignmentSession:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        for key, handler in self.log_handlers.items():
-            handler.close()
+        if hasattr(self, "log_handlers"):
+            for key, handler in self.log_handlers.items():
+                handler.close()
 
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0, velocity=0.,
@@ -458,7 +457,10 @@ class AssignmentSession:
              int_col: optional str arg specifying the name of the intensity column
         """
         # Make folders for organizing output
-        folders = ["assignment_objs", "queries", "sessions", "clean", "figures", "reports", "logs", "outputs", "ftb"]
+        folders = [
+            "assignment_objs", "queries", "sessions", "clean", "figures",
+            "reports", "logs", "outputs", "ftb", "linelists"
+        ]
         for folder in folders:
             if os.path.isdir(folder) is False:
                 os.mkdir(folder)
@@ -745,7 +747,8 @@ class AssignmentSession:
             )
         # Otherwise, we'll just update the existing LineList
         else:
-            transitions = Transition(
+            vfunc = np.vectorize(Transition)
+            transitions = vfunc(
                 frequency=dataframe[freq_col],
                 intensity=dataframe[int_col],
                 **selected_session
@@ -828,7 +831,7 @@ class AssignmentSession:
         """
         self.process_splatalogue(auto=auto)
 
-    def process_splatalogue(self, auto=False):
+    def process_splatalogue(self, auto=True, progressbar=True):
         """ Function that will provide an "interface" for interactive
             line assignment in a notebook environment.
 
@@ -845,11 +848,12 @@ class AssignmentSession:
          auto: bool
              If True the assignment process does not require user input, otherwise will prompt user.
         """
-        if hasattr(self, "peaks") is False:
-            self.logger.warning("Peak detection not run; running with default settings.")
-            self.find_peaks()
-        self.logger.info("Beginning Splatalogue lookup on {} lines.".format(len(self.peaks)))
-        for uindex, uline in tqdm(list(self.ulines.items())):
+        ulines = self.line_lists["Peaks"].get_ulines()
+        self.logger.info("Beginning Splatalogue lookup on {} lines.".format(len(ulines)))
+        iterator = enumerate(ulines)
+        if progressbar is True:
+            iterator = tqdm(iterator)
+        for index, uline in iterator:
             frequency = uline.frequency
             self.logger.info("Searching for frequency {:,.4f}".format(frequency))
             # Call splatalogue API to search for frequency
@@ -900,7 +904,7 @@ class AssignmentSession:
                 )
                 if splat_df is not None:
                     self.logger.info("Found {} candidates for frequency {:,.4f}, index {}.".format(
-                        len(splat_df), frequency, uindex)
+                        len(splat_df), frequency, index)
                     )
                     if self.verbose is True:
                         display(HTML(splat_df.to_html()))
@@ -919,11 +923,10 @@ class AssignmentSession:
                         self.logger.info("Index {} was chosen.".format(splat_index))
                         ass_df = splat_df.iloc[[splat_index]]
                         splat_df.to_csv(
-                            "queries/{0}-{1}.csv".format(self.session.experiment, uindex), index=False
+                            "queries/{0}-{1}.csv".format(self.session.experiment, index), index=False
                         )
                         ass_dict = {
                             "uline": False,
-                            "index": uindex,
                             "frequency": frequency,
                             "name": ass_df["Chemical Name"][0],
                             "catalog_frequency": ass_df["Frequency"][0],
@@ -936,12 +939,12 @@ class AssignmentSession:
                             "source": "CDMS/JPL",
                             "deviation": frequency - ass_df["Frequency"][0]
                         }
-                        # Need support to convert common name to SMILES
-                        self._assign_line(**ass_dict)
+                        # Update the Transition entry
+                        uline.update(**ass_dict)
                     except ValueError:
                         # If nothing matches, keep in the U-line
                         # pile.
-                        self.logger.info("Deferring assignment for index {}.".format(uindex))
+                        self.logger.info("Deferring assignment for index {}.".format(index))
                 else:
                     # Throw into U-line pile if no matches at all
                     self.logger.info("No species known for {:,.4f}".format(frequency))
@@ -1043,13 +1046,13 @@ class AssignmentSession:
             Kwargs are passed to the Transition object update when assignments are made.
         """
         # First case is if linelist is provided as a string corresponding to the key in the line_lists attribute
+        self.logger.info("Processing local catalog for molecule {}.".format(name))
         if type(linelist) == str:
-            catalog = self.line_lists[linelist]
+            linelist = self.line_lists[linelist]
         # In the event that linelist is an actual LineList object
         elif type(linelist) == LineList:
-            catalog = linelist
-            if catalog.name not in self.line_lists:
-                self.line_lists[catalog.name] = catalog
+            if linelist.name not in self.line_lists:
+                self.line_lists[linelist.name] = linelist
         elif filepath:
             # If a catalog is specified, create a LineList object with this catalog. The parser is inferred from the
             # file extension.
@@ -1080,6 +1083,14 @@ class AssignmentSession:
                         tol = self.session.freq_prox
                     else:
                         tol = (1. - self.session.freq_prox) * transition.frequency
+                self.logger.info(
+                    "Searching for frequency {} with tolerances: {} K, +/-{} MHz, {} intensity.".format(
+                        transition.frequency,
+                        self.t_threshold,
+                        tol,
+                        thres
+                    )
+                )
                 can_pkg = linelist.find_candidates(
                     transition.frequency,
                     lstate_threshold=self.t_threshold,
@@ -1099,12 +1110,17 @@ class AssignmentSession:
                             print(cand_idx, candidate)
                         chosen_idx = int(input("Please specify the candidate index.   "))
                         chosen = candidates[chosen_idx]
-                    self.logger.info("Assigning {} to peak at {:.4f}.".format(chosen.name, transition.frequency))
+                    self.logger.info(
+                        "Assigning {} (catalog {:.4f}) to peak {} at {:.4f}.".format(
+                            chosen.name, chosen.catalog_frequency, index, transition.frequency
+                        )
+                    )
                     # Create a copy of the Transition data from the LineList
                     assign_dict = deepcopy(chosen.__dict__)
-                    # Remove the frequency and intensity keys because they're going to overwrite the peaks!
-                    for key in ["frequency", "intensity"]:
-                        del assign_dict[key]
+                    # Update with the measured frequency and intensity
+                    assign_dict["frequency"] = transition.frequency
+                    assign_dict["intensity"] = transition.intensity
+                    assign_dict["velocity"] = self.session.velocity
                     # Add any other additional kwargs
                     assign_dict.update(
                         **kwargs
@@ -1114,32 +1130,6 @@ class AssignmentSession:
             self.logger.info("Assigned {} new transitions to {}.".format(nassigned, name))
         else:
             self.logger.warn("LineList was empty, and no lines were assigned.")
-
-    def process_artifacts(self, frequencies):
-        """
-        Function for specific for removing anomalies as "artifacts"; e.g. instrumental spurs and
-        interference, etc.
-        Assignments made this way fall under the "Artifact" category in the resulting assignment
-        tables.
-         frequencies: list-like with floats corresponding to artifact frequencies
-        """
-        counter = 0
-        self.logger.info("Processing artifacts.")
-        for freq in frequencies:
-            uline_freqs = np.array([uline.frequency for uline in self.ulines.values()])
-            nearest, index = routines.find_nearest(uline_freqs, freq)
-            self.logger.info("Found ")
-            if np.abs(nearest - freq) <= 0.1:
-                assign_dict = {
-                    "name": "Artifact",
-                    "index": index,
-                    "frequency": freq,
-                    "catalog_frequency": freq,
-                    "source": "Artifact"
-                }
-                self._assign_line(**assign_dict)
-                counter += 1
-        self.logger.info("Removed {} lines as artifacts.".format(counter))
 
     def process_db(self, auto=True, dbpath=None):
         """
@@ -1164,7 +1154,7 @@ class AssignmentSession:
                 catalog_df["frequency"].replace(0., np.nan, inplace=True)
                 catalog_df["frequency"].fillna(catalog_df["catalog_frequency"], inplace=True)
                 if len(catalog_df) > 0:
-                    sliced_catalog = self.calc_line_weighting(
+                    sliced_catalog = analysis.line_weighting(
                         uline.frequency,
                         catalog_df,
                         prox=self.session.freq_prox,
@@ -2293,9 +2283,12 @@ class LineList:
                 *catalog_df[["N'", "J'", "N''", "J''"]].values
             )
             # Calculate E upper to have a complete set of data
-            catalog_df["Upper state energy"] = units.calc_E_upper(catalog_df["Frequency"], catalog_df["Lower state energy"])
+            catalog_df["Upper state energy"] = units.calc_E_upper(
+                catalog_df["Frequency"], catalog_df["Lower state energy"]
+            )
+            vfunc = np.vectorize(Transition)
             # Vectorized generation of all the Transition objects
-            transitions = Transition(
+            transitions = vfunc(
                 catalog_frequency=catalog_df["Frequency"],
                 catalog_intensity=catalog_df["Intensity"],
                 lstate_energy=catalog_df["Lower state energy"],
@@ -2333,7 +2326,8 @@ class LineList:
         -------
         LineList
         """
-        transitions = Transition(
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
             frequency=dataframe[freq_col],
             intensity=dataframe[int_col],
             uline=True,
@@ -2364,7 +2358,8 @@ class LineList:
         LineList
         """
         lin_df = parsers.parse_lin(linpath)
-        transitions = Transition(
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
             name=name,
             formula=formula,
             catalog_frequency=lin_df["Frequency"],
@@ -2393,7 +2388,8 @@ class LineList:
         -------
         LineList
         """
-        transitions = Transition(
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
             name="Artifact",
             catalog_frequency=np.asarray(frequencies),
             uline=False,
@@ -2401,6 +2397,7 @@ class LineList:
             **kwargs
         )
         linelist_obj = cls(name="Artifacts", transitions=list(transitions))
+        return linelist_obj
 
     def to_dataframe(self):
         """
@@ -2412,6 +2409,20 @@ class LineList:
         """
         list_rep = [obj.__dict__ for obj in self.transitions]
         return pd.DataFrame(list_rep)
+
+    def to_pickle(self, filepath=None):
+        """
+        Function to serialize the LineList to a Pickle file. If no filepath is provided, the function will default
+        to using the name attribute of the LineList to name the file.
+
+        Parameters
+        ----------
+        filepath: str or None, optional
+            If None, uses name attribute for the filename, and saves to the linelists folder.
+        """
+        if filepath is None:
+            filepath = "linelists/{}-linelist.pkl".format(self.name)
+        routines.save_obj(self, filepath)
 
     def find_nearest(self, frequency, tol=1e-3):
         """
@@ -2479,6 +2490,9 @@ class LineList:
             if np.sum(transition_intensities) == 0.:
                 transition_intensities = None
             weighting = analysis.line_weighting(frequency, transition_frequencies, transition_intensities)
+            # Only normalize if there's more than one
+            if len(weighting) > 1:
+                weighting /= weighting.max()
             return transitions, weighting
         else:
             return None
