@@ -106,16 +106,21 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
         the peak indices, which are then used to fit Gaussians to determine
         the center frequency for each peak.
 
-        parameters:
-        ---------------
-        spec_df - dataframe containing the spectrum
-        freq_col - str denoting frequency column
-        int_col - str denoting intensity column
-        thres - threshold for peak detection
+        Parameters
+        ----------
+        spec_df: dataframe
+            Pandas dataframe containing the spectrum information, with columns corresponding to frequency and intensity.
+        freq_col: str, optional
+            Name of the frequency column in `spec_df`
+        int_col: str, optional
+            Name of the intensity column in `spec_df`
+        thres: float, optional
+            Threshold for peak detection
 
-        returns:
-        ---------------
-        peak_df - pandas dataframe containing the peaks frequency/intensity
+        Returns
+        -------
+        peak_df
+            Pandas dataframe containing the peaks frequency/intensity
     """
     peak_indices = peakutils.indexes(
         spec_df[int_col],
@@ -163,9 +168,18 @@ def search_molecule(species, freq_range=[0., 40e3]):
     The main use for this function is to verify line identifications - if a line is
     tentatively assigned to a U-line, then other transitions for the molecule that
     are stronger or comparatively strong should be visible.
-    :param species: str for the chemical name of the molecule
-    :param freq_range: list for the frequency range considered
-    :return: DataFrame containing transitions for the molecule
+
+    Parameters
+    ----------
+    species: str
+        Chemical name of the molecule
+    freq_range: list
+        The frequency range to perform the lookup
+
+    Returns
+    -------
+    DataFrame or None
+        Pandas dataframe containing transitions for the given molecule. If no matches are found, returns None.
     """
     splat_df = Splatalogue.query_lines(
         min(freq_range) * u.MHz,
@@ -173,43 +187,57 @@ def search_molecule(species, freq_range=[0., 40e3]):
         chemical_name=species,
         line_lists=["CDMS", "JPL"]
     ).to_pandas()
-    # These are the columns wanted
-    columns = [
-        "Species",
-        "Chemical Name",
-        "Meas Freq-GHz(rest frame,redshifted)",
-        "Freq-GHz(rest frame,redshifted)",
-        "Resolved QNs",
-        "CDMS/JPL Intensity",
-        "E_U (K)"
-    ]
-    # Take only what we want
-    splat_df = splat_df[columns]
-    splat_df.columns = [
-        "Species",
-        "Chemical Name",
-        "Meas Freq-GHz",
-        "Freq-GHz",
-        "Resolved QNs",
-        "CDMS/JPL Intensity",
-        "E_U (K)"
-    ]
-    # Now we combine the frequency measurements
-    splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
-    # Replace missing experimental data with calculated
-    splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
-    # Convert to MHz
-    splat_df["Frequency"] *= 1000.
-    return splat_df
+    if len(splat_df)> 0:
+        # These are the columns wanted
+        columns = [
+            "Species",
+            "Chemical Name",
+            "Meas Freq-GHz(rest frame,redshifted)",
+            "Freq-GHz(rest frame,redshifted)",
+            "Resolved QNs",
+            "CDMS/JPL Intensity",
+            "E_U (K)"
+        ]
+        # Take only what we want
+        splat_df = splat_df[columns]
+        splat_df.columns = [
+            "Species",
+            "Chemical Name",
+            "Meas Freq-GHz",
+            "Freq-GHz",
+            "Resolved QNs",
+            "CDMS/JPL Intensity",
+            "E_U (K)"
+        ]
+        # Now we combine the frequency measurements
+        splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
+        # Replace missing experimental data with calculated
+        splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+        # Convert to MHz
+        splat_df["Frequency"] *= 1000.
+        return splat_df
+    else:
+        return None
 
 
 def search_center_frequency(frequency, width=0.5):
-    """ Wrapper for the astroquery Splatalogue search
-        This function will take a center frequency, and query splatalogue
-        within the CDMS and JPL linelists for carriers of the line.
+    """
+    Function for wrapping the astroquery Splatalogue API for looking up a frequency and finding candidate molecules
+    for assignment. The width parameter adjusts the +/- range to include in the search: for high frequency surveys,
+    it's probably preferable to use a percentage to accommodate for the typically larger uncertainties (sub-mm
+    experiments).
 
-        Input arguments:
-        frequency - float specifying the center frequency
+    Parameters
+    ----------
+    frequency: float
+        Frequency in MHz to search Splatalogue for.
+    width: float, optional
+        Absolute frequency offset in MHz to include in the search.
+
+    Returns
+    -------
+    dataframe or None
+        Pandas dataframe containing frequency matches, or None if no matches are found.
     """
     min_freq = frequency - width
     max_freq = frequency + width
@@ -252,63 +280,6 @@ def search_center_frequency(frequency, width=0.5):
     except IndexError:
         print("Could not parse Splatalogue table at {:,.4f}".format(frequency))
         return None
-
-
-def assign_peaks(spec_df, frequencies, **kwargs):
-    """ Higher level function that will help assign features
-        in a chirp spectrum.
-
-        Input arguments:
-        spec_df - pandas dataframe containing chirp data
-        frequencies - iterable containing center frequencies of peaks
-        Optional arguments are passed into the peak detection as well
-        as in the plotting functions.
-
-        Returns a dataframe containing all the assignments, and a list
-        of unidentified peak frequencies.
-    """
-    unassigned = list()
-    dataframes = pd.DataFrame()
-    for frequency in frequencies:
-        splat_df = search_center_frequency(frequency)
-        nitems = len(splat_df)
-        # Only act if there's something found
-        if nitems > 0:
-            splat_df["Deviation"] = np.abs(
-                    splat_df["Combined"] - frequency
-                    )
-            print(splat_df)
-            try:
-                print("Peak frequency is " + str(frequency))
-                index = int(
-                    input(
-                        "Please choose an assignment index: 0-" + str(nitems - 1)
-                        )
-                )
-                assigned = True
-            except ValueError:
-                print("Deferring assignment")
-                unassigned.append(frequency)
-                assigned = False
-            # Take the assignment. Double brackets because otherwise
-            # a series is returned rather than a dataframe
-            if assigned is True:
-                assignment = splat_df.iloc[[index]].sort_values(
-                    ["Deviation"],
-                    ascending=False
-                )
-                ass_freq = assignment["Combined"]
-                # If the measurement is not available, go for
-                # the predicted value
-                ass_name = assignment["Species"] + "-" + assignment["Resolved QNs"]
-                # Clean the line
-                _ = fit_line_profile(spec_df, frequency)
-                # Keep track of the assignments in a dataframe
-                dataframes = dataframes.append(assignment)
-            print("----------------------------------------------------")
-        else:
-            print("No species known for " + str(frequency))
-    return dataframes, unassigned
 
 
 def brute_harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
@@ -695,6 +666,25 @@ def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
 
 
 def line_weighting(frequency, catalog_frequency, intensity=None):
+    """
+    Function for calculating the line weighting associated with each assignment candidate. The formula is based on
+    intensity and frequency offset, such as to favor strong lines that are spot on over weak lines that are further
+    away.
+
+    Parameters
+    ----------
+    frequency: float
+        Center frequency in MHz; typically the u-line frequency.
+    catalog_frequency: float
+        Catalog frequency of the candidate
+    intensity: float, optional
+        log Intensity of the transition; includes the line strength and the temperature factor.
+
+    Returns
+    -------
+    weighting: float
+        Associated weight value. Requires normalization
+    """
     deviation = np.abs(frequency - catalog_frequency)
     weighting = np.reciprocal(deviation)
     if intensity is not None:
