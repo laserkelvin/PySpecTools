@@ -40,9 +40,15 @@ def inertial_defect(A, B, C):
 
     Returns
     -------
-    inertial defect - float
+    delta - float
+        The inertial defect in units of amu Ang**2
     """
-    return 505379. * (1 / C - 1 / B - 1 / A)
+    frac = np.reciprocal([C, B, A])
+    cumdiff = frac[0]
+    # Calculate the cumulative difference; i.e. 1/C - 1/B - 1/A
+    for value in frac[1:]:
+        cumdiff -= value
+    return cumdiff * 505379.
 
 
 def rotcon2pmi(rotational_constant):
