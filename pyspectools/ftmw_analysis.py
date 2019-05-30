@@ -417,7 +417,7 @@ class Scan:
         return new_scan
 
     def __repr__(self):
-        return str(self.id)
+        return str(f"Scan {self.id}")
 
     def average(self, others):
         """
