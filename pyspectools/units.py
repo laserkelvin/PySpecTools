@@ -25,7 +25,21 @@ jm = constants.value("joule-inverse meter relationship")
 
 
 def kappa(A, B, C):
-    # Ray's asymmetry parameter
+    """
+    Calculate Ray's asymmetry parameter for a given set of A, B, and C rotational constants.
+    This parameter determines how asymmetric a molecule is by setting a range between two limits: the prolate (+1)
+    and the oblate (-1) limits.
+
+    Parameters
+    ----------
+    A, B, C: float
+        Rotational constant in MHz for each respective axis
+
+    Returns
+    -------
+    kappa: float
+        Ray's asymmetry parameter
+    """
     return (2*B - A - C) / (A - C)
 
 
@@ -52,32 +66,24 @@ def inertial_defect(A, B, C):
 
 
 def rotcon2pmi(rotational_constant):
-    """ Convert rotational constants in units of MHz to
-        Inertia, in units of amu A^2.
+    """
+    Convert rotational constants in units of MHz to
+    Inertia, in units of amu A^2.
 
-        The conversion factor is adapted from:
-        Oka & Morino, JMS (1962) 8, 9-21
-        This factor comprises h / pi^2 c.
+    The conversion factor is adapted from:
+    Oka & Morino, JMS (1962) 8, 9-21
+    This factor comprises h / pi^2 c.
 
-        :param rotational_constant: rotational constant in MHz
-        :return:
+    Parameters
+    ----------
+    rotational_constant:
+        Corresponding rotational constant in MHz
+
+    Returns
+    -------
+    Rotational constant converted to units of amu A^2
     """
     return 1 / (rotational_constant / 134.901)
-
-
-def inertial_defect(rotational_constants):
-    """ Calculates the inertial defect, given three
-        rotational constants in MHz. The ordering does not
-        matter because the values are sorted.
-
-        This value is I_c - I_a - I_b; a planar molecule
-        is strictly zero.
-    """
-    # Ensure the ordering is A,B,C
-    rotational_constants = np.sort(rotational_constants)[::-1]
-    # Convert to principal moments of inertia
-    pmi = rotcon2pmi(rotational_constants)
-    return pmi[2] - pmi[0] - pmi[1]
 
 
 def hartree2wavenumber(hartree):
@@ -205,19 +211,19 @@ def thermal_corrections(frequencies, T, linear=True, hartree=True):
     thermal: float
         Total thermal contribution at a given temperature
     """
-    translation = units.kbcm * T
-    rotation = units.kbcm * T
+    translation = kbcm * T
+    rotation = kbcm * T
     if linear is False:
         rotation *= 3. / 2.
     # Convert frequencies into vibrational temperatures
     frequencies = np.asarray(frequencies)
-    frequencies /= units.kbcm
-    vibration = units.kbcm * np.sum(
+    frequencies /= kbcm
+    vibration = kbcm * np.sum(
         frequencies * (0.5 * (1. / (np.exp(frequencies / T) - 1.)))
     )
     thermal = translation + rotation + vibration
     if hartree is True:
-        thermal *= 1. / units.hartree2wavenumber(1.)
+        thermal *= 1. / hartree2wavenumber(1.)
     return thermal
 
 
@@ -230,11 +236,19 @@ def thermal_corrections(frequencies, T, linear=True, hartree=True):
 
 def dop2freq(velocity, frequency):
     """
-    Calculates the expected frequency in MHz based on a
-    Doppler shift in km/s and a center frequency.
-    :param velocity: float
-    :param frequency: float
-    :return: Doppler shifted frequency in MHz
+    Calculates the expected frequency in MHz based on a Doppler shift in km/s and a center frequency.
+
+    Parameters
+    ----------
+    velocity: float
+        Radial velocity in km/s
+    frequency: float
+        Center frequency in MHz
+
+    Returns
+    -------
+    offset: float
+        The change in frequency associated with the velocity and
     """
     # Frequency given in MHz, Doppler_shift given in km/s
     # Returns the expected Doppler shift in frequency (MHz)
@@ -243,11 +257,19 @@ def dop2freq(velocity, frequency):
 
 def freq2vel(frequency, offset):
     """
-    Calculates the Doppler shift in km/s based on a center
-    frequency in MHz and n offset frequency in MHz (delta nu)
-    :param frequency: float
-    :param offset: float
-    :return: Doppler shift in km/s
+    Calculates the Doppler shift in km/s based on a center frequency in MHz and n offset frequency in MHz (delta nu).
+
+    Parameters
+    ----------
+    frequency: float
+        Center frequency in MHz
+    offset: float
+        Frequency offset from the center in MHz
+
+    Returns
+    -------
+    doppler: float
+        Doppler offset in km/s
     """
     return ((constants.c * offset) / frequency) / 1000.
 
