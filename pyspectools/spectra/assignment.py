@@ -1,8 +1,24 @@
-"""
-    transition.py
 
-    Contains the Transition, AssignmentSession, and Session classes that are designed to handle and assist
-    the assignment of broadband spectra from the laboratory or astronomical observations.
+"""
+    `assignment` module
+
+    This module contains three main classes for performing analysis of broad-
+    band spectra. The `AssignmentSession` class will be what the user will
+    mainly interact with, which will digest a spectrum, find peaks, make
+    assignments and keep track of them, and generate the reports at the end.
+
+    To perform the assignments, the user can use the `LineList` class, which
+    does the grunt work of homogenizing the different sources of frequency
+    and molecular information: it is able to take SPCAT and .lin formats, as
+    well as simply a list of frequencies. `LineList` then interacts with the
+    `AssignmentSession` class, which handles the assignments.
+
+    The smallest building block in this procedure is the `Transition` class;
+    every peak, every molecule transition, every artifact is considered as
+    a `Transition` object. The `LineList` contains a list of `Transition`s,
+    and the peaks found by the `AssignmentSession` are also kept as a 
+    `LineList`.
+
 """
 
 import os
@@ -308,9 +324,11 @@ class Transition:
 @dataclass
 class Session:
     """ 
-    DataClass for a Session, which simply holds the
-    experiment ID, composition, and guess_temperature.
-    Doppler broadening can also be incorporated. 
+    Data class for handling parameters used for an AssignmentSession.
+    The user generally shouldn't need to directly interact with this class,
+    but can give some level of dynamic control and bookkeeping to how and
+    what molecules can be assigned, particularly with the composition, the
+    frequency thresholds for matching, and the noise statistics.
 
     Attributes
     ----------
@@ -357,16 +375,13 @@ class Session:
 
 
 class AssignmentSession:
-    """ Class for managing a session of assigning molecules
-        to a broadband spectrum.
+    """
+        Main class for bookkeeping and analyzing broadband spectra. This class
+        revolves around operating on a single continuous spectrum, using the
+        class functions to automatically assess the noise statistics, find
+        peaks, and do the bulk of the bookkeeping on what molecules are assigned
+        to what peak.
 
-        Wraps some high level functionality from the analysis
-        module so that this can be run reproducibly in a jupyter
-        notebook.
-
-        TODO - Homogenize the assignment functions to use one main
-               function, as opposed to having separate functions
-               for catalogs, lin, etc.
     """
 
     @classmethod
@@ -397,6 +412,39 @@ class AssignmentSession:
             col_names=None, freq_col="Frequency", int_col="Intensity", skiprows=0, verbose=False, **kwargs
     ):
         """
+        Class method for AssignmentSession to generate a session using an ASCII
+        file. This is the preferred method for starting an AssignmentSession.
+        The ASCII files are parsed using the pandas method `read_csv`, with
+        the arguments for reading simply passed to that function.
+
+        Example based on blackchirp spectrum:
+        The first row in an ASCII output from blackchirp contains the headers,
+        which typically should be renamed to "Frequency, Intensity". This can
+        be done with this call:
+
+        ```
+        session = AssignmentSession.from_ascii(
+            filepath="ft1020.txt",
+            experiment=0,
+            col_names=["Frequency", "Intensity"],
+            skiprows=1
+            )
+        ```
+
+        Example based on astronomical spectra:
+        File formats are not homogenized, and delimiters may change. This exam-
+        ple reads in a comma-separated spectrum, with a radial velocity of
+        +26.2 km/s.
+        
+        ```
+        session = AssignmentSession.from_ascii(
+            filepath="spectrum.mid.dat",
+            experiment=0,
+            col_names=["Frequency", "Intensity"],
+            velocity=26.2,
+            delimiter=","
+            )
+        ```
 
         Parameters
         ----------
@@ -404,18 +452,25 @@ class AssignmentSession:
             Filepath to the ASCII spectrum
         experiment : int
             Integer identifier for the experiment
-        composition : list of str
+        composition : list of str, optional
             List of atomic symbols, representing the atomic composition of the experiment
-        delimiter : str
+        delimiter : str, optional
             Delimiter character used in the ASCII file. For example, "\t", "\s", ","
-        temperature : float
-            Rotational temperature in Kelvin used for the experiment
-        header : list of str, optional
-            Names of the columns
-        freq_col : str
+        velocity: float, optional
+            Radial velocity to offset the frequency in km/s.
+        temperature : float, optional
+            Rotational temperature in Kelvin used for the experiment.
+        col_names : None or list of str, optional
+            Names to rename the columns. If None, this is ignored.
+        freq_col : str, optional
             Name of the column to be used for the frequency axis
-        int_col : str
+        int_col : str, optional
             Name of the column to be used for the intensity axis
+        skip_rows : int, optional
+            Number of rows to skip reading.
+        verbose : bool, optional
+            If True, the logging module will also print statements and display
+            any interaction that happens.
         kwargs
             Additional kwargs are passed onto initializing the Session class
 
@@ -441,20 +496,36 @@ class AssignmentSession:
     ):
         """ init method for AssignmentSession.
 
-            Required arguments are necessary metadata for controlling various aspects of
-            the automated assignment procedure, as well as for reproducibility.
-
-            Parameters
-            -------------------------
-             exp_dataframe : pandas dataframe
-                Dataframe with observational data in frequency/intensity
-             experiment : int
-                ID for the experiment
-             composition : list of str
-                Corresponds to elemental composition composition; e.g. ["C", "H"]. Used for splatalogue analysis.
-             freq_col : str, optional
-                Specifying the name for the frequency column
-             int_col: optional str arg specifying the name of the intensity column
+            Attributes
+            ----------
+            session : `Session` object
+                Class containing parameters for the experiment, including the
+                chemical composition, the noise statistics, radial velocity,
+                etc.
+            data : Pandas DataFrame
+                This pandas dataframe contains the actual x/y data for the
+                spectrum being analyzed.
+            freq_col, int_col : str
+                Names of the frequency and intensity columns that are contained
+                in the `self.data` dataframe
+            t_threshold : float
+                This value is used to cut off upper-states for assignment. This
+                corresponds to three times the user specified temperature for
+                the experiment.
+            umols : list
+                TODO this list should be used to keep track of unidentified
+                molecules during the assignment process. Later on if an the
+                carrier is identified we should be able to update everything
+                consistently.
+            verbose : bool
+                Specifies whether the logging is printed in addition to being
+                dumped to file.
+            line_lists : dict
+                Dictionary containing all of the `LineList` objects being used
+                for assignments. When the `find_peaks` function is run, a
+                `LineList` is generated, holding every peak found as a corres-
+                ponding `Transition`. This `LineList` is then referenced by
+                the "Peaks" key in the line_lists dictionary.
         """
         # Make folders for organizing output
         folders = [
@@ -491,6 +562,8 @@ class AssignmentSession:
     def __truediv__(self, other, copy=True):
         """
         Method to divide the spectral intensity of the current experiment by another.
+        This gives the ratio of spectral intensities, and can be useful for determining
+        whether a line becomes stronger or weaker between experiments.
 
         If the copy keyword is True, this method creates a deep copy of the current experiment and returns the copy
         with the updated intensities. Otherwise, the spectrum of the current experiment is modified.
@@ -550,6 +623,7 @@ class AssignmentSession:
             "warning": logging.FileHandler("./logs/{}-warnings.log".format(self.session.experiment)),
             "debug": logging.FileHandler("./logs/{}-debug.log".format(self.session.experiment))
         }
+        # If verbose is specified, the logging info is directly printed as well
         if self.verbose is True:
             self.log_handlers["stream"] = logging.StreamHandler()
         # Set up the formatting and the level definitions
