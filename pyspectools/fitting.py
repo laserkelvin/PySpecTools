@@ -278,3 +278,4 @@ def baseline_als(y, lam=1e4, p=0.01, niter=10):
         z = spsolve(Z, w * y)
         w = p * (y > z) + (1 - p) * (y < z)
     return z
+

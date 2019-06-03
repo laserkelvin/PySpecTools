@@ -565,3 +565,4 @@ def parse_cfour(filepath):
         except FileNotFoundError:
             print("OBabel executable not found in PATH.")
     return InfoDict
+
