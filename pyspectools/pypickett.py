@@ -19,7 +19,6 @@ from tqdm.autonotebook import tqdm
 
 from pyspectools import routines
 from pyspectools.spcat import *
-from pyspectools.parsefit import *
 from pyspectools import parsers
 
 class MoleculeFit:

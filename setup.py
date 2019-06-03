@@ -1,24 +1,91 @@
-from setuptools import setup, find_packages
-from setuptools.command.install import install 
-from glob import glob
 import os
-from distutils.spawn import find_executable
+import shutil
 import stat
 import sys
-import shutil
+from distutils.command.sdist import sdist as _sdist
+from distutils.extension import Extension
+from distutils.spawn import find_executable
+from glob import glob
+
+from setuptools import setup, find_packages
+from setuptools.command.install import install
+
+"""
+    This recipe for including Cython in the setup.py was shamelessly
+    taken from a StackOverflow answer:
+    https://stackoverflow.com/questions/4505747/how-should-i-structure-a-python-package-that-contains-cython-code
+"""
+
+
+class sdist(_sdist):
+    """
+    This class simply ensures that the latest .pyx modules are compiled into C when Cython is
+    available. This way you don't have to manually compile the .pyx into C prior to pushing
+    to git.
+    """
+    def run(self):
+        from Cython.Build import cythonize
+        _ = [cythonize(module) for module in glob("cython/*.pyx")]
+        _sdist.run(self)
+
+
+try:
+    from Cython.Distutils import build_ext
+except ImportError:
+    use_cython = False
+else:
+    use_cython = True
+
+cmdclass = dict()
+ext_modules = list()
+
+if use_cython:
+    ext_modules += [
+        Extension(
+            "pyspectools.lineshapes",
+            ["cython/lineshapes.pyx"]
+        )
+    ]
+    cmdclass.update(**{"build_ext": build_ext, "sdist": sdist})
+else:
+    # If Cython is not available, then use the latest C files
+    ext_modules += [
+        Extension(
+            "pyspectools.lineshapes",
+            ["cython/lineshapes.c"]
+        )
+    ]
+
 
 class PostInstallCommand(install):
+    """
+    This class defines the functions to be run after running pip install.
+    The routines to run are:
+    1. Checking if SPFIT/SPCAT are installed
+    """
     def check_pickett(self):
         for executable in ["spcat", "spfit", "calbak"]:
             if find_executable(executable) is None:
                 print(executable + " not found in PATH.")
-                print("Make sure SPFIT/SPCAT is in your path.")
+                print("Make sure SPFIT/SPCAT is in your path to use the PyPickett wrappers.")
+
+    def setup_folders(self):
+        """
+        Sets up the dot folders that are utilized by the routines. If the matplotlib
+        user folder doesn't exist, this function will make one.
+        """
+        folders = [
+            ".pyspectools",
+            ".pyspectools/templates",
+            ".config/matplotlib/stylelib"
+        ]
+        folders = [
+            os.path.join(os.path.expanduser("~"), folder) for folder in folders
+        ]
+        for folder in folders:
+            os.makedirs(folder, exist_ok=True)
 
     def setup_files(self):
-        # If the dotfolder is not present in home directory, make one
-        if os.path.isdir(os.path.expanduser("~") + "/.pyspectools") is False:
-            os.mkdir(os.path.expanduser("~") + "/.pyspectools")
-
         try:
             # Copy over YAML file containing the parameter coding
             shutil.copy2(
@@ -68,6 +135,13 @@ class PostInstallCommand(install):
         self.setup_scripts()
         install.run(self)
 
+cmdclass.update(
+    **{
+        "develop": PostInstallCommand,
+        "install": PostInstallCommand
+    }
+)
+
 setup(
     name="pyspectools",
     version="4.0.1",
@@ -98,8 +172,5 @@ setup(
         "tinydb",
         "networkx",
     ],
-    cmdclass={
-        "develop": PostInstallCommand,
-        "install": PostInstallCommand
-    }
+    cmdclass=cmdclass
 )
