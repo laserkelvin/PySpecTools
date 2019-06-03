@@ -26,7 +26,6 @@ from shutil import rmtree
 from dataclasses import dataclass, field
 from typing import List, Dict
 from copy import deepcopy
-from itertools import product
 import logging
 
 import numpy as np
@@ -39,7 +38,6 @@ from plotly.offline import plot
 from plotly import graph_objs as go
 from uncertainties import ufloat
 from jinja2 import Template
-from joblib import Parallel, delayed
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import ftmw_analysis as fa
@@ -2468,6 +2466,7 @@ class LineList:
             catalog_frequency=np.asarray(frequencies),
             uline=False,
             source="Artifact",
+            interference=True,
             **kwargs
         )
         linelist_obj = cls(name="Artifacts", transitions=list(transitions))
