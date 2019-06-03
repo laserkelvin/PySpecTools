@@ -7,6 +7,7 @@ from distutils.extension import Extension
 from distutils.spawn import find_executable
 from glob import glob
 
+import numpy as np
 from setuptools import setup, find_packages
 from setuptools.command.install import install
 
@@ -25,7 +26,7 @@ class sdist(_sdist):
     """
     def run(self):
         from Cython.Build import cythonize
-        _ = [cythonize(module) for module in glob("cython/*.pyx")]
+        _ = [cythonize(module) for module in glob("pyspectools/fast/*.pyx")]
         _sdist.run(self)
 
 
@@ -42,8 +43,9 @@ ext_modules = list()
 if use_cython:
     ext_modules += [
         Extension(
-            "pyspectools.lineshapes",
-            ["cython/lineshapes.pyx"]
+            "pyspectools.fast.lineshapes",
+            ["pyspectools/fast/lineshapes.pyx"],
+            include_dirs=[np.get_include()]
         )
     ]
     cmdclass.update(**{"build_ext": build_ext, "sdist": sdist})
@@ -51,8 +53,8 @@ else:
     # If Cython is not available, then use the latest C files
     ext_modules += [
         Extension(
-            "pyspectools.lineshapes",
-            ["cython/lineshapes.c"]
+            "pyspectools.fast.lineshapes",
+            ["pyspectools/fast/lineshapes.c"]
         )
     ]
 
@@ -172,5 +174,6 @@ setup(
         "tinydb",
         "networkx",
     ],
-    cmdclass=cmdclass
+    cmdclass=cmdclass,
+    ext_modules=ext_modules
 )

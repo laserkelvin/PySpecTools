@@ -1,6 +1,7 @@
 
 import numpy as np
 cimport numpy as np
+cimport cython
 
 from libc.math cimport sqrt, exp, pi
 
@@ -17,7 +18,9 @@ from libc.math cimport sqrt, exp, pi
     lineshapes.
 """
 
-cdef gaussian(np.ndarray[double, ndim=1] x, float A, float x0, float w):
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def gaussian(double[:] x, float A, float x0, float w):
     """
         Cython implementation of a Gaussian line shape. This function is
         designed to minimize Python interpreter interaction; everything
@@ -40,12 +43,19 @@ cdef gaussian(np.ndarray[double, ndim=1] x, float A, float x0, float w):
         y: np.ndarray
             Numpy 1D array containing the x values.
     """
-    cdef np.ndarray[double, ndim=1] y
-    y = exp(-(x - x0)**2. / (2. * w**2.))
-    y *= (A / sqrt(2. * pi * w**2.))
+    cdef int index
+    cdef int n = x.size
+    cdef double[:] y = np.zeros(n)
+    for index in range(n):
+        y[index] = exp(-(x[index] - x0)**2. / (2. * w**2.))
+        y[index] *= (A / sqrt(2. * pi * w**2.))
+    #y = exp(-(x - x0)**2. / (2. * w**2.))
+    #y *= (A / sqrt(2. * pi * w**2.))
     return y
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def pair_gaussian(np.ndarray [double, ndim=1] x, float A1, float A2,
         float x0, float w, float xsep):
     """
@@ -61,10 +71,12 @@ def pair_gaussian(np.ndarray [double, ndim=1] x, float A1, float A2,
     """
     cdef np.ndarray[double, ndim=1] y1, y2
     y1 = gaussian(x, A1, x0 - xsep, w)
-    y2 = gaussian(x, A2, x9 + sep, w)
+    y2 = gaussian(x, A2, x0 + xsep, w)
     return y1 + y2
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def lorentzian(np.ndarray[double, ndim=1] x, float x0, float gamma, float A):
     """
         Cython function for a Lorenztian distribution. Same as the corres-
@@ -90,6 +102,8 @@ def lorentzian(np.ndarray[double, ndim=1] x, float x0, float gamma, float A):
     return y
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def first_deriv_lorentzian(np.ndarray [double, ndim=1] x, float x0, 
         float gamma, float A):
     """
@@ -111,9 +125,11 @@ def first_deriv_lorentzian(np.ndarray [double, ndim=1] x, float x0,
     cdef np.ndarray[double, ndim=1] y
     y = (-2. * A * gamma**3. * (x - x0))
     y /= (pi * (gamma**2. + (x - x0)**2.)**2.)
-    return return y
+    return y
 
 
+@cython.boundscheck(False)
+@cython.wraparound(False)
 def sec_deriv_lorentzian(np.ndarray [double, ndim=1] x, float x0, 
         float gamma, float A):
     """
@@ -134,6 +150,5 @@ def sec_deriv_lorentzian(np.ndarray [double, ndim=1] x, float x0,
     """
     cdef np.ndarray[double, ndim=1] y
     y = (-2. * A * gamma**3.) / (pi * (gamma**2. + (x - x0)**2.)**2.)
-    y += (8. * A * gamma**3. * (x - x0)**2.) / (pi (gamma**2. + (x - x0_**2.)**3.))
+    y += (8. * A * gamma**3. * (x - x0)**2.) / (pi * (gamma**2. + (x - x0**2.)**3.))
     return y
-
