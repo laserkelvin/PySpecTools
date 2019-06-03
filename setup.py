@@ -45,7 +45,16 @@ if use_cython:
         Extension(
             "pyspectools.fast.lineshapes",
             ["pyspectools/fast/lineshapes.pyx"],
-            include_dirs=[np.get_include()]
+            include_dirs=[np.get_include()],
+            libraries=["m"],
+            extra_compile_args=["-ffast-math", "-march=native", "-O3"]
+        ),
+        Extension(
+            "pyspectools.fast.filters",
+            ["pyspectools/fast/filters.pyx"],
+            include_dirs=[np.get_include()],
+            libraries=["m"],
+            extra_compile_args=["-ffast-math", "-march=native", "-O3"]
         )
     ]
     cmdclass.update(**{"build_ext": build_ext, "sdist": sdist})
@@ -55,6 +64,10 @@ else:
         Extension(
             "pyspectools.fast.lineshapes",
             ["pyspectools/fast/lineshapes.c"]
+        ),
+        Extension(
+            "pyspectools.fast.filters",
+            ["pyspectools/fast/filters.c"]
         )
     ]
 
