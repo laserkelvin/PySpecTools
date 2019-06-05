@@ -282,6 +282,68 @@ def search_center_frequency(frequency, width=0.5):
         return None
 
 
+def calc_line_weighting(
+        self, frequency, catalog_df, prox=0.00005,
+        abs=True, freq_col="Frequency", int_col="Intensity"
+):
+    """
+        Function for calculating the weighting factor for determining
+        the likely hood of an assignment. The weighting factor is
+        determined by the proximity of the catalog frequency to the
+        observed frequency, as well as the theoretical intensity if it
+        is available.
+        Parameters
+        ----------------
+         frequency : float
+            Observed frequency in MHz
+         catalog_df : dataframe
+            Pandas dataframe containing the catalog data entries
+         prox: float, optional
+            Frequency proximity threshold
+         abs: bool
+            Specifies whether argument prox is taken as the absolute value
+        Returns
+        ---------------
+        None
+            If nothing matches the frequency, returns None.
+        dataframe
+            If matches are found, calculate the weights and return the
+            candidates in a dataframe.
+    """
+    if abs is False:
+        lower_freq = frequency * (1 - prox)
+        upper_freq = frequency * (1 + prox)
+    else:
+        lower_freq = frequency - prox
+        upper_freq = frequency + prox
+    sliced_catalog = catalog_df.loc[
+        catalog_df[freq_col].between(lower_freq, upper_freq)
+    ]
+    nentries = len(sliced_catalog)
+    if nentries > 0:
+        if int_col in sliced_catalog:
+            column = sliced_catalog[int_col]
+        elif "CDMS/JPL Intensity" in sliced_catalog:
+            column = sliced_catalog["CDMS/JPL Intensity"]
+        else:
+            column = None
+        # Vectorized function for calculating the line weighting
+        sliced_catalog["Weighting"] = line_weighting(
+            frequency, sliced_catalog[freq_col], column
+        )
+        # Normalize and sort the weights only if there are more than one
+        # candidates
+        if nentries > 1:
+            sliced_catalog.loc[:, "Weighting"] /= sliced_catalog[
+                "Weighting"].max()
+            # Sort by obs-calc
+            sliced_catalog.sort_values(["Weighting"], ascending=False,
+                                       inplace=True)
+        sliced_catalog.reset_index(drop=True, inplace=True)
+        return sliced_catalog
+    else:
+        return None
+
 def brute_harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     """
         Function that will search for possible harmonic candidates
