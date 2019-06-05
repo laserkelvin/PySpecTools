@@ -810,8 +810,8 @@ class AssignmentSession:
         self.logger.info("Modifying the experiment LineList.")
         # Set up session information to be passed in the U-line
         skip = [
-            "temperature", "doppler", "freq_abs", "freq_prox", "noise_rms", "baseline", "header", "noise_region",
-            "composition", "name"
+            "temperature", "doppler", "freq_abs", "freq_prox", "noise_rms",
+            "baseline", "header", "noise_region", "composition", "name"
         ]
         selected_session = {
             key: self.session.__dict__[key] for key in self.session.__dict__ if key not in skip
@@ -819,7 +819,8 @@ class AssignmentSession:
         # If the Peaks key has not been set up yet, we set it up now
         if "Peaks" not in self.line_lists:
             self.line_lists["Peaks"] = LineList.from_dataframe(
-                dataframe, name="Peaks", freq_col=freq_col, int_col=int_col, **selected_session
+                dataframe, name="Peaks",
+                freq_col=freq_col, int_col=int_col, **selected_session
             )
         # Otherwise, we'll just update the existing LineList
         else:
@@ -2335,7 +2336,9 @@ class LineList:
             return None
 
     @classmethod
-    def from_dataframe(cls, dataframe, name="Peaks", freq_col="Frequency", int_col="Intensity", **kwargs):
+    def from_dataframe(cls, dataframe, name="Peaks",
+                       freq_col="Frequency", int_col="Intensity", **kwargs
+                       ):
         """
         Specialized class method for creating a LineList object from a Pandas Dataframe. This method is called by
         the AssignmentSession.df2ulines function to generate a Peaks LineList during peak detection.
@@ -2392,7 +2395,6 @@ class LineList:
             name=name,
             formula=formula,
             catalog_frequency=lin_df["Frequency"],
-            catalog_intensity=lin_df["Intensity"],
             uline=False,
             source="Line file",
             **kwargs
