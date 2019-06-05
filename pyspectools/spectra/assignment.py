@@ -1032,7 +1032,8 @@ class AssignmentSession:
                     self.logger.info("No species known for {:,.4f}".format(frequency))
         self.logger.info("Splatalogue search finished.")
 
-    def process_linelist(self, name=None, formula=None, filepath=None, linelist=None, auto=True, thres=-10.,
+    def process_linelist(self, name=None, formula=None, filepath=None,
+                         linelist=None, auto=True, thres=-10.,
                          progressbar=True, tol=None, **kwargs,):
         """
         General purpose function for performing line assignments using local catalog and line data. The two main ways
@@ -1113,6 +1114,7 @@ class AssignmentSession:
                         thres
                     )
                 )
+                # Find transitions in the LineList that can match
                 can_pkg = linelist.find_candidates(
                     transition.frequency,
                     lstate_threshold=self.t_threshold,
@@ -1130,7 +1132,9 @@ class AssignmentSession:
                     else:
                         for cand_idx, candidate in enumerate(candidates):
                             print(cand_idx, candidate)
-                        chosen_idx = int(input("Please specify the candidate index.   "))
+                        chosen_idx = int(
+                            input("Please specify the candidate index.   ")
+                        )
                         chosen = candidates[chosen_idx]
                     self.logger.info(
                         "Assigning {} (catalog {:.4f}) to peak {} at {:.4f}.".format(
@@ -1143,6 +1147,7 @@ class AssignmentSession:
                     assign_dict["frequency"] = transition.frequency
                     assign_dict["intensity"] = transition.intensity
                     assign_dict["velocity"] = self.session.velocity
+                    assign_dict["uline"] = False
                     # Add any other additional kwargs
                     assign_dict.update(
                         **kwargs
@@ -2489,7 +2494,8 @@ class LineList:
         else:
             return None
 
-    def find_candidates(self, frequency, lstate_threshold=4., freq_tol=1e-1, int_tol=-10.):
+    def find_candidates(self, frequency, lstate_threshold=4.,
+                        freq_tol=1e-1, int_tol=-10.):
         """
         Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
         that meet three criteria: the lower state energy, the catalog intensity, and the frequency distance.
@@ -2520,6 +2526,7 @@ class LineList:
                 [
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
+                    obj.uline is True,
                     abs(obj.catalog_frequency - frequency) <= freq_tol]
             )
         ]
