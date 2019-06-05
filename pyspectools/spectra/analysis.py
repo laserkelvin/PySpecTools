@@ -9,6 +9,7 @@ from astroquery.splatalogue import Splatalogue
 from lmfit import models, MinimizerException
 from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import silhouette_samples
+from scipy.signal import windows
 from uncertainties import ufloat
 
 from pyspectools import fitting
@@ -752,3 +753,41 @@ def line_weighting(frequency, catalog_frequency, intensity=None):
     if intensity is not None:
         weighting *= 10.**intensity
     return weighting
+
+
+def filter_spectrum(intensity, window="hanning"):
+    """
+    Apply a specified window function to a signal. The window functions are
+    taken from the `signal.windows` module of SciPy, so check what is available
+    before throwing it into this function.
+
+    The window function is convolved with the signal by taking the time-
+    domain product, and doing the inverse FFT to get the convolved spectrum
+    back.
+
+    Parameters
+    ----------
+    dataframe: pandas DataFrame
+        Pandas dataframe containing the spectral information
+    int_col: str, optional
+        Column name to reference the signal
+    window: str, optional
+        Name of the window function as implemented in SciPy.
+
+    Returns
+    -------
+    new_y: array_like
+        Numpy 1D array containing the convolved signal
+    """
+    if window not in dir(windows):
+        raise Exception("Specified window not available in SciPy.")
+    data_length = len(intensity)
+    window = windows.get_window(window, data_length)
+    fft_y = np.fft.fft(intensity)
+    # Convolve the signal with the window function
+    new_y = np.fft.ifft(
+        window * fft_y
+    )
+    # Return only the real part of the FFT
+    new_y = np.abs(new_y)
+    return new_y
