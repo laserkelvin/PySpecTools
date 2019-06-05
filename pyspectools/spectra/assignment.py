@@ -1154,9 +1154,13 @@ class AssignmentSession:
                     )
                     self.line_lists["Peaks"].update_transition(index, **assign_dict)
                     nassigned += 1
-            self.logger.info("Assigned {} new transitions to {}.".format(nassigned, name))
+            self.logger.info(
+                "Assigned {} new transitions to {}.".format(
+                    nassigned, linelist.name
+                )
+            )
         else:
-            self.logger.warn("LineList was empty, and no lines were assigned.")
+            self.logger.warning("LineList was empty, and no lines were assigned.")
 
     def process_db(self, auto=True, dbpath=None):
         """
@@ -2526,19 +2530,24 @@ class LineList:
                 [
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
-                    obj.uline is True,
                     abs(obj.catalog_frequency - frequency) <= freq_tol]
             )
         ]
         # If there are candidates, calculate the weights associated with each transition
         if len(transitions) != 0:
-            transition_frequencies = np.array([obj.catalog_frequency for obj in transitions])
-            transition_intensities = np.array([obj.catalog_intensity for obj in transitions])
+            transition_frequencies = np.array(
+                [obj.catalog_frequency for obj in transitions]
+            )
+            transition_intensities = np.array(
+                [obj.catalog_intensity for obj in transitions]
+            )
             # If there are actually no catalog intensities, it should sum up to zero in which case we won't
             # use the intensities in the weight factors
             if np.sum(transition_intensities) == 0.:
                 transition_intensities = None
-            weighting = analysis.line_weighting(frequency, transition_frequencies, transition_intensities)
+            weighting = analysis.line_weighting(
+                frequency, transition_frequencies, transition_intensities
+            )
             # Only normalize if there's more than one
             if len(weighting) > 1:
                 weighting /= weighting.max()
