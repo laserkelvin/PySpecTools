@@ -283,7 +283,7 @@ def search_center_frequency(frequency, width=0.5):
 
 
 def calc_line_weighting(
-        self, frequency, catalog_df, prox=0.00005,
+        frequency, catalog_df, prox=0.00005,
         abs=True, freq_col="Frequency", int_col="Intensity"
 ):
     """

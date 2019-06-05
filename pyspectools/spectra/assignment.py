@@ -542,6 +542,8 @@ class AssignmentSession:
         self.data = exp_dataframe
         # Set the temperature threshold for transitions to be 3x the set value
         self.t_threshold = self.session.temperature * 3.
+        # Initial threshold for peak detection is set to None
+        self.threshold = None
         self.umols = list()
         self.verbose = verbose
         # Holds catalogs
@@ -829,6 +831,11 @@ class AssignmentSession:
             )
             self.line_lists["Peaks"].update_linelist(transitions)
         self.logger.info("There are now {} line entries in this session.".format(len(self.line_lists["Peaks"])))
+        peaks_df = self.line_lists["Peaks"].to_dataframe()[
+            ["frequency", "intensity"]
+        ]
+        peaks_df.columns = ["Frequency", "Intensity"]
+        self.peaks = peaks_df
 
     def search_frequency(self, frequency):
         """
@@ -1484,21 +1491,28 @@ class AssignmentSession:
             )
             self.table = assignment_df
             # Dump assignments to disk
-            assignment_df.to_csv("reports/{0}.csv".format(self.session.experiment), index=False)
-            # Update the uline peak list with only unassigned stuff
-            try:
-                self.peaks = self.peaks[~self.peaks["Frequency"].isin(self.table["frequency"])]
-            except KeyError:
-                self.logger.warning("Could not compare assignments with peak table - ignoring for now.")
+            assignment_df.to_csv(
+                "reports/{0}.csv".format(self.session.experiment),
+                index=False
+            )
             # Dump Uline data to disk
-            self.peaks.to_csv("reports/{0}-ulines.csv".format(self.session.experiment), index=False)
+            peak_data = [
+                [peak.frequency, peak.intensity] for peak in ulines
+            ]
+            peak_df = pd.DataFrame(
+                peak_data, columns=["Frequency", "Intensity"]
+            )
+            peak_df.to_csv(
+                "reports/{0}-ulines.csv".format(self.session.experiment),
+                index=False
+            )
 
             tally = self._get_assigned_names()
             combined_dict = {
                 "assigned_lines": len(assignments),
                 "ulines": len(ulines),
-                "peaks": self.peaks[self.freq_col].values,
-                "num_peaks": len(self.peaks[self.freq_col]),
+                "peaks": self.line_lists["Peaks"].get_frequencies(),
+                "num_peaks": len(self.line_lists["Peaks"]),
                 "tally": tally,
                 "unique_molecules": self.names,
                 "num_unique": len(self.names)
@@ -1775,7 +1789,8 @@ class AssignmentSession:
         html_dict["peak_threshold"] = self.threshold
         # The assigned molecules table
         reduced_table = self.table[
-            ["frequency", "intensity", "formula", "name", "catalog_frequency", "deviation", "ustate_energy", "source"]
+            ["frequency", "intensity", "formula", "name", "catalog_frequency",
+             "deviation", "ustate_energy", "source"]
         ]
         # Render pandas dataframe HTML with bar annotations
         reduced_table_html = reduced_table.style.bar(
@@ -2560,3 +2575,6 @@ class LineList:
         """
         assign_objs = [obj for obj in self.transitions if obj.uline is False]
         return assign_objs
+
+    def get_frequencies(self):
+        return [transition.frequency for transition in self.transitions]
