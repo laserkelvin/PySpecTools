@@ -1403,7 +1403,7 @@ class AssignmentSession:
             cavity_freqs = select
         dr_freqs = [uline.frequency for uline in ulines]
         if thres is not None:
-            intensities = [uline.intensity for uline in ulines]
+            intensities = np.array([uline.intensity for uline in ulines])
             mask = np.where(intensities >= thres)
             dr_freqs = np.asarray(dr_freqs)[mask]
             cavity_freqs = np.asarray(cavity_freqs)[mask]
