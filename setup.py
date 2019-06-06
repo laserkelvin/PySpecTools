@@ -14,7 +14,8 @@ from setuptools.command.install import install
 """
     This recipe for including Cython in the setup.py was shamelessly
     taken from a StackOverflow answer:
-    https://stackoverflow.com/questions/4505747/how-should-i-structure-a-python-package-that-contains-cython-code
+    https://stackoverflow.com/questions/4505747/how-should-i-structure-a-python
+    -package-that-contains-cython-code
 """
 
 
@@ -24,6 +25,7 @@ class sdist(_sdist):
     available. This way you don't have to manually compile the .pyx into C prior to pushing
     to git.
     """
+
     def run(self):
         from Cython.Build import cythonize
         _ = [cythonize(module) for module in glob("pyspectools/fast/*.pyx")]
@@ -78,11 +80,15 @@ class PostInstallCommand(install):
     The routines to run are:
     1. Checking if SPFIT/SPCAT are installed
     """
+
     def check_pickett(self):
         for executable in ["spcat", "spfit", "calbak"]:
             if find_executable(executable) is None:
                 print(executable + " not found in PATH.")
-                print("Make sure SPFIT/SPCAT is in your path to use the PyPickett wrappers.")
+                print(
+                    "Make sure SPFIT/SPCAT is in your path "
+                    "to use the PyPickett wrappers."
+                )
 
     def setup_folders(self):
         """
@@ -116,7 +122,8 @@ class PostInstallCommand(install):
             for sheet in os.listdir("./pyspectools/mpl_stylesheets"):
                 shutil.copy2(
                     sheet,
-                    os.path.expanduser("~") + "/.config/matplotlib/stylelib/" + sheet
+                    os.path.expanduser(
+                        "~") + "/.config/matplotlib/stylelib/" + sheet
                 )
         except FileExistsError:
             pass
@@ -136,10 +143,13 @@ class PostInstallCommand(install):
                 template_name = template.split("/")[-1]
                 with open(template, "r") as read_file:
                     file_contents = read_file.read()
-                with open(os.path.expanduser("~") + "/.pyspectools/" + template_name, "w+") as write_file:
+                with open(os.path.expanduser(
+                        "~") + "/.pyspectools/" + template_name,
+                          "w+") as write_file:
                     write_file.write(file_contents.format(**format_dict))
-                os.chmod(os.path.expanduser("~") + "/.pyspectools/" + template_name,
-                         stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH)
+                os.chmod(
+                    os.path.expanduser("~") + "/.pyspectools/" + template_name,
+                    stat.S_IRWXU | stat.S_IRWXG | stat.S_IROTH)
 
     def run(self):
         # Check for SPFIT/SPCAT executables in PATH
@@ -150,6 +160,7 @@ class PostInstallCommand(install):
         self.setup_scripts()
         install.run(self)
 
+
 cmdclass.update(
     **{
         "develop": PostInstallCommand,
@@ -159,7 +170,7 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.0.3",
+    version="4.0.4",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
