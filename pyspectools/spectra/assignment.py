@@ -30,6 +30,7 @@ import logging
 
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 from tqdm.autonotebook import tqdm
 from lmfit.models import GaussianModel
 from IPython.display import display, HTML
@@ -2115,8 +2116,13 @@ class AssignmentSession:
         # Sort frequencies such that plots are descending in frequency
         frequencies = np.sort(frequencies)[::-1]
         nplots = len(frequencies)
-
-        titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
+        if nplots > 5:
+            raise Exception(
+                "Too many requested frequencies; I can't stack them all!"
+            )
+        titles = tuple(
+            "{:.0f} MHz".format(frequency) for frequency in frequencies
+        )
         fig = figurefactory.init_plotly_subplot(
             nrows=nplots, ncols=1,
             **{
@@ -2133,14 +2139,16 @@ class AssignmentSession:
             max_freq = frequency + freq_cutoff
             min_freq = frequency - freq_cutoff
             sliced_df = dataframe.loc[
-                (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
-                ]
+                dataframe["Offset {}".format(index)].between(
+                    -freq_cutoff, freq_cutoff
+                )
+            ]
             sliced_peaks = self.peaks.loc[
-                (self.peaks["Frequency"] <= max_freq) & (min_freq <= self.peaks["Frequency"])
+                self.peaks["Frequency"].between(min_freq, max_freq)
             ]
             sliced_peaks["Offset Frequency"] = sliced_peaks["Frequency"] - frequency
             sliced_assignments = self.table.loc[
-                (self.table["frequency"] <= max_freq) & (min_freq <= self.table["frequency"])
+                self.table["frequency"].between(min_freq, max_freq)
             ]
             sliced_assignments["offset_frequency"] = sliced_assignments["catalog_frequency"] - frequency
             # Plot the data
@@ -2215,45 +2223,127 @@ class AssignmentSession:
             self.logger.info("Removed {} peak as artifact.".format(freq))
 
     def find_progressions(
-            self, search=0.001, low_B=400.,
-            high_B=9000., sil_calc=True, refit=False, plot=True, **kwargs
+            self, search=0.001, low_B=400., high_B=9000.,
+            refit=False, plot=True, preferences=None, **kwargs
     ):
         """
-            High level function for searching U-line database for
-            possible harmonic progressions. Wraps the lower level function
-            harmonic_search, which will generate 3-4 frequency combinations
-            to search.
+        Performs a search for possible harmonically related U-lines.
+        The first step loops over every possible U-line pair, and uses the
+        difference to estimate an effective B value for predicting the next
+        transition. If the search is successful, the U-line is added to the
+        list. The search is repeated until there are no more U-lines within
+        frequency range of the next predicted line.
 
-            Parameters
-            ---------------
-             search - threshold for determining if quantum number J is close
-                     enough to an integer/half-integer
-             low_B - minimum value for B
-             high_B - maximum value for B
-             plot - whether or not to produce a plot of the progressions
+        Once the possible series are identified, the frequencies are fit to
+        an effective linear molecule model (B and D terms). An affinity propa-
+        gation cluster model is then used to group similar progressions toge-
+        ther, with either a systematic test of preference values or a user
+        specified value.
 
-            Returns
-            ---------------
-             harmonic_df - dataframe containing the viable transitions
+        Parameters
+        ----------
+        search: float, optional
+            Percentage value of the target frequency cutoff for excluding
+            possible candidates in the harmonic search
+        low_B, high_B: float, optional
+            Minimum and maximum value of B in MHz to be considered. This
+            constrains the size of the molecule you are looking for.
+        refit: bool, optional
+            If True, B and D are refit to the cluster frequencies.
+        plot: bool, optional
+            If True, creates a Plotly scatter plot of the clusters, as a funct-
+            ion of the preference values.
+        preferences: float or array_like of floats, optional
+            A single value or an array of preference values for the AP cluster
+            model. If None, the clustering will be performed on a default grid,
+            where all of the results are returned.
+        kwargs: optional
+            Additional kwargs are passed to the AP model initialization.
+
+        Returns
+        -------
+        fig
         """
-        uline_frequencies = [uline.frequency for uline in self.ulines.values()]
+        ulines = self.line_lists["Peaks"].get_ulines()
+        uline_frequencies = [uline.frequency for uline in ulines]
+        self.logger.info("Performing harmonic progression search")
         progressions = analysis.harmonic_finder(
             uline_frequencies,
             search=search,
             low_B=low_B,
             high_B=high_B
         )
-        fit_df = fitting.harmonic_fitter(progressions, J_thres=search)[0]
-        self.harmonic_fits = fit_df
+        self.logger.info("Fitting progressions.")
+        fit_df, _ = fitting.harmonic_fitter(progressions, J_thres=search)
+        self.logger.info("Found {} possible progressions.".format(len(fit_df)))
+        pref_test_data = dict()
         # Run cluster analysis on the results
-        self.cluster_dict, self.progressions, self.cluster_obj = analysis.cluster_AP_analysis(
-            self.harmonic_fits,
-            sil_calc,
-            refit,
-            **kwargs
-        )
-        self.cluster_df = pd.DataFrame.from_dict(self.cluster_dict).T
-        return self.cluster_df
+        if preferences is None:
+            preferences = np.linspace(-5000., 5000., 10)
+        if type(preferences) == list or type(preferences) == np.ndarray:
+            for preference in preferences:
+                try:
+                    ap_settings = {"preference": preference}
+                    ap_settings.update(**kwargs)
+                    cluster_dict, progressions, _ = analysis.cluster_AP_analysis(
+                        fit_df,
+                        sil_calc=True,
+                        refit=refit,
+                        **ap_settings
+                    )
+                    pref_test_data[preference] = {
+                        "cluster_data": cluster_dict,
+                        "nclusters": len(cluster_dict),
+                        "prog_df": progressions,
+                    }
+                except ValueError:
+                    pass
+        else:
+            # Perform the AP clustering with a single preference value
+            cluster_dict, progressions, _ = analysis.cluster_AP_analysis(
+                fit_df,
+                sil_calc=True,
+                refit=refit,
+                **{"preference": preferences}
+            )
+            pref_test_data[preferences] = {
+                "cluster_data": cluster_dict,
+                "nclusters":    len(cluster_dict),
+                "prog_df":      progressions,
+            }
+        # Make a plotly figure of how the clustering goes (with frequency)
+        # as a function of preference
+        if plot is True:
+            fig = go.FigureWidget()
+            fig.layout["xaxis"]["title"] = "Frequency (MHz)"
+            fig.layout["xaxis"]["tickformat"] = ".,"
+            for preference, contents in pref_test_data.items():
+                df = contents["prog_df"]
+                # Create the colors for the unique clusters
+                colors = figurefactory.generate_colors(
+                    len(contents["cluster_data"]),
+                    hex=True,
+                    cmap=plt.cm.Spectral
+                )
+                # Assign a color to each cluster
+                cmap = {
+                    index: color for index, color in zip(
+                        df["Cluster indices"].unique(),
+                        colors
+                    )
+                }
+                for index, data in contents["cluster_data"].items():
+                    frequencies = data["Frequencies"]
+                    fig.add_scattergl(
+                        x=frequencies,
+                        y=[preference + index] * len(frequencies),
+                        mode="markers",
+                        marker={"color": cmap[index]},
+                        opacity=0.7
+                    )
+            return fig, pref_test_data
+        else:
+            return None, pref_test_data
 
     def search_species(self, formula=None, name=None, smiles=None):
         """

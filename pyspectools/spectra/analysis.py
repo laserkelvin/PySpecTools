@@ -467,8 +467,7 @@ def harmonic_finder(frequencies, search=0.001, low_B=400., high_B=9000.):
     frequencies = np.sort(frequencies)
     progressions = list()
     for combo in combinations(frequencies, 2):
-        # Ignore everything that is too large or
-        # too small
+        # Ignore everything that is too large or too small
         guess_B = np.diff(combo)
         if low_B <= guess_B <= high_B:
             combo = np.array(combo)
@@ -504,30 +503,25 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
                  as attributes.
     """
     ap_options = dict()
-    ap_options.update(kwargs)
-    print(ap_options)
+    ap_options.update(**kwargs)
     ap_obj = AffinityPropagation(**ap_options)
-    # Determine clusters based on the RMS, B, and D
-    # similarities
-    print("Fitting the Affinity Propagation model.")
+    # Determine clusters based on the RMS, B, and D similarities
     # Remove occurrences of NaN in the three columns
     progression_df.dropna(subset=["RMS", "B", "D"], inplace=True)
+    # Fit the B, D, results to the cluster model
     ap_obj.fit(progression_df[["RMS", "B", "D"]])
-    print("Fit complete.")
+    # Indicate which progression fits with which cluster
     progression_df["Cluster indices"] = ap_obj.labels_
-    print("Determined {} clusters.".format(len(ap_obj.cluster_centers_)))
     # Calculate the metric for determining how well a sample
     # fits into its cluster
     if sil_calc is True:
-        print("Calculating silhouettes.")
         progression_df["Silhouette"] = silhouette_samples(
             progression_df[["RMS", "B", "D"]],
             progression_df["Cluster indices"],
             metric="euclidean"
-            )
-    
+        )
     data = dict()
-    print("Aggregating results.")
+    # Loop over each cluster, and aggregate the frequencies together
     for index, label in enumerate(progression_df["Cluster indices"].unique()):
         data[index] = dict()
         cluster_data = ap_obj.cluster_centers_[index]
@@ -611,12 +605,18 @@ def find_series(combo, frequencies, search=0.005):
     for guess in guess_centers:
         lower_guess = guess * (1 - search)
         upper_guess = guess * (1 + search)
-        nearest_neighbours = frequencies[(frequencies >= lower_guess) & (frequencies <= upper_guess)]
+        nearest_neighbours = frequencies[
+            (frequencies >= lower_guess) & (frequencies <= upper_guess)
+            ]
         # If we don't find anything close enough, don't worry about it
         # this will make sure that missing lines aren't necessarily ignored
         if len(nearest_neighbours) > 0:
             # Return the closest value to the predicted center
-            candidates.append(nearest_neighbours[np.argmin(np.abs(guess - nearest_neighbours))])
+            candidates.append(
+                nearest_neighbours[
+                    np.argmin(np.abs(guess - nearest_neighbours))
+                ]
+            )
     return candidates
 
 

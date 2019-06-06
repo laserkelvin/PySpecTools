@@ -173,15 +173,14 @@ def harmonic_fitter(progressions, J_thres=0.01):
     params = BJ_fit_model.make_params()
     data = list()
     fit_objs = list()
+    failed = list()
     for index, progression in tqdm(enumerate(progressions)):
         # Determine the approximate value of B based on
         # the differences between observed transitions
         approx_B = np.average(np.diff(progression))
-        # Calculate the values of J that are assigned
-        # based on B
+        # Calculate the values of J that are assigned based on B
         J = (progression / approx_B) / 2.
-        # We want at least half of the lines to be
-        # close to being integer
+        # We want at least half of the lines to be close to being integer
         if len(progression) >= 2:
             if np.sum(quant_check(J, J_thres)) >= len(progression) / 1.5:
                 # Let B vary a bit
@@ -218,14 +217,14 @@ def harmonic_fitter(progressions, J_thres=0.01):
                     data.append(return_dict)
                     fit_objs.append(fit)
                 else:
-                    print("Index {} failed to fit.".format(index))
-                    print(fit.fit_report())
+                    failed.append([index, fit.fit_report()])
             else:
-                print("Index {} failed the J test. Try loosen the threshold.".format(index))
+                failed.append(index)
         else:
             return_dict = dict()
             return_dict["RMS"] = 0.
             return_dict["B"] = approx_B
+            # reformat the frequencies and approximate J values
             for i, frequency in enumerate(progression):
                 return_dict[i] = frequency
                 return_dict["J{}".format(i)] = J[i]
