@@ -13,6 +13,7 @@ from scipy.signal import windows
 from uncertainties import ufloat
 
 from pyspectools import fitting
+from pyspectools import lineshapes
 from pyspectools import routines
 
 
@@ -755,7 +756,7 @@ def line_weighting(frequency, catalog_frequency, intensity=None):
     return weighting
 
 
-def filter_spectrum(intensity, window="hanning"):
+def filter_spectrum(intensity, window="hanning", sigma=0.5):
     """
     Apply a specified window function to a signal. The window functions are
     taken from the `signal.windows` module of SciPy, so check what is available
@@ -765,6 +766,10 @@ def filter_spectrum(intensity, window="hanning"):
     domain product, and doing the inverse FFT to get the convolved spectrum
     back.
 
+    The one exception is the gaussian window - if a user specifies "gaussian"
+    for the window function, the actual window function applied here is a
+    half gaussian, i.e. a 1D gaussian blur.
+
     Parameters
     ----------
     dataframe: pandas DataFrame
@@ -773,6 +778,7 @@ def filter_spectrum(intensity, window="hanning"):
         Column name to reference the signal
     window: str, optional
         Name of the window function as implemented in SciPy.
+    sigma:
 
     Returns
     -------
@@ -782,7 +788,13 @@ def filter_spectrum(intensity, window="hanning"):
     if window not in dir(windows):
         raise Exception("Specified window not available in SciPy.")
     data_length = len(intensity)
-    window = windows.get_window(window, data_length)
+    if window == "gaussian":
+        x = np.arange(data_length)
+        window = lineshapes.gaussian(
+            x, 1., 0., sigma
+        )
+    else:
+        window = windows.get_window(window, data_length)
     fft_y = np.fft.fft(intensity)
     # Convolve the signal with the window function
     new_y = np.fft.ifft(

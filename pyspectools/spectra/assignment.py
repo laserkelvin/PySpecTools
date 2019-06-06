@@ -902,6 +902,58 @@ class AssignmentSession:
         except:
             return False
 
+    def apply_filter(self, window, sigma=0.5, int_col=None):
+        """
+        Applies a filter to the spectral signal. If multiple window functions
+        are to be used, a list of windows can be provided, which will then
+        perform the convolution stepwise. With the exception of the gaussian
+        window function, the others functions use the SciPy signal functions.
+
+        A reference copy of the original signal is kept as the "Ref" column;
+        this is used if a new window function is applied, rather than on the
+        already convolved signal.
+
+        Parameters
+        ----------
+        window: str, or iterable of str
+            Name of the window function
+        sigma: float, optional
+            Specifies the magnitude of the gaussian blur. Only used when the
+            window function asked for is "gaussian".
+        int_col: None or str, optional
+            Specifies which column to apply the window function to. If None,
+            defaults to the session-wide intensity column
+        """
+        if int_col is None:
+            int_col = self.int_col
+        # If the reference spectrum exists, we'll use that instead
+        if "Ref" in self.data.columns:
+            int_col = "Ref"
+            self.logger.info("Using Ref signal for window function.")
+        else:
+            # Make a copy of the original signal
+            self.data["Ref"] = self.data[self.int_col].copy()
+            self.logger.info("Copied signal to Ref column.")
+        intensity = self.data[int_col].values
+        self.logger.info(
+            "Applying {} to column {}.".format(window, int_col)
+        )
+        # Try to see if the window variable is an iterable
+        try:
+            assert type(window) == list
+            for function in iter(window):
+                intensity = analysis.filter_spectrum(
+                    intensity, function, sigma
+                )
+        except AssertionError:
+            # In the event that window is not a list, just apply the filter
+            intensity = analysis.filter_spectrum(
+                intensity, window, sigma
+            )
+        # Windowed signal is usually too small for float printing in the html
+        # report
+        self.data[int_col] = intensity * 1000.
+
     def splat_assign_spectrum(self, auto=False):
         """
         Alias for `process_splatalogue`. Function will be removed in a later version.
