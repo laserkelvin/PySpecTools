@@ -25,8 +25,7 @@ import os
 from shutil import rmtree
 from dataclasses import dataclass, field
 from typing import List, Dict
-from copy import deepcopy
-from itertools import product
+from copy import copy, deepcopy
 import logging
 
 import numpy as np
@@ -39,7 +38,6 @@ from plotly.offline import plot
 from plotly import graph_objs as go
 from uncertainties import ufloat
 from jinja2 import Template
-from joblib import Parallel, delayed
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import ftmw_analysis as fa
@@ -733,7 +731,7 @@ class AssignmentSession:
         self.logger.info("Noise RMS set to {}.".format(rms))
         return baseline, rms
 
-    def find_peaks(self, threshold=None, region=None, sigma=6):
+    def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10):
         """
             Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
             The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
@@ -772,6 +770,7 @@ class AssignmentSession:
             freq_col=self.freq_col,
             int_col=self.int_col,
             thres=threshold,
+            min_dist=min_dist
         )
         # Shift the peak intensities down by the noise baseline
         peaks_df.loc[:, self.int_col] = peaks_df[self.int_col] - self.session.baseline
@@ -1062,6 +1061,7 @@ class AssignmentSession:
                         ass_dict = {
                             "uline": False,
                             "frequency": frequency,
+                            "intensity": uline.intensity,
                             "name": ass_df["Chemical Name"][0],
                             "catalog_frequency": ass_df["Frequency"][0],
                             "catalog_intensity": ass_df["CDMS/JPL Intensity"][0],
@@ -1194,7 +1194,7 @@ class AssignmentSession:
                         )
                     )
                     # Create a copy of the Transition data from the LineList
-                    assign_dict = deepcopy(chosen.__dict__)
+                    assign_dict = copy(chosen.__dict__)
                     # Update with the measured frequency and intensity
                     assign_dict["frequency"] = transition.frequency
                     assign_dict["intensity"] = transition.intensity
@@ -1204,7 +1204,9 @@ class AssignmentSession:
                     assign_dict.update(
                         **kwargs
                     )
-                    self.line_lists["Peaks"].update_transition(index, **assign_dict)
+                    # Copy over the information from the assignment, and update
+                    # the experimental peak information with the assignment
+                    transition.__dict__.update(**assign_dict)
                     nassigned += 1
             self.logger.info(
                 "Assigned {} new transitions to {}.".format(
@@ -2095,8 +2097,9 @@ class AssignmentSession:
         :return: Plotly Figure object
         """
         # Update the peaks table
+        ulines = self.line_lists["Peaks"].get_ulines()
         self.peaks = pd.DataFrame(
-            data=[[uline.frequency, uline.intensity] for uline in self.ulines.values()],
+            data=[[uline.frequency, uline.intensity] for uline in ulines],
             columns=["Frequency", "Intensity"]
         )
         dataframe = self.data.copy()
@@ -2108,7 +2111,7 @@ class AssignmentSession:
             )
         )
         # Plot only frequencies within band
-        frequencies = frequencies[indices]
+        frequencies = np.asarray(frequencies)[indices]
         # Sort frequencies such that plots are descending in frequency
         frequencies = np.sort(frequencies)[::-1]
         nplots = len(frequencies)
@@ -2158,7 +2161,7 @@ class AssignmentSession:
                     y=sliced_assignments["intensity"],
                     width=1.0,
                     hoverinfo="text",
-                    text=sliced_assignments["name"] + "-" + sliced_assignments["r_qnos"],
+                    text=sliced_assignments["name"] + "-" + sliced_assignments["r_qnos"].apply(str),
                     name="Assignments",
                     marker={"color": "rgb(253,174,97)"}
                 )
@@ -2380,10 +2383,15 @@ class LineList:
         """
         catalog_df = parsers.parse_cat(filepath, low_freq=min_freq, high_freq=max_freq)
         try:
-            # Create a formatted quantum number string
-            catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
-                *catalog_df[["N'", "J'", "N''", "J''"]].values
+            columns = ["N'", "J'", "N''", "J''"]
+            catalog_df["qno"] = catalog_df[columns].apply(
+                lambda x: "N'={}, J'={} - N''={}, J''={}".format(*x),
+                axis=1
             )
+            # Create a formatted quantum number string
+            #catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
+            #    *catalog_df[["N'", "J'", "N''", "J''"]].values
+            #)
             # Calculate E upper to have a complete set of data
             catalog_df["Upper state energy"] = units.calc_E_upper(
                 catalog_df["Frequency"], catalog_df["Lower state energy"]
@@ -2467,6 +2475,7 @@ class LineList:
             name=name,
             formula=formula,
             catalog_frequency=lin_df["Frequency"],
+            r_qnos=lin_df["Quantum numbers"],
             uline=False,
             source="Line file",
             **kwargs

@@ -102,7 +102,8 @@ def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Freq
         return None, None
 
 
-def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
+def peak_find(spec_df, freq_col="Frequency", int_col="Intensity",
+              thres=0.015, min_dist=10):
     """ 
         Wrapper for peakutils applied to pandas dataframes. First finds
         the peak indices, which are then used to fit Gaussians to determine
@@ -128,13 +129,13 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity", thres=0.015):
         spec_df[int_col],
         thres=thres,
         thres_abs=True,
-        min_dist=10
+        min_dist=min_dist
         )
     frequencies = peakutils.interpolate(
         x=spec_df[freq_col].values,
         y=spec_df[int_col].values,
         ind=peak_indices,
-        width=20
+        width=11
         )
     # Get the peaks if we were just using indexes
     direct_df = spec_df.iloc[peak_indices]
