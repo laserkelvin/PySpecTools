@@ -508,10 +508,14 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
     # Determine clusters based on the RMS, B, and D similarities
     # Remove occurrences of NaN in the three columns
     progression_df.dropna(subset=["RMS", "B", "D"], inplace=True)
-    # Fit the B, D, results to the cluster model
-    ap_obj.fit(progression_df[["RMS", "B", "D"]])
+    # Fit a random 40% subset of the B, D, results to the cluster model
+    ap_obj.fit(progression_df.sample(frac=0.4)[["RMS", "B", "D"]])
+    # Predict the clusters
+    progression_df["Cluster indices"] = ap_obj.predict(
+        progression_df[["RMS", "B", "D"]]
+    )
     # Indicate which progression fits with which cluster
-    progression_df["Cluster indices"] = ap_obj.labels_
+    #progression_df["Cluster indices"] = ap_obj.labels_
     # Calculate the metric for determining how well a sample
     # fits into its cluster
     if sil_calc is True:
@@ -523,7 +527,7 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
     data = dict()
     # Loop over each cluster, and aggregate the frequencies together
     for index, label in enumerate(progression_df["Cluster indices"].unique()):
-        data[index] = dict()
+        data[label] = dict()
         cluster_data = ap_obj.cluster_centers_[index]
         slice_df = progression_df.loc[progression_df["Cluster indices"] == label]
         columns = list()
@@ -534,7 +538,7 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
                 pass
         unique_frequencies = np.unique(slice_df[columns].values.flatten())
         unique_frequencies = unique_frequencies[~np.isnan(unique_frequencies)]
-        data[index]["Frequencies"] = unique_frequencies
+        data[label]["Frequencies"] = unique_frequencies
         if refit is True:
             # Refit the whole list of frequencies with B and D again
             BJ_model = models.Model(fitting.calc_harmonic_transition)
@@ -553,10 +557,9 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
                 params=params
             )
             # Package results together
-            fit_values = fit.best_values
-            data[index].update(fit.best_values)
-            data[index]["oldRMS"] = cluster_data[0]
-            data[index]["RMS"] = np.sqrt(np.average(np.square(fit.residual)))
+            data[label].update(fit.best_values)
+            data[label]["oldRMS"] = cluster_data[0]
+            data[label]["RMS"] = np.sqrt(np.average(np.square(fit.residual)))
         else:
             # Reuse old RMS
             fit_values = {
@@ -564,7 +567,7 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
                 "D": cluster_data[2],
                 "RMS": cluster_data[0]
                 }
-            data[index].update(fit_values)
+            data[label].update(fit_values)
     return data, progression_df, ap_obj
 
 
@@ -621,8 +624,8 @@ def find_series(combo, frequencies, search=0.005):
 
 
 def blank_spectrum(
-        spectrum_df, frequencies, noise, noise_std, freq_col="Frequency", int_col="Intensity", window=1.,
-        df=True
+        spectrum_df, frequencies, noise, noise_std, freq_col="Frequency",
+        int_col="Intensity", window=1., df=True
 ):
     """
     Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
@@ -659,20 +662,21 @@ def blank_spectrum(
         # Reset the random number generator seed
         np.random.seed()
         # Work out the length of the noise window we have to create
-        length = len(
-            new_spec.loc[(new_spec[freq_col] >= frequency - window) & (new_spec[freq_col] <= frequency + window)]
+        mask = new_spec[freq_col].between(
+            frequency - window,
+            frequency + window
         )
+        length = len(new_spec.loc[mask])
         # Create Gaussian noise for this region
         noise_array = np.random.normal(noise, noise_std, length)
-        # Blank the region of interest with the noise
         new_spec.loc[
-            (new_spec[freq_col] >= frequency - window) & (new_spec[freq_col] <= frequency + window),
-            int_col
+            mask, int_col
         ] = noise_array
     if df is True:
         return new_spec
     else:
         return new_spec[int_col].values
+
 
 def compare_experiments(experiments, thres_prox=0.1, thres_abs=True):
     """

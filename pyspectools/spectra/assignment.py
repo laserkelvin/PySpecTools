@@ -1729,6 +1729,42 @@ class AssignmentSession:
                 )
         return y
 
+    def clean_spectral_assignments(self, window=1.):
+        """
+        Function to blank regions of the spectrum that have already been
+        assigned. This function takes the frequencies of assignments, and
+        uses the noise statistics to generate white noise to replace the
+        peak. This is to let one focus on unidentified features, rather than
+        be distracted by the assignments with large amplitudes.
+
+        Parameters
+        ----------
+        window: float, optional
+            Frequency value in MHz to blank. The region corresponds to the
+            frequency +/- this value.
+        """
+        # Make a back up of the full spectrum
+        if "Full" not in self.data.columns:
+            self.data["Full"] = self.data[self.int_col].copy()
+        # If the backup exists, restore the backup first before blanking.
+        else:
+            self.data[self.int_col] = self.data["Full"].copy()
+        assignments = self.line_lists["Peaks"].get_assignments()
+        frequencies = np.array(
+            [transition.frequency for transition in assignments]
+        )
+        self.logger.info(f"Blanking spectrum over {frequencies} windows.")
+        self.data[self.int_col] = analysis.blank_spectrum(
+            self.data,
+            frequencies,
+            self.session.baseline,
+            self.session.noise_rms,
+            freq_col=self.freq_col,
+            int_col=self.int_col,
+            window=window,
+            df=False
+        )
+
     def calculate_assignment_statistics(self):
         """
         Function for calculating some aggregate statistics of the assignments and u-lines. This
@@ -2080,7 +2116,7 @@ class AssignmentSession:
         )
         return fig
 
-    def stacked_plot(self, frequencies, freq_range=0.05):
+    def stacked_plot(self, frequencies, int_col=None, freq_range=0.05):
         """
         Special implementation of the stacked_plot from the figurefactory module, adapted
         for AssignmentSession. In this version, the assigned/u-lines are also indicated.
@@ -2097,6 +2133,8 @@ class AssignmentSession:
          freq_range: float percentage value of each center frequency to use as cutoffs
         :return: Plotly Figure object
         """
+        if int_col is None:
+            int_col = self.int_col
         # Update the peaks table
         ulines = self.line_lists["Peaks"].get_ulines()
         self.peaks = pd.DataFrame(
@@ -2115,6 +2153,7 @@ class AssignmentSession:
         frequencies = np.asarray(frequencies)[indices]
         # Sort frequencies such that plots are descending in frequency
         frequencies = np.sort(frequencies)[::-1]
+        delta = min(frequencies) * freq_range
         nplots = len(frequencies)
         if nplots > 5:
             raise Exception(
@@ -2140,7 +2179,7 @@ class AssignmentSession:
             min_freq = frequency - freq_cutoff
             sliced_df = dataframe.loc[
                 dataframe["Offset {}".format(index)].between(
-                    -freq_cutoff, freq_cutoff
+                    -delta, delta
                 )
             ]
             sliced_peaks = self.peaks.loc[
@@ -2150,7 +2189,7 @@ class AssignmentSession:
             sliced_assignments = self.table.loc[
                 self.table["frequency"].between(min_freq, max_freq)
             ]
-            sliced_assignments["offset_frequency"] = sliced_assignments["catalog_frequency"] - frequency
+            sliced_assignments["offset_frequency"] = sliced_assignments["frequency"] - frequency
             # Plot the data
             traces = list()
             # Spectrum plot
@@ -2279,8 +2318,12 @@ class AssignmentSession:
         pref_test_data = dict()
         # Run cluster analysis on the results
         if preferences is None:
-            preferences = np.arange(-5000., -50., 500.)
+            preferences = np.array(
+                [-8e4, -4e4, -2e4, -1e4, -5e3, -3e3, -1.5e3, -500., -100.]
+            )
+        # Perform the AP cluster modelling
         if type(preferences) == list or type(preferences) == np.ndarray:
+            self.logger.info(f"Evaluating AP over grid values {preferences}.")
             for preference in preferences:
                 try:
                     ap_settings = {"preference": preference}
@@ -2291,11 +2334,23 @@ class AssignmentSession:
                         refit=refit,
                         **ap_settings
                     )
+                    npoor = progressions.loc[
+                                     progressions["Silhouette"] < 0.
+                                     ].size,
+                    if type(npoor) == tuple:
+                        npoor = npoor[0]
+                    nclusters = len(cluster_dict)
                     pref_test_data[preference] = {
                         "cluster_data": cluster_dict,
-                        "nclusters": len(cluster_dict),
-                        "prog_df": progressions,
+                        "nclusters": nclusters,
+                        "npoor": npoor,
+                        "avg_silh": np.average(progressions["Silhouette"]),
+                        "progression_df": progressions,
                     }
+                    self.logger.info(
+                        f"{preference} has {npoor} poor fits "
+                        f"out of {nclusters} clusters ({npoor / nclusters})."
+                    )
                 except ValueError:
                     pass
         else:
@@ -2306,19 +2361,32 @@ class AssignmentSession:
                 refit=refit,
                 **{"preference": preferences}
             )
+            npoor = progressions.loc[
+                        progressions["Silhouette"] < 0.
+                        ].size,
+            if type(npoor) == tuple:
+                npoor = npoor[0]
+            nclusters = len(cluster_dict)
             pref_test_data[preferences] = {
-                "cluster_data": cluster_dict,
-                "nclusters":    len(cluster_dict),
-                "prog_df":      progressions,
+                "cluster_data":   cluster_dict,
+                "nclusters":      nclusters,
+                "npoor":          npoor,
+                "avg_silh":       np.average(progressions["Silhouette"]),
+                "progression_df": progressions,
             }
+            self.logger.info(
+                f"{preferences} has {npoor} poor fits "
+                f"out of {nclusters} clusters ({npoor / nclusters})."
+            )
         # Make a plotly figure of how the clustering goes (with frequency)
         # as a function of preference
         if plot is True:
             fig = go.FigureWidget()
             fig.layout["xaxis"]["title"] = "Frequency (MHz)"
+            fig.layout["yaxis"]["title"] = "Preference"
             fig.layout["xaxis"]["tickformat"] = ".,"
+            # Loop over the preference values
             for preference, contents in pref_test_data.items():
-                df = contents["prog_df"]
                 # Create the colors for the unique clusters
                 colors = figurefactory.generate_colors(
                     len(contents["cluster_data"]),
@@ -2328,7 +2396,7 @@ class AssignmentSession:
                 # Assign a color to each cluster
                 cmap = {
                     index: color for index, color in zip(
-                        df["Cluster indices"].unique(),
+                        np.arange(len(contents["cluster_data"])),
                         colors
                     )
                 }
@@ -2338,7 +2406,7 @@ class AssignmentSession:
                         x=frequencies,
                         y=[preference + index] * len(frequencies),
                         mode="markers",
-                        marker={"color": cmap[index]},
+                        marker={"color": cmap.get(index, "#ffffff")},
                         opacity=0.7,
                         name=f"{preference}-{index}"
                     )
