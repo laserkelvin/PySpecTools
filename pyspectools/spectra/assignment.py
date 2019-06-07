@@ -2279,7 +2279,7 @@ class AssignmentSession:
         pref_test_data = dict()
         # Run cluster analysis on the results
         if preferences is None:
-            preferences = np.linspace(-5000., 5000., 10)
+            preferences = np.arange(-5000., -50., 500.)
         if type(preferences) == list or type(preferences) == np.ndarray:
             for preference in preferences:
                 try:
@@ -2339,7 +2339,8 @@ class AssignmentSession:
                         y=[preference + index] * len(frequencies),
                         mode="markers",
                         marker={"color": cmap[index]},
-                        opacity=0.7
+                        opacity=0.7,
+                        name=f"{preference}-{index}"
                     )
             return fig, pref_test_data
         else:
@@ -2428,6 +2429,7 @@ class LineList:
     transitions: List = field(default_factory=list)
     frequencies: List[float] = field(default_factory=list)
     catalog_frequencies: List[float] = field(default_factory=list)
+    source: str = ""
 
     def __str__(self):
         return "Line list for: {}, Formula: {}, Number of entries: {}".format(
@@ -2500,7 +2502,13 @@ class LineList:
                 uline=False,
                 **kwargs
             )
-            linelist_obj = cls(name, formula, filepath=filepath, transitions=list(transitions))
+            linelist_obj = cls(
+                name,
+                formula,
+                filepath=filepath,
+                transitions=list(transitions),
+                source="Catalog"
+            )
             return linelist_obj
         except IndexError:
             return None
@@ -2535,7 +2543,11 @@ class LineList:
             uline=True,
             **kwargs
         )
-        linelist_obj = cls(name=name, transitions=list(transitions))
+        linelist_obj = cls(
+            name=name,
+            transitions=list(transitions),
+            source="Peaks"
+        )
         return linelist_obj
 
     @classmethod
@@ -2570,7 +2582,13 @@ class LineList:
             source="Line file",
             **kwargs
         )
-        linelist_obj = cls(name, formula, filepath=linpath, transitions=list(transitions))
+        linelist_obj = cls(
+            name,
+            formula,
+            filepath=linpath,
+            transitions=list(transitions),
+            source="Line file"
+        )
         return linelist_obj
 
     @classmethod
@@ -2598,7 +2616,11 @@ class LineList:
             source="Artifact",
             **kwargs
         )
-        linelist_obj = cls(name="Artifacts", transitions=list(transitions))
+        linelist_obj = cls(
+            name="Artifacts",
+            transitions=list(transitions),
+            source="Artifacts"
+        )
         return linelist_obj
 
     def to_dataframe(self):
@@ -2611,6 +2633,62 @@ class LineList:
         """
         list_rep = [obj.__dict__ for obj in self.transitions]
         return pd.DataFrame(list_rep)
+
+    def to_ftb(self, filepath=None, thres=-10.,
+               shots=500, dipole=1.0, **kwargs
+               ):
+        """
+        Function to create an FTB file from a LineList object. This will
+        create entries for every transition entry above a certain intensity
+        threshold, in whatever units the intensities are in; i.e. SPCAT will
+        be in log units, while experimental peaks will be in whatever arbitrary
+        voltage scale.
+
+        Parameters
+        ----------
+        filepath: None or str, optional
+            Path to write the ftb file to. If None (default), uses the name of
+            the LineList and writes to the ftb folder.
+        thres: float, optional
+            Threshold to cutoff transitions in the ftb file. Transitions with
+            less intensity than this value not be included. Units are in the
+            same units as whatever the LineList units are.
+        shots: int, optional
+            Number of shots to integrate.
+        dipole: float, optional
+            Target dipole moment for the species
+        kwargs
+            Additional kwargs are passed into the ftb creation, e.g. magnet,
+            discharge, etc.
+        """
+        # If no path is given, use the default naming scheme.
+        if filepath is None:
+            filepath = f"ftb/{self.name}-batch.ftb"
+        # If the source of information are from experimentally measured peaks,
+        # we'll use the correct attributes.
+        if self.source == "Peaks":
+            freq_attr = "frequency"
+            int_attr = "intensity"
+        else:
+            freq_attr = "catalog_frequency"
+            int_attr = "catalog_intensity"
+        # Get all the frequencies that have intensities above a threshold
+        frequencies = [
+            getattr(obj, freq_attr) for obj in self.transitions if
+            getattr(obj, int_attr) >= thres
+        ]
+        ftb_kwargs = {"dipole": dipole}
+        ftb_kwargs.update(**kwargs)
+        ftb_str = ""
+        # Loop over the frequencies
+        for frequency in frequencies:
+            ftb_str += fa.generate_ftb_line(
+                np.round(frequency, 4),
+                shots=shots,
+                **ftb_kwargs
+            )
+        with open(filepath, "w+") as write_file:
+            write_file.write(ftb_str)
 
     def to_pickle(self, filepath=None):
         """

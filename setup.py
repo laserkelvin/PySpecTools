@@ -170,7 +170,7 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.0.4",
+    version="4.0.5",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
