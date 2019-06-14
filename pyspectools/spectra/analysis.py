@@ -15,6 +15,7 @@ from uncertainties import ufloat
 from pyspectools import fitting
 from pyspectools import lineshapes
 from pyspectools import routines
+from pyspectools import ftmw_analysis as fa
 
 
 def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Frequency", int_col="Intensity",
@@ -621,6 +622,67 @@ def find_series(combo, frequencies, search=0.005):
                 ]
             )
     return candidates
+
+
+def create_cluster_tests(cluster_dict, shots=25, dipole=1.0, min_dist=500.,
+                         **kwargs):
+    """
+    Take the output of the cluster AP analysis, and generate the FTB batch
+    files for a targeted DR search.
+
+    Parameters
+    ----------
+    cluster_dict: dict
+        Cluster dictionary with keys corresponding to the cluster number,
+        and values are subdictionaries holding the frequencies associated
+        with the cluster.
+    shots: int, optional
+        Number of integration counts
+    dipole: float, optional
+        Approximate dipole moment to target
+    min_dist: float, optional
+        Minimum frequency difference between the cavity and DR frequencies.
+    kwargs
+        Additional kwargs are passed to the ftb line generation.
+
+    """
+    # In the event one wants to perform all of the clusters in a sitting
+    full_str = ""
+    # Loop over each cluster, and we'll generate an FTB file for that cluster
+    for cluster, subdict in cluster_dict.items():
+        filepath = f"ftb/cluster{cluster}-dr.ftb"
+        frequencies = subdict["Frequencies"]
+        ftb_str = ""
+        ftb_dict = {"dipole": dipole}
+        ftb_dict.update(**kwargs)
+        for cavity_freq in frequencies:
+            # First time a cavity frequency is used, tune there and turn
+            # the DR off
+            ftb_dict["drpower"] = -20
+            ftb_str += fa.generate_ftb_line(
+                cavity_freq,
+                shots=shots,
+                **ftb_dict
+            )
+            # Loop over the other frequencies
+            for dr_freq in frequencies:
+                # If we're sufficiently far away, then ping that transition
+                if np.abs(cavity_freq - dr_freq) > min_dist:
+                    ftb_dict["drpower"] = 13
+                    ftb_dict["drfreq"] = "{:.4f}".format(dr_freq)
+                    ftb_dict["skiptune"] = True
+                    ftb_str += fa.generate_ftb_line(
+                        cavity_freq,
+                        shots=shots,
+                        **ftb_dict
+                    )
+                else:
+                    pass
+        full_str += ftb_str
+        with open(filepath, "w+") as write_file:
+            write_file.write(ftb_str)
+        with open("ftb/full-cluster-dr.ftb", "w+") as write_file:
+            write_file.write(full_str)
 
 
 def blank_spectrum(

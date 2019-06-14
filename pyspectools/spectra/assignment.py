@@ -1370,7 +1370,7 @@ class AssignmentSession:
             write_file.write(lines)
 
     def create_uline_dr_batch(self, filepath=None, select=None,
-                              shots=25, dipole=1., gap=500., thres=None):
+                              shots=25, dipole=1., min_dist=500., thres=None):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
         A list of selected frequencies can be used as the cavity frequencies, which will
@@ -1400,9 +1400,10 @@ class AssignmentSession:
         ulines = self.line_lists["Peaks"].get_ulines()
         if select is None:
             cavity_freqs = [uline.frequency for uline in ulines]
+            dr_freqs = [uline.frequency for uline in ulines]
         else:
             cavity_freqs = select
-        dr_freqs = [uline.frequency for uline in ulines]
+            dr_freqs = select
         if thres is not None:
             intensities = np.array([uline.intensity for uline in ulines])
             mask = np.where(intensities >= thres)
@@ -1417,7 +1418,7 @@ class AssignmentSession:
                         shots,
                         **{"dipole": dipole, "drpower": -20}
                     )
-                if np.abs(cavity - dr) >= gap:
+                if np.abs(cavity - dr) >= min_dist:
                     lines += fa.generate_ftb_line(
                         cavity,
                         shots,
