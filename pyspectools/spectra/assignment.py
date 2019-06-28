@@ -1429,6 +1429,51 @@ class AssignmentSession:
         with open(filepath, "w+") as write_file:
             write_file.write(lines)
 
+    def create_full_dr_batch(self, cavity_freqs, filepath=None, shots=25,
+                        dipole=1., min_dist=500.):
+        """
+        Create an FTB batch file for use in QtFTM to perform a DR experiment.
+        A list of selected frequencies can be used as the cavity frequencies, which will
+        subsequently be exhaustively DR'd against by ALL frequencies in the
+        experiment.
+
+        The file is then saved to "ftb/XXX-full-dr.ftb".
+
+        Parameters
+        ----------
+        cavity_freqs: iterable of floats
+            Iterable of frequencies to tune to, in MHz.
+        filepath: str, optional
+            Path to save the ftb file to. Defaults to ftb/{}-dr.ftb
+        shots: int, optional
+            Number of integration shots
+        dipole: float, optional
+            Dipole moment used for attenuation setting
+        min_dist: float, optional
+            Minimum frequency difference between cavity and DR frequency to actually perform
+            the experiment
+        """
+        dr_freqs = np.array(self.line_lists["Peaks"].frequencies)
+        lines = ""
+        for cindex, cavity in enumerate(cavity_freqs):
+            for dindex, dr in enumerate(dr_freqs):
+                if dindex == 0:
+                    lines += fa.generate_ftb_line(
+                        cavity,
+                        shots,
+                        **{"dipole": dipole, "drpower": -20}
+                    )
+                if np.abs(cavity - dr) >= min_dist:
+                    lines += fa.generate_ftb_line(
+                        cavity,
+                        shots,
+                        **{"dipole": dipole, "drpower": 13, "skiptune": True, "drfreq": dr}
+                    )
+        if filepath is None:
+            filepath = "ftb/{}-full-dr.ftb".format(self.session.experiment)
+        with open(filepath, "w+") as write_file:
+            write_file.write(lines)
+
     def analyze_molecule(self, Q=None, T=None, name=None, formula=None, smiles=None, chi_thres=10.):
         """
         Function for providing some astronomically relevant parameters by analyzing Gaussian line shapes.
