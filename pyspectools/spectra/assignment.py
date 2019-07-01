@@ -27,6 +27,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from copy import copy, deepcopy
 import logging
+import pathlib
 
 import numpy as np
 import pandas as pd
@@ -39,6 +40,7 @@ from plotly.offline import plot
 from plotly import graph_objs as go
 from uncertainties import ufloat
 from jinja2 import Template
+from monsterurl import get_monster
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import ftmw_analysis as fa
@@ -543,7 +545,7 @@ class AssignmentSession:
         self.t_threshold = self.session.temperature * 3.
         # Initial threshold for peak detection is set to None
         self.threshold = None
-        self.umols = list()
+        self.umol_names = dict()
         self.verbose = verbose
         # Holds catalogs
         self.line_lists = dict()
@@ -589,10 +591,9 @@ class AssignmentSession:
         else:
             self.data[:, self.int_col] = self.data[self.int_col] / other.data[other.int_col]
 
-    def umol_gen(self):
+    def umol_gen(self, silly=True):
         """
-        Method for keeping track of what unidentified molecule we're up to. Currently not used.
-
+        Generator for unidentified molecule names. Wraps
         Yields
         ------
         str
@@ -600,8 +601,103 @@ class AssignmentSession:
         """
         counter = 1
         while counter <= 200:
-            yield "UMol_{:03.d}".format(counter)
-            counter+=1
+            # If we want to use silly names from the monsterurl generator
+            if silly is True:
+                name = get_monster()
+            # Otherwise use boring counters
+            else:
+                name = f"U-molecule-{counter:03d}"
+            yield name
+            counter += 1
+
+    def create_ulinelist(self, filepath, silly=True):
+        """
+        Create a LineList object for an unidentified molecule. This uses the
+        class method `umol_gen` to automatically generate names for U-molecules
+        which can then be renamed once it has been identified.
+
+        The session attribute `umol_names` also keeps track of filepaths to
+        catalog names. If the filepath has been used previously, then it will
+        raise an Exception noting that the filepath is already associated with
+        another catalog.
+
+        Parameters
+        ----------
+        filepath: str
+            File path to the catalog or .lin file to use as a reference
+        silly: bool, optional
+            Flag whether to use boring numbered identifiers, or randomly
+            generated `AdjectiveAdjectiveAnimal`.
+
+        Returns
+        -------
+        LineList object
+        """
+        if filepath not in self.umol_names:
+            path = pathlib.Path(filepath)
+            ext = path.suffix
+            name = next(self.umol_gen(silly=silly))
+            parameters = {
+                "name": name,
+                "formula": name,
+                "filepath": filepath
+            }
+            if ext == ".lin":
+                method = LineList.from_lin
+            elif ext == ".cat":
+                method = LineList.from_catalog
+            else:
+                raise Exception(f"File extension not recognized: {ext}.")
+            linelist = method(**parameters)
+            self.line_lists[name] = linelist
+            # Give the first frequency just for book keeping
+            frequency = linelist.transitions[0].catalog_frequency
+            self.logger.info(
+                f"Created a U-molecule: {name}, with frequency {frequency:.3f}."
+            )
+            # Create a symlink so we know which catalog this molecule refers to
+            sym_path = pathlib.Path(f"linelists/{name}{ext}")
+            sym_path.symlink_to(
+                filepath
+            )
+            # Also for internal record keeping
+            self.umol_names[filepath] = name
+            return linelist
+        else:
+            name = self.umol_names[filepath]
+            raise Exception(
+                f"U-molecule already exists with name: {name}!"
+            )
+
+    def rename_umolecule(self, name, new_name, formula=""):
+        """
+        Function to update the name of a LineList. This function should be used
+        to update a LineList, particularly when the identity of an unidentified
+        molecule is discovered.
+
+        Parameters
+        ----------
+        name: str
+            Old name of the LineList.
+        new_name: str
+            New name of the LineList - preferably, a real molecule name.
+        formula: str, optional
+            New formula of the LineList.
+        """
+        if name in self.line_lists:
+            # Rename the LineList within the experiment
+            self.line_lists[new_name] = self.line_lists.pop(name)
+            self.line_lists[new_name].name = new_name
+            self.line_lists[new_name].formula = formula
+            # Create symlinks to the catalog with the new name for book keeping
+            sym_path = pathlib.Path(f"linelists/{new_name}.cat")
+            sym_path.symlink_to(
+                self.line_lists[new_name].filepath
+            )
+        else:
+            raise Exception(
+                f"{name} does not exist in {self.session.experiment} line_lists"
+            )
 
     def _init_logging(self):
         """
@@ -748,11 +844,13 @@ class AssignmentSession:
             ----------
              threshold: float or None
                 Peak detection threshold. If None, will take 1.5 times the noise RMS.
-             region - 2-tuple or None, optional
+             region: 2-tuple or None, optional
                 If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
                 in frequency to use for noise statistics.
-             sigma - float, optional
+             sigma: float, optional
                 Defines the number of sigma (noise RMS) above the baseline to use as the peak detection threshold.
+             min_dist: int, optional
+                Number of channels between peaks to be detected
 
             Returns
             -------
@@ -876,31 +974,6 @@ class AssignmentSession:
         else:
             self.logger.info("Found assignments.")
             return slice_df
-
-    def in_experiment(self, frequency):
-        """
-        Method to ask a simple yes/no if the frequency exists in either U-lines or assignments.
-
-        Parameters
-        ----------
-        frequency : float
-            Center frequency to search for in MHz
-
-        Returns
-        -------
-        True
-            If the frequency is present in the experiment
-        False
-            If the frequency does not exist
-        """
-        try:
-            slice_df = self.search_frequency(frequency)
-            if len(slice_df) > 0:
-                return True
-            else:
-                return False
-        except:
-            return False
 
     def apply_filter(self, window, sigma=0.5, int_col=None):
         """

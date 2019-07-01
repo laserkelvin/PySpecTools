@@ -170,7 +170,7 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.0.6",
+    version="4.0.7",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
@@ -187,6 +187,7 @@ setup(
         "peakutils",
         "sklearn",
         "colorlover",
+        "monsterurl",
         "plotly>=3.0.0",
         "periodictable",
         "uncertainties",
