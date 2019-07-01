@@ -586,10 +586,57 @@ class AssignmentSession:
         if copy is True:
             new_experiment = deepcopy(self)
             new_experiment.data[:, self.int_col] = new_experiment[self.int_col] / other.data[other.int_col]
-            new_experiment.session.id += other.session.id
+            new_experiment.session.experiment += other.session.experiment
             return new_experiment
         else:
             self.data[:, self.int_col] = self.data[self.int_col] / other.data[other.int_col]
+
+    def __sub__(self, other, copy=True, window=0.2):
+        """
+        Dunder method to blank the current experiment with another. This method
+        will take every detected frequency in the reference experiment, and
+        blank the corresponding regions from the current experiment. In effect
+        this
+        Parameters
+        ----------
+        other
+        copy
+        window
+
+        Returns
+        -------
+
+        """
+        if copy is True:
+            experiment = deepcopy(self)
+        else:
+            experiment = self
+        blank_freqs = list()
+        # Get regions to blank
+        for transition in other.line_lists["Peaks"].transitions:
+            # Use the measured frequency where possible
+            if transition.frequency != 0.:
+                frequency = transition.frequency
+            else:
+                frequency = transition.catalog_frequency
+            blank_freqs.append(frequency)
+        try:
+            blank_spectrum = analysis.blank_spectrum(
+                self.data,
+                blank_freqs,
+                self.session.baseline,
+                self.session.noise_rms,
+                self.freq_col,
+                self.int_col,
+                window,
+                df=False
+            )
+            experiment.data[self.int_col] = blank_spectrum
+            new_id = self.session.experiment - other.session.experiment
+            experiment.session.experiment = f"{new_id}"
+            return experiment
+        except AttributeError:
+            raise Exception("Peak/Noise detection not yet run!")
 
     def umol_gen(self, silly=True):
         """

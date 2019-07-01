@@ -1,5 +1,7 @@
 
-from itertools import combinations, chain
+from itertools import combinations, chain, compress
+from copy import deepcopy
+import warnings
 
 import numpy as np
 import pandas as pd
@@ -16,6 +18,7 @@ from pyspectools import fitting
 from pyspectools import lineshapes
 from pyspectools import routines
 from pyspectools import ftmw_analysis as fa
+from pyspectools.fast.routines import isin_array
 
 
 def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Frequency", int_col="Intensity",
@@ -740,23 +743,82 @@ def blank_spectrum(
         return new_spec[int_col].values
 
 
-def compare_experiments(experiments, thres_prox=0.1, thres_abs=True):
+def correlate_experiments(experiments, thres_prox=0.2):
     """
-    TODO - Write this damn function
+    Function to find correlations between experiments, looking for common
+    peaks detected in every provided experiment. This function uses the first
+    experiment as the base for comparison. Coincidences are searched for
+    between this base and the other provided experiment, and ultimately combined
+    to determine the common peaks.
+
+    A copy of the base experiment is returned, along with a dictionary with
+    frequencies of correlations between a given experiment and the base.
+
     Parameters
     ----------
-    experiments - tuple-like
+    experiments : tuple-like
         Iterable list/tuple of AssignmentSession objects.
-    thres_prox - float, optional
-        Proximity in frequency units for determining if peaks are the same. If thres-abs is False, this value is treated
-        as a percentage of the center frequency
-    thres_abs
+    thres_prox : float, optional
+        Proximity in frequency units for determining if peaks are the same.
+        If thres-abs is False, this value is treated as a percentage of the
+        center frequency.
 
     Returns
     -------
-
+    base_exp : AssignmentSession object
+        A deep copy of the first experiment, with the updated spectra.
+    return_dict : dict
+        Dictionary where keys correspond to the experiment number and
+        values are 1D arrays of frequencies that are coincident
     """
-    return None
+    # Use the first experiment as a base
+    base_exp = deepcopy(experiments[0])
+    base_freqs = base_exp.line_lists["Peaks"].frequencies
+    indices = dict()
+    for index, experiment in enumerate(experiments):
+        # Ignore the base experiment
+        if index != 0:
+            try:
+                comp_freqs = experiment.line_lists["Peaks"].frequencies
+                mask = isin_array(base_freqs, comp_freqs, thres_prox)
+                # Convert to boolean mask
+                mask.dtype = bool
+                indices[experiment.session.experiment] = mask
+            except AttributeError:
+                warnings.warn(f"Experiment {index} is missing peaks!")
+    # Take the product column-wise, which gives only peaks which are common
+    # to all experiments
+    all_index = np.product([index for index in indices.values()], axis=0)
+    return_dict = {
+        id: list(compress(base_freqs, mask)) for id, mask in indices.items()
+    }
+    # Mask frequencies such that we are keeping on transitions that are common
+    # across all experiments
+    uncommon_freqs = base_freqs[~all_index]
+    common_freqs = base_freqs[all_index]
+    # Get spectra that show only coincidences and only unique peaks.
+    common_int = blank_spectrum(
+        base_exp.data,
+        common_freqs,
+        base_exp.session.baseline,
+        base_exp.session.noise_rms,
+        base_exp.freq_col,
+        base_exp.int_col,
+        df=False
+    )
+    uncommon_int = blank_spectrum(
+        base_exp.data,
+        uncommon_freqs,
+        base_exp.session.baseline,
+        base_exp.session.noise_rms,
+        base_exp.freq_col,
+        base_exp.int_col,
+        df=False
+    )
+    # Set the new intensity columns
+    base_exp.data["Coincidence Spectrum"] = common_int
+    base_exp.data["Unique Spectrum"] = uncommon_int
+    return base_exp, return_dict
 
 
 def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
