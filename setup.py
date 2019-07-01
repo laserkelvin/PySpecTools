@@ -57,6 +57,13 @@ if use_cython:
             include_dirs=[np.get_include()],
             libraries=["m"],
             extra_compile_args=["-ffast-math", "-march=native", "-O3"]
+        ),
+        Extension(
+            "pyspectools.fast.routines",
+            ["pyspectools/fast/routines.pyx"],
+            include_dirs=[np.get_include()],
+            libraries=["m"],
+            extra_compile_args=["-ffast-math", "-march=native", "-O3"]
         )
     ]
     cmdclass.update(**{"build_ext": build_ext, "sdist": sdist})
@@ -70,6 +77,10 @@ else:
         Extension(
             "pyspectools.fast.filters",
             ["pyspectools/fast/filters.c"]
+        ),
+        Extension(
+            "pyspectools.fast.routines",
+            ["pyspectools/fast/routines.c"]
         )
     ]
 
