@@ -351,6 +351,7 @@ def calc_line_weighting(
     else:
         return None
 
+
 def brute_harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     """
         Function that will search for possible harmonic candidates
@@ -741,6 +742,9 @@ def blank_spectrum(
         return new_spec
     else:
         return new_spec[int_col].values
+
+
+def create_experiment_comparison(experiments):
 
 
 def correlate_experiments(experiments, thres_prox=0.2):

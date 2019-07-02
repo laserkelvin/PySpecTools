@@ -8,6 +8,10 @@ from matplotlib import colors as cl
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly import tools
+from bokeh.models import ColumnDataSource
+from bokeh.models.widgets import DataTable, TableColumn
+from bokeh.embed import file_html
+from bokeh.resources import CDN
 
 from pyspectools import routines
 
@@ -741,3 +745,36 @@ def cfa_cmap(nsteps=100):
     colors = [(141, 0, 52), (43, 53, 117)]
     cm = cl.LinearSegmentedColormap("cfa", colors, N=nsteps)
     return cm
+
+
+def pandas_bokeh_table(dataframe, html=False, **kwargs):
+    """
+    Convert a Pandas DataFrame to a Bokeh DataTable object.
+    Columns will be automatically generated based on the DataFrame keys.
+    The `html` flag can be used to specify whether or not an HTML representation is returned.
+
+    Additional kwargs are passed into the `file_html` function, and is only used when `html`
+    is True.
+
+    Parameters
+    ----------
+    dataframe : pandas dataframe
+        Pandas DataFrame to convert into a DataTable object
+    html : bool, optional
+        If True, function will return a string of the HTML code for embedding
+    kwargs
+        Additional kwargs are passed into the HTML conversion
+
+    Returns
+    -------
+    DataTable object if html is False, otherwise str
+    """
+    source = ColumnDataSource(dataframe)
+    columns = [
+        TableColumn(field=key, title=key.capitalize()) for key in dataframe
+    ]
+    table = DataTable(source=source, columns=columns, **kwargs)
+    if html is True:
+        return file_html(table, CDN)
+    else:
+        return table

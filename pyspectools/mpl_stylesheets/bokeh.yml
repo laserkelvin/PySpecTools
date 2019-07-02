@@ -1,0 +1,22 @@
+attrs:
+    Figure:
+        background_fill_color: "#EFEFEF"
+        border_fill_color: "#EFEFEF"
+        outline_line_color: '#444444'
+        width: 800
+        height: 500
+        toolbar_location: "above"
+    Grid:
+        grid_line_dash: [6, 4]
+        grid_line_alpha: .3
+    Title:
+        text_color: "black"
+        text_font: "roboto"
+        text_font_size: 16
+    Axis:
+        major_label_text_font_size: 14
+        major_label_text_font: "roboto"
+        major_label_text_color: "black"
+        axis_label_text_font_size: 16
+        axis_label_text_color: "black"
+        axis_label_text_font: "roboto"
