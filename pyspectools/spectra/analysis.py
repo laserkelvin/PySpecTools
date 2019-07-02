@@ -13,12 +13,16 @@ from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import silhouette_samples
 from scipy.signal import windows
 from uncertainties import ufloat
+from bokeh.layouts import layout
+from bokeh.io import save
+from plotly import graph_objs as go
 
 from pyspectools import fitting
 from pyspectools import lineshapes
 from pyspectools import routines
 from pyspectools import ftmw_analysis as fa
-from pyspectools.fast.routines import isin_array
+from pyspectools.fast.routines import isin_array, hot_match_arrays
+from pyspectools import figurefactory
 
 
 def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Frequency", int_col="Intensity",
@@ -724,9 +728,9 @@ def blank_spectrum(
         If df is False, numpy 1D array
     """
     new_spec = spectrum_df.copy()
+    # Reset the random number generator seed
+    np.random.seed()
     for frequency in frequencies:
-        # Reset the random number generator seed
-        np.random.seed()
         # Work out the length of the noise window we have to create
         mask = new_spec[freq_col].between(
             frequency - window,
@@ -735,24 +739,222 @@ def blank_spectrum(
         length = len(new_spec.loc[mask])
         # Create Gaussian noise for this region
         noise_array = np.random.normal(noise, noise_std, length)
-        new_spec.loc[
-            mask, int_col
-        ] = noise_array
+        new_spec.loc[mask, int_col] = noise_array
     if df is True:
         return new_spec
     else:
         return new_spec[int_col].values
 
 
-def create_experiment_comparison(experiments):
+def plotly_create_experiment_comparison(experiments, thres_prox=0.2, index=0,
+                                       filepath=None, **kwargs):
+    """
+    Function to create a plot comparing multiple experiments. This is a high
+    level function that wraps the `correlate_experiments` function,
+    and provides a visual and interactive view of the spectra output from
+    this function using Plotly.
+
+    This function is effectively equivalent to
+    `bokeh_create_experiment_comparison`, however uses Plotly as the front
+    end instead.
 
 
-def correlate_experiments(experiments, thres_prox=0.2):
+    Parameters
+    ----------
+    experiments
+    thres_prox
+    index
+    filepath
+    kwargs
+
+    Returns
+    -------
+
+    """
+    fig = figurefactory.init_plotly_subplot(
+        nrows=2, ncols=1,
+        **{
+            "subplot_titles":   ["Experiment Comparison", "Unique Spectrum"],
+            "vertical_spacing": 0.15,
+            "shared_xaxes":     True
+        }
+    )
+    n_experiments = len(experiments)
+    colors = figurefactory.generate_colors(
+        n_experiments,
+        "Set1",
+        hex=True,
+    )
+    base_exp = deepcopy(experiments[index])
+    top_traces = list()
+    top_traces.append(go.Scattergl(
+            x=base_exp.data[base_exp.freq_col],
+            y=base_exp.data[base_exp.int_col] / base_exp.session.baseline,
+            opacity=0.9,
+            line={"color": colors[index]},
+            name=f"Ref; {base_exp.session.experiment}"
+        )
+    )
+    # Loop over all the experiments and plot them up
+    for idx, experiment in enumerate(experiments):
+        if idx != index:
+            top_traces.append(go.Scattergl(
+                    x=experiment.data[experiment.freq_col],
+                    y=experiment.data[
+                        experiment.int_col] / experiment.session.baseline,
+                    opacity=0.9,
+                    line={"color": colors[idx]},
+                    name=f"{experiment.session.experiment}"
+                )
+            )
+    fig.add_traces(top_traces, [1] * len(experiments), [1] * len(experiments))
+    base, indices = correlate_experiments(
+        experiments, thres_prox=thres_prox, index=index
+    )
+    bottom_trace = go.Scattergl(
+        x=base.data["Frequency"],
+        y=base.data["Unique Spectrum"] / base.session.baseline,
+        opacity=0.9,
+        line={"color": colors[index]},
+        name="Unique Spectrum"
+    )
+    fig.add_traces([bottom_trace], [2], [1])
+    fig["layout"].update(
+        autosize=True,
+        height=1000,
+        width=900,
+        showlegend=False
+    )
+    fig["layout"]["xaxis1"].update(
+        title="Frequency (MHz)",
+        showgrid=True,
+        tickformat=":.0f"
+    )
+    for axis in ["yaxis1", "yaxis2"]:
+        fig["layout"][axis].update(
+            title="Signal-to-Noise",
+            showgrid=True,
+            tickformat=":.0f"
+        )
+    return fig
+
+
+def bokeh_create_experiment_comparison(experiments, thres_prox=0.2, index=0,
+                                 filepath=None, **kwargs):
+    """
+    Function to create a plot comparing multiple experiments. This is a high
+    level function that wraps the `correlate_experiments` function,
+    and provides a visual and interactive view of the spectra output from
+    this function using Bokeh.
+
+
+    Parameters
+    ----------
+    experiments
+    thres_prox
+    index
+    filepath
+    kwargs
+
+    Returns
+    -------
+
+    """
+    params = {
+        "plot_height": 500,
+        "plot_width": 900,
+        "title": "Experiment Comparison"
+    }
+    params.update(**kwargs)
+    full_fig = figurefactory.init_bokeh_figure(**params)
+    full_fig.yaxis.axis_label = "Signal-to-noise"
+    n_experiments = len(experiments)
+    colors = figurefactory.generate_colors(
+        n_experiments,
+        "Pastel1",
+        hex=True,
+    )
+    base_exp = deepcopy(experiments[index])
+    full_fig.line(
+        base_exp.data[base_exp.freq_col],
+        base_exp.data[base_exp.int_col] / base_exp.session.baseline,
+        line_width=2,
+        alpha=0.9,
+        color=colors[0],
+        legend=f"Ref; {base_exp.session.experiment}"
+    )
+    # Loop over all the experiments and plot them up
+    for idx, experiment in enumerate(experiments):
+        if idx != index:
+            full_fig.line(
+                experiment.data[experiment.freq_col],
+                experiment.data[experiment.int_col] / experiment.session.baseline,
+                line_width=2,
+                alpha=0.9,
+                color=colors[idx],
+                legend=f"{experiment.session.experiment}"
+            )
+    # Set some legend stuffs
+    full_fig.legend.click_policy = "hide"
+    full_fig.legend.location = "top_left"
+    params = {
+        "plot_height": 500,
+        "plot_width": 900,
+        "title": "Unique Features"
+    }
+    params.update(**kwargs)
+    unique_fig = figurefactory.init_bokeh_figure(**params)
+    base, indices = correlate_experiments(
+        experiments, thres_prox=thres_prox, index=index
+    )
+    unique_fig.line(
+        base.data["Frequency"],
+        base.data["Unique Spectrum"] / base.session.baseline,
+        line_width=2,
+        alpha=0.9,
+        color=colors[0]
+    )
+    unique_fig.yaxis.axis_label = "Signal-to-noise"
+    combined_fig = layout([full_fig, unique_fig], sizing_mode="stretch_both")
+    if filepath:
+        save(combined_fig, filepath, title="ExperimentComparison")
+        return None
+    else:
+        return combined_fig
+
+
+def copy_assignments(A, B, corr_mat):
+    """
+    Function to copy assignments from experiment B over to experiment A. The
+    correlation matrix argument requires the output from the
+    `correlate_experiments` function.
+
+    Parameters
+    ----------
+    A, B : AssignmentSession
+        AssignmentSession objects, where the assignments from B are copied
+        into A
+    corr_mat : 2D array
+        2D array mask with length A x B
+    """
+    # Find actual correlations; should end up having two 1D arrays of equal
+    # length
+    non_zero = np.where(corr_mat != 0)
+    # Indexes of i and j correspond to A and B indexes
+    for i, j in zip(non_zero[0], non_zero[1]):
+        a_trans = A.line_lists["Peaks"].transitions[i]
+        b_trans = B.line_lists["Peaks"].transitions[j]
+        b_dict = b_trans.__dict__
+        _ = b_dict.pop("frequency")
+        a_trans.update(**b_dict)
+
+
+def correlate_experiments(experiments, thres_prox=0.2, index=0):
     """
     Function to find correlations between experiments, looking for common
-    peaks detected in every provided experiment. This function uses the first
-    experiment as the base for comparison. Coincidences are searched for
-    between this base and the other provided experiment, and ultimately combined
+    peaks detected in every provided experiment. This function uses by the first
+    experiment as the base for comparison by default. Coincidences are searched
+    for between this base and the other provided experiment, and ultimately combined
     to determine the common peaks.
 
     A copy of the base experiment is returned, along with a dictionary with
@@ -766,6 +968,8 @@ def correlate_experiments(experiments, thres_prox=0.2):
         Proximity in frequency units for determining if peaks are the same.
         If thres-abs is False, this value is treated as a percentage of the
         center frequency.
+    index : int, optional
+        Index for the experiment to use as a base for comparisons.
 
     Returns
     -------
@@ -775,37 +979,49 @@ def correlate_experiments(experiments, thres_prox=0.2):
         Dictionary where keys correspond to the experiment number and
         values are 1D arrays of frequencies that are coincident
     """
-    # Use the first experiment as a base
-    base_exp = deepcopy(experiments[0])
-    base_freqs = base_exp.line_lists["Peaks"].frequencies
+    # Use the a selected experiment as a base comparison
+    base_exp = deepcopy(experiments[index])
+    base_freqs = np.array(base_exp.line_lists["Peaks"].frequencies)
     indices = dict()
+    masks = list()
     for index, experiment in enumerate(experiments):
         # Ignore the base experiment
         if index != 0:
             try:
-                comp_freqs = experiment.line_lists["Peaks"].frequencies
+                comp_freqs = np.array(
+                    experiment.line_lists["Peaks"].frequencies
+                )
                 mask = isin_array(base_freqs, comp_freqs, thres_prox)
                 # Convert to boolean mask
                 mask.dtype = bool
-                indices[experiment.session.experiment] = mask
+                # Work out a correlation matrix to find indices where the two
+                # arrays are matched
+                correlations = hot_match_arrays(
+                    base_freqs,
+                    comp_freqs,
+                    thres_prox
+                )
+                indices[experiment.session.experiment] = [mask, correlations]
+                masks.append(mask)
             except AttributeError:
                 warnings.warn(f"Experiment {index} is missing peaks!")
     # Take the product column-wise, which gives only peaks which are common
     # to all experiments
-    all_index = np.product([index for index in indices.values()], axis=0)
-    return_dict = {
-        id: list(compress(base_freqs, mask)) for id, mask in indices.items()
-    }
+    if index > 1:
+        all_index = np.product(masks, axis=0, dtype=bool)
+    else:
+        # If there's only one comparison being made
+        all_index = masks[0]
     # Mask frequencies such that we are keeping on transitions that are common
     # across all experiments
-    uncommon_freqs = base_freqs[~all_index]
-    common_freqs = base_freqs[all_index]
+    uncommon_freqs = base_freqs[all_index]
+    common_freqs = base_freqs[~all_index]
     # Get spectra that show only coincidences and only unique peaks.
     common_int = blank_spectrum(
         base_exp.data,
         common_freqs,
         base_exp.session.baseline,
-        base_exp.session.noise_rms,
+        base_exp.session.noise_rms / 4.,
         base_exp.freq_col,
         base_exp.int_col,
         df=False
@@ -814,7 +1030,7 @@ def correlate_experiments(experiments, thres_prox=0.2):
         base_exp.data,
         uncommon_freqs,
         base_exp.session.baseline,
-        base_exp.session.noise_rms,
+        base_exp.session.noise_rms / 4.,
         base_exp.freq_col,
         base_exp.int_col,
         df=False
@@ -822,7 +1038,7 @@ def correlate_experiments(experiments, thres_prox=0.2):
     # Set the new intensity columns
     base_exp.data["Coincidence Spectrum"] = common_int
     base_exp.data["Unique Spectrum"] = uncommon_int
-    return base_exp, return_dict
+    return base_exp, indices
 
 
 def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):

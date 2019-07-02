@@ -1,4 +1,6 @@
 
+import os
+from warnings import warn
 
 import numpy as np
 import networkx as nx
@@ -8,10 +10,13 @@ from matplotlib import colors as cl
 from plotly import graph_objs as go
 from plotly.offline import plot
 from plotly import tools
+from bokeh.plotting import figure
 from bokeh.models import ColumnDataSource
 from bokeh.models.widgets import DataTable, TableColumn
 from bokeh.embed import file_html
 from bokeh.resources import CDN
+from bokeh.io import curdoc
+from bokeh.themes import Theme
 
 from pyspectools import routines
 
@@ -595,11 +600,28 @@ def generate_colors(n, cmap=plt.cm.Spectral, hex=True):
     Generate a linearly spaced color series using a colormap from
     Matplotlib. The colors can be returned as either RGB values
     or as hex-codes using the `hex` flag.
-    :param n: number of colors to generate
-    :param cmap: Matplotlib colormap object
-    :param hex: bool specifying whether the return format are hex-codes or RGB
-    :return:
+
+    Parameters
+    ----------
+    n : int
+        Number of colours to generate
+    cmap : str or `matplotlib.colors.LinearSegementedColomap`, optional
+        Specified colormap to interpolate. If a str is provided, the function
+        will try to look for it in the available matplotlib colormaps.
+    hex : bool, optional
+        If True, hex colors are returned. Otherwise, RGB values.
+    Returns
+    -------
+    colors
+        List of hex or RGB codes
     """
+    # In the case that a string is passed, use the `get_cmap` function instead
+    if type(cmap) == str:
+        try:
+            cmap = plt.cm.get_cmap(cmap)
+        except ValueError:
+            warn(f"{cmap} not found in Matplotlib, defaulting to Spectral.")
+            pass
     colormap = cmap(np.linspace(0., 1., n))
     if hex is True:
         colors = [cl.rgb2hex(color) for color in colormap]
@@ -778,3 +800,41 @@ def pandas_bokeh_table(dataframe, html=False, **kwargs):
         return file_html(table, CDN)
     else:
         return table
+
+
+def init_bokeh_figure(yml_path=None, **kwargs):
+    """
+    Initialize a Bokeh Figure object. This code is fairly low level, and is
+    used simply as a matter of convenience for supplying a default theme even
+    without the user explicitly providing one.
+
+    Kwargs are passed into the creation of the figure, and so further
+    customization like title, axis limits, etc. should be supplied this way.
+
+    Parameters
+    ----------
+    yml_path : str or None, optional
+        If None, uses the PySpecTools default bokeh styling. If a str is
+        provided then it should correspond to the filepath to a YAML file.
+    kwargs
+        Kwargs are passed into the creation of the Figure object
+
+    Returns
+    -------
+    Bokeh Figure object
+    """
+    if yml_path is None:
+        # Use the default stylesheet
+        yml_path = os.path.expanduser("~") + "/.pyspectools/bokeh.yml"
+    # Set the document theme
+    doc = curdoc()
+    doc.theme = Theme(filename=yml_path)
+    default_params = {
+        "tools": "crosshair,pan,wheel_zoom,box_zoom,reset,box_select,"
+                 "lasso_select",
+        "outline_line_color": "black",
+        "output_backend": "webgl"
+    }
+    default_params.update(**kwargs)
+    fig = figure(**default_params)
+    return fig

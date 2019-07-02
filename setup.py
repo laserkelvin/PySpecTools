@@ -2,6 +2,7 @@ import os
 import shutil
 import stat
 import sys
+from warnings import warn
 from distutils.command.sdist import sdist as _sdist
 from distutils.extension import Extension
 from distutils.spawn import find_executable
@@ -95,11 +96,7 @@ class PostInstallCommand(install):
     def check_pickett(self):
         for executable in ["spcat", "spfit", "calbak"]:
             if find_executable(executable) is None:
-                print(executable + " not found in PATH.")
-                print(
-                    "Make sure SPFIT/SPCAT is in your path "
-                    "to use the PyPickett wrappers."
-                )
+                warn(executable + " not found in PATH.")
 
     def setup_folders(self):
         """
@@ -120,7 +117,7 @@ class PostInstallCommand(install):
     def setup_files(self):
         try:
             # Copy over YAML file containing the parameter coding
-            shutil.copy2(
+            shutil.copy(
                 "./pyspectools/pickett_terms.yml",
                 os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
             )
@@ -131,11 +128,13 @@ class PostInstallCommand(install):
             )
             # Copy over matplotlib stylesheets
             for sheet in os.listdir("./pyspectools/mpl_stylesheets"):
-                shutil.copy2(
-                    sheet,
-                    os.path.expanduser(
-                        "~") + "/.config/matplotlib/stylelib/" + sheet
-                )
+                if ".yml" not in sheet:
+                    path = os.path.expanduser("~") + \
+                           "/.config/matplotlib/stylelib" + sheet
+                else:
+                    path = os.path.expanduser("~") + \
+                        "/.pyspectools/" + sheet
+                shutil.copy(sheet, path)
         except FileExistsError:
             pass
 

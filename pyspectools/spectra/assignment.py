@@ -403,6 +403,15 @@ class AssignmentSession:
                 Instance of the AssignmentSession loaded from disk
         """
         session = routines.read_obj(filepath)
+        # If the pickle file is just read independently, just make all the
+        # folders ahead of time
+        folders = [
+            "assignment_objs", "queries", "sessions", "clean", "figures",
+            "reports", "logs", "outputs", "ftb", "linelists"
+        ]
+        for folder in folders:
+            if os.path.isdir(folder) is False:
+                os.mkdir(folder)
         session._init_logging()
         session.logger.info("Reloading session: {}".format(filepath))
         return session
@@ -490,6 +499,25 @@ class AssignmentSession:
         if hasattr(self, "log_handlers"):
             for key, handler in self.log_handlers.items():
                 handler.close()
+
+    def __repr__(self):
+        return f"Experiment {self.session.experiment}"
+
+    def __deepcopy__(self, memodict={}):
+        # Kill all of the loggers prior to copying, otherwise thread lock
+        # prevents pickling
+        if hasattr(self, "log_handlers"):
+            for key, handler in self.log_handlers.items():
+                handler.close()
+        settings = {
+            "exp_dataframe": self.data,
+            "experiment": self.session.experiment,
+            "composition": self.session.composition
+        }
+        new_copy = AssignmentSession(**settings)
+        new_copy.__dict__.update(**self.__dict__)
+        new_copy.session = deepcopy(self.session)
+        return new_copy
 
     def __init__(
             self, exp_dataframe, experiment, composition, temperature=4.0, velocity=0.,
@@ -919,13 +947,14 @@ class AssignmentSession:
             min_dist=min_dist
         )
         # Shift the peak intensities down by the noise baseline
-        peaks_df.loc[:, self.int_col] = peaks_df[self.int_col] - self.session.baseline
+        peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - \
+                                   self.session.baseline
         self.logger.info("Found {} peaks in total.".format(len(peaks_df)))
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
         if len(peaks_df) != 0:
             # Generate U-lines
-            self.df2ulines(peaks_df, self.freq_col, self.int_col)
+            self.df2ulines(peaks_df, self.freq_col, "Intensity")
             # Assign attribute
             self.peaks = peaks_df
             self.peaks.to_csv("./outputs/{}-peaks.csv".format(self.session.experiment), index=False)
@@ -1396,6 +1425,36 @@ class AssignmentSession:
         self.logger.info("Prior number of ulines: {}".format(old_nulines))
         self.logger.info("Current number of ulines: {}".format(len(self.ulines)))
         self.logger.info("Finished processing local database.")
+
+    def copy_assignments(self, other, thres_prox=1e-2):
+        """
+        Function to copy assignments from another experiment. This class
+        method wraps two analysis routines: first, correlations in detected
+        peaks are found, and indexes of where correlations are found will be
+        used to locate the corresponding Transition object, and copy its data
+        over to the current experiment.
+
+        Parameters
+        ----------
+        other : AssignmentSession object
+            The reference AssignmentSession object to copy assignments from
+        thres_prox : float, optional
+            Threshold for considering coincidences between spectra.
+        """
+        self.logger.info(
+            f"Copying assignments from Experiment {other.session.experiment}"
+        )
+        _, indices = analysis.correlate_experiments(
+            [self, other],
+            thres_prox=thres_prox
+        )
+        # Get the correlation matrix
+        corr_mat = indices[other.session.experiment][1]
+        analysis.copy_assignments(self, other, corr_mat)
+        n_assign = len(np.where(corr_mat > 0)[0])
+        self.logger.info(
+            f"Copied {n_assign} assignments."
+        )
 
     def blank_spectrum(self, noise, noise_std, window=1.):
         """
