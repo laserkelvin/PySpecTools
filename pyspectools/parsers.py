@@ -85,7 +85,7 @@ def parse_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf)
     """
     cat_df = pd.read_fwf(
         simulation_path,
-        widths=[13,8,8,2,10,3,7,4,2,2,2,8,2,2],
+        widths=[13, 8, 8, 2, 10, 3, 7, 4, 2, 2, 2, 8, 2, 2],
         header=None
     )
     cat_df.columns = [

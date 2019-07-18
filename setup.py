@@ -180,7 +180,7 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.0.7",
+    version="4.0.8",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
@@ -208,6 +208,7 @@ setup(
         "tqdm",
         "tinydb",
         "networkx",
+        "monsterurl"
     ],
     cmdclass=cmdclass,
     ext_modules=ext_modules

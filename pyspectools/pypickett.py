@@ -1,5 +1,6 @@
 
 import os
+from pathlib import Path
 from glob import glob
 from dataclasses import dataclass, field
 import pickle
@@ -8,11 +9,11 @@ import tempfile
 from copy import deepcopy
 from typing import List, Dict
 from itertools import product, combinations_with_replacement
+from subprocess import run, PIPE
 
 import numpy as np
 import pandas as pd
 import stat
-from matplotlib import pyplot as plt
 import pprint
 import joblib
 from tqdm.autonotebook import tqdm
@@ -20,6 +21,7 @@ from tqdm.autonotebook import tqdm
 from pyspectools import routines
 from pyspectools.spcat import *
 from pyspectools import parsers
+from pyspectools.spectra.assignment import LineList
 
 class MoleculeFit:
     """ Class for handling the top level of a Pickett simulation.
@@ -1093,3 +1095,186 @@ class AutoFitSession:
         if filepath is None:
             filepath = self.filename + ".pkl"
         routines.save_obj(self, filepath)
+
+
+@dataclass
+class GenerateCatalog:
+    niter: int = 10
+    temp_path: str = ""
+    out_path: str = ""
+    temp_dict: Dict = field(default_factory=dict)
+    constants_dict: Dict = field(default_factory=dict)
+    constants: List = field(default_factory=list)
+    cwd: str = ""
+
+    def __post_init__(self):
+        self.temp_path = Path(self.temp_path)
+        self.out_path = Path(self.out_path)
+        if self.temp_path.exists() is False:
+            raise Exception("Target template folder is missing!")
+        self.cwd = os.getcwd()
+        self.counter = self._count_generator()
+
+    def _count_generator(self):
+        """
+        Private generator for counting the simulation number.
+
+        Returns
+        -------
+        index : str
+            Left zero-padded string corresponding to the index
+        """
+        for index in range(self.niter):
+            yield f"{index:07d}"
+
+    def _read_templates(self):
+        """
+        Private method for reading in the var and int file templates. Will
+        perform checks to make sure that the correct number of templates are
+        actually found.
+        """
+        self.temp_dict = dict()
+        template_paths = self.temp_path.rglob("template*")
+        if len(list(template_paths)) < 2:
+            raise Exception(f"Template files missing; found {template_paths}")
+        else:
+            for path in self.temp_path.rglob("template*"):
+                self.temp_dict[path.suffix] = path.read_text()
+
+    def generate_constants(self, lower=1000., upper=10000., distortion=True):
+        """
+        Function to generate a random set of constants for an Asymmetric top
+        based on a uniform random distribution. This also includes centrifugal
+        distortion terms.
+
+        Parameters
+        ----------
+        lower, upper : float, optional
+            Lower and upper bounds for constants to be generated, in MHz.
+        distortion : bool, optional
+            If True, quartic centrifugal distortion terms are also included
+            in the simulation. This option is on by default.
+
+        Returns
+        -------
+        constants_dict : dict
+            Dictionary with generated rotational constants
+        """
+        assert lower <= upper
+        c, b, a = np.sort(np.random.uniform(lower, upper, 3))
+        if distortion:
+            # Generate random values for quartic centrifugal distortion as well
+            cd = np.random.uniform(1e-6, 1e-3, 5)
+            dj, djk, dk, d1, d2 = cd
+        else:
+            # Otherwise set CD terms to zero and not use them
+            dj = djk = dk = d1 = d2 = 0.
+        # Generate dipole moment as boolean values
+        dipoles = np.random.randint(0, 2, 3)
+        # Make sure that we have at least one dipole moment; at the very least
+        # an a-type
+        if np.sum(dipoles) == 0:
+            dipoles[0] = 1.
+        u_a, u_b, u_c = dipoles
+        # This part ensures that there is a minimum working example
+        self.constants_dict = {
+            "A": 10000.,
+            "B": 5000.,
+            "C": 2000.,
+            "u_a": 1.,
+            "u_b": 0.,
+            "u_c": 0.
+        }
+        self.constants_dict.update(**{
+            "A":   a,
+            "B":   b,
+            "C":   c,
+            "DJ":  dj,
+            "DJK": djk,
+            "DK":  dk,
+            "d1":  d1,
+            "d2":  d2,
+            "u_a": u_a,
+            "u_b": u_b,
+            "u_c": u_c
+        })
+        return self.constants_dict
+
+    def run_spcat(self):
+        """
+        Function to run SPCAT from within Python. The function does so with
+        temporary folders within a context manager, such that there are no
+        scratch files left behind when the process is finished.
+
+        Returns
+        -------
+        catalog : LineList object
+            PySpecTools LineList object based on the digested catalog
+        """
+        name = next(self.counter)
+        # Assume that the constants dictionary actually has values in it
+        assert len(self.constants_dict) != 0
+        with tempfile.TemporaryDirectory() as temp_dir:
+            try:
+                os.chdir(temp_dir)
+                with open("molecule.var", "w+") as write_file:
+                    write_file.write(
+                        self.temp_dict[".var"].format_map(self.constants_dict)
+                    )
+                with open("molecule.int", "w+") as write_file:
+                    write_file.write(
+                        self.temp_dict[".int"].format_map(self.constants_dict)
+                    )
+                # Call SPCAT
+                _ = run(["spcat", "molecule"], stdout=PIPE)
+                # Create LineList object from the catalog
+                catalog = LineList.from_catalog(name, name, "molecule.cat")
+                catalog.constants = self.constants_dict
+                return catalog
+            except KeyError:
+                raise Exception("temp_dict is missing entries!")
+            finally:
+                # finally statement to make sure we go back to the original
+                # working directory before finishing
+                os.chdir(self.cwd)
+
+    def _iteration(self, **kwargs):
+        constants = self.generate_constants(**kwargs)
+        catalog = self.run_spcat()
+        # Add this to the list of constants created
+        self.constants.append(constants)
+        return catalog
+
+    def run_batch(self, niter=None, progressbar=True, **kwargs):
+        """
+        Run a batch of simulations. This is the main function to be called by a
+        user, and will automatically carry out all of the book keeping and
+
+        Parameters
+        ----------
+        niter : int or None, optional
+            Number of simulations to perform. This option overrides the class
+            attribute, and if the user provided argument is None, will just use
+            that instead.
+        progressbar : bool, optional
+            If True, wraps the iterator with a `tqdm` progress bar.
+        kwargs
+            Additional kwargs are passed into the `generate_constants`
+            function, which allows for control on bounds, etc.
+
+        Returns
+        -------
+
+        """
+        # Reset the constants list
+        self.constants = list()
+        np.random.seed()
+        if not niter:
+            niter = self.niter
+        # Set up an iterator for the batch
+        iterator = range(niter)
+        if progressbar:
+            iterator = tqdm(iterator)
+        # Run the loop
+        results = [self._iteration(**kwargs) for _ in iterator]
+        return results
