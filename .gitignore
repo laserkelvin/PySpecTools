@@ -6,3 +6,4 @@ docs/build/*
 cython/lineshapes\.html
 
 \.DS_Store
+.vscode

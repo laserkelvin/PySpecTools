@@ -9,6 +9,7 @@ import shutil
 import json
 import types
 from glob import glob
+from warnings import warn
 
 import ruamel.yaml as yaml
 import numpy as np
@@ -27,9 +28,10 @@ def run_spcat(filename, temperature=None):
             raise FileNotFoundError("No .var or .par file found.")
         else:
             shutil.copy2(filename + ".par", parameter_file)
-    process = subprocess.Popen(["spcat", filename + ".int", parameter_file],
-                     stdout=subprocess.PIPE            # suppress stdout
-                     )
+    process = subprocess.Popen(
+        ["spcat", filename + ".int", parameter_file],
+        stdout=subprocess.PIPE,  # suppress stdout
+    )
     process.wait()
     # Extract the partition function at the specified temperature
     if temperature is not None:
@@ -48,12 +50,7 @@ def run_calbak(filename):
     if os.path.isfile(filename + ".cat") is False:
         raise FileNotFoundError(filename + ".cat is missing; cannot run calbak.")
     process = subprocess.Popen(
-        [
-            "calbak",
-            filename + ".cat",
-            filename + ".lin"
-        ],
-        stdout=subprocess.DEVNULL
+        ["calbak", filename + ".cat", filename + ".lin"], stdout=subprocess.DEVNULL
     )
     process.wait()
     with open(filename + ".lin") as read_file:
@@ -75,9 +72,9 @@ def run_spfit(filename):
     """
     process = subprocess.run(
         ["spfit", filename + ".lin", filename + ".par"],
-        timeout=20.,
-        capture_output=True
-        )
+        timeout=20.0,
+        capture_output=True,
+    )
     if process.returncode != 0:
         raise OSError("SPFIT failed to run.")
 
@@ -99,9 +96,7 @@ def list_chunks(target, n):
     split_list: list
         Nested list of chunks
     """
-    split_list = [
-        target[i:i+n] for i in range(0, len(target), n)
-    ]
+    split_list = [target[i : i + n] for i in range(0, len(target), n)]
     return split_list
 
 
@@ -110,12 +105,16 @@ def pickett_molecule(json_filepath=None):
     # instance of the molecule class
     # This method is superceded by serializing using classmethods for each
     # file format
-    raise UserWarning("pickett_molecule is now outdated. Please use the class \
-                       methods from_yaml or from_json.")
+    warn(
+        "pickett_molecule is now outdated. Please use the class \
+                       methods from_yaml or from_json."
+    )
     if json_filepath is None:
         print("No JSON input file specified.")
-        print("A template file will be created in your directory; please rerun\
-               after setting up the parameters.")
+        print(
+            "A template file will be created in your directory; please rerun\
+               after setting up the parameters."
+        )
         copy_template()
         raise FileNotFoundError("No input file specified.")
     json_data = read_json(json_filepath)
@@ -187,19 +186,19 @@ def generate_folder():
     Generates the folder for the next calculation
     and returns the next calculation number
     """
-    folderlist = list_directories()      # get every file/folder in directory
+    folderlist = list_directories()  # get every file/folder in directory
     # filter out any non-folders that happen to be here
     shortlist = list()
     for folder in folderlist:
         try:
             shortlist.append(int(folder))
-        except ValueError:                  # if it's not an integer
+        except ValueError:  # if it's not an integer
             pass
     if len(shortlist) == 0:
         lastcalc = 0
     else:
         lastcalc = max(shortlist)
-    #lastcalc = len(folderlist)
+    # lastcalc = len(folderlist)
     os.mkdir(str(lastcalc + 1))
     return lastcalc + 1
 
@@ -211,14 +210,14 @@ def format_uncertainty(value, uncertainty):
     # Convert the value into a string, then determine the length by
     # splitting at the decimal point
     decimal_places = decimal_length(value)
-    uncertainty = float(uncertainty)           # make sure we're dealing floats
+    uncertainty = float(uncertainty)  # make sure we're dealing floats
     uncertainty_places = decimal_length(uncertainty)
     # Force the uncertainty into decimals
-    uncertainty = uncertainty * 10**-uncertainty_places[1]
+    uncertainty = uncertainty * 10 ** -uncertainty_places[1]
     # Work out how many places we've moved now
     uncertainty_places = decimal_length(uncertainty)
     # Move the precision of the uncertainty to match the precision of the value
-    uncertainty = uncertainty * 10**(uncertainty_places[1] - decimal_places[1])
+    uncertainty = uncertainty * 10 ** (uncertainty_places[1] - decimal_places[1])
     return uncertainty
 
 
@@ -292,14 +291,14 @@ def isnotebook():
     # Check if the code is being run in a notebook, IPython shell, or Python
     try:
         shell = get_ipython().__class__.__name__
-        if shell == 'ZMQInteractiveShell':  # Jupyter notebook or qtconsole?
+        if shell == "ZMQInteractiveShell":  # Jupyter notebook or qtconsole?
             return True
-        elif shell == 'TerminalInteractiveShell':  # Terminal running IPython?
+        elif shell == "TerminalInteractiveShell":  # Terminal running IPython?
             return False
         else:
             return False  # Other type (?)
     except NameError:
-        return False      # Probably standard Python interpreter
+        return False  # Probably standard Python interpreter
 
 
 def save_obj(obj, filepath, **kwargs):
@@ -314,10 +313,7 @@ def save_obj(obj, filepath, **kwargs):
         obj - instance of object to be serialized
         filepath - filepath to save to
     """
-    settings = {
-        "compress": ("gzip", 6),
-        "protocol": 4
-        }
+    settings = {"compress": ("gzip", 6), "protocol": 4}
     settings.update(kwargs)
     joblib.dump(obj, filepath, **settings)
 
@@ -382,11 +378,7 @@ class RemoteClient(paramiko.SSHClient):
     def __init__(self, hostname=None, username=None, **kwargs):
         super().__init__()
         self.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        self.connect(
-            hostname=hostname,
-            username=username,
-            **kwargs
-        )
+        self.connect(hostname=hostname, username=username, **kwargs)
 
         self.sftp = self.open_sftp()
 
@@ -400,7 +392,9 @@ class RemoteClient(paramiko.SSHClient):
         remote = read_obj(filepath)
         # Make sure that the pickle file is a RemoteClient object
         if remote.__name__ != "RemoteClient":
-            raise Exception("File was not a RemoteClient session; {}".format(remote.__name__))
+            raise Exception(
+                "File was not a RemoteClient session; {}".format(remote.__name__)
+            )
         else:
             return read_obj(filepath)
 
@@ -459,22 +453,24 @@ class RemoteClient(paramiko.SSHClient):
         save_obj(self, filepath, **kwargs)
 
 
-def search_file(root_path, filename, ext=".txt"):
-    """
-    Function for searching for a specific filename in a given root path.
-    The option `ext` specifies whether or not the extension must also be matched.
-    :param root: str path to begin search
-    :param filename: str filename to match
-    :param ext: bool option to match file extension also
-    :return: str full path to the file
-    """
-    for root, dirs, files in os.walk(root_path):
-        if any([file for file in files if filename in file]) is True:
-            return os.path.join(root, filename) + ext
-
-
 def group_consecutives(vals, step=1):
-    """Return list of consecutive lists of numbers from vals (number list)."""
+    """
+    Function to group all consecutive values in a list together. The primary purpose of this
+    is to split concatenated spectra that are given in a single list of frequencies
+    into individual windows.
+    
+    Parameters
+    ----------
+    vals : list
+        List of floats to be split
+    step : int, optional
+        [description], by default 1
+    
+    Returns
+    -------
+    [type]
+        [description]
+    """
     run = []
     result = [run]
     expect = None
