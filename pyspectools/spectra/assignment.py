@@ -969,8 +969,7 @@ class AssignmentSession:
                 "p": 0.05,
                 "niter": 10
             }
-            if als_settings is not None:
-                als_params.update(**als_settings)
+            als_params.update(**kwargs)
             baseline = fitting.baseline_als(self.data[self.int_col], **als_params)
             # Decimate the noise with a huge Gaussian blur
             baseline = gaussian_filter(baseline, 200.)
@@ -980,7 +979,7 @@ class AssignmentSession:
             self.session.noise_rms = rms
         return baseline, rms
 
-    def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10, als=True, als_settings=None):
+    def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10, als=True, **kwargs):
         """
             Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
             The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
@@ -999,15 +998,19 @@ class AssignmentSession:
 
             Parameters
             ----------
-             threshold: float or None
+            threshold : float or None, optional
                 Peak detection threshold. If None, will take 1.5 times the noise RMS.
-             region: 2-tuple or None, optional
+            region : 2-tuple or None, optional
                 If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
                 in frequency to use for noise statistics.
-             sigma: float, optional
+            sigma : float, optional
                 Defines the number of sigma (noise RMS) above the baseline to use as the peak detection threshold.
-             min_dist: int, optional
-                Number of channels between peaks to be detected
+            min_dist : int, optional
+                Number of channels between peaks to be detected.
+            als : bool, optional
+                If True, uses ALS fitting to determine a baseline.
+            kwargs
+                Additional keyword arguments are passed to the ALS fitting routine.
 
             Returns
             -------
@@ -1025,7 +1028,7 @@ class AssignmentSession:
             self.int_col = "SNR"
             self.logger.info("Now using SNR as primary intensity unit.")
         elif threshold is None and als is True:
-            baseline, _ = self.detect_noise_floor(als=True, als_settings=als_settings)
+            baseline, _ = self.detect_noise_floor(als=True, **kwargs)
             # Convert to SNR, and start using this instead
             self.data["SNR"] = self.data[self.int_col] / baseline
             self.int_col = "SNR"
