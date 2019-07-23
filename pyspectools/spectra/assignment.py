@@ -26,7 +26,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict
 from copy import copy, deepcopy
 import logging
-import pathlib
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -941,7 +941,7 @@ class AssignmentSession:
         self.session.baseline = baseline
         self.session.noise_region = region
         self.logger.info(f"Baseline signal set to {baseline}.")
-        self.logger.info(f"Noise RMS set to rms}.")
+        self.logger.info(f"Noise RMS set to {rms}.")
         return baseline, rms
 
     def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10):
@@ -1060,8 +1060,9 @@ class AssignmentSession:
                 **selected_session,
             )
             self.line_lists["Peaks"].update_linelist(transitions)
+        new_remaining = len(self.line_lists["Peaks"])
         self.logger.info(
-            f"There are now {len(self.line_lists["Peaks"])} line entries in this session."
+            f"There are now {new_remaining} line entries in this session."
         )
         peaks_df = self.line_lists["Peaks"].to_dataframe()[["frequency", "intensity"]]
         peaks_df.columns = ["Frequency", "Intensity"]
@@ -1184,7 +1185,7 @@ class AssignmentSession:
         """
         ulines = self.line_lists["Peaks"].get_ulines()
         self.logger.info(
-            f"Beginning Splatalogue lookup on {len(ulines)} lines.")
+            f"Beginning Splatalogue lookup on {len(ulines)} lines."
         )
         iterator = enumerate(ulines)
         if progressbar is True:
@@ -1309,6 +1310,70 @@ class AssignmentSession:
                     self.logger.info(f"No species known for {frequency:,.4f}")
         self.logger.info("Splatalogue search finished.")
 
+    def process_linelist_batch(self, param_dict=None, yml_path=None, **kwargs):
+        """
+        Function for processing a whole folder of catalog files. This takes a user-specified
+        mapping scheme that will associate catalog files with molecule names, formulas, and
+        any other `LineList`/`Transition` attributes. This can be in the form of a dictionary
+        or a YAML file; one has to be provided.
+        
+        An example scheme is given here:
+        {
+            "cyclopentadiene": {
+                "formula": "c5h6",
+                "filepath": "../data/catalogs/cyclopentadiene.cat"
+            }
+        }
+        The top dictionary has keys corresponding to the name of the molecule,
+        and the value as a sub dictionary containing the formula and filepath
+        to the catalog file as minimum input.
+        
+        You can also provide additional details that are `Transition` attributes:
+        {
+            "benzene": {
+                "formula": "c6h6",
+                "filepath": "../data/catalogs/benzene.cat",
+                "smiles": "c1ccccc1",
+                "publc": False
+            }
+        }
+        
+        Parameters
+        ----------
+        param_dict : dict or None, optional
+            If not None, a dictionary containing the mapping scheme will be used
+            to process the catalogs. Defaults to None.
+        yml_path : str or None, optional
+            If not None, corresponds to a str filepath to the YAML file to be read.
+        kwargs
+            Additional keyword arguments will be passed into the assignment process,
+            which are the args for `process_linelist`.
+            
+        Raises
+        ------
+        ValueError : If yml_path and param_dict args are the same value.
+        """
+        if param_dict == yml_path:
+            raise ValueError("Please provide arguments to param_dict or yml_path.")
+        if yml_path:
+            param_dict = routines.read_yaml(yml_path)
+            yml_path = Path(yml_path)
+            root = yml_path.parents[0]
+        linelists = list()
+        self.logger.info(f"Processing {len(param_dict)} catalog entries in batch mode.")
+        for name, subdict in param_dict.items():
+            try:
+                # Append the directory path to the catalog filepath
+                subdict["filepath"] = str(root.joinpath(subdict["filepath"]))
+                self.logger.info(f"Creating LineList for molecule {name}")
+                linelist_obj = LineList.from_catalog(name=name, **subdict)
+                print(linelist_obj)
+                self.process_linelist(name=linelist_obj.name, linelist=linelist_obj)
+            except ValueError:
+                self.logger.warning(f"Could not parse molecule {name}.")
+                raise Exception(f"Could not parse molecule {name} from dictionary.")
+        self.logger.info("Completed catalog batch analysis.")
+
     def process_linelist(
         self,
         name=None,
@@ -1401,7 +1466,6 @@ class AssignmentSession:
                     f"Searching for frequency {transition.frequency:,.4f}"
                     f" with tolerances: {self.t_threshold:.2f} K, "
                     f" +/-{tol:.4f} MHz, {thres} intensity."
-                    )
                 )
                 # Find transitions in the LineList that can match
                 can_pkg = linelist.find_candidates(
@@ -1593,7 +1657,7 @@ class AssignmentSession:
                     last_source = source
             except (KeyError, ValueError):
                 self.logger.warning(
-                    f"Could not blank spectrum {last_source} with {source}.")
+                    f"Could not blank spectrum {last_source} with {source}."
                 )
 
     def _get_assigned_names(self):
@@ -1916,14 +1980,14 @@ class AssignmentSession:
             combined_dict.update(self.session.__dict__)
             # Dump to disk
             routines.dump_yaml(
-                f"sessions/{self.session.experiment0}.yml", "yaml"
+                f"sessions/{self.session.experiment}.yml", "yaml"
             )
             self._create_html_report()
             # Dump data to notebook output
             for key, value in combined_dict.items():
                 self.logger.info(key + ":   " + str(value))
         else:
-            self.logger.warning(
+            raise Exception(
                 "No assignments made in this session - nothing to finalize!"
             )
 
@@ -2259,11 +2323,11 @@ class AssignmentSession:
             .bar(subset=["intensity"], color="#5fba7d")
             .format(
                 {
-                    "frequency": "{:.4f}",
-                    "catalog_frequency": "{:.4f}",
-                    "deviation": "{:.3f}",
-                    "ustate_energy": "{:.2f}",
-                    "intensity": "{:.3f}",
+                    "frequency": "{:,.4f}",
+                    "catalog_frequency": "{:,.4f}",
+                    "deviation": "{:,.3f}",
+                    "ustate_energy": "{:,.2f}",
+                    "intensity": "{:,.3f}",
                 }
             )
             .set_table_attributes("""class = "durr" id="assignment-table" """)
@@ -2427,7 +2491,7 @@ class AssignmentSession:
         fig = go.FigureWidget()
         fig.layout["title"] = f"Experiment {self.session.experiment}"
         fig.layout["xaxis"]["title"] = "Frequency (MHz)"
-        fig.layout["xaxis"]["tickformat"] = ".2f"
+        fig.layout["xaxis"]["tickformat"] = ",.2f"
 
         # Update the peaks table
         self.peaks = pd.DataFrame(
@@ -2832,13 +2896,12 @@ class LineList:
     source: str = ""
 
     def __str__(self):
-        return f"Line list for: {self.name},"
-    f"Formula: {self.formula},"
-    f"Number of entries: {len(self.transitions)}"
+        nentries = len(self.transitions)
+        return f"Line list for: {self.name} Formula: {self.formula}, Number of entries: {nentries}"
 
     def __repr__(self):
-        return f"Line list name: {self.name},"
-    f"Number of entries: {len(self.transitions)}"
+        nentries = len(self.transitions)
+        return f"Line list name: {self.name}, Number of entries: {nentries}"
 
     def __len__(self):
         return len(self.transitions)
