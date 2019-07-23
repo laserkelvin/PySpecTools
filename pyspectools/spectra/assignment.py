@@ -40,6 +40,7 @@ from plotly import graph_objs as go
 from uncertainties import ufloat
 from jinja2 import Template
 from monsterurl import get_monster
+from scipy.ndimage.filters import gaussian_filter
 
 from pyspectools import routines, parsers, figurefactory
 from pyspectools import ftmw_analysis as fa
@@ -875,19 +876,29 @@ class AssignmentSession:
         self.session.velocity = value
         self.logger.info(f"Set the session velocity to {value}.")
 
-    def detect_noise_floor(self, region=None):
+    def detect_noise_floor(self, region=None, als=True, **kwargs):
         """
         Set the noise parameters for the current spectrum. Control over what "defines" the noise floor
         is specified with the parameter region. By default, if region is None then the function will
         perform an initial peak find using 1% of the maximum intensity as the threshold. The noise region
         will be established based on the largest gap between peaks, i.e. hopefully capturing as little
         features in the statistics as possible.
+        
+        The alternative method is invoked when the `als` argument is set to True, which will use the
+        asymmetric least-squares method to determine the baseline. Afterwards, the baseline is decimated
+        by an extremely heavy Gaussian blur, and one ends up with a smoothly varying baseline. In this
+        case, there is no `noise_rms` attribute to be returned as it is not required to determine the
+        minimum peak threshold.
 
         Parameters
         ----------
-        region - 2-tuple or None, optional
+        region : 2-tuple or None, optional
             If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
             in frequency to use for noise statistics.
+        als : bool, optional
+            If True, will use the asymmetric least squares method to determine the baseline.
+        kwargs
+            Additional kwargs are passed into the ALS function.
 
         Returns
         -------
@@ -896,36 +907,44 @@ class AssignmentSession:
         rms - float
             Noise RMS/standard deviation
         """
-        if region is None:
-            # Perform rudimentary peak detection
-            threshold = 0.2 * self.data[self.int_col].max()
-            peaks_df = analysis.peak_find(
-                self.data, freq_col=self.freq_col, int_col=self.int_col, thres=threshold
-            )
-            if len(peaks_df) >= 2:
-                # find largest gap in data, including the edges of the spectrum
-                freq_values = list(peaks_df["Frequency"].values)
-                freq_values.extend(
-                    [self.data[self.freq_col].min(), self.data[self.freq_col].max()]
+        if als is False:
+            if region is None:
+                # Perform rudimentary peak detection
+                threshold = 0.2 * self.data[self.int_col].max()
+                peaks_df = analysis.peak_find(
+                    self.data, freq_col=self.freq_col, int_col=self.int_col, thres=threshold
                 )
-                # sort the values
-                freq_values = sorted(freq_values)
-                self.logger.info("Possible noise regio:")
-                self.logger.info(freq_values)
-                index = np.argmax(np.diff(freq_values))
-                # Define region as the largest gap
-                region = freq_values[index : index + 2]
-                # Add a 30 MHz offset to either end of the spectrum
-                region[0] = region[0] + 30.0
-                region[1] = region[1] - 30.0
-                # Make sure the frequencies are in ascending order
-                region = np.sort(region)
-                self.logger.info("Noise region defined as {} to {}.".format(*region))
-                noise_df = self.data.loc[self.data[self.freq_col].between(*region)]
-                if len(noise_df) < 50:
+                if len(peaks_df) >= 2:
+                    # find largest gap in data, including the edges of the spectrum
+                    freq_values = list(peaks_df["Frequency"].values)
+                    freq_values.extend(
+                        [self.data[self.freq_col].min(), self.data[self.freq_col].max()]
+                    )
+                    # sort the values
+                    freq_values = sorted(freq_values)
+                    self.logger.info("Possible noise region:")
+                    self.logger.info(freq_values)
+                    index = np.argmax(np.diff(freq_values))
+                    # Define region as the largest gap
+                    region = freq_values[index : index + 2]
+                    # Add a 30 MHz offset to either end of the spectrum
+                    region[0] = region[0] + 30.0
+                    region[1] = region[1] - 30.0
+                    # Make sure the frequencies are in ascending order
+                    region = np.sort(region)
+                    self.logger.info("Noise region defined as {} to {}.".format(*region))
+                    noise_df = self.data.loc[self.data[self.freq_col].between(*region)]
+                    if len(noise_df) < 50:
+                        noise_df = self.data.sample(int(len(self.data) * 0.1))
+                        self.logger.warning(
+                            "Noise region too small; taking a statistical sample."
+                        )
+                else:
+                    # If we haven't found any peaks, sample 10% of random channels and determine the
+                    # baseline from those values
                     noise_df = self.data.sample(int(len(self.data) * 0.1))
                     self.logger.warning(
-                        "Noise region too small; taking a statistical sample."
+                        "No obvious peaks detected; taking a statistical sample."
                     )
             else:
                 # If we haven't found any peaks, sample 10% of random channels and determine the
@@ -934,17 +953,34 @@ class AssignmentSession:
                 self.logger.warning(
                     "No obvious peaks detected; taking a statistical sample."
                 )
-        # Calculate statistics
-        baseline = np.average(noise_df[self.int_col])
-        rms = np.std(noise_df[self.int_col])
-        self.session.noise_rms = rms
-        self.session.baseline = baseline
-        self.session.noise_region = region
-        self.logger.info(f"Baseline signal set to {baseline}.")
-        self.logger.info(f"Noise RMS set to {rms}.")
+                # Calculate statistics
+            baseline = np.average(noise_df[self.int_col])
+            rms = np.std(noise_df[self.int_col])
+            self.session.noise_region = region
+            self.session.noise_rms = rms
+            self.session.baseline = baseline
+            self.logger.info(f"Baseline signal set to {baseline}.")
+            self.logger.info(f"Noise RMS set to {rms}.")
+        elif als is True:
+            # Use the asymmetric least-squares method to determine the baseline
+            self.logger.info("Using asymmetric least squares method for baseline determination.")
+            als_params = {
+                "lam": 1e2,
+                "p": 0.05,
+                "niter": 10
+            }
+            if als_settings is not None:
+                als_params.update(**als_settings)
+            baseline = fitting.baseline_als(self.data[self.int_col], **als_params)
+            # Decimate the noise with a huge Gaussian blur
+            baseline = gaussian_filter(baseline, 200.)
+            rms = None
+            self.session.baseline = baseline
+            self.session.noise_region = "als"
+            self.session.noise_rms = rms
         return baseline, rms
 
-    def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10):
+    def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10, als=True, als_settings=None):
         """
             Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
             The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
@@ -955,6 +991,11 @@ class AssignmentSession:
 
             The peaks are then returned as a pandas DataFrame, which can also be accessed in the peaks_df
             attribute of AssignmentSession.
+            
+            When a value of threshold is not provided, the function will turn to use automated methods for
+            noise detection, either by taking a single value as the baseline (not ALS), or by using the
+            asymmetric least-squares method for fitting the baseline. In both instances, the primary intensity
+            column to be used for analysis will be changed to "SNR", which is the recommended approach.
 
             Parameters
             ----------
@@ -973,11 +1014,24 @@ class AssignmentSession:
             peaks_df : dataframe
                 Pandas dataframe with Frequency/Intensity columns, corresponding to peaks
         """
-        if threshold is None:
+        if threshold is None and als is False:
             # Use a quasi-intelligent method of determining the noise floor
             # and ultimately using noise + 1 sigma
             baseline, rms = self.detect_noise_floor(region)
             threshold = baseline + (rms * sigma)
+            # Convert threshold into SNR units
+            threshold /= baseline
+            self.data["SNR"] = self.data[self.int_col] / baseline
+            self.int_col = "SNR"
+            self.logger.info("Now using SNR as primary intensity unit.")
+        elif threshold is None and als is True:
+            baseline, _ = self.detect_noise_floor(als=True, als_settings=als_settings)
+            # Convert to SNR, and start using this instead
+            self.data["SNR"] = self.data[self.int_col] / baseline
+            self.int_col = "SNR"
+            self.logger.info("Now using SNR as primary intensity unit.")
+            # If using ALS, the sigma argument becomes the threshold value in SNR units
+            threshold = sigma
         self.threshold = threshold
         self.logger.info(f"Peak detection threshold is: {threshold}")
         peaks_df = analysis.peak_find(
@@ -988,7 +1042,8 @@ class AssignmentSession:
             min_dist=min_dist,
         )
         # Shift the peak intensities down by the noise baseline
-        peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - self.session.baseline
+        if als is False:
+            peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - self.session.baseline
         self.logger.info(f"Found {len(peaks_df)} peaks in total.")
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
@@ -2504,7 +2559,7 @@ class AssignmentSession:
 
         fig.add_scattergl(
             x=self.data["Frequency"],
-            y=self.data["Intensity"],
+            y=self.data[self.int_col],
             name="Experiment",
             opacity=0.6,
         )
