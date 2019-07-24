@@ -1424,7 +1424,16 @@ class AssignmentSession:
                 # Append the directory path to the catalog filepath
                 subdict["filepath"] = str(root.joinpath(subdict["filepath"]))
                 self.logger.info(f"Creating LineList for molecule {name}")
-                linelist_obj = LineList.from_catalog(name=name, **subdict)
+                extension = Path(subdict["filepath"]).suffix
+                if extension == ".cat":
+                    func = LineList.from_catalog
+                elif extension == ".lin":
+                    func = LineList.from_lin
+                else:
+                    raise ValueError(
+                        f"File extension not recognized: {name} extension: {extension}"
+                        )
+                linelist_obj = func(name=name, **subdict)
                 print(linelist_obj)
                 self.process_linelist(name=linelist_obj.name, linelist=linelist_obj)
             except ValueError:
@@ -3075,18 +3084,18 @@ class LineList:
         return linelist_obj
 
     @classmethod
-    def from_lin(cls, name, linpath, formula="", **kwargs):
+    def from_lin(cls, name, filepath, formula="", **kwargs):
         """
         Generate a LineList object from a .lin file. This method should be used for intermediate assignments, when one
         does not know what the identity of a molecule is but has measured some frequency data.
 
         Parameters
         ----------
-        name: str
+        name : str
             Name of the molecule
-        linpath: str
+        filepath : str
             File path to the .lin file.
-        formula: str, optional
+        formula : str, optional
             Chemical formula of the molecule if known.
         kwargs
             Additional kwargs are passed into the Transition objects.
@@ -3095,7 +3104,7 @@ class LineList:
         -------
         LineList
         """
-        lin_df = parsers.parse_lin(linpath)
+        lin_df = parsers.parse_lin(filepath)
         vfunc = np.vectorize(Transition)
         transitions = vfunc(
             name=name,
@@ -3109,7 +3118,7 @@ class LineList:
         linelist_obj = cls(
             name,
             formula,
-            filepath=linpath,
+            filepath=filepath,
             transitions=list(transitions),
             source="Line file",
         )
