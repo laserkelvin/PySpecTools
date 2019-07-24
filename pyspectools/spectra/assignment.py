@@ -1743,25 +1743,37 @@ class AssignmentSession:
         self.identifications = {name: names.count(name) for name in self.names}
         return self.identifications
 
-    def create_uline_ftb_batch(self, filepath=None, shots=500, dipole=1.0):
+    def create_uline_ftb_batch(self, filepath=None, shots=500, dipole=1.0, threshold=0.):
         """
         Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
         frequencies.
+        
+        If a filepath is not specified, a -uline.ftb file will be created in the
+        ftb folder.
+        
+        The user has the ability to control parameters of the batch by setting
+        a global shot count, dipole moment, and minimum intensity value for
+        creation.
 
         Parameters
         ----------
-        filepath: str or None, optional
+        filepath : str or None, optional
             Path to save the .ftb file to. If None, defaults to the session ID.
-        shots: int
+        shots : int, optional
             Number of shots to integrate on each frequency
-        dipole: float
+        dipole : float, optional
             Dipole moment in Debye attenuation target for each frequency
+        threshold : float, optional
+            Minimum value for the line intensity to be considered. For example,
+            if the spectrum is analyzed in units of SNR, this would be the minimum
+            value of SNR to consider in the FTB file.
         """
         if filepath is None:
             filepath = f"./ftb/{self.session.experiment}-ulines.ftb"
         lines = ""
         for index, uline in enumerate(self.line_lists["Peaks"].get_ulines()):
-            lines += fa.generate_ftb_line(uline.frequency, shots, **{"dipole": dipole})
+            if uline.intensity >= threshold:
+                lines += fa.generate_ftb_line(uline.frequency, shots, **{"dipole": dipole})
         with open(filepath, "w+") as write_file:
             write_file.write(lines)
 
