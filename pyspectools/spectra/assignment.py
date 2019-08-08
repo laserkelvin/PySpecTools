@@ -162,6 +162,9 @@ class Transition:
             name and frequency of the Transition
         """
         return f"{self.name}, {self.frequency}"
+    
+    def __repr__(self):
+        return f"{self.name}, {self.frequency:,.4f}"
 
     def calc_intensity(self, Q, T=300.0):
         """
@@ -756,7 +759,7 @@ class AssignmentSession:
         LineList object
         """
         if filepath not in self.umol_names:
-            path = pathlib.Path(filepath)
+            path = Path(filepath)
             ext = path.suffix
             name = next(self.umol_gen(silly=silly))
             parameters = {"name": name, "formula": name, "filepath": filepath}
@@ -774,7 +777,7 @@ class AssignmentSession:
                 f"Created a U-molecule: {name}, with frequency {frequency:,.4f}."
             )
             # Create a symlink so we know which catalog this molecule refers to
-            sym_path = pathlib.Path(f"linelists/{name}{ext}")
+            sym_path = Path(f"linelists/{name}{ext}")
             sym_path.symlink_to(filepath)
             # Also for internal record keeping
             self.umol_names[filepath] = name
@@ -804,7 +807,7 @@ class AssignmentSession:
             self.line_lists[new_name].name = new_name
             self.line_lists[new_name].formula = formula
             # Create symlinks to the catalog with the new name for book keeping
-            sym_path = pathlib.Path(f"linelists/{new_name}.cat")
+            sym_path = Path(f"linelists/{new_name}.cat")
             sym_path.symlink_to(self.line_lists[new_name].filepath)
         else:
             raise Exception(
@@ -1689,9 +1692,6 @@ class AssignmentSession:
             Standard deviation for the spectrum noise.
         window - float
             Value to use for the range to blank. This region blanked corresponds to frequency+/-window.
-
-        Returns
-        -------
         """
         sources = ["CDMS/JPL", "Literature", "New"]
         slices = [
@@ -2034,6 +2034,8 @@ class AssignmentSession:
             # Convert all of the assignment data into a CSV file
             assignment_df = pd.DataFrame(data=[obj.__dict__ for obj in assignments])
             self.table = assignment_df
+            # Generate a LaTeX table for publication
+            self.create_latex_table()
             # Dump assignments to disk
             assignment_df.to_csv(
                 f"reports/{self.session.experiment}.csv", index=False
@@ -2442,6 +2444,64 @@ class AssignmentSession:
             filepath = f"reports/{self.session.experiment}-summary.html"
         with open(filepath, "w+") as write_file:
             write_file.write(output)
+            
+    def create_latex_table(self, filepath=None, header=None, cols=None, **kwargs):
+        """
+        Method to create a LaTeX table summarizing the measurements in this experiment.
+        
+        Without any additional inputs, the table will be printed into a .tex file
+        in the reports folder. The table will be created with the minimum amount
+        of information required for a paper, including the frequency and intensity
+        information, assignments, and the source of the information.
+        
+        The user can override the default settings by supplying `header` and `col`
+        arguments, and any other kwargs are passed into the `to_latex` pandas
+        DataFrame method. The header and col lengths must match.
+        
+        Parameters
+        ----------
+        filepath : str, optional
+            Filepath to save the LaTeX table to; by default None
+        header : iterable of str, optional
+            An iterable of strings specifying the header to be printed. By default None
+        cols : iterable of str, optional
+            An iterable of strings specifying which columns to include. If this is
+            changed, the header must also be changed to reflect the new columns.
+        """
+        table = self.line_lists["Peaks"].to_dataframe()
+        # Numerical formatting
+        formatters = {
+            "frequency": "{:,.4f}".format,
+            "intensity": "{:.2f}".format,
+            "catalog_frequency": "{:,.4f}".format,
+            "deviation": "{:,.4f}".format
+        }
+        # Replace the source information to designate u-line if it is a u-line
+        table.loc[table["uline"] == True, "source"] = "U"
+        if header is None:
+            header = [
+                "Frequency", "Intensity", "Catalog frequency", 
+                "Deviation", "Name", "Formula", "Quantum numbers", "Source"
+                ]
+        if cols is None:
+            cols = [
+                "frequency", "intensity", "catalog_frequency", 
+                "deviation", "name", "formula", "r_qnos", "source"
+                ]
+        assert len(header) == len(cols)
+        if filepath is None:
+            filepath = f"reports/{self.session.experiment}-table.tex"
+        # Settings to be passed into the latex table creation
+        table_settings = {
+            "formatters": formatters,
+            "index": False,
+            "longtable": True,
+            "header": header
+        }
+        table_settings.update(**kwargs)
+        # Write the table to file
+        with open(filepath, "w+") as write_file:
+            table[cols].to_latex(buf=write_file, **table_settings)
 
     def plot_breakdown(self):
         """
@@ -2991,6 +3051,46 @@ class LineList:
             self.catalog_frequencies = [
                 obj.catalog_frequency for obj in self.transitions
             ]
+    
+    def __eq__(self, other):
+        """
+        Dunder method for comparison of LineLists. Since users can accidently
+        use different method/formulas yet use the same catalog/lin file to
+        create the LineList, we only perform the check on the list of transitions.
+        
+        Parameters
+        ----------
+        other : LineList object
+            The other LineList to be used for comparison.
+            
+        Returns
+        -------
+        bool
+            If True, the two LineList objects are equal.
+        """
+        # Assert that we're comparing LineList objects
+        assert type(self) == type(other)
+        return self.transitions == other.transitions
+    
+    def __add__(self, transition_obj):
+        """
+        Dunder method to add Transitions to the LineList.
+        
+        Parameters
+        ----------
+        transition_obj : [type]
+            [description]
+        """
+        assert type(transition_obj) == Transition
+        self.transitions.append(Transition)
+    
+    def __iter__(self):
+        """
+        Sets up syntax for looping over a LineList. This is recommended more
+        for users, but not for programming. When writing new code in the
+        module, iterate over the transitions attribute explicitly.
+        """
+        yield from self.transitions
 
     @classmethod
     def from_catalog(
@@ -3294,7 +3394,8 @@ class LineList:
             If candidates are found, lists of the transitions and the associated weights are returned.
             Otherwise, returns None
         """
-        # first threshold the temperature
+        # Filter out all transition objects quickly with a list comprehension
+        # and if statement
         transitions = [
             obj
             for obj in self.transitions
@@ -3309,14 +3410,14 @@ class LineList:
         # If there are candidates, calculate the weights associated with each transition
         if len(transitions) != 0:
             transition_frequencies = np.array(
-                [obj.catalog_frequency for obj in transitions]
+                [getattr(obj, "catalog_frequency", np.nan) for obj in transitions]
             )
             transition_intensities = np.array(
-                [obj.catalog_intensity for obj in transitions]
+                [getattr(obj, "catalog_intensity", np.nan) for obj in transitions]
             )
             # If there are actually no catalog intensities, it should sum up to zero in which case we won't
             # use the intensities in the weight factors
-            if np.sum(transition_intensities) == 0.0:
+            if np.nansum(transition_intensities) == 0.0:
                 transition_intensities = None
             weighting = analysis.line_weighting(
                 frequency, transition_frequencies, transition_intensities
@@ -3379,4 +3480,30 @@ class LineList:
         return assign_objs
 
     def get_frequencies(self):
+        """
+        Method to extract all the frequencies out of a LineList
+        
+        Returns
+        -------
+        [type]
+            [description]
+        """
         return [transition.frequency for transition in self.transitions]
+
+
+@dataclass
+class Molecule(LineList):
+    """
+    Special instance of the LineList class. The idea is to eventually
+    use the high speed fitting/cataloguing routines by Brandon to provide
+    quick simulations overlaid on chirp spectra.
+    
+    Attributes
+    """
+    A: float = 20000.
+    B: float = 6000.
+    C: float = 3500.
+    var_file: str = ""
+    
+    def __post_init__(self, **kwargs):
+        super().__init__(**kwargs)
