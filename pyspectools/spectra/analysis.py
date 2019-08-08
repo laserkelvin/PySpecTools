@@ -1152,3 +1152,31 @@ def filter_spectrum(intensity, window="hanning", sigma=0.5):
     # Return only the real part of the FFT
     new_y = np.abs(new_y)
     return new_y
+
+
+def detect_artifacts(frequencies, tol=2e-3):
+    """
+    Quick one-liner function to perform a very rudimentary test for
+    RFI. This method relies on the assumption that any frequency that
+    is suspiciously close to an exact number (e.g. 16250.0000) is very
+    likely an artifact.
+    
+    The function will calculate the difference between each frequency
+    and its nearest whole number, and return frequencies that are
+    within a specified tolerance.
+    
+    Parameters
+    ----------
+    frequencies : NumPy 1D array
+        Array of frequencies to check for artifacts.
+    tol : float, optional
+        Maximum tolerance to be used to check whether frequency
+        is close enough to its rounded value, by default 2e-3
+    
+    Returns
+    -------
+    NumPy 1D array
+        Returns the frequencies that match the specified criteria.
+    """
+    mask = np.abs(np.round(frequencies) - frequencies) <= tol
+    return frequencies[mask]
