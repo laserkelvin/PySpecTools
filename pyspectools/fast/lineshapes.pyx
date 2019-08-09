@@ -84,17 +84,18 @@ cpdef multi_gaussian(double[:] x, double[:] A, double[:] x0, double[:] w):
     y: array_like
         Numpy 1D array of Y(X|A,X0,W)
     """
-    cdef unsigned int i, j
+    cdef unsigned int j
     cdef unsigned int n = x.size
     cdef unsigned int m = x0.size
     cdef double[:] y = np.zeros(n)
+    cdef double[:] y_temp = np.zeros(n)
     # Make sure that the size of the parameter arrays are equal
     assert A.size == x0.size == w.size
 
-    for i in range(n):
-        for j in range(m):
-            y[i] += (A[j] / sqrt(2. * pi * w[j]**2.))
-            y[i] *= exp(-(x[i] - x0[j])**2. / (2. * w[j]**2.))
+    for j in range(m):
+        y_temp = gaussian(x, A[j], x0[j], w[j])
+        for i in range(n):
+            y[i] += y_temp[i]
     return y
 
 

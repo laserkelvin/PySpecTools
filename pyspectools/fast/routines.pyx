@@ -111,3 +111,4 @@ cpdef hot_match_arrays(double[:] a, double[:] b, double tol=1e-2):
             else:
                 continue
     return check_array
+    

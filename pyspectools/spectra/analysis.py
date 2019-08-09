@@ -16,6 +16,7 @@ from uncertainties import ufloat
 from bokeh.layouts import layout
 from bokeh.io import save
 from plotly import graph_objs as go
+import numba
 
 from pyspectools import fitting
 from pyspectools import lineshapes
@@ -1180,3 +1181,37 @@ def detect_artifacts(frequencies, tol=2e-3):
     """
     mask = np.abs(np.round(frequencies) - frequencies) <= tol
     return frequencies[mask]
+
+
+@numba.jit
+def cross_correlate(a, b, lags=None):
+    """
+    Cross-correlate two arrays a and b that are of equal length by
+    lagging b with respect to a. Uses np.roll to shift b by values
+    of lag, and appropriately zeros out "out of bounds" values.
+    
+    Parameters
+    ----------
+    a, b: Length n NumPy 1D arrays
+        Arrays containing the values to cross-correlate. Must be the
+        same length.
+    lags : [type], optional
+        [description], by default None
+    """
+    if lags is None:
+        lags = np.arange(-50, 50, 1, dtype=int)
+    assert lags.dtype == int
+    assert a.size == b.size
+    C = np.zeros(lags.size, dtype=a.dtype)
+    index = 0
+    for lag in lags:
+        b_temp = np.roll(b, lag)
+        if lag < 0:
+            b_temp[b_temp.size + lag:] = 0
+        elif lag > 0:
+            b_temp[:lag] = 0
+        else:
+            pass
+        C[index] = (a * b_temp).sum()
+        index += 1
+    return C, lags
