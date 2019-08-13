@@ -813,6 +813,32 @@ class AssignmentSession:
             raise Exception(
                 f"{name} does not exist in {self.session.experiment} line_lists"
             )
+            
+    def add_ulines(self, data, **kwargs):
+        """
+        Function to manually add multiple pairs of frequency/intensity to the current
+        experiment's Peaks list.
+        
+        Kwargs are passed to the creation of the Transition object.
+        
+        Parameters
+        ----------
+        data: iterable of 2-tuple
+            List-like of 2-tuples corresponding to frequency and intensity.
+            Data should look like this example:
+            [
+                (12345.213, 5.),
+                (18623.125, 12.3)
+            ]
+        """
+        default_dict = {
+            "experiment": self.session.experiment,
+            "velocity": self.session.velocity
+        }
+        default_dict.update(**kwargs)
+        if "Peaks" in self.line_lists:
+            self.line_lists["Peaks"].add_ulines(data, **default_dict)
+        self.logger.info(f"Added {len(data)} transitions to U-lines.")
 
     def _init_logging(self):
         """
@@ -2209,15 +2235,18 @@ class AssignmentSession:
         assignments = self.line_lists["Peaks"].get_assignments()
         frequencies = np.array([transition.frequency for transition in assignments])
         self.logger.info(f"Blanking spectrum over {frequencies} windows.")
-        if len(self.session.baseline) > 1:
+        if self.session.noise_region == "als":
             baseline = np.mean(self.session.baseline)
+            baseline /= baseline
+            rms = np.std(baseline)
         else:
             baseline = self.session.baseline
+            rms = self.session.noise_rms
         self.data[self.int_col] = analysis.blank_spectrum(
             self.data,
             frequencies,
             baseline,
-            self.session.noise_rms,
+            rms,
             freq_col=self.freq_col,
             int_col=self.int_col,
             window=window,
@@ -3493,7 +3522,54 @@ class LineList:
             [description]
         """
         return [transition.frequency for transition in self.transitions]
-
+    
+    def add_uline(self, frequency, intensity, **kwargs):
+        """
+        Function to manually add a U-line to the LineList.
+        The function creates a Transition object with the frequency and
+        intensity values provided by a user, which is then compared with
+        the other transition entries within the LineList. If it doesn't
+        already exist, it will then add the new Transition to the LineList.
+        
+        Kwargs are passed to the creation of the Transition object.
+        
+        Parameters
+        ----------
+        frequency, intensity: float
+            Floats corresponding to the frequency and intensity of the line in
+            a given unit.
+        """
+        transition = Transition(
+            frequency=frequency, 
+            intensity=intensity,
+            uline=True,
+            **kwargs
+            )
+        if transition not in self.transitions:
+            self.transitions.append(transition)
+            
+    def add_ulines(self, data, **kwargs):
+        """
+        Function to add multiple pairs of frequency/intensity to the current
+        LineList.
+        
+        Kwargs are passed to the creation of the Transition object.
+        
+        Parameters
+        ----------
+        data: iterable of 2-tuple
+            List-like of 2-tuples corresponding to frequency and intensity.
+            Data should look like this example:
+            [
+                (12345.213, 5.),
+                (18623.125, 12.3)
+            ]
+        """
+        for line in data:
+            # This assertion makes sure that every line has a specified
+            # frequency AND intensity value
+            assert len(line) == 2
+            self.add_uline(*line, **kwargs)
 
 @dataclass
 class Molecule(LineList):
