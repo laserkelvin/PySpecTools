@@ -976,7 +976,7 @@ class AssignmentSession:
             baseline = fitting.baseline_als(self.data[self.int_col], **als_params)
             # Decimate the noise with a huge Gaussian blur
             baseline = gaussian_filter(baseline, 200.)
-            rms = None
+            rms = np.std(baseline)
             self.session.baseline = baseline
             self.session.noise_region = "als"
             self.session.noise_rms = rms
@@ -1676,7 +1676,7 @@ class AssignmentSession:
         n_assign = len(np.where(corr_mat > 0)[0])
         self.logger.info(f"Copied {n_assign} assignments.")
 
-    def blank_spectrum(self, noise, noise_std, window=1.0):
+    def blank_spectrum(self, noise=None, noise_std=None, window=1.0):
         """
         Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
         and standard deviation of the noise, typically estimated by picking a region free of spectral features.
@@ -2209,10 +2209,14 @@ class AssignmentSession:
         assignments = self.line_lists["Peaks"].get_assignments()
         frequencies = np.array([transition.frequency for transition in assignments])
         self.logger.info(f"Blanking spectrum over {frequencies} windows.")
+        if len(self.session.baseline) > 1:
+            baseline = np.mean(self.session.baseline)
+        else:
+            baseline = self.session.baseline
         self.data[self.int_col] = analysis.blank_spectrum(
             self.data,
             frequencies,
-            self.session.baseline,
+            baseline,
             self.session.noise_rms,
             freq_col=self.freq_col,
             int_col=self.int_col,

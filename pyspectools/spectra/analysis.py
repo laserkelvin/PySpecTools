@@ -695,7 +695,7 @@ def create_cluster_tests(cluster_dict, shots=25, dipole=1.0, min_dist=500.,
 
 
 def blank_spectrum(
-        spectrum_df, frequencies, noise, noise_std, freq_col="Frequency",
+        spectrum_df, frequencies, noise=None, noise_std=None, freq_col="Frequency",
         int_col="Intensity", window=1., df=True
 ):
     """
