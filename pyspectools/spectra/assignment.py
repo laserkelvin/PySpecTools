@@ -165,6 +165,12 @@ class Transition:
     
     def __repr__(self):
         return f"{self.name}, {self.frequency:,.4f}"
+    
+    def __lt__(self, other):
+        return self.frequency < other.frequency
+    
+    def __gt__(self, other):
+        return self.frequency > other.frequency
 
     def calc_intensity(self, Q, T=300.0):
         """
@@ -2060,6 +2066,7 @@ class AssignmentSession:
             # Convert all of the assignment data into a CSV file
             assignment_df = pd.DataFrame(data=[obj.__dict__ for obj in assignments])
             self.table = assignment_df
+            self.table.sort_values(["frequency"], ascending=True, inplace=True)
             # Generate a LaTeX table for publication
             self.create_latex_table()
             # Dump assignments to disk
