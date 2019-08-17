@@ -2516,6 +2516,12 @@ class AssignmentSession:
             "catalog_frequency": "{:,.4f}".format,
             "deviation": "{:,.4f}".format
         }
+        def ref_formatter(x):
+            noform = ["CDMS/JPL", "Artifact", "U"]
+            if x not in noform:
+                return f"\cite{x}"
+            else:
+                return x
         # Replace the source information to designate u-line if it is a u-line
         table.loc[table["uline"] == True, "source"] = "U"
         if header is None:
@@ -2529,6 +2535,10 @@ class AssignmentSession:
                 "deviation", "name", "formula", "r_qnos", "source"
                 ]
         assert len(header) == len(cols)
+        if "source" in cols:
+            table["source"].apply(ref_formatter)
+        if "formula" in cols:
+            table["formula"].apply(lambda x: f"\ce{x}")
         if filepath is None:
             filepath = f"reports/{self.session.experiment}-table.tex"
         # Settings to be passed into the latex table creation
@@ -2536,7 +2546,8 @@ class AssignmentSession:
             "formatters": formatters,
             "index": False,
             "longtable": True,
-            "header": header
+            "header": header,
+            "escape": False
         }
         table_settings.update(**kwargs)
         # Write the table to file
