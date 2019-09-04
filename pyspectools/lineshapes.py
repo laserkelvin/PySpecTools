@@ -34,25 +34,73 @@ def pair_gaussian(x, A1, A2, x0, w, xsep):
     return gaussian(x, A1, x0 - xsep, w) + gaussian(x, A2, x0 + xsep, w)
 
 
-def lorentzian(x, x0, gamma, A):
-    # Stock Lorentizan function
-    return (A / np.pi * gamma) * (gamma**2. / ((x - x0)**2. + gamma**2.))
+def lorentzian(x, x0, gamma, I):
+    """
+    Function to evaluate a Lorentzian lineshape function.
+    
+    Parameters
+    ----------
+    x : Numpy 1D array
+        Array of floats corresponding to the x values to evaluate on
+    x0 : float
+        Center for the distribution
+    gamma : float
+        Width of the distribution
+    I : float
+        Height of the distribution
+    
+    Returns
+    -------
+    Numpy 1D array
+        Values of the Lorentzian distribution
+    """
+    return I * (gamma**2. / ((x - x0)**2. + gamma**2.))
 
 
-def first_deriv_lorentzian(x, x0, gamma, A):
+def first_deriv_lorentzian(x, x0, gamma, I):
     """
-        Analytic first derivative function for a Lorentizan.
-        This was solved using SymPy.
+    Function to evaluate the first derivative of a Lorentzian lineshape function.
+    
+    Parameters
+    ----------
+    x : Numpy 1D array
+        Array of floats corresponding to the x values to evaluate on
+    x0 : float
+        Center for the distribution
+    gamma : float
+        Width of the distribution
+    I : float
+        Height of the distribution
+    
+    Returns
+    -------
+    Numpy 1D array
+        Values of the Lorentzian distribution
     """
-    return (-2. * A * gamma**3. * (x - x0)) / (np.pi * (gamma**2. + (x - x0)**2.)**2.)
+    return -2.0*I*gamma**2.0*(x - x0)**1.0/(gamma**2.0 + (x - x0)**2.0)**2
 
 
-def sec_deriv_lorentzian(x, x0, gamma, A):
+def sec_deriv_lorentzian(x, x0, gamma, I):
     """
-        Analytic second derivative function for a Lorentizan.
-        Similar to the first derivative, this was derived using SymPy.
-        The function is split into two parts K and L.
+    Function to evaluate the second derivative of a Lorentzian lineshape function.
+    This was evaluated analytically with SymPy by differentiation of the
+    Lorentzian expression used for the `lorentzian` function in this module.
+    
+    Parameters
+    ----------
+    x : Numpy 1D array
+        Array of floats corresponding to the x values to evaluate on
+    x0 : float
+        Center for the distribution
+    gamma : float
+        Width of the distribution
+    I : float
+        Height of the distribution
+    
+    Returns
+    -------
+    Numpy 1D array
+        Values of the Lorentzian distribution
     """
-    K = (-2. * A * gamma**3.) / (np.pi * (gamma**2. + (x - x0)**2.)**2.)
-    L = (8. * A * gamma**3. * (x - x0)**2.) / (np.pi (gamma**2. + (x - x0_**2.)**3.))
-    return K + L
+    return -I*gamma**2.0*(2.0 - 8.0*(x - x0)**2.0/(gamma**2.0 + \
+         (x - x0)**2.0))/(gamma**2.0 + (x - x0)**2.0)**2
