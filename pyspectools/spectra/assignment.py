@@ -161,10 +161,18 @@ class Transition:
         str
             name and frequency of the Transition
         """
-        return f"{self.name}, {self.frequency}"
+        if self.uline is True:
+            frequency = self.frequency
+        else:
+            frequency = self.catalog_frequency
+        return f"{self.name}, {frequency:,.4f}"
     
     def __repr__(self):
-        return f"{self.name}, {self.frequency:,.4f}"
+        if self.uline is True:
+            frequency = self.frequency
+        else:
+            frequency = self.catalog_frequency
+        return f"{self.name}, {frequency:,.4f}"
     
     def __lt__(self, other):
         return self.frequency < other.frequency
@@ -326,6 +334,23 @@ class Transition:
         json_dict = routines.read_json(json_path)
         assignment_obj = obj(**json_dict)
         return assignment_obj
+    
+    def reset_assignment(self):
+        """
+        Function to reset an assigned line into its original state.
+        The only information that is kept regards to the frequency,
+        intensity, and aspects about the experiment.
+        """
+        remain = {
+            "frequency": self.frequency,
+            "intensity": self.intensity,
+            "experiment": self.experiment,
+            "velocity": self.velocity,
+            "source": self.source
+        }
+        empty = Transition()
+        self.__dict__.update(**empty.__dict__)
+        self.__dict__.update(**remain)
 
 
 @dataclass
@@ -1031,6 +1056,17 @@ class AssignmentSession:
             asymmetric least-squares method for fitting the baseline. In both instances, the primary intensity
             column to be used for analysis will be changed to "SNR", which is the recommended approach.
 
+            To use the ALS algorithm there may be some tweaking involved for the parameters.
+            These are typically found empirically, but for reference here are some "optimal" values
+            that have been tested.
+            
+            For millimeter-wave spectra, larger values of lambda are favored:
+            
+            lambda = 1e5
+            p = 0.1
+            
+            This should get rid of periodic (fringe) baselines, and leave the "real" signal behind.
+
             Parameters
             ----------
             threshold : float or None, optional
@@ -1081,7 +1117,8 @@ class AssignmentSession:
         )
         # Shift the peak intensities down by the noise baseline
         if als is False:
-            peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - self.session.baseline
+            baseline = getattr(self.session, "baseline", 0.)
+            peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - baseline
         self.logger.info(f"Found {len(peaks_df)} peaks in total.")
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
@@ -1402,6 +1439,63 @@ class AssignmentSession:
                     # Throw into U-line pile if no matches at all
                     self.logger.info(f"No species known for {frequency:,.4f}")
         self.logger.info("Splatalogue search finished.")
+        
+    def overlay_molecule(self, species, freq_range=None, threshold=-7.):
+        """
+        Function to query splatalogue for a specific molecule. By default, the
+        frequency range that will be requested corresponds to the spectral range
+        available in the experiment.
+        
+        Parameters
+        ----------
+        species : str
+            Identifier for a specific molecule, typically name
+        
+        Returns
+        -------
+        FigureWidget
+            Plotly FigureWidget that shows the experimental spectrum along
+            with the detected peaks, and the molecule spectrum.
+        DataFrame
+            Pandas DataFrame from the Splatalogue query.
+        
+        Raises
+        ------
+        Exception
+            If no species are found in the query, raises Exception.
+        """
+        if freq_range is None:
+            freq_range = [
+                self.data[self.freq_col].min(),
+                self.data[self.freq_col].max()
+            ]
+        molecule_df = analysis.search_molecule(
+            species,
+            freq_range
+            )
+        # Threshold intensity
+        molecule_df = molecule_df.loc[molecule_df["CDMS/JPL Intensity"] >= threshold]
+        # This prevents missing values from blowing up the normalization
+        molecule_df.loc[molecule_df["CDMS/JPL Intensity"] > -1.]["CDMS/JPL Intensity"] = -1.
+        # Calculate the real intensity and normalize
+        molecule_df["Intensity"] = 10**molecule_df["CDMS/JPL Intensity"]
+        molecule_df["Normalized"] = molecule_df["Intensity"] / molecule_df["Intensity"].max()
+        # Add annotations to the hovertext
+        molecule_df["Annotation"] = molecule_df["Resolved QNs"].astype(str) + \
+            "-" + molecule_df["E_U (K)"].astype(str)
+        if len(molecule_df) != 0:
+            fig = self.plot_spectrum()
+            fig.add_bar(
+                x=molecule_df["Frequency"], y=molecule_df["Normalized"], 
+                hoverinfo="text", 
+                text=molecule_df["Annotation"],
+                name=species,
+                width=2.
+            )
+            molecule_df.to_csv(f"linelists/{species}-splatalogue.csv", index=False)
+            return fig, molecule_df
+        else:
+            raise Exception(f"No molecules found in Splatalogue named {species}.")
 
     def process_linelist_batch(self, param_dict=None, yml_path=None, **kwargs):
         """
@@ -3286,6 +3380,43 @@ class LineList:
             source="Line file",
         )
         return linelist_obj
+    
+    @classmethod
+    def from_splatalogue_query(cls, dataframe, **kwargs):
+        """
+        Method for converting a Splatalogue query dataframe into a LineList
+        object. This is designed with the intention of pre-querying a set
+        of molecules ahead of time, so that the user can have direct control
+        over which molecules are specifically targeted without having to
+        generate specific catalog files.
+        
+        Parameters
+        ----------
+        dataframe : pandas DataFrame
+            DataFrame generated by the function `analysis.search_molecule`
+        
+        Returns
+        -------
+        LineList
+        """
+        vfunc = np.vectorize(Transition)
+        name = dataframe["Chemical Name"].unique()[0]
+        transitions = vfunc(
+            name=dataframe["Chemical Name"].values,
+            catalog_frequency=dataframe["Frequency"].values,
+            catalog_intensity=dataframe["CDMS/JPL Intensity"].values,
+            ustate_energy=dataframe["E_U (K)"].values,
+            formula=dataframe["Species"].values,
+            r_qnos=dataframe["Resolved QNs"].values,
+            uline=False,
+            source="Splatalogue",
+            public=True
+            **kwargs
+        )
+        linelist_obj = cls(
+            name=name, transitions=list(transitions), source="Splatalogue"
+        )
+        return linelist_obj
 
     @classmethod
     def from_artifacts(cls, frequencies, **kwargs):
@@ -3310,6 +3441,7 @@ class LineList:
             catalog_frequency=np.asarray(frequencies),
             uline=False,
             source="Artifact",
+            public=False
             **kwargs,
         )
         linelist_obj = cls(

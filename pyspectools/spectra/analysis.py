@@ -171,7 +171,7 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity",
     return peak_df
 
 
-def search_molecule(species, freq_range=[0., 40e3]):
+def search_molecule(species, freq_range=[0., 40e3], **kwargs):
     """
     Function to search Splatalogue for a specific molecule. Technically I'd prefer to
     download entries from CDMS instead, but this is probably the most straight
@@ -193,11 +193,16 @@ def search_molecule(species, freq_range=[0., 40e3]):
     DataFrame or None
         Pandas dataframe containing transitions for the given molecule. If no matches are found, returns None.
     """
+    default_param = {
+        "line_lists": ["CDMS", "JPL"],
+        "export_limit": 20000
+    }
+    default_param.update(**kwargs)
     splat_df = Splatalogue.query_lines(
         min(freq_range) * u.MHz,
         max(freq_range) * u.MHz,
         chemical_name=species,
-        line_lists=["CDMS", "JPL"]
+        **default_param
     ).to_pandas()
     if len(splat_df)> 0:
         # These are the columns wanted
