@@ -108,6 +108,10 @@ class Transition:
             Flag to indicate if the information for this assignment is public/published
         velocity : float
             Velocity of the source used to make the assignment in km/s
+        discharge : bool
+            Whether or not the line is discharge dependent
+        magnet : bool
+            Whether or not the line is magnet dependent (i.e. open shell)
     """
 
     name: str = ""
@@ -133,6 +137,8 @@ class Transition:
     source: str = "Catalog"
     public: bool = True
     velocity: float = 0.0
+    discharge: bool = False
+    magnet: bool = False
 
     def __eq__(self, other):
         """ Dunder method for comparing molecules.
