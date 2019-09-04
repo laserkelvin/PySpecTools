@@ -44,6 +44,7 @@ cmdclass = dict()
 ext_modules = list()
 
 if use_cython:
+    print("Building Cython routines.")
     ext_modules += [
         Extension(
             "pyspectools.fast.lineshapes",
@@ -70,6 +71,7 @@ if use_cython:
     cmdclass.update(**{"build_ext": build_ext, "sdist": sdist})
 else:
     # If Cython is not available, then use the latest C files
+    print("Not building cython!")
     ext_modules += [
         Extension(
             "pyspectools.fast.lineshapes",
