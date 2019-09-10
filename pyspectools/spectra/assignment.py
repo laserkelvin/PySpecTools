@@ -3416,7 +3416,7 @@ class LineList:
             r_qnos=dataframe["Resolved QNs"].values,
             uline=False,
             source="Splatalogue",
-            public=True
+            public=True,
             **kwargs
         )
         linelist_obj = cls(
@@ -3447,7 +3447,7 @@ class LineList:
             catalog_frequency=np.asarray(frequencies),
             uline=False,
             source="Artifact",
-            public=False
+            public=False,
             **kwargs,
         )
         linelist_obj = cls(
