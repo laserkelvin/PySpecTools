@@ -1653,24 +1653,37 @@ class AssignmentSession:
             raise Exception("Please specify an internal or external line list!")
         if linelist is not None:
             nassigned = 0
-            iterator = enumerate(self.line_lists["Peaks"].get_ulines())
+            # Sort the LineList by intensity if possible. If the strongest line isn't
+            # there, the other lines shouldn't be there
+            if linelist.source in ["Splatalogue", "Catalog"]:
+                linelist = sorted(linelist, key=lambda line: line.catalog_intensity)
+            # Loop over the LineList lines
+            iterator = enumerate(linelist)
             if progressbar is True:
                 iterator = tqdm(iterator)
             # Loop over all of the U-lines
             for index, transition in iterator:
+                # Control the flow so that we're not wasting time looking for lines if the strongest
+                # transitions are not seen
+                if (index > 5) and (nassigned == 0) and (linelist.source in ["Catalog", "Splatalogue"]):
+                    self.logger.info(
+                    "Searched for fice strongest transitions in {linelist.name}, and nothing; aborting."
+                    )
+                break
                 # If no value of tolerance is provided, determine from the session
                 if tol is None:
                     if self.session.freq_abs is True:
                         tol = self.session.freq_prox
                     else:
                         tol = (1.0 - self.session.freq_prox) * transition.frequency
+                # Log the search
                 self.logger.info(
                     f"Searching for frequency {transition.frequency:,.4f}"
                     f" with tolerances: {self.t_threshold:.2f} K, "
                     f" +/-{tol:.4f} MHz, {thres} intensity."
                 )
                 # Find transitions in the LineList that can match
-                can_pkg = linelist.find_candidates(
+                can_pkg = self.line_lists["Peaks"].find_candidates(
                     transition.frequency,
                     lstate_threshold=self.t_threshold,
                     freq_tol=tol,
