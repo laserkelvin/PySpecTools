@@ -1188,7 +1188,7 @@ def detect_artifacts(frequencies, tol=2e-3):
     return frequencies[mask]
 
 
-@numba.jit
+@numba.njit(fastmath=True)
 def cross_correlate(a, b, lags=None):
     """
     Cross-correlate two arrays a and b that are of equal length by

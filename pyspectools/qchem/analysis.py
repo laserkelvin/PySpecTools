@@ -312,7 +312,7 @@ class CalculationResult:
         return cls(**data)
 
     @classmethod
-    def from_g16(cls, filepath):
+    def from_g16(cls, filepath, parser=parsers.parse_g16):
         """
         Class method for parsing a Gaussian logfile, and converting the dictionary into a Calculation class.
 
@@ -326,8 +326,10 @@ class CalculationResult:
         Calculation - object
             Calculation object with the parsed Gaussian output.
         """
-        data = parsers.parse_g16(filepath)
-        return cls(**data)
+        data = parser(filepath)
+        calc_obj = cls()
+        calc_obj.__dict__.update(**data)
+        return calc_obj
 
     def __add__(self, other):
         for attr in ["composite", "elec_zpe", "correlation", "scf"]:

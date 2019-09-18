@@ -36,6 +36,7 @@ def parse_g16(filepath):
     """
     data = dict()
     g3 = dict()
+    w1 = dict()
     harm_freq = list()
     harm_int = list()
     data["program"] = "Gaussian"
@@ -189,6 +190,17 @@ def parse_g16(filepath):
             if "G3 Enthalpy" in line:
                 g3["G3-enthalpy"] = float(line.split()[2])
                 g3["G3-entropy"] = float(line.split()[-1])
+            if "W1BD (0 K)=" in line:
+                split_line = line.split()
+                w1["W1BD-H-0 K"] = float(split_line[3])
+                data["composite"] = float(split_line[3])
+            if "W1BD  Enthalpy" in line:
+                split_line = line.split()
+                w1["W1BD-H-298 K"] = float(split_line[2])
+                w1["W1BD-S-298 K"] = float(split_line[-1])
+            if "W1BD  Electronic Energy" in line:
+                split_line = line.split()
+                w1["W1BD-Electronic"] = float(split_line[-1])
     if "coords" in data:
         atom_dict = dict()
         for coord in data["coords"]:
@@ -207,6 +219,7 @@ def parse_g16(filepath):
     data["harm_freq"] = harm_freq
     data["harm_int"] = harm_int
     data["G3"] = g3
+    data["W1"] = w1
     return data
 
 
@@ -244,6 +257,41 @@ def parseG3(filepath):
                 split_line = line.split()
                 results["G3-H-298 K"] = float(split_line[2])
                 results["G3-S-298 K"] = float(split_line[-1])
+    if len(frequencies) != 0:
+        # Round the vibrational frequencies to integers
+        frequencies = np.array(frequencies).astype(int)
+        frequencies = frequencies[frequencies >= 0.]
+        results["Frequencies"] = frequencies
+    if rotational_constants is not None:
+        results["Rotational constants"] = np.array(rotational_constants)
+    return results
+
+def parseW1(filepath):
+    results = dict()
+    frequencies = list()
+    rotational_constants = None
+    with open(filepath) as read_file:
+        for line in read_file:
+            if "Rotational constants" in line:
+                split_line = line.split()
+                rotational_constants = [float(value) for value in split_line[3:]]
+            if "Frequencies --" in line:
+                split_line = line.split()
+                frequencies.extend([float(value) for value in split_line[2:]])
+            if "W1BD (0 K)=" in line:
+                split_line = line.split()
+                results["W1BD-H-0 K"] = float(split_line[3])
+                results["composite"] = float(split_line[3])
+            if "W1BD  Enthalpy" in line:
+                split_line = line.split()
+                results["W1BD-H-298 K"] = float(split_line[2])
+                results["W1BD-S-298 K"] = float(split_line[-1])
+            if "W1BD  Electronic Energy" in line:
+                split_line = line.split()
+                results["W1BD-Electronic"] = float(split_line[-1])
+            if "E(ZPE)=" in line:
+                split_line = line.split()
+                results["ZPE"] = float(split_line[1])
     if len(frequencies) != 0:
         # Round the vibrational frequencies to integers
         frequencies = np.array(frequencies).astype(int)
