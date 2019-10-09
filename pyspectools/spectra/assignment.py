@@ -3358,7 +3358,42 @@ class LineList:
         )
         linelist_obj = cls(name=name, transitions=list(transitions), source="Peaks")
         return linelist_obj
+    
+    @classmethod
+    def from_list(cls, name, frequencies, formula="", **kwargs):
+        """
+        Generic, low level method for creating a LineList object from a list
+        of frequencies. This method can be used when neither lin, catalog, nor
+        splatalogue is appropriate and you would like to manually create it
+        by handpicked frequencies.
 
+        Parameters
+        ----------
+        name: str
+            Name of the species - doesn't have to be its real name, just an identifier.
+        frequencies: list
+            A list of floats corresponding to the "catalog" frequencies.
+        formula: str, optional
+            Formula of the species, if known.
+        kwargs
+            Optional settings are passed into the creation of Transition objects.
+
+        Returns
+        -------
+        LineList
+        """
+        vfunc = np.vectorize(Transition)
+        frequencies = np.asarray(frequencies)
+        transitions = vfunc(
+            frequency=frequencies,
+            uline=False,
+            name=name,
+            formula=formula,
+            **kwargs,
+        )
+        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
+        return linelist_obj  
+        
     @classmethod
     def from_lin(cls, name, filepath, formula="", **kwargs):
         """
