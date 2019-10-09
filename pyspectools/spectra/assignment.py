@@ -1678,13 +1678,13 @@ class AssignmentSession:
                         tol = (1.0 - self.session.freq_prox) * transition.frequency
                 # Log the search
                 self.logger.info(
-                    f"Searching for frequency {transition.frequency:,.4f}"
+                    f"Searching for frequency {transition.catalog_frequency:,.4f}"
                     f" with tolerances: {self.t_threshold:.2f} K, "
                     f" +/-{tol:.4f} MHz, {thres} intensity."
                 )
                 # Find transitions in the LineList that can match
                 can_pkg = self.line_lists["Peaks"].find_candidates(
-                    transition.frequency,
+                    transition.catalog_frequency,
                     lstate_threshold=self.t_threshold,
                     freq_tol=tol,
                     int_tol=thres,
@@ -1706,21 +1706,21 @@ class AssignmentSession:
                         chosen = candidates[chosen_idx]
                     self.logger.info(
                         f"Assigning {chosen.name}"
-                        f" (catalog {chosen.catalog_frequency:,.4f})"
-                        f" to peak {index} at {transition.frequency:,.4f}."
+                        f" (catalog {chosen.frequency:,.4f})"
+                        f" to peak {index} at {transition.catalog_frequency:,.4f}."
                     )
                     # Create a copy of the Transition data from the LineList
                     assign_dict = copy(chosen.__dict__)
                     # Update with the measured frequency and intensity
-                    assign_dict["frequency"] = transition.frequency
-                    assign_dict["intensity"] = transition.intensity
+                    assign_dict["catalog_frequency"] = transition.catalog_frequency
+                    assign_dict["catalog_intensity"] = transition.catalog_intensity
                     assign_dict["velocity"] = self.session.velocity
                     assign_dict["uline"] = False
                     # Add any other additional kwargs
                     assign_dict.update(**kwargs)
                     # Copy over the information from the assignment, and update
                     # the experimental peak information with the assignment
-                    transition.__dict__.update(**assign_dict)
+                    chosen.__dict__.update(**assign_dict)
                     nassigned += 1
             self.logger.info(
                 f"Assigned {nassigned} new transitions to {linelist.name}."
@@ -3385,7 +3385,7 @@ class LineList:
         vfunc = np.vectorize(Transition)
         frequencies = np.asarray(frequencies)
         transitions = vfunc(
-            frequency=frequencies,
+            catalog_frequency=frequencies,
             uline=False,
             name=name,
             formula=formula,
@@ -3633,6 +3633,10 @@ class LineList:
         """
         # Filter out all transition objects quickly with a list comprehension
         # and if statement
+        if self.source == "Peaks":
+            freq_attr = "frequency"
+        else:
+            freq_attr = "catalog_frequency"
         transitions = [
             obj
             for obj in self.transitions
@@ -3640,14 +3644,14 @@ class LineList:
                 [
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
-                    abs(obj.catalog_frequency - frequency) <= freq_tol,
+                    abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
                 ]
             )
         ]
         # If there are candidates, calculate the weights associated with each transition
         if len(transitions) != 0:
             transition_frequencies = np.array(
-                [getattr(obj, "catalog_frequency", np.nan) for obj in transitions]
+                [getattr(obj, "freq_attr", np.nan) for obj in transitions]
             )
             transition_intensities = np.array(
                 [getattr(obj, "catalog_intensity", np.nan) for obj in transitions]

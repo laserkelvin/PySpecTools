@@ -182,7 +182,7 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.1.2",
+    version="4.1.3",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
@@ -196,7 +196,7 @@ setup(
         "astroquery==0.3.8",
         "astropy==3.0.5",
         "lmfit",
-        "peakutils",
+        "peakutils>=1.3.2",
         "sklearn",
         "colorlover",
         "monsterurl",
