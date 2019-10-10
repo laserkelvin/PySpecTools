@@ -1656,7 +1656,7 @@ class AssignmentSession:
             # Sort the LineList by intensity if possible. If the strongest line isn't
             # there, the other lines shouldn't be there
             if linelist.source in ["Splatalogue", "Catalog"]:
-                linelist = sorted(linelist, key=lambda line: line.catalog_intensity)
+                linelist.transitions = sorted(linelist, key=lambda line: line.catalog_intensity)[::-1]
             # Loop over the LineList lines
             iterator = enumerate(linelist)
             if progressbar is True:
@@ -1669,7 +1669,7 @@ class AssignmentSession:
                     self.logger.info(
                     "Searched for fice strongest transitions in {linelist.name}, and nothing; aborting."
                     )
-                break
+                    break
                 # If no value of tolerance is provided, determine from the session
                 if tol is None:
                     if self.session.freq_abs is True:
@@ -1682,7 +1682,7 @@ class AssignmentSession:
                     f" with tolerances: {self.t_threshold:.2f} K, "
                     f" +/-{tol:.4f} MHz, {thres} intensity."
                 )
-                # Find transitions in the LineList that can match
+                # Find transitions in the peak list that might match
                 can_pkg = self.line_lists["Peaks"].find_candidates(
                     transition.catalog_frequency,
                     lstate_threshold=self.t_threshold,
@@ -1705,16 +1705,18 @@ class AssignmentSession:
                         )
                         chosen = candidates[chosen_idx]
                     self.logger.info(
-                        f"Assigning {chosen.name}"
-                        f" (catalog {chosen.frequency:,.4f})"
-                        f" to peak {index} at {transition.catalog_frequency:,.4f}."
+                        f"Assigning {transition.name}"
+                        f" (catalog {transition.catalog_frequency:,.4f})"
+                        f" to peak {index} at {chosen.frequency:,.4f}."
                     )
                     # Create a copy of the Transition data from the LineList
-                    assign_dict = copy(chosen.__dict__)
+                    assign_dict = copy(transition.__dict__)
                     # Update with the measured frequency and intensity
-                    assign_dict["catalog_frequency"] = transition.catalog_frequency
-                    assign_dict["catalog_intensity"] = transition.catalog_intensity
+                    assign_dict["frequency"] = chosen.catalog_frequency
+                    assign_dict["intensity"] = chosen.catalog_intensity
+                    assign_dict["experiment"] = chosen.experiment
                     assign_dict["velocity"] = self.session.velocity
+                    assign_dict["peak_id"] = chosen.peak_id
                     assign_dict["uline"] = False
                     # Add any other additional kwargs
                     assign_dict.update(**kwargs)
