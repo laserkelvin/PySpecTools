@@ -1657,12 +1657,19 @@ class AssignmentSession:
             # there, the other lines shouldn't be there
             if linelist.source in ["Splatalogue", "Catalog"]:
                 linelist.transitions = sorted(linelist, key=lambda line: line.catalog_intensity)[::-1]
+            # Filter out out-of-band stuff
+            max_freq = max(self.line_lists["Peaks"].get_frequencies())
+            min_freq = min(self.line_lists["Peaks"].get_frequencies())
+            transitions = [
+                transition for transition in linelist.transitions if \
+                    min_freq <= transition.catalog_frequency <= max_freq
+                ]
             # Loop over the LineList lines
             if progressbar is True:
-                iterator = tqdm(linelist)
-                iterator = enumerate(linelist)
+                iterator = tqdm(transitions)
+                iterator = enumerate(iterator)
             else:
-                iterator = enumerate(linelist)
+                iterator = enumerate(transitions)
             # Loop over all of the U-lines
             for index, transition in iterator:
                 # Control the flow so that we're not wasting time looking for lines if the strongest
