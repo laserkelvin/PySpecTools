@@ -1674,11 +1674,11 @@ class AssignmentSession:
             for index, transition in iterator:
                 # Control the flow so that we're not wasting time looking for lines if the strongest
                 # transitions are not seen
-                if (index > 5) and (nassigned == 0) and (linelist.source in ["Catalog", "Splatalogue"]):
-                    self.logger.info(
-                    "Searched for fice strongest transitions in {linelist.name}, and nothing; aborting."
-                    )
-                    break
+                #if (index > 5) and (nassigned == 0) and (linelist.source in ["Catalog", "Splatalogue"]):
+                #    self.logger.info(
+                #    "Searched for fice strongest transitions in {linelist.name}, and nothing; aborting."
+                #    )
+                #    break
                 # If no value of tolerance is provided, determine from the session
                 if tol is None:
                     if self.session.freq_abs is True:
