@@ -1890,7 +1890,7 @@ class AssignmentSession:
         self.identifications = {name: names.count(name) for name in self.names}
         return self.identifications
 
-    def create_uline_ftb_batch(self, filepath=None, shots=500, dipole=1.0, threshold=0.):
+    def create_uline_ftb_batch(self, filepath=None, shots=500, dipole=1.0, threshold=0., sort_int=False):
         """
         Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
         frequencies.
@@ -1918,7 +1918,12 @@ class AssignmentSession:
         if filepath is None:
             filepath = f"./ftb/{self.session.experiment}-ulines.ftb"
         lines = ""
-        for index, uline in enumerate(self.line_lists["Peaks"].get_ulines()):
+        transitions = self.line_lists["Peaks"].get_ulines()
+        if sort_int is True:
+            transitions = sorted(
+                transitions, key=lambda line: line.catalog_intensity
+                )[::-1]
+        for index, uline in enumerate(transitions):
             if uline.intensity >= threshold:
                 lines += fa.generate_ftb_line(uline.frequency, shots, **{"dipole": dipole})
         with open(filepath, "w+") as write_file:
@@ -1931,7 +1936,7 @@ class AssignmentSession:
         shots=25,
         dipole=1.0,
         min_dist=500.0,
-        thres=None,
+        thres=None
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
