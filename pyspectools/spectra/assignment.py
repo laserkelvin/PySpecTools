@@ -1676,7 +1676,7 @@ class AssignmentSession:
                 # transitions are not seen
                 #if (index > 5) and (nassigned == 0) and (linelist.source in ["Catalog", "Splatalogue"]):
                 #    self.logger.info(
-                #    "Searched for fice strongest transitions in {linelist.name}, and nothing; aborting."
+                #    "Searched for five strongest transitions in {linelist.name}, and nothing; aborting."
                 #    )
                 #    break
                 # If no value of tolerance is provided, determine from the session
@@ -1923,14 +1923,18 @@ class AssignmentSession:
             Minimum value for the line intensity to be considered. For example,
             if the spectrum is analyzed in units of SNR, this would be the minimum
             value of SNR to consider in the FTB file.
+        sort_int : bool, optional
+            If True, sorts the FTB entries in descending intensity order.
         """
         if filepath is None:
             filepath = f"./ftb/{self.session.experiment}-ulines.ftb"
         lines = ""
         transitions = self.line_lists["Peaks"].get_ulines()
+        transitions = [transition for transition in transitions if transition.intensity >= threshold]
+        # Sort the intensities such that the strongest ones are scanned first.
         if sort_int is True:
             transitions = sorted(
-                transitions, key=lambda line: line.catalog_intensity
+                transitions, key=lambda line: line.intensity
                 )[::-1]
         for index, uline in enumerate(transitions):
             if uline.intensity >= threshold:
@@ -3653,6 +3657,7 @@ class LineList:
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
                     abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
+                    obj.uline == True
                 ]
             )
         ]
