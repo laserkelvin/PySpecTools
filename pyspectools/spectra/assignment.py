@@ -2566,18 +2566,9 @@ class AssignmentSession:
                     "intensity": "{:,.3f}",
                 }
             )
-            .set_table_attributes("""class = "durr" id="assignment-table" """)
-            .render(classes=""" "durr" id="assignment-table" """)
+            .set_table_attributes("""class = "data-table hover compact" """)
+            .render(classes=""" "data-table hover compact" """)
         )
-        reduced_table_html += """
-        <script src="https://code.jquery.com/jquery-1.12.4.js" type="text/javascript"></script>
-        <script src="https://cdn.datatables.net/1.10.16/js/jquery.dataTables.min.js" type="text/javascript"></script>
-        <script type="text/javascript">
-        $(document).ready(function() {
-          $('#assignment-table').DataTable();
-        });
-        </script>
-        """
         html_dict["assignments_table"] = reduced_table_html
         # The unidentified features table
         ulines = self.line_lists["Peaks"].get_ulines()
@@ -2588,7 +2579,8 @@ class AssignmentSession:
         html_dict["uline_table"] = (
             uline_df.style.bar(subset=["Intensity"], color="#5fba7d")
             .format({"Frequency": "{:.4f}", "Intensity": "{:.2f}"})
-            .render()
+            .set_table_attributes("""class = "data-table hover compact" """)
+            .render(classes=""" "data-table hover compact" """)
         )
         # Plotly displays of the spectral feature breakdown and whatnot
         html_dict["plotly_breakdown"] = plot(self.plot_breakdown(), output_type="div")

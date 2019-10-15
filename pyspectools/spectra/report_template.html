@@ -1,8 +1,20 @@
 <!DOCTYPE html>
 <html lang="en">
 <link rel="stylesheet" type="text/css" href="https://codepen.io/chriddyp/pen/bWLwgP.css" />
-<script src="https://cdn.datatables.net/1.10.19/js/jquery.dataTables.min"></script>
 <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+<script src="https://code.jquery.com/jquery-3.3.1.js" type="text/javascript"></script>
+<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('table.data-table').DataTable(
+            {
+                scrollY:        '50vh',
+                scrollCollapse: true,
+                paging:         false
+            }
+        );
+    });
+</script>
 <head>
     <meta charset="UTF_8">
     <title>Analysis summary for experiment {{ session.experiment }}</title>
