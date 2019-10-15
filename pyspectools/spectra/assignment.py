@@ -1714,8 +1714,8 @@ class AssignmentSession:
                     # Create a copy of the Transition data from the LineList
                     assign_dict = copy(transition.__dict__)
                     # Update with the measured frequency and intensity
-                    assign_dict["frequency"] = chosen.catalog_frequency
-                    assign_dict["intensity"] = chosen.catalog_intensity
+                    assign_dict["frequency"] = chosen.frequency
+                    assign_dict["intensity"] = chosen.intensity
                     assign_dict["experiment"] = chosen.experiment
                     assign_dict["velocity"] = self.session.velocity
                     assign_dict["peak_id"] = chosen.peak_id
