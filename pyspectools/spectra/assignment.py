@@ -1658,9 +1658,11 @@ class AssignmentSession:
             if linelist.source in ["Splatalogue", "Catalog"]:
                 linelist.transitions = sorted(linelist, key=lambda line: line.catalog_intensity)[::-1]
             # Loop over the LineList lines
-            iterator = enumerate(linelist)
             if progressbar is True:
-                iterator = tqdm(iterator)
+                iterator = tqdm(linelist)
+                iterator = enumerate(linelist)
+            else:
+                iterator = enumerate(linelist)
             # Loop over all of the U-lines
             for index, transition in iterator:
                 # Control the flow so that we're not wasting time looking for lines if the strongest
