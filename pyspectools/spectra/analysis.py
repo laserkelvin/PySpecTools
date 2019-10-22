@@ -1,6 +1,7 @@
 
 from itertools import combinations, chain, compress
 from copy import deepcopy
+from typing import List, Tuple, Dict, Any
 import warnings
 
 import numpy as np
@@ -26,9 +27,9 @@ from pyspectools.fast.routines import isin_array, hot_match_arrays
 from pyspectools import figurefactory
 
 
-def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Frequency", int_col="Intensity",
-        fit_func=models.GaussianModel, sigma=2, logger=None
-        ):
+def fit_line_profile(spec_df: pd.DataFrame, center: float, width=None, 
+                     intensity=None, freq_col="Frequency", int_col="Intensity",
+                     fit_func=models.GaussianModel, sigma=2, logger=None):
     """ 
         Somewhat high level function that wraps lmfit for
         fitting Gaussian lineshapes to a spectrum.
@@ -111,7 +112,7 @@ def fit_line_profile(spec_df, center, width=None, intensity=None, freq_col="Freq
         return None, None
 
 
-def peak_find(spec_df, freq_col="Frequency", int_col="Intensity",
+def peak_find(spec_df: pd.DataFrame, freq_col="Frequency", int_col="Intensity",
               thres=0.015, min_dist=10):
     """ 
         Wrapper for peakutils applied to pandas dataframes. First finds
@@ -171,7 +172,7 @@ def peak_find(spec_df, freq_col="Frequency", int_col="Intensity",
     return peak_df
 
 
-def search_molecule(species, freq_range=[0., 40e3], **kwargs):
+def search_molecule(species: str, freq_range=[0., 40e3], **kwargs):
     """
     Function to search Splatalogue for a specific molecule. Technically I'd prefer to
     download entries from CDMS instead, but this is probably the most straight
@@ -237,7 +238,7 @@ def search_molecule(species, freq_range=[0., 40e3], **kwargs):
         return None
 
 
-def search_center_frequency(frequency, width=0.5):
+def search_center_frequency(frequency: float, width=0.5):
     """
     Function for wrapping the astroquery Splatalogue API for looking up a frequency and finding candidate molecules
     for assignment. The width parameter adjusts the +/- range to include in the search: for high frequency surveys,
@@ -300,7 +301,7 @@ def search_center_frequency(frequency, width=0.5):
 
 
 def calc_line_weighting(
-        frequency, catalog_df, prox=0.00005,
+        frequency: float, catalog_df: pd.DataFrame, prox=0.00005,
         abs=True, freq_col="Frequency", int_col="Intensity"
 ):
     """
@@ -362,7 +363,7 @@ def calc_line_weighting(
         return None
 
 
-def brute_harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
+def brute_harmonic_search(frequencies: np.ndarray, maxJ=10, dev_thres=5., prefilter=False):
     """
         Function that will search for possible harmonic candidates
         in a list of frequencies. Wraps the lower level function.
@@ -458,7 +459,7 @@ def brute_harmonic_search(frequencies, maxJ=10, dev_thres=5., prefilter=False):
     return results_df, fit_results
 
 
-def harmonic_finder(frequencies, search=0.001, low_B=400., high_B=9000.):
+def harmonic_finder(frequencies: np.ndarray, search=0.001, low_B=400., high_B=9000.):
     """
         Function that will generate candidates for progressions.
         Every possible pair combination of frequencies are
@@ -493,7 +494,7 @@ def harmonic_finder(frequencies, search=0.001, low_B=400., high_B=9000.):
     return progressions
 
 
-def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
+def cluster_AP_analysis(progression_df: pd.DataFrame, sil_calc=False, refit=False, **kwargs):
     """
         Wrapper for the AffinityPropagation cluster method from
         scikit-learn.
@@ -586,7 +587,7 @@ def cluster_AP_analysis(progression_df, sil_calc=False, refit=False, **kwargs):
     return data, progression_df, ap_obj
 
 
-def find_series(combo, frequencies, search=0.005):
+def find_series(combo: Tuple(float, float), frequencies: np.ndarray, search=0.005):
     """
         Function that will exhaustively search for candidate
         progressions based on a pair of frequencies.
@@ -638,8 +639,8 @@ def find_series(combo, frequencies, search=0.005):
     return candidates
 
 
-def create_cluster_tests(cluster_dict, shots=25, dipole=1.0, min_dist=500.,
-                         **kwargs):
+def create_cluster_tests(cluster_dict: Dict[Any, Any], shots=25, 
+                         dipole=1.0, min_dist=500., **kwargs):
     """
     Take the output of the cluster AP analysis, and generate the FTB batch
     files for a targeted DR search.
@@ -700,9 +701,9 @@ def create_cluster_tests(cluster_dict, shots=25, dipole=1.0, min_dist=500.,
 
 
 def blank_spectrum(
-        spectrum_df, frequencies, noise=None, noise_std=None, freq_col="Frequency",
-        int_col="Intensity", window=1., df=True
-):
+        spectrum_df: pd.DataFrame, frequencies: np.ndarray, 
+        noise=None, noise_std=None, freq_col="Frequency",
+        int_col="Intensity", window=1., df=True):
     """
     Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
     noise corresponding to the average noise floor and standard deviation.
@@ -1084,7 +1085,7 @@ def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
     return candidates
 
 
-def line_weighting(frequency, catalog_frequency, intensity=None):
+def line_weighting(frequency: float, catalog_frequency: float, intensity=None):
     """
     Function for calculating the line weighting associated with each assignment candidate. The formula is based on
     intensity and frequency offset, such as to favor strong lines that are spot on over weak lines that are further
@@ -1111,7 +1112,7 @@ def line_weighting(frequency, catalog_frequency, intensity=None):
     return weighting
 
 
-def filter_spectrum(intensity, window="hanning", sigma=0.5):
+def filter_spectrum(intensity: float, window="hanning", sigma=0.5):
     """
     Apply a specified window function to a signal. The window functions are
     taken from the `signal.windows` module of SciPy, so check what is available
@@ -1160,7 +1161,7 @@ def filter_spectrum(intensity, window="hanning", sigma=0.5):
     return new_y
 
 
-def detect_artifacts(frequencies, tol=2e-3):
+def detect_artifacts(frequencies: np.ndarray, tol=2e-3):
     """
     Quick one-liner function to perform a very rudimentary test for
     RFI. This method relies on the assumption that any frequency that
@@ -1189,7 +1190,7 @@ def detect_artifacts(frequencies, tol=2e-3):
 
 
 @numba.njit(fastmath=True)
-def cross_correlate(a, b, lags=None):
+def cross_correlate(a: np.ndarray, b: np.ndarray, lags=None):
     """
     Cross-correlate two arrays a and b that are of equal length by
     lagging b with respect to a. Uses np.roll to shift b by values

@@ -5,6 +5,8 @@
     that are often used in spectroscopy.
 """
 
+from typing import List
+
 import numpy as np
 from scipy import constants
 
@@ -24,7 +26,7 @@ harm = constants.value("hartree-inverse meter relationship")
 jm = constants.value("joule-inverse meter relationship")
 
 
-def kappa(A, B, C):
+def kappa(A: float, B: float, C: float):
     """
     Calculate Ray's asymmetry parameter for a given set of A, B, and C rotational constants.
     This parameter determines how asymmetric a molecule is by setting a range between two limits: the prolate (+1)
@@ -43,7 +45,7 @@ def kappa(A, B, C):
     return (2*B - A - C) / (A - C)
 
 
-def inertial_defect(A, B, C):
+def inertial_defect(A: float, B: float, C: float):
     """
     Calculate the inertial defect of a molecule with a set of A, B, and C rotational constants.
 
@@ -65,7 +67,7 @@ def inertial_defect(A, B, C):
     return cumdiff * 505379.
 
 
-def rotcon2pmi(rotational_constant):
+def rotcon2pmi(rotational_constant: float):
     """
     Convert rotational constants in units of MHz to
     Inertia, in units of amu A^2.
@@ -86,7 +88,7 @@ def rotcon2pmi(rotational_constant):
     return 1 / (rotational_constant / 134.901)
 
 
-def hartree2wavenumber(hartree):
+def hartree2wavenumber(hartree: float):
     """
     Convert Hartrees to wavenumbers.
     :param hartree: float
@@ -95,7 +97,7 @@ def hartree2wavenumber(hartree):
     return hartree * (harm / 100.)
 
 
-def kjmol2wavenumber(kj):
+def kjmol2wavenumber(kj: float):
     """
     Convert kJ/mol to wavenumbers
     :param kj: float
@@ -104,7 +106,7 @@ def kjmol2wavenumber(kj):
     return kj * (jm / 100.) / (avo * 1000.)
 
 
-def MHz2cm(frequency):
+def MHz2cm(frequency: float):
     """
     Convert MHz to wavenumbers
     :param frequency: float
@@ -113,7 +115,7 @@ def MHz2cm(frequency):
     return (frequency / 1000.) / (constants.c / 1e7)
 
 
-def cm2MHz(wavenumber):
+def cm2MHz(wavenumber: float):
     """
     Convert wavenumbers to MHz
     :param wavenumber: float
@@ -122,7 +124,7 @@ def cm2MHz(wavenumber):
     return (wavenumber * (constants.c / 1e7)) * 1000.
 
 
-def hartree2kjmol(hartree):
+def hartree2kjmol(hartree: float):
     """
     Convert Hartrees to kJ/mol.
     :param hartree: float
@@ -131,7 +133,7 @@ def hartree2kjmol(hartree):
     return hartree * (eha * avo / 1000.)
 
 
-def hartree2eV(hartree):
+def hartree2eV(hartree: float):
     """
     Convert Hartrees to eV.
     Parameters
@@ -147,7 +149,7 @@ def hartree2eV(hartree):
     return haev * hartree
 
 
-def hartree2K(hartree):
+def hartree2K(hartree: float):
     """
     Convert Hartrees to temperature in Kelvin.
 
@@ -164,7 +166,7 @@ def hartree2K(hartree):
     return hartree * hak
 
 
-def wavenumber2kjmol(wavenumber):
+def wavenumber2kjmol(wavenumber: float):
     """
     Convert wavenumbers to kJ/mol.
     :param wavenumber: float
@@ -173,7 +175,7 @@ def wavenumber2kjmol(wavenumber):
     return wavenumber / (jm / 100.) / (avo * 1000.)
 
 
-def T2wavenumber(T):
+def T2wavenumber(T: float):
     """
     Convert temperature in Kelvin to wavenumbers.
     :param T: float
@@ -182,7 +184,7 @@ def T2wavenumber(T):
     return T * kbcm
 
 
-def wavenumber2T(wavenumber):
+def wavenumber2T(wavenumber: float):
     """
     Convert wavenumbers to Kelvin
     :param wavenumber: float
@@ -191,7 +193,7 @@ def wavenumber2T(wavenumber):
     return wavenumber / kbcm
 
 
-def thermal_corrections(frequencies, T, linear=True, hartree=True):
+def thermal_corrections(frequencies: List[float], T: float, linear=True, hartree=True):
     """
     Calculates the thermal contributions from nuclear motion, in the same way as
     Gaussian does.
@@ -234,7 +236,7 @@ def thermal_corrections(frequencies, T, linear=True, hartree=True):
 """
 
 
-def dop2freq(velocity, frequency):
+def dop2freq(velocity: float, frequency: float):
     """
     Calculates the expected frequency in MHz based on a Doppler shift in km/s and a center frequency.
 
@@ -255,7 +257,7 @@ def dop2freq(velocity, frequency):
     return ((velocity * 1000. * frequency) / constants.c)
 
 
-def freq2vel(frequency, offset):
+def freq2vel(frequency: float, offset: float):
     """
     Calculates the Doppler shift in km/s based on a center frequency in MHz and n offset frequency in MHz (delta nu).
 
@@ -274,7 +276,7 @@ def freq2vel(frequency, offset):
     return ((constants.c * offset) / frequency) / 1000.
 
 
-def gaussian_fwhm(sigma):
+def gaussian_fwhm(sigma: float):
     """
         Calculate the full-width half maximum
         value assuming a Gaussian function.
@@ -290,7 +292,7 @@ def gaussian_fwhm(sigma):
     return 2. * np.sqrt(2. * np.log(2.)) * sigma
 
 
-def gaussian_height(amplitude, sigma):
+def gaussian_height(amplitude: float, sigma: float):
     """
         Calculate the height of a Gaussian distribution,
         based on the amplitude and sigma. This value
@@ -309,7 +311,7 @@ def gaussian_height(amplitude, sigma):
     return h
 
 
-def gaussian_integral(amplitude, sigma):
+def gaussian_integral(amplitude: float, sigma: float):
     """
     Calculate the integral of a Gaussian analytically using
     the amplitude and sigma.
@@ -321,7 +323,7 @@ def gaussian_integral(amplitude, sigma):
     return integral
 
 
-def I2S(I, Q, frequency, E_lower, T=300.):
+def I2S(I: float, Q: float, frequency: float, E_lower, T=300.):
     """
     Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.
 
@@ -355,7 +357,7 @@ def I2S(I, Q, frequency, E_lower, T=300.):
     return A / B
 
 
-def S2I(S, Q, frequency, E_lower, T=300.):
+def S2I(S: float, Q: float, frequency: float, E_lower: float, T=300.):
     """
     Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.
 
@@ -388,7 +390,7 @@ def S2I(S, Q, frequency, E_lower, T=300.):
     return I
 
 
-def calc_E_upper(frequency, E_lower):
+def calc_E_upper(frequency: float, E_lower: float):
     """
     Calculate the upper state energy, for a given lower state energy and the frequency of the transition.
 
@@ -408,7 +410,7 @@ def calc_E_upper(frequency, E_lower):
     return transition_freq + E_lower
 
 
-def calc_E_lower(frequency, E_upper):
+def calc_E_lower(frequency: float, E_upper: float):
     """
     Calculate the lower state energy, for a given lower state energy and the frequency of the transition.
 
@@ -428,7 +430,7 @@ def calc_E_lower(frequency, E_upper):
     return E_upper - transition_freq
 
 
-def boltzmann_factor(E, T):
+def boltzmann_factor(E: float, T: float):
     """
     Calculate the Boltzmann weighting for a given state and temperature.
 
@@ -447,7 +449,7 @@ def boltzmann_factor(E, T):
     return np.exp(-E / (kbcm * T))
 
 
-def approx_Q_linear(B, T):
+def approx_Q_linear(B: float, T: float):
     """
     Approximate rotational partition function for a linear molecule.
 
@@ -467,7 +469,7 @@ def approx_Q_linear(B, T):
     return Q
 
 
-def approx_Q_top(A, B, T, sigma=1, C=None):
+def approx_Q_top(A: float, B: float, T: float, sigma=1, C=None):
     """
     Approximate expression for the (a)symmetric top partition function. The expression is adapted from Gordy and Cook,
     p.g. 57 equation 3.68. By default, the prolate top is used if the C constant is not specified, where B = C.
@@ -499,7 +501,23 @@ def approx_Q_top(A, B, T, sigma=1, C=None):
     return Q
 
 
-def einsteinA(S, frequency):
+def einsteinA(S: float, frequency: float):
+    """
+    Calculate the Einstein A coefficient for a transition with
+    specified transition frequency and intrinsic linestrength.
+    
+    Parameters
+    ----------
+    S : float
+        Intrinsic linestrength; unitless
+    frequency : float
+        Transition frequency in MHz
+    
+    Returns
+    -------
+    float
+        Einstein A coefficient in units of per second
+    """
     # Prefactor is given in the PGopher Intensity formulae
     # http://pgopher.chm.bris.ac.uk/Help/intensityformulae.htm
     # Units of the prefactor are s^-1 MHz^-3 D^-2

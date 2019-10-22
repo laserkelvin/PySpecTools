@@ -8,6 +8,7 @@ import subprocess
 import shutil
 import json
 import types
+from typing import List, Any, Union
 from glob import glob
 from warnings import warn
 
@@ -19,7 +20,7 @@ import paramiko
 from pyspectools import pypickett as pp
 
 
-def run_spcat(filename, temperature=None):
+def run_spcat(filename: str, temperature=None):
     # Run SPCAT
     parameter_file = filename + ".var"
     if os.path.isfile(filename + ".var") is False:
@@ -45,7 +46,7 @@ def run_spcat(filename, temperature=None):
         return Q
 
 
-def run_calbak(filename):
+def run_calbak(filename: str):
     """ Runs the calbak routine, which generates a .lin file from the .cat """
     if os.path.isfile(filename + ".cat") is False:
         raise FileNotFoundError(filename + ".cat is missing; cannot run calbak.")
@@ -59,7 +60,7 @@ def run_calbak(filename):
         raise RuntimeError("No lines produced in calbak! Check .cat file.")
 
 
-def run_spfit(filename):
+def run_spfit(filename: str):
     """
 
     Parameters
@@ -79,7 +80,7 @@ def run_spfit(filename):
         raise OSError("SPFIT failed to run.")
 
 
-def list_chunks(target, n):
+def list_chunks(target: List[Any], n: int):
     """
     Split a list into a number of chunks with length n. If there are not enough elements,
     the last chunk will finish the remaining elements.
@@ -122,7 +123,7 @@ def pickett_molecule(json_filepath=None):
     return molecule_object
 
 
-def human2pickett(name, reduction="A", linear=True, nuclei=0):
+def human2pickett(name: str, reduction="A", linear=True, nuclei=0):
     """ Function for translating a Hamiltonian parameter to a Pickett
         identifier.
 
@@ -152,30 +153,70 @@ def human2pickett(name, reduction="A", linear=True, nuclei=0):
     return identifier
 
 
-def read_json(json_filepath):
+def read_json(json_filepath: str) -> Dict[Any, Any]:
+    """
+    Load a JSON file into memory as a Python dictionary.
+    
+    Parameters
+    ----------
+    json_filepath : str
+        Path to the JSON file
+    
+    Returns
+    -------
+    Dict[Any, Any]
+        Dictionary from JSON file
+    """
     with open(json_filepath, "r") as read_file:
         json_data = json.load(read_file)
     return json_data
 
 
-def dump_json(json_filepath, json_dict):
-    """ Function for dumping a Python dictionary to JSON syntax.
-        Does so with some pretty formatting with indents and whatnot.
+def dump_json(json_filepath: str, json_dict: Dict[Any, Any]):
+    """
+    Function to serialize a Python dictionary into a JSON file.
+    The pretty printing is enabled by default.
+    
+    Parameters
+    ----------
+    json_filepath : str
+        Path to the JSON file to save to
+    json_dict : Dict[Any, Any]
+        Dictionary to be serialized
     """
     with open(json_filepath, "w+") as write_file:
         json.dump(json_dict, write_file, indent=4, sort_keys=True)
 
 
-def read_yaml(yaml_filepath):
-    """ Function for reading a YAML file in as a Python dictionary """
+def read_yaml(yaml_filepath: str) -> Dict[Any, Any]:
+    """
+    Function to load in a YAML file into a Python dictionary.
+    
+    Parameters
+    ----------
+    yaml_filepath : str
+        Path to the YAML file
+    
+    Returns
+    -------
+    Dict[Any, Any]
+        Dictionary based on the YAML contents
+    """
     with open(yaml_filepath) as read_file:
         yaml_data = yaml.load(read_file, Loader=yaml.Loader)
     return yaml_data
 
 
-def dump_yaml(yaml_filepath, yaml_dict):
-    """ Function for dumping a python dictionary to
-        YAML syntax
+def dump_yaml(yaml_filepath: str, yaml_dict: Dict[Any, Any]):
+    """
+    Function to serialize a Python dictionary into a YAML file.
+    
+    Parameters
+    ----------
+    yaml_filepath : str
+        Path to the YAML file
+    yaml_dict : Dict[Any, Any]
+        Dictionary to be serialized
     """
     with open(yaml_filepath, "w+") as write_file:
         yaml.dump(yaml_dict, write_file)
@@ -203,7 +244,7 @@ def generate_folder():
     return lastcalc + 1
 
 
-def format_uncertainty(value, uncertainty):
+def format_uncertainty(value: float, uncertainty: float):
     """ Function to determine the number of decimal places to
         format the uncertainty. Probably not the most elegant way of doing this.
     """
@@ -221,7 +262,7 @@ def format_uncertainty(value, uncertainty):
     return uncertainty
 
 
-def decimal_length(value):
+def decimal_length(value: float):
     # Function that determines the decimal length of a float; convert the value
     # into a string, then work out the length by splitting at the decimal point
     decimal_split = str(value).split(".")
@@ -246,7 +287,7 @@ def copy_template():
         print("Edit the .json input file and re-run the script.")
 
 
-def flatten_list(input_list):
+def flatten_list(input_list: List[List[Any]]):
     """
     Takes a nested list of values and flattens it. The code is written as a try/except that makes the assumption
     that the data is a list/tuple/array, and in the case that it isn't will simply append the item to the
@@ -301,7 +342,7 @@ def isnotebook():
         return False  # Probably standard Python interpreter
 
 
-def save_obj(obj, filepath, **kwargs):
+def save_obj(obj: Any, filepath: str, **kwargs):
     """
         Function to serialize an object using dump from joblib.
 
@@ -318,7 +359,7 @@ def save_obj(obj, filepath, **kwargs):
     joblib.dump(obj, filepath, **settings)
 
 
-def read_obj(filepath):
+def read_obj(filepath: str):
     """
         Wrapper for joblib.load to load an object from disk
 
@@ -362,12 +403,22 @@ def dump_packages():
     return mod_dict
 
 
-def find_nearest(array, value):
+def find_nearest(array: np.ndarray, value: Union[float, int]) -> Tuple[np.ndarray, int]:
     """
-    Search a numpy array for the closest value.
-    :param array: np.array of values
-    :param value: float value to search array for
-    :return: value of array closest to target, and the index
+    Function that will find the nearest value in a NumPy array to a specified
+    value.
+    
+    Parameters
+    ----------
+    array : np.ndarray
+        NumPy 1D array
+    value : float
+        Value to search the array for
+    
+    Returns
+    -------
+    Tuple[np.ndarray, int]
+        Returns the closest value, as well as the index
     """
     array = np.asarray(array)
     idx = (np.abs(array - value)).argmin()
@@ -383,7 +434,7 @@ class RemoteClient(paramiko.SSHClient):
         self.sftp = self.open_sftp()
 
     @classmethod
-    def from_file(cls, filepath):
+    def from_file(cls, filepath: str):
         """
         Reload a remote session from a pickle file created by the save_session.
         :param filepath: str path to RemoteClient pickle file
@@ -406,7 +457,7 @@ class RemoteClient(paramiko.SSHClient):
         self.sftp.close()
         self.close()
 
-    def get_file(self, remote_path, local_path=os.getcwd()):
+    def get_file(self, remote_path: str, local_path=os.getcwd()):
         """
         Download a file from remote server to disk. If no local path is provided, defaults
         to the current working directory.
@@ -415,15 +466,15 @@ class RemoteClient(paramiko.SSHClient):
         """
         self.sftp.get(remote_path, local_path)
 
-    def run_command(self, command):
+    def run_command(self, command: str):
         stdin, stdout, stderr = self.exec_command(command)
         error_msg = stderr.read()
         if len(error_msg) == 0:
             return stdout.readlines()
         else:
-            raise Exception("Error in running command: {}".format(error_msg))
+            raise Exception(f"Error in running command: {error_msg}")
 
-    def open_remote(self, remote_path):
+    def open_remote(self, remote_path: str):
         """
         Function to stream the file contents of a remote file. Can be used to directly
         provide data into memory without downloading it to disk.
@@ -453,7 +504,7 @@ class RemoteClient(paramiko.SSHClient):
         save_obj(self, filepath, **kwargs)
 
 
-def group_consecutives(vals, step=1):
+def group_consecutives(vals: List[float], step=1):
     """
     Function to group all consecutive values in a list together. The primary purpose of this
     is to split concatenated spectra that are given in a single list of frequencies

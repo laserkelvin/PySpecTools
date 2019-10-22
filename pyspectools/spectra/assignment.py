@@ -23,7 +23,7 @@
 import os
 from shutil import rmtree
 from dataclasses import dataclass, field
-from typing import List, Dict
+from typing import List, Dict, Tuple, Union
 from copy import copy, deepcopy
 import logging
 from pathlib import Path
@@ -140,7 +140,7 @@ class Transition:
     discharge: bool = False
     magnet: bool = False
 
-    def __eq__(self, other):
+    def __eq__(self, other: Transition):
         """ Dunder method for comparing molecules.
             This method is simply a shortcut to see if
             two molecules are the same based on their
@@ -186,7 +186,7 @@ class Transition:
     def __gt__(self, other):
         return self.frequency > other.frequency
 
-    def calc_intensity(self, Q, T=300.0):
+    def calc_intensity(self, Q: float, T=300.0):
         """
         Convert linestrength into intensity.
 
@@ -214,7 +214,7 @@ class Transition:
         self.S = I
         return I
 
-    def calc_linestrength(self, Q, T=300.0):
+    def calc_linestrength(self, Q: float, T=300.0):
         """
         Convert intensity into linestrength.
 
@@ -238,7 +238,7 @@ class Transition:
         self.intensity = intensity
         return intensity
 
-    def to_file(self, filepath, format="yaml"):
+    def to_file(self, filepath: str, format="yaml"):
         """
         Save an Transition object to disk with a specified file format.
         Defaults to YAML.
@@ -261,7 +261,7 @@ class Transition:
             writer = routines.dump_yaml
         writer(filepath, self.__dict__)
 
-    def get_spectrum(self, x):
+    def get_spectrum(self, x: np.ndarray):
         """
         Generate a synthetic peak by supplying
         the x axis for a particular spectrum. This method
@@ -284,7 +284,7 @@ class Transition:
             raise Exception("get_spectrum() with no fit data available!")
 
     @classmethod
-    def from_dict(obj, data_dict):
+    def from_dict(obj, data_dict: Dict):
         """ 
         Method for generating an Assignment object
         from a dictionary. All this method does is
@@ -304,7 +304,7 @@ class Transition:
         return assignment_obj
 
     @classmethod
-    def from_yml(obj, yaml_path):
+    def from_yml(obj, yaml_path: str):
         """
         Method for initializing an Assignment object from a YAML file.
 
@@ -323,7 +323,7 @@ class Transition:
         return assignment_obj
 
     @classmethod
-    def from_json(obj, json_path):
+    def from_json(obj, json_path: str):
         """
         Method for initializing an Assignment object from a JSON file.
 
@@ -424,7 +424,7 @@ class AssignmentSession:
     """
 
     @classmethod
-    def load_session(cls, filepath):
+    def load_session(cls, filepath: str):
         """
             Load an AssignmentSession from disk, once it has
             been saved with the save_session method which creates a pickle
@@ -465,8 +465,8 @@ class AssignmentSession:
     @classmethod
     def from_ascii(
         cls,
-        filepath,
-        experiment,
+        filepath: str,
+        experiment: int,
         composition=["C", "H"],
         delimiter="\t",
         temperature=4.0,
@@ -588,9 +588,9 @@ class AssignmentSession:
 
     def __init__(
         self,
-        exp_dataframe,
-        experiment,
-        composition,
+        exp_dataframe: pd.DataFrame,
+        experiment: int,
+        composition: List[str],
         temperature=4.0,
         velocity=0.0,
         freq_col="Frequency",
@@ -673,7 +673,7 @@ class AssignmentSession:
         if velocity != 0.0:
             self.set_velocity(velocity)
 
-    def __truediv__(self, other, copy=True):
+    def __truediv__(self, other: AssignmentSession, copy=True):
         """
         Method to divide the spectral intensity of the current experiment by another.
         This gives the ratio of spectral intensities, and can be useful for determining
@@ -706,7 +706,7 @@ class AssignmentSession:
                 self.data[self.int_col] / other.data[other.int_col]
             )
 
-    def __sub__(self, other, copy=True, window=0.2):
+    def __sub__(self, other: AssignmentSession, copy=True, window=0.2):
         """
         Dunder method to blank the current experiment with another. This method
         will take every detected frequency in the reference experiment, and
@@ -772,7 +772,7 @@ class AssignmentSession:
             yield name
             counter += 1
 
-    def create_ulinelist(self, filepath, silly=True):
+    def create_ulinelist(self, filepath: str, silly=True):
         """
         Create a LineList object for an unidentified molecule. This uses the
         class method `umol_gen` to automatically generate names for U-molecules
@@ -823,7 +823,7 @@ class AssignmentSession:
             name = self.umol_names[filepath]
             raise Exception(f"U-molecule already exists with name: {name}!")
 
-    def rename_umolecule(self, name, new_name, formula=""):
+    def rename_umolecule(self, name: str, new_name: str, formula=""):
         """
         Function to update the name of a LineList. This function should be used
         to update a LineList, particularly when the identity of an unidentified
@@ -851,7 +851,7 @@ class AssignmentSession:
                 f"{name} does not exist in {self.session.experiment} line_lists"
             )
             
-    def add_ulines(self, data, **kwargs):
+    def add_ulines(self, data: List[Tuple(float, float)], **kwargs):
         """
         Function to manually add multiple pairs of frequency/intensity to the current
         experiment's Peaks list.
@@ -916,7 +916,7 @@ class AssignmentSession:
             handler.setLevel(mapping[key])
             self.logger.addHandler(handler)
 
-    def set_velocity(self, value):
+    def set_velocity(self, value: float):
         """
         Set the radial velocity offset for the spectrum. The velocity is specified in km/s, and is set up
         such that the notation is positive velocity yields a redshifted spectrum (i.e. moving towards us).
@@ -1140,7 +1140,7 @@ class AssignmentSession:
         else:
             return None
 
-    def df2ulines(self, dataframe, freq_col=None, int_col=None):
+    def df2ulines(self, dataframe: pd.DataFrame, freq_col=None, int_col=None):
         """
         Add a dataframe of frequency and intensities to the session U-line dictionary. This function provides more
         manual control over what can be processed in the assignment pipeline, as not everything can be picked
@@ -1204,7 +1204,7 @@ class AssignmentSession:
         peaks_df.columns = ["Frequency", "Intensity"]
         self.peaks = peaks_df
 
-    def search_frequency(self, frequency):
+    def search_frequency(self, frequency: float):
         """
         Function for searching the experiment for a particular frequency. The search range is defined by
         the Session attribute freq_prox, and will first look for the frequency in the assigned features
@@ -1245,7 +1245,7 @@ class AssignmentSession:
             self.logger.info("Found assignments.")
             return slice_df
 
-    def apply_filter(self, window, sigma=0.5, int_col=None):
+    def apply_filter(self, window: Union[str, List[str]], sigma=0.5, int_col=None):
         """
         Applies a filter to the spectral signal. If multiple window functions
         are to be used, a list of windows can be provided, which will then
@@ -1446,7 +1446,7 @@ class AssignmentSession:
                     self.logger.info(f"No species known for {frequency:,.4f}")
         self.logger.info("Splatalogue search finished.")
         
-    def overlay_molecule(self, species, freq_range=None, threshold=-7.):
+    def overlay_molecule(self, species: str, freq_range=None, threshold=-7.):
         """
         Function to query splatalogue for a specific molecule. By default, the
         frequency range that will be requested corresponds to the spectral range
@@ -1805,7 +1805,7 @@ class AssignmentSession:
         self.logger.info(f"Current number of ulines: {len(remaining_ulines)}")
         self.logger.info("Finished processing local database.")
 
-    def copy_assignments(self, other, thres_prox=1e-2):
+    def copy_assignments(self, other: AssignmentSession, thres_prox=1e-2):
         """
         Function to copy assignments from another experiment. This class
         method wraps two analysis routines: first, correlations in detected
@@ -2013,7 +2013,7 @@ class AssignmentSession:
             write_file.write(lines)
 
     def create_full_dr_batch(
-        self, cavity_freqs, filepath=None, shots=25, dipole=1.0, min_dist=500.0
+        self, cavity_freqs: List[float], filepath=None, shots=25, dipole=1.0, min_dist=500.0
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2274,7 +2274,8 @@ class AssignmentSession:
             ass_list = [assignment.__dict__ for assignment in self.assignments]
             db_obj.insert_multiple(ass_list)
 
-    def simulate_sticks(self, catalogpath, N, Q, T, doppler=None, gaussian=False):
+    def simulate_sticks(self, catalogpath: str, N: float, 
+                        Q: float, T: float, doppler=None, gaussian=False):
         """
         Simulates a stick spectrum with intensities in flux units (Jy) for
         a given catalog file, the column density, and the rotational partition
@@ -2327,7 +2328,8 @@ class AssignmentSession:
             )
             return simulated_df
 
-    def simulate_spectrum(self, x, centers, widths, amplitudes, fake=False):
+    def simulate_spectrum(self, x: np.ndarray, centers: List[float], 
+                          widths: List[float], amplitudes: List[float], fake=False):
         """
             Generate a synthetic spectrum with Gaussians with the
             specified parameters, on a given x axis.
@@ -2844,7 +2846,7 @@ class AssignmentSession:
         fig.add_bar(x=ulines[:, 1], y=ulines[:, 0], width=1.0, name="U-lines")
         return fig
 
-    def stacked_plot(self, frequencies, int_col=None, freq_range=0.05):
+    def stacked_plot(self, frequencies: List[float], int_col=None, freq_range=0.05):
         """
         Special implementation of the stacked_plot from the figurefactory module, adapted
         for AssignmentSession. In this version, the assigned/u-lines are also indicated.
@@ -2962,7 +2964,7 @@ class AssignmentSession:
         fig["layout"].update(autosize=True, height=1000, width=900, showlegend=False)
         return fig
 
-    def match_artifacts(self, artifact_exp, threshold=0.05):
+    def match_artifacts(self, artifact_exp: AssignmentSession, threshold=0.05):
         """
         Remove artifacts based on another experiment which has the blank
         sample - i.e. only artifacts.
@@ -3228,7 +3230,7 @@ class LineList:
                 obj.catalog_frequency for obj in self.transitions
             ]
     
-    def __eq__(self, other):
+    def __eq__(self, other: LineList):
         """
         Dunder method for comparison of LineLists. Since users can accidently
         use different method/formulas yet use the same catalog/lin file to
@@ -3248,7 +3250,7 @@ class LineList:
         assert type(self) == type(other)
         return self.transitions == other.transitions
     
-    def __add__(self, transition_obj):
+    def __add__(self, transition_obj: Transition):
         """
         Dunder method to add Transitions to the LineList.
         
@@ -3270,7 +3272,7 @@ class LineList:
 
     @classmethod
     def from_catalog(
-        cls, name, formula, filepath, min_freq=0.0, max_freq=1e12, **kwargs
+        cls, name: str, formula: str, filepath: str, min_freq=0.0, max_freq=1e12, **kwargs
     ):
         """
         Create a Line List object from an SPCAT catalog.
@@ -3336,7 +3338,7 @@ class LineList:
     @classmethod
     def from_dataframe(
         cls,
-        dataframe,
+        dataframe: pd.DataFrame,
         name="Peaks",
         freq_col="Frequency",
         int_col="Intensity",
@@ -3372,7 +3374,7 @@ class LineList:
         return linelist_obj
     
     @classmethod
-    def from_list(cls, name, frequencies, formula="", **kwargs):
+    def from_list(cls, name: str, frequencies: List[float], formula="", **kwargs):
         """
         Generic, low level method for creating a LineList object from a list
         of frequencies. This method can be used when neither lin, catalog, nor
@@ -3405,9 +3407,46 @@ class LineList:
         )
         linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
         return linelist_obj  
+    
+    @classmethod
+    def from_pgopher(cls, name: str, filepath: str, formula="", **kwargs):
+        """
+        Method to take the output of a PGopher file and create a LineList
+        object. The PGopher output must be in the comma delimited specification.
+        
+        This is actually the ideal way to generate LineList objects: it fills
+        in all of the relevant fields, such as linestrength and state energies.
+        
+        Parameters
+        ----------
+        name : str
+            Name of the molecule
+        filepath : str
+            Path to the PGopher CSV output
+        formula : str, optional
+            Chemical formula of the molecule, defaults to an empty string.
+            
+        Returns
+        -------
+        LineList
+        """
+        pgopher_df = pd.read_csv(filepath, skiprows=1)
+        pgopher_df = pgopher_df.iloc[:-1]
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            catalog_frequency=pgopher_df["Position"].astype(float),
+            catalog_intensity=pgopher_df["Intensity"].astype(float),
+            ustate_energy=pgopher_df["Eupper"].apply(units.MHz2cm),
+            lstate_energy=pgopher_df["Elower"].apply(units.MHz2cm),
+            S=pgopher_df["Spol"],
+            uline=False,
+            name=name,
+            formula=formula
+        )
+        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")        
         
     @classmethod
-    def from_lin(cls, name, filepath, formula="", **kwargs):
+    def from_lin(cls, name: str, filepath: str, formula="", **kwargs):
         """
         Generate a LineList object from a .lin file. This method should be used for intermediate assignments, when one
         does not know what the identity of a molecule is but has measured some frequency data.
@@ -3448,7 +3487,7 @@ class LineList:
         return linelist_obj
     
     @classmethod
-    def from_splatalogue_query(cls, dataframe, **kwargs):
+    def from_splatalogue_query(cls, dataframe: pd.DataFrame, **kwargs):
         """
         Method for converting a Splatalogue query dataframe into a LineList
         object. This is designed with the intention of pre-querying a set
@@ -3485,7 +3524,7 @@ class LineList:
         return linelist_obj
 
     @classmethod
-    def from_artifacts(cls, frequencies, **kwargs):
+    def from_artifacts(cls, frequencies: List[float], **kwargs):
         """
         Specialized class method for creating a LineList object specifically for artifacts/RFI. These Transitions are
         specially flagged as Artifacts.
@@ -3593,7 +3632,7 @@ class LineList:
             filepath = "linelists/{}-linelist.pkl".format(self.name)
         routines.save_obj(self, filepath)
 
-    def find_nearest(self, frequency, tol=1e-3):
+    def find_nearest(self, frequency: float, tol=1e-3):
         """
         Look up transitions to find the nearest in frequency to the query. If the matched frequency is within a
         tolerance, then the function will return the corresponding Transition. Otherwise, it returns None.
@@ -3617,7 +3656,7 @@ class LineList:
             return None
 
     def find_candidates(
-        self, frequency, lstate_threshold=4.0, freq_tol=1e-1, int_tol=-10.0
+        self, frequency: float, lstate_threshold=4.0, freq_tol=1e-1, int_tol=-10.0
     ):
         """
         Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
@@ -3683,7 +3722,7 @@ class LineList:
         else:
             return None
 
-    def update_transition(self, index, **kwargs):
+    def update_transition(self, index: int, **kwargs):
         """
         Function for updating a specific Transition object within the Line List.
 
@@ -3696,7 +3735,7 @@ class LineList:
         """
         self.transitions[index].__dict__.update(**kwargs)
 
-    def update_linelist(self, transition_objs):
+    def update_linelist(self, transition_objs: List[Transition]):
         """
         Adds transitions to a LineList if they do not exist in the list already.
 
@@ -3744,7 +3783,7 @@ class LineList:
         """
         return [transition.frequency for transition in self.transitions]
     
-    def add_uline(self, frequency, intensity, **kwargs):
+    def add_uline(self, frequency: float, intensity: float, **kwargs):
         """
         Function to manually add a U-line to the LineList.
         The function creates a Transition object with the frequency and
@@ -3769,7 +3808,7 @@ class LineList:
         if transition not in self.transitions:
             self.transitions.append(transition)
             
-    def add_ulines(self, data, **kwargs):
+    def add_ulines(self, data: List[Tuple(float, float)], **kwargs):
         """
         Function to add multiple pairs of frequency/intensity to the current
         LineList.
