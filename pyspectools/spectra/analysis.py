@@ -587,7 +587,7 @@ def cluster_AP_analysis(progression_df: pd.DataFrame, sil_calc=False, refit=Fals
     return data, progression_df, ap_obj
 
 
-def find_series(combo: Tuple(float, float), frequencies: np.ndarray, search=0.005):
+def find_series(combo: Tuple[float, float], frequencies: np.ndarray, search=0.005):
     """
         Function that will exhaustively search for candidate
         progressions based on a pair of frequencies.

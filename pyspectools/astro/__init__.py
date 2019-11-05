@@ -1,3 +1,3 @@
-from . import analysis
-from . import radiative
-from . import conversions
+from pyspectools.astro import analysis
+from pyspectools.astro import radiative
+from pyspectools.astro import conversions

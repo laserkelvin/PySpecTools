@@ -673,7 +673,7 @@ class AssignmentSession:
         if velocity != 0.0:
             self.set_velocity(velocity)
 
-    def __truediv__(self, other: Type[AssignmentSession], copy=True):
+    def __truediv__(self, other: "AssignmentSession", copy=True):
         """
         Method to divide the spectral intensity of the current experiment by another.
         This gives the ratio of spectral intensities, and can be useful for determining
@@ -706,7 +706,7 @@ class AssignmentSession:
                 self.data[self.int_col] / other.data[other.int_col]
             )
 
-    def __sub__(self, other: AssignmentSession, copy=True, window=0.2):
+    def __sub__(self, other: "AssignmentSession", copy=True, window=0.2):
         """
         Dunder method to blank the current experiment with another. This method
         will take every detected frequency in the reference experiment, and
@@ -1806,7 +1806,7 @@ class AssignmentSession:
         self.logger.info(f"Current number of ulines: {len(remaining_ulines)}")
         self.logger.info("Finished processing local database.")
 
-    def copy_assignments(self, other: Type[AssignmentSession], thres_prox=1e-2):
+    def copy_assignments(self, other: "AssignmentSession", thres_prox=1e-2):
         """
         Function to copy assignments from another experiment. This class
         method wraps two analysis routines: first, correlations in detected
@@ -2966,7 +2966,7 @@ class AssignmentSession:
         fig["layout"].update(autosize=True, height=1000, width=900, showlegend=False)
         return fig
 
-    def match_artifacts(self, artifact_exp: Type[AssignmentSession], threshold=0.05):
+    def match_artifacts(self, artifact_exp: "AssignmentSession", threshold=0.05):
         """
         TODO: Need to update this method; `process_artifacts` is no longer a method.
         

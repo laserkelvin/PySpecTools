@@ -8,7 +8,7 @@ import subprocess
 import shutil
 import json
 import types
-from typing import List, Any, Union
+from typing import List, Any, Union, Dict, Tuple
 from glob import glob
 from warnings import warn
 

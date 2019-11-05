@@ -1,3 +1,2 @@
-from . import artifacts
-from . import analysis
-from . import assignment
+from pyspectools.spectra import analysis
+from pyspectools.spectra import assignment
