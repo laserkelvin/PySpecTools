@@ -1,4 +1,3 @@
-
 import os
 from warnings import warn
 
@@ -28,6 +27,7 @@ from pyspectools import routines
     but always have to look up stack overflow to find out how to do...
 """
 
+
 def strip_spines(spines, axis):
     # Function for removing the spines from an axis.
     for spine in spines:
@@ -44,10 +44,9 @@ def format_ticklabels(axis):
     # Adds commas to denote thousands - quite useful for
     # publications
     axis.get_xaxis().set_major_formatter(
-            matplotlib.ticker.FuncFormatter(
-                lambda x, p: format(int(x), ',')
-                )
-            )
+        matplotlib.ticker.FuncFormatter(lambda x, p: format(int(x), ","))
+    )
+
 
 """
     Specific figure types
@@ -61,6 +60,7 @@ def format_ticklabels(axis):
         - Generic energy diagrams
         - Adding images to a matplotlib figure
 """
+
 
 def make_pes(x, energies, width=5):
     """ Function to create a smooth PES, where stationary 
@@ -77,12 +77,9 @@ def make_pes(x, energies, width=5):
     new_energies = list()
     for xvalue, energy in zip(x, energies):
         new_x = np.append(
-                new_x, 
-                np.linspace(
-                    xvalue - (width * 0.05), 
-                    xvalue + (width * 0.05), 
-                    width * 2)
-                )
+            new_x,
+            np.linspace(xvalue - (width * 0.05), xvalue + (width * 0.05), width * 2),
+        )
         new_energies.append([energy] * width * 2)
     return new_x, np.array(new_energies).flatten()
 
@@ -96,12 +93,7 @@ def calc_vibE(quant_nums, vibrations):
     """
     energies = list()
     for state in quant_nums:
-        energies.append(
-                {
-                "state": state,
-                "energy": np.sum(state * vibrations)
-            }
-        )
+        energies.append({"state": state, "energy": np.sum(state * vibrations)})
     return energies
 
 
@@ -116,13 +108,11 @@ def generate_x_coord(quant_nums, energies):
     cat_dict = {x: list() for x in np.arange(n_unique)}
     for item in energies:
         index = np.where((unique_combos == (item["state"] > 0)).all(axis=1))[0][0]
-        cat_dict[index].append(
-            item
-        )
+        cat_dict[index].append(item)
     return cat_dict
 
 
-def make_elevel_plot(cat_dict, axis, color, maxE, alpha=1.):
+def make_elevel_plot(cat_dict, axis, color, maxE, alpha=1.0):
     """
         make_elevel_plot is used to create energy level diagrams
         with Matplotlib axis objects. This is considered slightly
@@ -142,7 +132,7 @@ def make_elevel_plot(cat_dict, axis, color, maxE, alpha=1.):
     # Spacing defines the x-axis unit spacing
     spacing = 5
     # Defines the width of the levels
-    width = 1.
+    width = 1.0
     # Loop over every state
     for index in cat_dict:
         xs = list()
@@ -154,10 +144,10 @@ def make_elevel_plot(cat_dict, axis, color, maxE, alpha=1.):
             annotations.append(str(tuple(item["state"])).replace(",", ""))
         axis.hlines(
             ys,
-            [x - (width / 2.) + spacing for x in xs],
-            [x + (width / 2.) + spacing for x in xs],
+            [x - (width / 2.0) + spacing for x in xs],
+            [x + (width / 2.0) + spacing for x in xs],
             color=color,
-            alpha=alpha
+            alpha=alpha,
         )
         # Loop over configurations and annotate the energy levels
         # with their quantum numbers
@@ -167,16 +157,16 @@ def make_elevel_plot(cat_dict, axis, color, maxE, alpha=1.):
             if y < maxE:
                 axis.text(
                     x + spacing,
-                    y + 30.,
+                    y + 30.0,
                     text,
                     horizontalalignment="center",
                     color=color,
                     alpha=alpha,
-                    size=8.
+                    size=8.0,
                 )
 
 
-def add_image(axis, filepath, zoom=0.15, position=[0., 0.]):
+def add_image(axis, filepath, zoom=0.15, position=[0.0, 0.0]):
     """
         Function to add an image annotation to a specified axis.
 
@@ -187,16 +177,15 @@ def add_image(axis, filepath, zoom=0.15, position=[0., 0.]):
     image = OffsetImage(plt.imread(filepath, format="png"), zoom=zoom)
     image.image.axes = axis
 
-    box = AnnotationBbox(image, position,
-                        xybox=position,
-                        xycoords='data',
-                        frameon=False
-                        )
+    box = AnnotationBbox(
+        image, position, xybox=position, xycoords="data", frameon=False
+    )
     axis.add_artist(box)
 
 
-def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
-                       useFull=True, image=None, imagesize=0.1):
+def vib_energy_diagram(
+    quant_nums, vibrations, maxV=2, maxE=3000.0, useFull=True, image=None, imagesize=0.1
+):
     """
         Function that will generate a vibrational energy diagram.
 
@@ -229,7 +218,7 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
         cat_dict = generate_x_coord(quant_nums, energies)
 
     # Initialize the figure object
-    fig, ax = plt.subplots(figsize=(5,5.5))
+    fig, ax = plt.subplots(figsize=(5, 5.5))
     # If we want to show predictions, plot them up too
     if useFull is True:
         make_plot(full_cat_dict, ax, "black", maxE, 0.6)
@@ -242,7 +231,7 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
 
     ax.set_xlabel("Vibrational state")
     ax.set_ylabel("Energy (cm$^{-1}$)")
-    ax.set_ylim([-50., maxE])
+    ax.set_ylim([-50.0, maxE])
 
     minx = ax.get_xlim()[0]
     maxx = ax.get_xlim()[1]
@@ -255,44 +244,37 @@ def vib_energy_diagram(quant_nums, vibrations, maxV=2, maxE=3000.,
             maxx,
             color="#377eb8",
             linestyle="--",
-            zorder=0.,
-            alpha=0.3
+            zorder=0.0,
+            alpha=0.3,
         )
         # If an image filepath is specified, then plot it up on the edge
         if image is not None:
-            add_image(
-                ax,
-                image,
-                zoom=imagesize,
-                position=[
-                    maxx - 0.5,
-                    vibration
-                ]
-            )
+            add_image(ax, image, zoom=imagesize, position=[maxx - 0.5, vibration])
     fig.tight_layout()
 
     return fig, ax
 
 
-def overlay_dr_spectrum(dataframe, progressions, freq_col="Frequency", int_col="Intensity", **kwargs):
+def overlay_dr_spectrum(
+    dataframe, progressions, freq_col="Frequency", int_col="Intensity", **kwargs
+):
     layout = define_layout("Frequency (MHz)", "Intensity")
     fig = go.FigureWidget(layout=layout)
 
     fig.add_scattergl(
-        x=dataframe[freq_col],
-        y=dataframe[int_col],
-        name="Observation",
-        opacity=0.4
+        x=dataframe[freq_col], y=dataframe[int_col], name="Observation", opacity=0.4
     )
 
     colors = generate_colors(len(progressions), cmap=plt.cm.tab10)
-    level = 2.
+    level = 2.0
 
     for index, (progression, color) in enumerate(zip(progressions, colors)):
         mask = np.where(progression <= np.max(dataframe[freq_col]))
         progression = progression[mask]
-        indices = np.array([routines.find_nearest(dataframe[freq_col], freq) for freq in progression])
-        indices = indices[:,1]
+        indices = np.array(
+            [routines.find_nearest(dataframe[freq_col], freq) for freq in progression]
+        )
+        indices = indices[:, 1]
         y = dataframe[int_col].iloc[indices] * 1.2
         fig.add_scattergl(
             x=progression,
@@ -300,7 +282,7 @@ def overlay_dr_spectrum(dataframe, progressions, freq_col="Frequency", int_col="
             marker={"color": color},
             mode="markers+lines",
             hoverinfo="name+x",
-            name="Progression {}".format(index)
+            name="Progression {}".format(index),
         )
     return fig
 
@@ -329,31 +311,31 @@ def dr_network_diagram(connections, **kwargs):
     colors = generate_colors(len(connected), **color_kwarg)
 
     fig_layout = {
-        "height": 700.,
-        "width": 700.,
+        "height": 700.0,
+        "width": 700.0,
         "autosize": True,
         "xaxis": {
             "showgrid": False,
             "zeroline": False,
             "ticks": "",
-            "showticklabels": False
+            "showticklabels": False,
         },
         "yaxis": {
             "showgrid": False,
             "zeroline": False,
             "ticks": "",
-            "showticklabels": False
+            "showticklabels": False,
         },
         "showlegend": False,
     }
     fig = go.FigureWidget(layout=fig_layout)
     # Draw the nodes
     fig.add_scattergl(
-        x=coords[:,0],
-        y=coords[:,1],
+        x=coords[:, 0],
+        y=coords[:, 1],
         text=list(np.unique(connections)),
         hoverinfo="text",
-        mode="markers"
+        mode="markers",
     )
     # Draw the vertices
     for connectivity, color in zip(connected, colors):
@@ -361,13 +343,13 @@ def dr_network_diagram(connections, **kwargs):
         # of connections
         coords = np.array([positions[node] for node in sorted(connectivity)])
         fig.add_scattergl(
-            x=coords[:,0],
-            y=coords[:,1],
+            x=coords[:, 0],
+            y=coords[:, 1],
             mode="lines",
             hoverinfo=None,
             name="",
             opacity=0.4,
-            marker={"color": color}
+            marker={"color": color},
         )
     return fig, connected
 
@@ -379,16 +361,14 @@ def init_plotly_subplot(nrows, ncols, **kwargs):
     :param ncols: number of columns for the subplot
     :return: plotly FigureWidget object
     """
-    subplot = tools.make_subplots(
-        rows=nrows,
-        cols=ncols,
-        **kwargs
-    )
+    subplot = tools.make_subplots(rows=nrows, cols=ncols, **kwargs)
     fig = go.FigureWidget(subplot)
     return fig
 
 
-def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency", int_col="Intensity"):
+def stacked_plot(
+    dataframe, frequencies, freq_range=0.002, freq_col="Frequency", int_col="Intensity"
+):
     """
     Create a Loomis-Wood style plot via a list of frequencies, and a broadband
     spectrum. The keyword freq_range will use a percentage of the center
@@ -406,7 +386,7 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency",
     indices = np.where(
         np.logical_and(
             dataframe[freq_col].min() <= frequencies,
-            frequencies <= dataframe[freq_col].max()
+            frequencies <= dataframe[freq_col].max(),
         )
     )
     # Plot only frequencies within band
@@ -416,12 +396,9 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency",
 
     titles = tuple("{:.0f} MHz".format(frequency) for frequency in frequencies)
     fig = init_plotly_subplot(
-        nrows=nplots, ncols=1,
-        **{
-            "subplot_titles": titles,
-            "vertical_spacing": 0.15,
-            "shared_xaxes": True
-        }
+        nrows=nplots,
+        ncols=1,
+        **{"subplot_titles": titles, "vertical_spacing": 0.15, "shared_xaxes": True},
     )
     for index, frequency in enumerate(frequencies):
         # Calculate the offset frequency
@@ -429,28 +406,22 @@ def stacked_plot(dataframe, frequencies, freq_range=0.002, freq_col="Frequency",
         # Range as a fraction of the center frequency
         freq_cutoff = freq_range * frequency
         sliced_df = dataframe.loc[
-            (dataframe["Offset " + str(index)] > -freq_cutoff) & (dataframe["Offset " + str(index)] < freq_cutoff)
+            (dataframe["Offset " + str(index)] > -freq_cutoff)
+            & (dataframe["Offset " + str(index)] < freq_cutoff)
         ]
         # Plot the data
         trace = plot_func(
-            x=sliced_df["Offset " + str(index)],
-            y=sliced_df[int_col],
-            mode="lines"
+            x=sliced_df["Offset " + str(index)], y=sliced_df[int_col], mode="lines"
         )
         # Plotly indexes from one because they're stupid
         fig.add_trace(trace, index + 1, 1)
         fig["layout"]["xaxis1"].update(
             range=[-freq_cutoff, freq_cutoff],
             title="Offset frequency (MHz)",
-            showgrid=True
+            showgrid=True,
         )
         fig["layout"]["yaxis" + str(index + 1)].update(showgrid=False)
-    fig["layout"].update(
-        autosize=True,
-        height=1000,
-        width=900,
-        showlegend=False
-    )
+    fig["layout"].update(autosize=True, height=1000, width=900, showlegend=False)
     return fig
 
 
@@ -467,9 +438,7 @@ def plot_catchirp(chirpdf, catfiles=None):
     # Generate the experimental plot first
     plots = list()
     exp_trace = go.Scattergl(
-        x=chirpdf["Frequency"],
-        y=chirpdf["Intensity"],
-        name="Experiment"
+        x=chirpdf["Frequency"], y=chirpdf["Intensity"], name="Experiment"
     )
 
     plots.append(exp_trace)
@@ -488,9 +457,9 @@ def plot_catchirp(chirpdf, catfiles=None):
                         # Convert the matplotlib rgb color to hex code
                         "color": color
                     },
-                    width=1.,
+                    width=1.0,
                     opacity=0.6,
-                    yaxis="y2"
+                    yaxis="y2",
                 )
             )
     layout = go.Layout(
@@ -501,12 +470,7 @@ def plot_catchirp(chirpdf, catfiles=None):
         paper_bgcolor="#f0f0f0",
         plot_bgcolor="#f0f0f0",
         yaxis={"title": ""},
-        yaxis2={
-            "title": "",
-            "side": "right",
-            "overlaying": "y",
-            "range": [0., 1.]
-        }
+        yaxis2={"title": "", "side": "right", "overlaying": "y", "range": [0.0, 1.0]},
     )
     fig = go.FigureWidget(data=plots, layout=layout)
 
@@ -562,33 +526,20 @@ def plot_assignment(spec_df, assignments_df, col="Intensity"):
     colors = color_iterator(nitems)
     traces = list()
     # Loop over the experimental data
-    traces.append(
-        plot_column(
-            spec_df,
-            col,
-            color=next(colors)
-        )
-    )
+    traces.append(plot_column(spec_df, col, color=next(colors)))
     # Loop over the assignments
     for molecule in molecules:
         sliced_df = assignments_df.loc[assignments_df["Chemical Name"] == molecule]
-        traces.append(
-            plot_bar_assignments(
-                sliced_df,
-                next(colors)
-            )
-        )
+        traces.append(plot_bar_assignments(sliced_df, next(colors)))
     layout = define_layout()
-    layout["yaxis"] = {
-        "title": "Experimental Intensity"
-    }
+    layout["yaxis"] = {"title": "Experimental Intensity"}
     # Specify a second y axis for the catalog intensity
     layout["yaxis2"] = {
         "title": "CDMS/JPL Intensity",
         "overlaying": "y",
         "side": "right",
         "type": "log",
-        "autorange": True
+        "autorange": True,
     }
     figure = go.Figure(data=traces, layout=layout)
     plot(figure)
@@ -622,7 +573,7 @@ def generate_colors(n, cmap=plt.cm.Spectral, hex=True):
         except ValueError:
             warn(f"{cmap} not found in Matplotlib, defaulting to Spectral.")
             pass
-    colormap = cmap(np.linspace(0., 1., n))
+    colormap = cmap(np.linspace(0.0, 1.0, n))
     if hex is True:
         colors = [cl.rgb2hex(color) for color in colormap]
     else:
@@ -659,15 +610,13 @@ def plot_bar_assignments(species_df, color="#fc8d62"):
     molecule = species_df["Chemical Name"].unique()[0]
     trace = go.Bar(
         x=species_df["Combined"],
-        y=10**species_df["CDMS/JPL Intensity"],
+        y=10 ** species_df["CDMS/JPL Intensity"],
         name=molecule,
         text=species_df["Resolved QNs"],
-        marker={
-            "color": color
-            },
+        marker={"color": color},
         width=0.25,
         yaxis="y2",
-        opacity=0.9
+        opacity=0.9,
     )
     return trace
 
@@ -695,19 +644,11 @@ def plot_column(dataframe, col, name=None, color=None, layout=None):
     if color is None:
         color = "#1c9099"
     trace = go.Scatter(
-        x=dataframe["Frequency"],
-        y=dataframe[col],
-        name=name,
-        marker={
-            "color": color
-        }
+        x=dataframe["Frequency"], y=dataframe[col], name=name, marker={"color": color}
     )
     # If a layout is supplied, plot the figure
     if layout:
-        figure = go.Figure(
-            data=[trace],
-            layout=layout
-        )
+        figure = go.Figure(data=[trace], layout=layout)
         iplot(figure)
     else:
         return trace
@@ -725,12 +666,12 @@ def define_layout(xlabel="", ylabel=""):
         xaxis={"title": xlabel, "tickformat": ".,"},
         yaxis={"title": ylabel},
         autosize=True,
-        height=650.,
-        width=850.,
+        height=650.0,
+        width=850.0,
         paper_bgcolor="#ffffff",
         plot_bgcolor="#ffffff",
-        font=dict(family='Roboto', size=14, color='#000000'),
-        annotations=list()
+        font=dict(family="Roboto", size=14, color="#000000"),
+        annotations=list(),
     )
     return layout
 
@@ -741,13 +682,7 @@ def save_plot(fig, filename, js=True):
         This method does inject the plotly.js code by default, and so will
         result in relatively large files. Use `save_html` instead.
     """
-    plot(
-        fig,
-        filename=filename,
-        show_link=False,
-        auto_open=False,
-        include_plotlyjs=js
-    )
+    plot(fig, filename=filename, show_link=False, auto_open=False, include_plotlyjs=js)
 
 
 def cfa_cmap(nsteps=100):
@@ -792,9 +727,7 @@ def pandas_bokeh_table(dataframe, html=False, **kwargs):
     DataTable object if html is False, otherwise str
     """
     source = ColumnDataSource(dataframe)
-    columns = [
-        TableColumn(field=key, title=key.capitalize()) for key in dataframe
-    ]
+    columns = [TableColumn(field=key, title=key.capitalize()) for key in dataframe]
     table = DataTable(source=source, columns=columns, **kwargs)
     if html is True:
         return file_html(table, CDN)
@@ -830,10 +763,9 @@ def init_bokeh_figure(yml_path=None, **kwargs):
     doc = curdoc()
     doc.theme = Theme(filename=yml_path)
     default_params = {
-        "tools": "crosshair,pan,wheel_zoom,box_zoom,reset,box_select,"
-                 "lasso_select",
+        "tools": "crosshair,pan,wheel_zoom,box_zoom,reset,box_select," "lasso_select",
         "outline_line_color": "black",
-        "output_backend": "webgl"
+        "output_backend": "webgl",
     }
     default_params.update(**kwargs)
     fig = figure(**default_params)

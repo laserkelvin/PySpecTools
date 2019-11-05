@@ -1,4 +1,3 @@
-
 import os
 from pathlib import Path
 from glob import glob
@@ -22,6 +21,7 @@ from pyspectools import routines
 from pyspectools.spcat import *
 from pyspectools import parsers
 from pyspectools.spectra.assignment import LineList
+
 
 class MoleculeFit:
     """ Class for handling the top level of a Pickett simulation.
@@ -62,29 +62,25 @@ class MoleculeFit:
         self.properties = {
             "name": "Molecule",
             "tag": 0,
-            "parameters": dict(),            # human input of parameters
+            "parameters": dict(),  # human input of parameters
             "linear": False,
             "symmetric": False,
             "prolate": False,
-            "dipole": {
-                "A": 0.,
-                "B": 0.,
-                "C": 0.,
-            },
+            "dipole": {"A": 0.0, "B": 0.0, "C": 0.0},
             "reduction": "A",
             "spin": 1,
             "spin degeneracy": 0,
-        # These are options for the simulation
+            # These are options for the simulation
             "units": "MHz",
-            "temperature": 5.,
-            "intensity threshold": [-8., -3.],
-            "K range": [0, 0],               # range for K quantum number
-            "partition function": 1E3,
+            "temperature": 5.0,
+            "intensity threshold": [-8.0, -3.0],
+            "K range": [0, 0],  # range for K quantum number
+            "partition function": 1e3,
             "interactions": 0,
             "quantum number range": [0, 99],
             "odd state weight": 1,
             "even state weight": 1,
-            "frequency limit": 100.,
+            "frequency limit": 100.0,
             "vibration limit": 1,
             "vsym": 1,
             "ewt": 0,
@@ -93,27 +89,27 @@ class MoleculeFit:
             "number of lines": 0,
             "number of iterations": 10,
             "number of skipped lines": 0,
-            "marquadrt-levenburg": 0.0000E+00,
-            "maximum error": 1E+13,
-            "fractional importance": 1.0000E+00,
+            "marquadrt-levenburg": 0.0000e00,
+            "maximum error": 1e13,
+            "fractional importance": 1.0000e00,
             "IR scaling": 1.0,
             "diagonalization": 0,
-            "xopt": 1
+            "xopt": 1,
         }
 
-        self.param_objects = dict()      # stores parameter objects
+        self.param_objects = dict()  # stores parameter objects
 
-        self.iteration_count = 1         # running count of iterations
-        self.iterations = dict()         # stores data from each iteration
-        self.top_dir = os.getcwd()       # top directory always stored
-        self.cwd = ""                    # current working directory
+        self.iteration_count = 1  # running count of iterations
+        self.iterations = dict()  # stores data from each iteration
+        self.top_dir = os.getcwd()  # top directory always stored
+        self.cwd = ""  # current working directory
 
-        self.experimental_lines = dict() # experimental lines that go to a .lin
+        self.experimental_lines = dict()  # experimental lines that go to a .lin
 
         # Function that updates parameters, and re-writes the .par and .int
         # files.
         self.initialize(options)
-        self.interactive = False              # Interactive plotting option
+        self.interactive = False  # Interactive plotting option
 
     def initialize(self, options=None):
         """ Method that will rewrite the .par and .int files, after updating
@@ -139,15 +135,19 @@ class MoleculeFit:
         """
         # If the K range is set to 0, but the molecule is not linear
         if self.properties["K range"][1] == 0 and self.properties["linear"] is False:
-            raise UserWarning("Warning: You have specified a non-linear molecule \
+            raise UserWarning(
+                "Warning: You have specified a non-linear molecule \
                                and the maximum K value is unset. Result cat file \
-                               may be empty!")
+                               may be empty!"
+            )
 
         # If A and C constants are given and molecule is supposed to be linear
         if ["A", "C"] in list(self.properties["parameters"].keys()):
             if self.properties["linear"] is True:
-                raise UserWarning("Molecule flagged as linear, \
-                                   but A and C constants specified.")
+                raise UserWarning(
+                    "Molecule flagged as linear, \
+                                   but A and C constants specified."
+                )
 
     def generate_parameter_objects(self, verbose=True):
         for param_key in self.properties["parameters"]:
@@ -156,13 +156,21 @@ class MoleculeFit:
                 self.properties["parameters"][param_key],
                 self.properties["reduction"],
                 linear=self.properties["linear"],
-                verbose=verbose
+                verbose=verbose,
             )
 
     def nuclear(self, delete=False):
         """ Function that cleans up Pickett files in a folder """
-        filelist = [".cat", ".var", ".par", ".int", "_parsedlines.csv",
-                    "_spectrum.pdf", ".fit", ".out"]
+        filelist = [
+            ".cat",
+            ".var",
+            ".par",
+            ".int",
+            "_parsedlines.csv",
+            "_spectrum.pdf",
+            ".fit",
+            ".out",
+        ]
         files = [self.properties["name"] + name for name in filelist]
         if delete is True:
             for file in files:
@@ -199,17 +207,31 @@ class MoleculeFit:
         # Format the spin degeneracy sign - if it's positive, we use asym top
         # quantum numbers. If negative use symmetric top.
         if self.properties["symmetric"] is True and self.properties["linear"] is False:
-            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
-        elif self.properties["symmetric"] is False and self.properties["linear"] is False:
-            prop_line += str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
-        elif self.properties["symmetric"] is False and self.properties["linear"] is True:
-            prop_line += str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
+            prop_line += (
+                str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
+            )
+        elif (
+            self.properties["symmetric"] is False and self.properties["linear"] is False
+        ):
+            prop_line += (
+                str(np.absolute(self.properties["spin degeneracy"])).rjust(3) + " "
+            )
+        elif (
+            self.properties["symmetric"] is False and self.properties["linear"] is True
+        ):
+            prop_line += (
+                str(np.negative(self.properties["spin degeneracy"])).rjust(3) + " "
+            )
         # Format the sign of vibration limit; negative treats top as oblate case
         # while positive treats the prolate case
         if self.properties["prolate"] is True and self.properties["linear"] is False:
-            prop_line += str(np.absolute(self.properties["vibration limit"])).rjust(3) + " "
+            prop_line += (
+                str(np.absolute(self.properties["vibration limit"])).rjust(3) + " "
+            )
         elif self.properties["prolate"] is False and self.properties["linear"] is False:
-            prop_line += str(np.negative(self.properties["vibration limit"])).rjust(3) + " "
+            prop_line += (
+                str(np.negative(self.properties["vibration limit"])).rjust(3) + " "
+            )
         else:
             prop_line += str(self.properties["vibration limit"]).rjust(3) + " "
         prop_line += str(self.properties["K range"][0]).rjust(3) + " "
@@ -245,7 +267,7 @@ class MoleculeFit:
             9. vibrational quantum number limit
             10. dipole moments
         """
-        settings_line = " "                                # units of the sim
+        settings_line = " "  # units of the sim
         if self.properties["units"] == "wavenumbers":
             settings_line += "1"
         elif self.properties["units"] == "MHz":
@@ -267,11 +289,17 @@ class MoleculeFit:
             write_file.write(settings_line + "\n")
             for projection in self.properties["dipole"]:
                 if projection == "A":
-                    write_file.write(" 1      " + str(self.properties["dipole"][projection]) + "\n")
+                    write_file.write(
+                        " 1      " + str(self.properties["dipole"][projection]) + "\n"
+                    )
                 elif projection == "B":
-                    write_file.write(" 2      " + str(self.properties["dipole"][projection]) + "\n")
+                    write_file.write(
+                        " 2      " + str(self.properties["dipole"][projection]) + "\n"
+                    )
                 elif projection == "C":
-                    write_file.write(" 3      " + str(self.properties["dipole"][projection]) + "\n")
+                    write_file.write(
+                        " 3      " + str(self.properties["dipole"][projection]) + "\n"
+                    )
 
     def fit_lines(self, verbose=True):
         os.chdir(self.top_dir)
@@ -287,7 +315,7 @@ class MoleculeFit:
         # attribute as a list, but can potentially be used to do more...
         with open(self.properties["name"] + ".lin") as read_file:
             self.lin_file = read_file.readlines()
-            #self.properties["number of lines"] = len(self.lin_file)
+            # self.properties["number of lines"] = len(self.lin_file)
 
         # Figure out what the next iteration is
         folder_number = generate_folder()
@@ -301,9 +329,9 @@ class MoleculeFit:
         backup_files(self.properties["name"], self.cwd)
 
         # write the settings used for the current simulation to disk
-        dump_yaml(str(folder_number) + "/" + self.properties["name"] + ".yml",
-                  self.properties
-                  )
+        dump_yaml(
+            str(folder_number) + "/" + self.properties["name"] + ".yml", self.properties
+        )
         # change directory to the new working directory
         os.chdir(self.cwd)
         # Write the .int and .par file to disk
@@ -313,10 +341,10 @@ class MoleculeFit:
         run_spfit(self.properties["name"])
         # Create an instance of a fit object, and add it to the pile
         self.iterations[self.iteration_count] = fit_output(
-                self.properties["name"] + ".fit",
-                verbose=verbose,
-                interactive=self.interactive
-            )
+            self.properties["name"] + ".fit",
+            verbose=verbose,
+            interactive=self.interactive,
+        )
         self.predict_lines()
         os.chdir(self.top_dir)
 
@@ -330,8 +358,13 @@ class MoleculeFit:
 
         print("Current parameters (MHz)")
         for parameter in current_params:
-            print(parameter + "\t" + str(current_params[parameter]["value"]) + \
-                  "(" + str(current_params[parameter]["uncertainty"] + ")"))
+            print(
+                parameter
+                + "\t"
+                + str(current_params[parameter]["value"])
+                + "("
+                + str(current_params[parameter]["uncertainty"] + ")")
+            )
 
     def calbak(self):
         """ Run calbak to generate a .lin file from .cat """
@@ -353,17 +386,17 @@ class MoleculeFit:
         # First pass of SPCAT; get the partition function
         self.properties["partition function"] = run_spcat(
             self.properties["name"],
-            temperature="{:.3f}".format(self.properties["temperature"])
-            )
+            temperature="{:.3f}".format(self.properties["temperature"]),
+        )
         # Make sure the int file has the correct partition function
         self.setup_int()
         # Second pass of SPCAT with correct intensities
         run_spcat(self.properties["name"])
         # Parse the output of SPCAT
-        self.cat_lines = parsers.parse_cat(
-            self.properties["name"] + ".cat",
+        self.cat_lines = parsers.parse_cat(self.properties["name"] + ".cat")
+        print(
+            "Saving the parsed lines to " + self.properties["name"] + "_parsedlines.csv"
         )
-        print("Saving the parsed lines to " + self.properties["name"] + "_parsedlines.csv")
         self.cat_lines.to_csv(self.properties["name"] + "_parsedlines.csv")
 
         # Plot the .cat file up
@@ -377,7 +410,7 @@ class MoleculeFit:
         """
         if iteration == 0:
             iteration = "initial"
-        #current_params = self.iterations[iteration].export_parameters()
+        # current_params = self.iterations[iteration].export_parameters()
         iteration_folder = str(iteration) + "/" + self.properties["name"]
         if os.path.isfile(iteration_folder + ".fit.yml") is True:
             iteration_file = iteration_folder + ".fit.yml"
@@ -424,9 +457,14 @@ class MoleculeFit:
         if os.path.isdir("instances") is False:
             os.mkdir("instances")
         counter = 0
-        while os.path.exists("instances/" + self.properties["name"] + ".%s.pickle" % counter):
+        while os.path.exists(
+            "instances/" + self.properties["name"] + ".%s.pickle" % counter
+        ):
             counter += 1
-        with open("instances/" + self.properties["name"] + "." + str(counter) + ".pickle", "wb") as write_file:
+        with open(
+            "instances/" + self.properties["name"] + "." + str(counter) + ".pickle",
+            "wb",
+        ) as write_file:
             pickle.dump(self, write_file, pickle.HIGHEST_PROTOCOL)
 
     def set_fit(self, fit=True, params=None, verbose=False):
@@ -441,13 +479,17 @@ class MoleculeFit:
             params = list(self.properties["parameters"].keys())
         if type(params) is str:
             if params not in list(self.properties["parameters"].keys()):
-                raise KeyError("Parameter " + parameter + " is not in your parameter list!")
+                raise KeyError(
+                    "Parameter " + parameter + " is not in your parameter list!"
+                )
             else:
                 self.properties["parameters"][parameter]["fit"] = fit
         elif type(params) is list:
             for parameter in params:
                 if parameter not in list(self.properties["parameters"].keys()):
-                    raise KeyError("Parameter " + parameter + " is not in your parameter list!")
+                    raise KeyError(
+                        "Parameter " + parameter + " is not in your parameter list!"
+                    )
                 else:
                     self.properties["parameters"][parameter]["fit"] = fit
         self.generate_parameter_objects(verbose=verbose)
@@ -475,25 +517,26 @@ class MoleculeFit:
             else:
                 raise ValueError("Final folder exists, and not deleting.")
         # Copy the files over from designated iteration
-        shutil.copytree(
-            self.top_dir + "/" + str(iteration),
-            self.top_dir + "/final",
-            )
+        shutil.copytree(self.top_dir + "/" + str(iteration), self.top_dir + "/final")
         # Generate a report for the final fits
         for parameter in self.properties["parameters"]:
             if "uncertainty" in list(self.properties["parameters"][parameter].keys()):
-                self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"]) + \
-                                         "(" + str(self.properties["parameters"][parameter]["uncertainty"]) + \
-                                         ")"
+                self.properties["parameters"][parameter]["formatted"] = (
+                    str(self.properties["parameters"][parameter]["value"])
+                    + "("
+                    + str(self.properties["parameters"][parameter]["uncertainty"])
+                    + ")"
+                )
             else:
-                self.properties["parameters"][parameter]["formatted"] = str(self.properties["parameters"][parameter]["value"])
+                self.properties["parameters"][parameter]["formatted"] = str(
+                    self.properties["parameters"][parameter]["value"]
+                )
         report_df = pd.DataFrame.from_dict(self.properties["parameters"]).T
         with open(self.top_dir + "/final/parameter_report.html", "w+") as write_file:
             write_file.write(report_df.to_html())
         for file in glob(self.top_dir + "/final/*"):
             # Make the final files read-only
             os.chmod(file, stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH)
-
 
     def parameter_scan(self, parameter, values, relaxed=False):
         """ A method for automatically scanning parameter space to see
@@ -528,25 +571,25 @@ class MoleculeFit:
             # Record the final RMS error for this parameter
             current_params = self.report_parameters()
             last_key = max(list(self.iterations.keys()))
-            current_params["rms"] = self.iterations[last_key].fit_properties["final rms"]
+            current_params["rms"] = self.iterations[last_key].fit_properties[
+                "final rms"
+            ]
             parameter_values.append(current_params)
         scan_report = pd.DataFrame(parameter_values)
 
-        fig, ax = plt.subplots(figsize=(14,5.5))
+        fig, ax = plt.subplots(figsize=(14, 5.5))
 
-        ax.scatter(
-            x=scan_report[parameter].values,
-            y=scan_report["rms"].values,
-        )
+        ax.scatter(x=scan_report[parameter].values, y=scan_report["rms"].values)
         ax.set_ylabel("RMS (MHz)")
         ax.set_xlabel(parameter + " value (MHz)")
         ax.set_xticks(values)
         ax.set_xticklabels(values)
         ax.set_title("Parameter scan for " + parameter)
 
-        fig.savefig("scan_" + parameter + "_" + str(values[0]) + "-" + str(values[-1]) + ".pdf",
-                    format="pdf"
-                )
+        fig.savefig(
+            "scan_" + parameter + "_" + str(values[0]) + "-" + str(values[-1]) + ".pdf",
+            format="pdf",
+        )
         if isnotebook() is True:
             plt.show()
         else:
@@ -565,12 +608,15 @@ class MoleculeFit:
 
             Nuclear spin terms will have the nuclei identifier
         """
-        def __init__(self, name, parameter_dict, reduction="A", linear=True, verbose=True):
+
+        def __init__(
+            self, name, parameter_dict, reduction="A", linear=True, verbose=True
+        ):
             # Initialize values for parameters
             self.variables = {
                 "name": name,
-                "value": 0.,
-                "uncertainty": 1E-25,
+                "value": 0.0,
+                "uncertainty": 1e-25,
                 "fit": False,
                 "identifier": 0,
                 "nuclei": 0,
@@ -582,21 +628,22 @@ class MoleculeFit:
                 # Format the parameter printing to be nicer
                 pp = pprint.PrettyPrinter(indent=4)
                 pp.pprint(self.variables)
-            if self.variables["nuclei"] == 0 \
-            and self.variables["name"] in ["eQq", "eQq/2"]:
+            if self.variables["nuclei"] == 0 and self.variables["name"] in [
+                "eQq",
+                "eQq/2",
+            ]:
                 # warning message issued if no nucleus specified
                 print("You have specificed a hyperfine parameter, but")
                 print("did not specify a nucleus in your input file.")
                 raise ValueError("Hyperfine parameter with no nuclei ID!")
 
             # Convert the human parameter name to a Pickett identifier
-            self.variables["identifier"] = human2pickett(self.variables["name"],
-                                                         reduction,
-                                                         linear,
-                                                         self.variables["nuclei"] + 1)
+            self.variables["identifier"] = human2pickett(
+                self.variables["name"], reduction, linear, self.variables["nuclei"] + 1
+            )
             if self.variables["fit"] is True:
                 # flag variable for fitting
-                self.variables["uncertainty"] = 1E+25
+                self.variables["uncertainty"] = 1e25
 
         def format_line(self):
             """ Formats a string output to match the Pickett format for a parameter """
@@ -609,19 +656,20 @@ class MoleculeFit:
         def fit_check(self):
             """ A function to flip the uncertainty if we will fit a parameter """
             if self.variables["fit"] is True:
-                self.variables["uncertainty"] = 1E+25
+                self.variables["uncertainty"] = 1e25
             else:
-                self.variables["uncertainty"] = 1E-25
+                self.variables["uncertainty"] = 1e-25
 
     class exp_line:
         """ Class for an experimental line. Converts to and from .lin files. """
+
         def __init__(self, frequency, uncertainty, lower_num, upper_num, comment=None):
             self.properties = {
-                "frequency": frequency,               # frequency in MHz
-                "uncertainty": uncertainty,           # uncertainty in MHz
-                "lower quantum nos.": lower_num,      # list of quantum numbers
-                "upper quantum nos.": upper_num,      # for lower and upper states
-                "comment": comment
+                "frequency": frequency,  # frequency in MHz
+                "uncertainty": uncertainty,  # uncertainty in MHz
+                "lower quantum nos.": lower_num,  # list of quantum numbers
+                "upper quantum nos.": upper_num,  # for lower and upper states
+                "comment": comment,
             }
 
         def update_line(self, line_dict):
@@ -631,8 +679,8 @@ class MoleculeFit:
         def format_quantum_numbers(quantum_list):
             line = ""
             for value in quantum_list:
-                line += str(value).rjust(3)       # each quantum number is right
-            return line                           # justified by 3 positions...
+                line += str(value).rjust(3)  # each quantum number is right
+            return line  # justified by 3 positions...
 
         def format_line(self):
             # Formatting for a .lin line
@@ -651,6 +699,7 @@ class QuantumNumber:
     """
     Class for a Quantum Number.
     """
+
     value: int
     upper: bool = False
     frozen: bool = False
@@ -745,7 +794,7 @@ class Transition:
         upper_state = qnos[half:]
         trans.quantum_numbers = [
             [str(lower) for lower in lower_state],
-            [str(upper) for upper in upper_state]
+            [str(upper) for upper in upper_state],
         ]
         return trans
 
@@ -758,7 +807,8 @@ class Transition:
             self.uncertainty = 0.005
         # Initialize the quantum numbers
         self.lower_state = [
-            QuantumNumber(0, center=center, width=width) for center, width in zip(self.centers, self.widths)
+            QuantumNumber(0, center=center, width=width)
+            for center, width in zip(self.centers, self.widths)
         ]
         if len(self.j) != 0:
             for qno, j in zip(self.lower_state, self.j):
@@ -782,7 +832,7 @@ class Transition:
             "upper": "  ".join(self.quantum_numbers[1]),
             "lower": "  ".join(self.quantum_numbers[0]),
             "frequency": self.frequency,
-            "uncertainty": self.uncertainty
+            "uncertainty": self.uncertainty,
         }
         return line.format(**format_dict)
 
@@ -801,7 +851,7 @@ class Transition:
         self.upper_state = [qno.spawn_upper() for qno in self.lower_state]
         self.quantum_numbers = [
             [str(qno) for qno in self.lower_state],
-            [str(qno) for qno in self.upper_state]
+            [str(qno) for qno in self.upper_state],
         ]
         return self.quantum_numbers
 
@@ -817,7 +867,7 @@ class AutoFitSession:
     deltas: List = field(default_factory=list)
     j: List = field(default_factory=list)
     method: str = "mc"
-    rms_target: float = 1.
+    rms_target: float = 1.0
     rms: float = 1e9
     nfit: int = 0
     niter: int = 10000
@@ -858,9 +908,9 @@ class AutoFitSession:
         Loaded
         """
         cls = routines.read_obj(filepath)
-        #if cls.__name__ != "AutoFitSession":
+        # if cls.__name__ != "AutoFitSession":
         #    raise Exception("Target file is not an AutoFitSession object!")
-        #else:
+        # else:
         return cls
 
     def __post_init__(self):
@@ -907,7 +957,9 @@ class AutoFitSession:
         # a nested list since for every transition (number of frequencies), we want to systematically
         # test every possible combination of quantum numbers.
         possible = [list(range(val + 1)) for val in self.max_values] * 2
-        return enumerate(combinations_with_replacement(product(*possible), len(self.frequencies)))
+        return enumerate(
+            combinations_with_replacement(product(*possible), len(self.frequencies))
+        )
 
     def _brute(self, iteration):
         """
@@ -923,11 +975,10 @@ class AutoFitSession:
         index, qnos = iteration
         # Set up the quantum numbers for this transition
         transitions = [
-            Transition.from_list(
-                frequency,
-                qno,
-                uncertainty
-            ) for frequency, uncertainty, qno in zip(self.frequencies, self.uncertainties, qnos)
+            Transition.from_list(frequency, qno, uncertainty)
+            for frequency, uncertainty, qno in zip(
+                self.frequencies, self.uncertainties, qnos
+            )
         ]
         # Call SPFIT and return the fit RMS
         index, rms = self._check_spfit(index, transitions)
@@ -952,10 +1003,7 @@ class AutoFitSession:
         index, rms: 2-tuple
             The current iteration index and the RMS for this iteration
         """
-        pkg = zip(
-            self.frequencies,
-            self.uncertainties,
-        )
+        pkg = zip(self.frequencies, self.uncertainties)
         # Make sure a different seed is used to other parallel jobs
         np.random.seed()
         # Initialize the Transition object, which handles all of the quantum numbers for a given transition
@@ -967,8 +1015,9 @@ class AutoFitSession:
                 centers=self.centers,
                 widths=self.widths,
                 deltas=self.deltas,
-                j=self.j
-            ) for frequency, uncertainty in pkg
+                j=self.j,
+            )
+            for frequency, uncertainty in pkg
         ]
         # Generate the quantum numbers for each transition
         _ = [transition.random_quantum_numbers() for transition in transitions]
@@ -1010,9 +1059,17 @@ class AutoFitSession:
             # Dump files only if debug mode is on, or we had a successful iteration
             if self.debug is True or update is True:
                 # Copy some of the data back over
-                routines.dump_yaml(os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict)
-                shutil.copy2(self.filename + ".fit", os.path.join(self.wd, "fits/{}.fit".format(index)))
-                shutil.copy2(self.filename + ".lin", os.path.join(self.wd, "lin/{}.lin".format(index)))
+                routines.dump_yaml(
+                    os.path.join(self.wd, "yml/{}.yml".format(index)), fit_dict
+                )
+                shutil.copy2(
+                    self.filename + ".fit",
+                    os.path.join(self.wd, "fits/{}.fit".format(index)),
+                )
+                shutil.copy2(
+                    self.filename + ".lin",
+                    os.path.join(self.wd, "lin/{}.lin".format(index)),
+                )
             # Not sure if this is necessary, but just in case
             os.chdir(self.wd)
         return index, fit_dict["rms"]
@@ -1037,11 +1094,7 @@ class AutoFitSession:
             niter = self.niter
         if nprocesses is None:
             nprocesses = self.nprocesses
-        pool = joblib.Parallel(
-            n_jobs=nprocesses,
-            verbose=self.verbose,
-            timeout=30.
-        )
+        pool = joblib.Parallel(n_jobs=nprocesses, verbose=self.verbose, timeout=30.0)
         if method in ["mc", "bruteforce"]:
             if method == "mc":
                 iterator = range(niter)
@@ -1054,9 +1107,7 @@ class AutoFitSession:
         if headless is False:
             iterator = tqdm(iterator)
         # Distribute and run the quantum number testing
-        results = pool(
-            joblib.delayed(self._iteration)(i) for i in iterator
-        )
+        results = pool(joblib.delayed(self._iteration)(i) for i in iterator)
         self.results = results
         return results
 
@@ -1076,7 +1127,10 @@ class AutoFitSession:
             Dictionary with indexes corresponding to the fit number, and values are the parsed
             fit dictionaries
         """
-        fits = {index: routines.read_yaml(file) for index, file in enumerate(glob("yml/*.yml"))}
+        fits = {
+            index: routines.read_yaml(file)
+            for index, file in enumerate(glob("yml/*.yml"))
+        }
         # Find all fits where the number of actual fitted lines exceeds nlines
         viable = {
             index: fit for index, fit in fits.items() if len(fit["o-c"]) >= nlines
@@ -1141,7 +1195,7 @@ class GenerateCatalog:
             for path in self.temp_path.rglob("template*"):
                 self.temp_dict[path.suffix] = path.read_text()
 
-    def generate_constants(self, lower=1000., upper=10000., distortion=True):
+    def generate_constants(self, lower=1000.0, upper=10000.0, distortion=True):
         """
         Function to generate a random set of constants for an Asymmetric top
         based on a uniform random distribution. This also includes centrifugal
@@ -1168,36 +1222,38 @@ class GenerateCatalog:
             dj, djk, dk, d1, d2 = cd
         else:
             # Otherwise set CD terms to zero and not use them
-            dj = djk = dk = d1 = d2 = 0.
+            dj = djk = dk = d1 = d2 = 0.0
         # Generate dipole moment as boolean values
         dipoles = np.random.randint(0, 2, 3)
         # Make sure that we have at least one dipole moment; at the very least
         # an a-type
         if np.sum(dipoles) == 0:
-            dipoles[0] = 1.
+            dipoles[0] = 1.0
         u_a, u_b, u_c = dipoles
         # This part ensures that there is a minimum working example
         self.constants_dict = {
-            "A": 10000.,
-            "B": 5000.,
-            "C": 2000.,
-            "u_a": 1.,
-            "u_b": 0.,
-            "u_c": 0.
+            "A": 10000.0,
+            "B": 5000.0,
+            "C": 2000.0,
+            "u_a": 1.0,
+            "u_b": 0.0,
+            "u_c": 0.0,
         }
-        self.constants_dict.update(**{
-            "A":   a,
-            "B":   b,
-            "C":   c,
-            "DJ":  dj,
-            "DJK": djk,
-            "DK":  dk,
-            "d1":  d1,
-            "d2":  d2,
-            "u_a": u_a,
-            "u_b": u_b,
-            "u_c": u_c
-        })
+        self.constants_dict.update(
+            **{
+                "A": a,
+                "B": b,
+                "C": c,
+                "DJ": dj,
+                "DJK": djk,
+                "DK": dk,
+                "d1": d1,
+                "d2": d2,
+                "u_a": u_a,
+                "u_b": u_b,
+                "u_c": u_c,
+            }
+        )
         return self.constants_dict
 
     def run_spcat(self):

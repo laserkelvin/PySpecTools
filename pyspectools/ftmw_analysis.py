@@ -1,4 +1,3 @@
-
 import datetime
 import re
 import os
@@ -30,7 +29,7 @@ def parse_specdata(filename):
     return pd.read_csv(filename, skiprows=4)
 
 
-def parse_spectrum(filename, threshold=20.):
+def parse_spectrum(filename, threshold=20.0):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
     dataframe = pd.read_csv(
         filename, delimiter="\t", names=["Frequency", "Intensity"], skiprows=1
@@ -63,7 +62,7 @@ class Batch:
     date: datetime.datetime
     scans: List = field(default_factory=list)
     filter: List = field(default_factory=list)
-    exp: float = 0.
+    exp: float = 0.0
     zeropad: bool = False
     window: str = ""
 
@@ -79,7 +78,9 @@ class Batch:
         assays = ["dr", "magnet", "discharge", "dipole"]
         assay = assay.lower()
         if assay not in assays:
-            raise Exception("Not a valid assay type; choose dr, magnet, discharge, dipole.")
+            raise Exception(
+                "Not a valid assay type; choose dr, magnet, discharge, dipole."
+            )
         with open(filepath) as read_file:
             batch_df, batch_data = parse_batch(read_file.readlines())
         batch_data["assay"] = assay
@@ -113,16 +114,10 @@ class Batch:
         :return:
         """
         if ssh_obj is None:
-            default_keypath = os.path.join(
-                os.path.expanduser("~"),
-                ".ssh/id_rsa.pub"
-            )
+            default_keypath = os.path.join(os.path.expanduser("~"), ".ssh/id_rsa.pub")
             hostname = input("Please provide remote hostname:    ")
             username = input("Please provide login:              ")
-            ssh_settings = {
-                "hostname": hostname,
-                "username": username
-            }
+            ssh_settings = {"hostname": hostname, "username": username}
             if os.path.isfile(default_keypath) is True:
                 ssh_settings["key_filename"] = default_keypath
             else:
@@ -179,16 +174,19 @@ class Batch:
         :param src: str optional specifying whether a remote or local path is used
         """
         root_path = root_path.replace("batch", "scans")
-        path_list = tqdm([
-            os.path.join(root_path, "*", "*", str(scan_id) + ".txt") for scan_id in ids
-        ])
+        path_list = tqdm(
+            [
+                os.path.join(root_path, "*", "*", str(scan_id) + ".txt")
+                for scan_id in ids
+            ]
+        )
         if hasattr(self, "remote") is True:
             scans = [Scan.from_remote(path, self.remote) for path in path_list]
         else:
             scans = [Scan.from_qtftm(path) for path in path_list]
         self.scans = scans
 
-    def process_dr(self, significance=16.):
+    def process_dr(self, significance=16.0):
         """
         Function to batch process all of the DR measurements.
         :param global_depletion: float between 0. and 1. specifying the expected depletion for any line
@@ -199,7 +197,9 @@ class Batch:
                          a dict of the DR frequencies, scan IDs and Scan objects.
         """
         if self.assay != "dr":
-            raise Exception("Batch is not a DR test! I think it's {}".format(self.assay))
+            raise Exception(
+                "Batch is not a DR test! I think it's {}".format(self.assay)
+            )
         # Find the cavity frequencies that DR was performed on
         progressions = self.split_progression_batch()
         dr_dict = dict()
@@ -210,25 +210,40 @@ class Batch:
                 ref_fit = ref.fit_cavity(plot=False)
                 roi, ref_x, ref_y = ref.get_line_roi()
                 signal = [np.sum(ref_y, axis=0)]
-                sigma = np.average(
-                    [np.std(scan.spectrum["Intensity"].iloc[roi]) for scan in progression]
-                ) * significance
-                connections = [scan for scan in progression if scan.is_depleted(ref, roi, sigma)]
+                sigma = (
+                    np.average(
+                        [
+                            np.std(scan.spectrum["Intensity"].iloc[roi])
+                            for scan in progression
+                        ]
+                    )
+                    * significance
+                )
+                connections = [
+                    scan for scan in progression if scan.is_depleted(ref, roi, sigma)
+                ]
                 if len(connections) > 1:
                     counter += len(connections)
                     signal.extend(
-                        [np.sum(scan.spectrum["Intensity"].iloc[roi], axis=0) for scan in connections]
+                        [
+                            np.sum(scan.spectrum["Intensity"].iloc[roi], axis=0)
+                            for scan in connections
+                        ]
                     )
                     dr_dict[index] = {
                         "frequencies": [scan.dr_frequency for scan in connections],
                         "ids": [scan.id for scan in connections],
                         "cavity": ref.fit.frequency,
                         "signal": signal,
-                        "expected": np.sum(ref_y) - sigma
+                        "expected": np.sum(ref_y) - sigma,
                     }
             except ValueError:
                 print("Progression {} could not be fit; ignoring.".format(index))
-        print("Possible depletions detected in these indexes: {}".format(list(dr_dict.keys())))
+        print(
+            "Possible depletions detected in these indexes: {}".format(
+                list(dr_dict.keys())
+            )
+        )
         print("There are {} possible depletions.".format(counter))
         return dr_dict
 
@@ -245,7 +260,9 @@ class Batch:
             slice_df = self.details.loc[self.details["ftfreq"] == freq]
             chunks = routines.group_consecutives(slice_df["id"])
             for chunk in chunks:
-                progressions[counter] = [scan for scan in self.scans if scan.id in chunk]
+                progressions[counter] = [
+                    scan for scan in self.scans if scan.id in chunk
+                ]
                 counter += 1
         return progressions
 
@@ -258,11 +275,13 @@ class Batch:
         """
         progressions = self.split_progression_batch()
         fig = go.FigureWidget()
-        fig.layout["width"] = 900.
+        fig.layout["width"] = 900.0
         fig.layout["showlegend"] = False
+
         def update_figure(index):
             fig.data = []
             fig.add_traces([scan.scatter_trace() for scan in progressions[index]])
+
         index_slider = interactive(update_figure, index=(0, len(progressions) - 1, 1))
         vbox = VBox((fig, index_slider))
         vbox.layout.align_items = "center"
@@ -287,7 +306,9 @@ class Batch:
         :param kwargs:
         """
         param_list = ["filter", "exp", "zeropad", "window"]
-        params = {key: value for key, value in self.__dict__.items() if key in param_list}
+        params = {
+            key: value for key, value in self.__dict__.items() if key in param_list
+        }
         params.update(**kwargs)
         _ = [scan.process_fid(**params) for scan in tqdm(self.scans)]
 
@@ -314,7 +335,9 @@ class Batch:
         :return fig: Plotly FigureWidget object
         """
         connections = [
-            [np.floor(scan.cavity_frequency), np.floor(scan.dr_frequency)] for scan in self.scans if scan.id in scans
+            [np.floor(scan.cavity_frequency), np.floor(scan.dr_frequency)]
+            for scan in self.scans
+            if scan.id in scans
         ]
         fig, self.progressions = ff.dr_network_diagram(connections)
         return fig
@@ -339,7 +362,7 @@ class Batch:
                             "snr": np.max(snrs),
                             "scan": best_scan.id,
                             "attenuation": best_scan.cavity_atten,
-                            "index": index
+                            "index": index,
                         }
                     )
             except ValueError:
@@ -357,11 +380,9 @@ class Batch:
         """
         upper = frequency * (1 + tol)
         lower = frequency * (1 - tol)
-        scans = [
-            scan for scan in self.scans if lower <= scan.cavity_frequency <= upper
-        ]
-        #new_batch = deepcopy(self)
-        #new_batch.scans = scans
+        scans = [scan for scan in self.scans if lower <= scan.cavity_frequency <= upper]
+        # new_batch = deepcopy(self)
+        # new_batch.scans = scans
         return scans
 
 
@@ -375,6 +396,7 @@ class Scan:
     Has a few class methods that will make look ups easily such as
     the date the scan was collected and the gases used.
     """
+
     id: int
     machine: str
     fid: np.array
@@ -391,7 +413,7 @@ class Scan:
     magnet: bool = False
     gases: Dict = field(default_factory=dict)
     filter: List = field(default_factory=list)
-    exp: float = 0.
+    exp: float = 0.0
     zeropad: bool = False
     window: str = ""
 
@@ -408,9 +430,11 @@ class Scan:
         manipulating multiple Scan objects.
         :return: A deep copy of the current Scan object
         """
+
         class Empty(self.__class__):
             def __init__(self):
                 pass
+
         new_scan = Empty()
         new_scan.__class__ = self.__class__
         new_scan.__dict__.update(self.__dict__)
@@ -467,7 +491,9 @@ class Scan:
         :return: A new Scan object with the subtracted spectrum
         """
         new_scan = self.__deepcopy__()
-        new_scan.spectrum["Intensity"] = new_scan.spectrum["Intensity"] - other.spectrum["Intensity"]
+        new_scan.spectrum["Intensity"] = (
+            new_scan.spectrum["Intensity"] - other.spectrum["Intensity"]
+        )
         new_scan.subtracted = other.id
         return new_scan
 
@@ -478,7 +504,9 @@ class Scan:
         :return: A new Scan object with the co-added spectrum
         """
         new_scan = self.__deepcopy__()
-        new_scan.spectrum["Intensity"] = new_scan.spectrum["Intensity"] + other.spectrum["Intensity"]
+        new_scan.spectrum["Intensity"] = (
+            new_scan.spectrum["Intensity"] + other.spectrum["Intensity"]
+        )
         new_scan.subtracted = other.id
         return new_scan
 
@@ -533,16 +561,10 @@ class Scan:
         :return: Scan object from remote QtFTM file
         """
         if ssh_obj is None:
-            default_keypath = os.path.join(
-                os.path.expanduser("~"),
-                ".ssh/id_rsa.pub"
-            )
+            default_keypath = os.path.join(os.path.expanduser("~"), ".ssh/id_rsa.pub")
             hostname = input("Please provide remote hostname:    ")
             username = input("Please provide login:              ")
-            ssh_settings = {
-                "hostname": hostname,
-                "username": username
-            }
+            ssh_settings = {"hostname": hostname, "username": username}
             if os.path.isfile(default_keypath) is True:
                 ssh_settings["key_filename"] = default_keypath
             else:
@@ -566,9 +588,9 @@ class Scan:
         """
         if "." not in filepath:
             if format == "json":
-                filepath+=".json"
+                filepath += ".json"
             else:
-                filepath+=".yml"
+                filepath += ".yml"
         if format == "json":
             writer = routines.dump_json
         else:
@@ -595,22 +617,20 @@ class Scan:
         """
         # Calculate the frequency bins
         frequencies = np.linspace(
-            self.cavity_frequency,
-            self.cavity_frequency + 1.,
-            len(self.fid)
+            self.cavity_frequency, self.cavity_frequency + 1.0, len(self.fid)
         )
         # Calculate the time bins
-        time = np.linspace(
-            0.,
-            self.fid_spacing * self.fid_points,
-            self.fid_points
-        )
+        time = np.linspace(0.0, self.fid_spacing * self.fid_points, self.fid_points)
         process_list = ["window", "filter", "exp", "zeropad"]
-        process_dict = {key: value for key, value in self.__dict__.items() if key in process_list}
+        process_dict = {
+            key: value for key, value in self.__dict__.items() if key in process_list
+        }
         # Override with user settings
         process_dict.update(**kwargs)
         temp_fid = np.copy(self.fid)
-        self.spectrum = fid2fft(temp_fid, 1. / self.fid_spacing, frequencies, **process_dict)
+        self.spectrum = fid2fft(
+            temp_fid, 1.0 / self.fid_spacing, frequencies, **process_dict
+        )
         self.fid_df = pd.DataFrame({"Time (us)": time * 1e6, "FID": temp_fid})
 
     def within_time(self, date_range):
@@ -622,17 +642,11 @@ class Scan:
         :return: bool - True if within range, False otherwise
         """
         try:
-            early = datetime.datetime.strptime(
-                date_range[0],
-                "%m/%d/%y"
-            )
+            early = datetime.datetime.strptime(date_range[0], "%m/%d/%y")
         except:
             early = datetime.datetime(1, 1, 1)
         try:
-            late = datetime.datetime.strptime(
-                date_range[1],
-                "%m/%d/%y"
-            )
+            late = datetime.datetime.strptime(date_range[1], "%m/%d/%y")
         except:
             late = datetime.datetime(9999, 1, 1)
         return early <= self.date <= late
@@ -663,11 +677,11 @@ class Scan:
             y_ref = y_ref[roi]
             y_obs = y_obs[roi]
         # This doesn't work, or is not particularly discriminating.
-        #chisq, p_value = chisquare(
+        # chisq, p_value = chisquare(
         #    y_obs, y_ref
-        #)
+        # )
         if depletion is None:
-            sigma = np.std(y_obs, axis=0) * 16.
+            sigma = np.std(y_obs, axis=0) * 16.0
         else:
             sigma = depletion
         expected = np.sum(y_ref, axis=0) - sigma
@@ -680,14 +694,18 @@ class Scan:
         :return trace: Scattergl object
         """
         text = "Scan ID: {}<br>Cavity: {}<br>DR: {}<br>Magnet: {}<br>Attn: {}".format(
-            self.id, self.cavity_frequency, self.dr_frequency, self.magnet, self.cavity_atten
+            self.id,
+            self.cavity_frequency,
+            self.dr_frequency,
+            self.magnet,
+            self.cavity_atten,
         )
         trace = go.Scattergl(
             x=np.linspace(self.id, self.id + 1, len(self.spectrum["Intensity"])),
             y=self.spectrum["Intensity"],
             text=text,
             marker={"color": "rgb(43,140,190)"},
-            hoverinfo="text"
+            hoverinfo="text",
         )
         return trace
 
@@ -722,8 +740,12 @@ class Scan:
         params = self.fit.best_values
         x = self.spectrum["Frequency (MHz)"].values
         y = self.spectrum["Intensity"].values
-        _, low_end = routines.find_nearest(x, params["x0"] - params["xsep"] - params["w"] * 4.)
-        _, high_end = routines.find_nearest(x, params["x0"] + params["xsep"] + params["w"] * 4.)
+        _, low_end = routines.find_nearest(
+            x, params["x0"] - params["xsep"] - params["w"] * 4.0
+        )
+        _, high_end = routines.find_nearest(
+            x, params["x0"] + params["xsep"] + params["w"] * 4.0
+        )
         index = list(range(low_end, high_end))
         return index, x[low_end:high_end], y[low_end:high_end]
 
@@ -733,12 +755,18 @@ class Scan:
             noise = np.average(
                 [
                     self.spectrum["Intensity"].iloc[-10:],
-                    self.spectrum["Intensity"].iloc[:10]
+                    self.spectrum["Intensity"].iloc[:10],
                 ]
             )
-        peaks = self.spectrum["Intensity"].iloc[
-            peakutils.indexes(self.spectrum["Intensity"], thres=thres, thres_abs=True)
-            ].values
+        peaks = (
+            self.spectrum["Intensity"]
+            .iloc[
+                peakutils.indexes(
+                    self.spectrum["Intensity"], thres=thres, thres_abs=True
+                )
+            ]
+            .values
+        )
         signal = np.average(np.sort(peaks)[:2])
         return signal / noise
 
@@ -775,8 +803,7 @@ def parse_scan(filecontents):
         if "#Date" in line:
             strip_targets = ["#Date", "\t", "\n"]
             data["date"] = datetime.datetime.strptime(
-                re.sub("|".join(strip_targets), "", line),
-                "%a %b %d %H:%M:%S %Y"
+                re.sub("|".join(strip_targets), "", line), "%a %b %d %H:%M:%S %Y"
             )
         if "#Cavity Voltage" in line:
             data["cavity_voltage"] = int(line.split()[2])
@@ -787,12 +814,7 @@ def parse_scan(filecontents):
         if "#DR power" in line:
             data["dr_power"] = int(line.split()[2])
         if "#FID spacing" in line:
-            data["fid_spacing"] = float(
-                    re.findall(
-                    r"\de[+-]?\d\d",
-                    line
-                )[0]
-            )
+            data["fid_spacing"] = float(re.findall(r"\de[+-]?\d\d", line)[0])
         if "#FID points" in line:
             data["fid_points"] = int(line.split()[-1])
         # Get the name of the gas
@@ -822,7 +844,7 @@ def parse_scan(filecontents):
                 data["discharge"] = bool(int(line.split()[-1]))
         # Find when the FID lines start popping up
         if fid_regex.match(line):
-            fid = filecontents[index+1:]
+            fid = filecontents[index + 1 :]
             fid = [float(value) for value in fid]
             data["fid"] = np.array(fid)
     return data
@@ -863,26 +885,22 @@ def perform_fft(fid, spacing, start=0, stop=-1, window="boxcar"):
     else:
         raise Exception("Specified window function is not implemented in SciPy!")
     # Set values to zero up to starting index
-    fid[:start] = 0.
+    fid[:start] = 0.0
     if stop < 0:
         # If we're using negative indexes
-        fid[fid.size + stop:] = 0.
+        fid[fid.size + stop :] = 0.0
     else:
         # Otherwise, index with a positive number
-        fid[stop:] = 0.
+        fid[stop:] = 0.0
     # Perform the FFT
     fft = np.fft.rfft(fid)
     read_length = len(fid) // 2 + 1
-    df = 1. / fid.size / spacing
+    df = 1.0 / fid.size / spacing
     # Generate the frequency array
-    frequency = np.linspace(
-        0.,
-        self.header["sideband"] * df,
-        read_length
-    )
+    frequency = np.linspace(0.0, self.header["sideband"] * df, read_length)
     frequency += self.header["probe_freq"]
-    fft[(frequency >= f_max) & (frequency <= f_min)] = 0.
-    fft *= 1000.
+    fft[(frequency >= f_max) & (frequency <= f_min)] = 0.0
+    fft *= 1000.0
     return frequency, fft
 
 
@@ -911,8 +929,8 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     # Remove DC
     new_fid = fid - np.average(fid)
     if "delay" in kwargs:
-        delay = int(kwargs["delay"] / (1. / rate) / 1e6)
-        new_fid[:delay] = 0.
+        delay = int(kwargs["delay"] / (1.0 / rate) / 1e6)
+        new_fid[:delay] = 0.0
     # Zero-pad the FID
     if "zeropad" in kwargs:
         if kwargs["zeropad"] is True:
@@ -927,22 +945,17 @@ def fid2fft(fid, rate, frequencies, **kwargs):
             new_fid *= spsig.get_window(kwargs["window"], new_fid.size)
     # Apply an exponential filter on the FID
     if "exp" in kwargs:
-        if kwargs["exp"] > 0.:
+        if kwargs["exp"] > 0.0:
             new_fid *= spsig.exponential(len(new_fid), tau=kwargs["exp"])
     # Apply a bandpass filter on the FID
     if ("filter" in kwargs) and (len(kwargs["filter"]) == 2):
         low, high = sorted(kwargs["filter"])
         if low < high:
-            new_fid = apply_butter_filter(
-                new_fid,
-                low,
-                high,
-                rate
-            )
+            new_fid = apply_butter_filter(new_fid, low, high, rate)
     # Perform the FFT
     fft = np.fft.rfft(new_fid)
     # Get the real part of the FFT, and only the non-duplicated side
-    real_fft = np.abs(fft[:int(len(new_fid) / 2)]) / len(new_fid) * 1e3
+    real_fft = np.abs(fft[: int(len(new_fid) / 2)]) / len(new_fid) * 1e3
     frequencies = spsig.resample(frequencies, real_fft.size)
     # For some reason, resampling screws up the frequency ordering...
     real_fft = real_fft[np.argsort(frequencies)]
@@ -950,7 +963,6 @@ def fid2fft(fid, rate, frequencies, **kwargs):
     # Package into a pandas dataframe
     freq_df = pd.DataFrame({"Frequency (MHz)": frequencies, "Intensity": real_fft})
     return freq_df
-
 
 
 def butter_bandpass(low, high, rate, order=1):
@@ -967,12 +979,12 @@ def butter_bandpass(low, high, rate, order=1):
         :return bandpass window
     """
     # Calculate the Nyquist frequency
-    nyq = 0.5 * (rate / (2. * np.pi))
+    nyq = 0.5 * (rate / (2.0 * np.pi))
     low = (low * 1e3) / nyq
     high = (high * 1e3) / nyq
-    if high > 1.:
+    if high > 1.0:
         raise Exception("High frequency cut-off exceeds the Nyquist frequency.")
-    b, a = spsig.butter(order, [low, high], btype='band', analog=False)
+    b, a = spsig.butter(order, [low, high], btype="band", analog=False)
     return b, a
 
 
@@ -999,11 +1011,10 @@ def parse_batch(filecontents):
         if "#Date" in line:
             strip_targets = ["#Date", "\t", "\n"]
             data["date"] = datetime.datetime.strptime(
-                re.sub("|".join(strip_targets), "", line),
-                "%a %b %d %H:%M:%S %Y"
+                re.sub("|".join(strip_targets), "", line), "%a %b %d %H:%M:%S %Y"
             )
         if line.startswith("batchscan"):
-            scan_details = filecontents[index+1:]
+            scan_details = filecontents[index + 1 :]
             scan_details = [scan.split() for scan in scan_details]
     headers = [
         "id",
@@ -1019,7 +1030,7 @@ def parse_batch(filecontents):
         "autofitpair_freq",
         "autofitpair_int",
         "autofitfreq",
-        "autofitint"
+        "autofitint",
     ]
     df = pd.DataFrame(scan_details, columns=headers)
     return df, data
@@ -1051,8 +1062,8 @@ def generate_ftb_line(frequency, shots, **kwargs):
     """
     line = "ftm:{:.4f} shots:{}".format(frequency, shots)
     for key, value in kwargs.items():
-        line+=" {}:{}".format(key, value)
-    line+="\n"
+        line += " {}:{}".format(key, value)
+    line += "\n"
     return line
 
 
@@ -1070,11 +1081,11 @@ def neu_categorize_frequencies(frequencies, intensities=None, nshots=50, **kwarg
 
     # default settings for all stuff
     param_dict = {
-        "dipole": 1.,
+        "dipole": 1.0,
         "magnet": "false",
         "drpower": "10",
-        "skiptune": "false"
-        }
+        "skiptune": "false",
+    }
 
     param_dict.update(kwargs)
     for freq, shot in zip(frequencies, shotcounts):
@@ -1084,9 +1095,18 @@ def neu_categorize_frequencies(frequencies, intensities=None, nshots=50, **kwarg
             ftb_string += generate_ftb_str(freq, shot, **param_dict)
 
 
-def categorize_frequencies(frequencies, nshots=50, intensities=None, 
-        power=None, attn_list=None, dipole=None, attn=None, 
-        magnet=False, dr=False, discharge=False):
+def categorize_frequencies(
+    frequencies,
+    nshots=50,
+    intensities=None,
+    power=None,
+    attn_list=None,
+    dipole=None,
+    attn=None,
+    magnet=False,
+    dr=False,
+    discharge=False,
+):
     """
         Function that will format an FT batch file to perform categorization
         tests, with some flexibility on how certain tests are performed.
@@ -1127,31 +1147,30 @@ def categorize_frequencies(frequencies, nshots=50, intensities=None,
             if dr is True:
                 dr_freq = float(dr_freq)
 
-            ftb_str+=generate_ftb_line(
-                freq, 
-                shotcount, 
-                **{"skiptune": "false"})
+            ftb_str += generate_ftb_line(freq, shotcount, **{"skiptune": "false"})
 
             if dr is True:
-                ftb_str+=generate_ftb_line(freq, 
-                    shotcount, 
-                    **{
-                        "skiptune": "true",
-                        "drfreq": dr_freq,
-                    }
-                    )
+                ftb_str += generate_ftb_line(
+                    freq, shotcount, **{"skiptune": "true", "drfreq": dr_freq}
+                )
 
             if dipole is True:
                 for dipole_value in dipole_test:
-                    ftb_str+=generate_ftb_line(freq, shotcount, **{dipole_flag: dipole_value})
+                    ftb_str += generate_ftb_line(
+                        freq, shotcount, **{dipole_flag: dipole_value}
+                    )
 
             if magnet is True:
-                ftb_str+=generate_ftb_line(freq, shotcount, **{"magnet": "true"})
+                ftb_str += generate_ftb_line(freq, shotcount, **{"magnet": "true"})
 
             if discharge is True:
                 # Toggle the discharge stack on and off
-                ftb_str+=generate_ftb_line(freq, shotcount, **{"pulse,1,enabled": "false"})
-                ftb_str+=generate_ftb_line(freq, shotcount, **{"pulse,1,enabled": "true"})
+                ftb_str += generate_ftb_line(
+                    freq, shotcount, **{"pulse,1,enabled": "false"}
+                )
+                ftb_str += generate_ftb_line(
+                    freq, shotcount, **{"pulse,1,enabled": "true"}
+                )
         except ValueError:
             print("Error with " + str(value))
 
@@ -1235,8 +1254,13 @@ class AssayBatch:
         noise = np.mean(noise_array)
         return peak_int / noise
 
-    def dipole_analysis(self, batch_path, thres=0.5,
-            dipoles=[1., 0.01, 0.1, 1.0, 3.0, 5.], snr_thres=5.):
+    def dipole_analysis(
+        self,
+        batch_path,
+        thres=0.5,
+        dipoles=[1.0, 0.01, 0.1, 1.0, 3.0, 5.0],
+        snr_thres=5.0,
+    ):
         """
             Method for determining the optimal dipole moment to use 
             for each frequency in a given exported batch of dipole tests.
@@ -1257,29 +1281,29 @@ class AssayBatch:
         """
         batch_df = pd.read_csv(batch_path, sep="\t")
         batch_df.columns = ["Scan", "Intensity"]
-        
+
         # Reference scan numbers from the batch
         scan_numbers = np.unique(np.around(batch_df["Scan"]).astype(int))
         # Make a dataframe for what we expect everything should be
         full_df = pd.DataFrame(
             data=list(product(self.data["Frequency"], dipoles)),
-            columns=["Frequency", "Dipole"]
-            )
+            columns=["Frequency", "Dipole"],
+        )
         full_df["Scan"] = scan_numbers
-        
+
         # Loop over each scan, and determine whether or not there is a peak
         # If there is sufficiently strong feature, add it to the list with the
         # scan number
         detected_scans = list()
         for index, scan in enumerate(scan_numbers):
             scan_slice = batch_df.loc[
-                (batch_df["Scan"] >= scan - 0.5) & (batch_df["Scan"] <= scan +0.5)
-                ]
+                (batch_df["Scan"] >= scan - 0.5) & (batch_df["Scan"] <= scan + 0.5)
+            ]
             # Find the peaks based on absolute signal intensity
             # Assumption is that everything is integrated for the same period of time
             peaks = scan_slice.iloc[
                 peakutils.indexes(scan_slice["Intensity"], thres=thres, thres_abs=True)
-                ].sort_values(["Intensity"], ascending=False)
+            ].sort_values(["Intensity"], ascending=False)
 
             peak_int = np.average(peaks["Intensity"][:2])
             snr = self.calc_scan_SNR(peak_int, scan_slice["Intensity"][-10:])
@@ -1294,17 +1318,14 @@ class AssayBatch:
         # Loop over each frequency in order to determine the optimal
         # dipole moment to use
         for frequency in np.unique(obs_df["Frequency"]):
-            slice_df = obs_df.loc[
-                obs_df["Frequency"] == frequency
-                ]
+            slice_df = obs_df.loc[obs_df["Frequency"] == frequency]
             # Sort the best response dipole moment at the top
             slice_df.sort_values(["SNR"], inplace=True, ascending=False)
             slice_df.index = np.arange(len(slice_df))
             optimal_data.append(slice_df.iloc[0].values)
         optimal_df = pd.DataFrame(
-            optimal_data,
-            columns=["Frequency", "Dipole", "Scan", "SNR"]
-            )
+            optimal_data, columns=["Frequency", "Dipole", "Scan", "SNR"]
+        )
         optimal_df.sort_values(["SNR"], ascending=False, inplace=True)
 
         self.dipole_df = optimal_df
@@ -1320,8 +1341,8 @@ class AssayBatch:
             fig.savefig(
                 "./assays/plots/{}-dipole.pdf".format(self.exp_id),
                 format="pdf",
-                transparent=True
-                )
+                transparent=True,
+            )
         return optimal_df
 
     def generate_magnet_test(self, dataframe=None, cal=False, nshots=50, **kwargs):
@@ -1345,12 +1366,11 @@ class AssayBatch:
         if dataframe is None:
             dataframe = self.dipole_df
             dataframe["Shots"] = calculate_integration_times(
-                dataframe["SNR"].values,
-                nshots
-                )
+                dataframe["SNR"].values, nshots
+            )
         ftb_str = ""
-        
-        # If there are no shots determined, 
+
+        # If there are no shots determined,
         if "Shots" not in dataframe:
             dataframe["Shots"] = nshots
 
@@ -1360,8 +1380,8 @@ class AssayBatch:
             cal_settings = {
                 "cal_freq": dataframe["Frequency"][0],
                 "cal_rate": 100,
-                "cal_shots": dataframe["Shots"][0]
-                }
+                "cal_shots": dataframe["Shots"][0],
+            }
             if "Dipole" in dataframe:
                 cal_settings["cal_dipole"] = dataframe["Dipole"][0]
             cal_settings.update(kwargs)
@@ -1369,37 +1389,26 @@ class AssayBatch:
             cal_str = generate_ftb_line(
                 cal_settings["cal_freq"],
                 cal_settings["cal_shots"],
-                **{
-                    "dipole": cal_settings["cal_dipole"],
-                    "skiptune": "false"
-                }
-                )
+                **{"dipole": cal_settings["cal_dipole"], "skiptune": "false"},
+            )
             cal_str = cal_str.replace("\n", " cal\n")
 
         # generate the batch file
         for index, row in dataframe.iterrows():
             # If we want to add a calibration line
             if index % cal_settings["cal_rate"] == 0:
-                ftb_str+=cal_str
+                ftb_str += cal_str
             param_dict = {}
             # Make sure the magnet is off
             if "Dipole" in row:
                 param_df["dipole"] = row["Dipole"]
             param_df["magnet"] = "false"
             param_df["skiptune"] = "false"
-            ftb_str += generate_ftb_line(
-                row["Frequency"],
-                row["Shots"],
-                **param_df
-                )
+            ftb_str += generate_ftb_line(row["Frequency"], row["Shots"], **param_df)
             # Turn on the magnet
             param_df["skiptune"] = "true"
             param_df["magnet"] = "true"
-            ftb_str += generate_ftb_line(
-                row["Frequency"],
-                row["Shots"],
-                **param_df
-                )
+            ftb_str += generate_ftb_line(row["Frequency"], row["Shots"], **param_df)
 
         with open("./ftbfiles/{}.ftb".format(self.exp_id), "w+") as write_file:
             write_file.write(ftb_str)
@@ -1421,18 +1430,18 @@ class AssayBatch:
             # we will measure it once without DR
             freq = combo[0][0]
             if (index == 0) or (last_freq != freq):
-                ftb_str+=generate_ftb_line(
+                ftb_str += generate_ftb_line(
                     freq,
                     nshots,
                     **{
                         "dipole": combo[0][1],
                         "pulse,{},enable".format(dr_channel): "false",
                         "skiptune": "false",
-                        }
-                    )
+                    },
+                )
             # Only do DR if the DR frequency is significantly different from
             # the cavity frequency
-            if np.abs(combo[1][0] - freq) >= 100.:
+            if np.abs(combo[1][0] - freq) >= 100.0:
                 ftb_str += generate_ftb_line(
                     freq,
                     nshots,
@@ -1440,12 +1449,12 @@ class AssayBatch:
                         "dipole": combo[0][1],
                         "drfreq": combo[1][0],
                         "pulse,{},enable".format(dr_channel): "true",
-                        "skiptune": "true"
-                        }
-                    )
+                        "skiptune": "true",
+                    },
+                )
             last_freq = combo[0][0]
         print("There are {} combinations to measure.".format(index))
-        
+
         with open("./ftbfiles/{}-bruteDR.ftb".format(self.exp_id), "w+") as write_file:
             write_file.write(ftb_str)
 
@@ -1465,16 +1474,11 @@ class AssayBatch:
             cluster_dict - dictionary containing all of the clustered
                            progressions
         """
-        progressions = analysis.harmonic_finder(
-            self.dipole_df["Frequency"].values
-            )
+        progressions = analysis.harmonic_finder(self.dipole_df["Frequency"].values)
         self.progression_df = fitting.harmonic_fitter(progressions)
         data, ap_obj = analysis.cluster_AP_analysis(
-            self.progression_df,
-            True,
-            False,
-            **kwargs
-            )
+            self.progression_df, True, False, **kwargs
+        )
         self.cluster_dict = data
         self.cluster_obj = ap_obj
         return self.cluster_dict
@@ -1492,34 +1496,36 @@ class AssayBatch:
             # Take only frequencies that are in the current progression
             slice_df = self.dipole_df.loc[
                 self.dipole_df["Frequency"].isin(sub_dict["Frequencies"])
-                ]
+            ]
             prog_data = slice_df[["Frequency", "Dipole", "Shots"]].values
             for sub_index, pair in enumerate(combinations(prog_data, 2)):
-                count+=1
+                count += 1
                 if (sub_index == 0) or (last_freq != pair[0][0]):
-                    ftb_str+=generate_ftb_line(
+                    ftb_str += generate_ftb_line(
                         pair[0][0],
                         10,
                         **{
                             "dipole": pair[0][1],
                             "pulse,{},enable".format(dr_channel): "false",
-                            "skiptune": "false"
-                            }
-                        )
+                            "skiptune": "false",
+                        },
+                    )
                 # Perform the DR measurement
-                ftb_str+=generate_ftb_line(
+                ftb_str += generate_ftb_line(
                     pair[0][0],
                     10,
                     **{
                         "dipole": pair[0][1],
                         "pulse,{},enable".format(dr_channel): "true",
-                        "skiptune": "true"
-                        }
-                    )
+                        "skiptune": "true",
+                    },
+                )
                 last_freq = pair[0][0]
         print("There are {} combinations to test.".format(count))
 
-        with open("./ftbfiles/{}-progressionDR.ftb".format(self.exp_id), "w+") as write_file:
+        with open(
+            "./ftbfiles/{}-progressionDR.ftb".format(self.exp_id), "w+"
+        ) as write_file:
             write_file.write(ftb_str)
 
         print("FTB file saved to ./ftbfiles/{}-progressionDR.ftb".format(self.exp_id))
@@ -1535,16 +1541,10 @@ class AssayBatch:
         """
         fig = go.FigureWidget()
 
-        fig.add_scatter(
-            x=self.data["Scan"],
-            y=self.data["Intensity"]
-            )
-        
+        fig.add_scatter(x=self.data["Scan"], y=self.data["Intensity"])
+
         if scan_number is not None:
-            fig.add_bar(
-                x=[scan_number],
-                y=[np.max(self.data["Intensity"])]
-                )
+            fig.add_bar(x=[scan_number], y=[np.max(self.data["Intensity"])])
 
         return fig
 
@@ -1566,8 +1566,9 @@ class AssayBatch:
         if dataframe is None:
             dataframe = self.data
         slice_df = dataframe.loc[
-            (dataframe["Scan"] >= scan_number - 1.5) & (dataframe["Scan"] <= scan_number + 1.5)
-            ]
+            (dataframe["Scan"] >= scan_number - 1.5)
+            & (dataframe["Scan"] <= scan_number + 1.5)
+        ]
         scan_numbers = np.unique(np.round(slice_df["Scan"]))
 
         with plt.style.context("publication"):
@@ -1584,8 +1585,8 @@ class AssayBatch:
             fig.savefig(
                 "./assays/plots/{}.pdf".format(scan_number),
                 format="pdf",
-                transparent=True
-                )
+                transparent=True,
+            )
 
     def save_session(self, filepath=None):
         """
@@ -1601,10 +1602,7 @@ class AssayBatch:
         """
         if filepath is None:
             filepath = "./assays/{}-assay-analysis.dat".format(self.exp_id)
-        routines.save_obj(
-            self.__dict__,
-            filepath
-            )
+        routines.save_obj(self.__dict__, filepath)
         print("Saved session to {}".format(filepath))
 
 
@@ -1620,20 +1618,21 @@ def predict_prolate_series(progressions, J_thres=0.1):
             J_fit = J_model.fit(data=J_values, x=np.arange(len(J_values)))
             J_predicted = J_fit.eval(x=np.arange(-10, 10, 1))
             BJ_params = row[["B", "D"]].values
-            freq_predicted = BJ_model.eval(J=J_predicted, B=BJ_params[0], D=BJ_params[1])
+            freq_predicted = BJ_model.eval(
+                J=J_predicted, B=BJ_params[0], D=BJ_params[1]
+            )
         elif len(J_values) == 2:
             frequencies = row[[2, 4]].values
             approx_B = np.abs(np.diff(frequencies))
             next_freq = np.max(frequencies) + approx_B
             low_freq = np.min(frequencies) - approx_B
             freq_predicted = np.concatenate(
-                (frequencies, [next_freq, low_freq]),
-                axis=None
+                (frequencies, [next_freq, low_freq]), axis=None
             )
             freq_predicted = np.sort(freq_predicted)
             J_predicted = freq_predicted / approx_B
         # Filter out negative frequencies
-        freq_predicted = freq_predicted[0. < freq_predicted]
+        freq_predicted = freq_predicted[0.0 < freq_predicted]
         predictions[index] = {
             "predicted_freq": freq_predicted,
             "predicted_J": J_predicted,
@@ -1646,21 +1645,17 @@ class BlackchirpExperiment:
     exp_id: int
     fid_start: int = 0
     fid_end: int = -1
-    ft_min: float = 0.
-    ft_max: float = 40000.
+    ft_min: float = 0.0
+    ft_max: float = 40000.0
     ft_filter: str = "boxcar"
-    freq_offset: float = 0.
+    freq_offset: float = 0.0
     fids: List = field(default_factory=list)
     header: Dict = field(default_factory=dict)
 
     @classmethod
     def from_dir(cls, filepath):
         exp_id, header, fids, timedata = parsers.parse_blackchirp(filepath)
-        exp_obj = cls(
-            exp_id=exp_id,
-            header=header,
-            fids=fids
-        )
+        exp_obj = cls(exp_id=exp_id, header=header, fids=fids)
         return exp_obj
 
     def process_ffts(self, weighting=None):
@@ -1676,21 +1671,25 @@ class BlackchirpExperiment:
         -------
 
         """
-        weight_factors = {index: 1. for index in range(len(self.fids))}
+        weight_factors = {index: 1.0 for index in range(len(self.fids))}
         if weighting:
             weight_factors.update(**weighting)
         # Work out the frequency bins
         frequency = self.fids[0].determine_frequencies()
         # Weight the FIDs
-        weighted_fids = [self.fids[index][1] * weight for index, weight in weight_factors.items()]
-        averaged = np.sum(weighted_fids) / np.sum([weight for weight in weight_factors.values()])
+        weighted_fids = [
+            self.fids[index][1] * weight for index, weight in weight_factors.items()
+        ]
+        averaged = np.sum(weighted_fids) / np.sum(
+            [weight for weight in weight_factors.values()]
+        )
         # Calculate the sample rate; inverse of the spacing, converted back to seconds
-        rate = 1. / self.header["spacing"] / 1e6
+        rate = 1.0 / self.header["spacing"] / 1e6
         fid2fft(averaged, rate, frequency)
 
-
-
-        spectrum_df = pd.DataFrame({"Frequency": fft_data[0][0] + self.freq_offset, "Intensity": averaged})
+        spectrum_df = pd.DataFrame(
+            {"Frequency": fft_data[0][0] + self.freq_offset, "Intensity": averaged}
+        )
         self.spectrum = spectrum_df
         return spectrum_df
 
@@ -1733,7 +1732,7 @@ class BlackChirpFid:
         """
         routines.save_obj(self, filepath, **kwargs)
 
-    def perform_fft(self, start=0, stop=-1, window="boxcar", f_min=0., f_max=30000.):
+    def perform_fft(self, start=0, stop=-1, window="boxcar", f_min=0.0, f_max=30000.0):
         """
         Perform an FFT on the current FID to get the frequency domain spectrum.
         All of the arguments are optional, and provide control over how the FFT is performed, as well as post-processing
@@ -1768,28 +1767,24 @@ class BlackChirpFid:
         else:
             raise Exception("Specified window function is not implemented in SciPy!")
         # Set values to zero up to starting index
-        fid[:start] = 0.
+        fid[:start] = 0.0
         if stop < 0:
             # If we're using negative indexes
-            fid[fid.size + stop:] = 0.
+            fid[fid.size + stop :] = 0.0
         else:
             # Otherwise, index with a positive number
-            fid[stop:] = 0.
+            fid[stop:] = 0.0
         # Perform the FFT
         fft = np.fft.rfft(fid)
         read_length = len(fid) // 2 + 1
-        df = 1. / fid.size / self.header["spacing"]
+        df = 1.0 / fid.size / self.header["spacing"]
         # Generate the frequency array
-        frequency = np.linspace(
-            0.,
-            self.header["sideband"] * df,
-            read_length
-        )
+        frequency = np.linspace(0.0, self.header["sideband"] * df, read_length)
         frequency += self.header["probe_freq"]
-        fft[(frequency >= f_max) & (frequency <= f_min)] = 0.
-        fft *= 1000.
+        fft[(frequency >= f_max) & (frequency <= f_min)] = 0.0
+        fft *= 1000.0
         return frequency, fft
-    
+
     def determine_frequencies(self):
         """
         Calculate the frequency bins for the FFT.
@@ -1800,13 +1795,9 @@ class BlackChirpFid:
             Array containing the frequency bins (x values)
         """
         fid = self.xy_data[1]
-        df = 1. / fid.size / self.header["spacing"]
+        df = 1.0 / fid.size / self.header["spacing"]
         read_length = len(fid) // 2 + 1
         # Generate the frequency array
-        frequency = np.linspace(
-            0.,
-            self.header["sideband"] * df,
-            read_length
-        )
+        frequency = np.linspace(0.0, self.header["sideband"] * df, read_length)
         frequency += self.header["probe_freq"]
         return frequency

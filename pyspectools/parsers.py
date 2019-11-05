@@ -1,4 +1,3 @@
-
 import os
 import struct
 from glob import glob
@@ -8,7 +7,8 @@ import numpy as np
 
 from pyspectools import ftmw_analysis as fa
 
-def parse_spectrum(filename, threshold=20.):
+
+def parse_spectrum(filename, threshold=20.0):
     """ Function to read in a blackchirp or QtFTM spectrum from file """
     dataframe = pd.read_csv(
         filename, delimiter="\t", names=["Frequency", "Intensity"], skiprows=1
@@ -55,24 +55,21 @@ def parse_lin(filename):
             # into floats
             for col in split_cols:
                 try:
-                    line_data.append(
-                        float(col)
-                        )
+                    line_data.append(float(col))
                 except ValueError:
-                    line_data.append(0.)
+                    line_data.append(0.0)
             # Split up the quantum numbers
-            #qnos = qnos.split()
-            #qnos = [int(num) for num in qnos]
+            # qnos = qnos.split()
+            # qnos = [int(num) for num in qnos]
             line_data.append(",".join(split_line[:-3]))
             data.append(line_data)
     dataframe = pd.DataFrame(
-        data=data,
-        columns=["Frequency", "Uncertainty", "Weight", "Quantum numbers"]
-        )
+        data=data, columns=["Frequency", "Uncertainty", "Weight", "Quantum numbers"]
+    )
     return dataframe
 
 
-def parse_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf):
+def parse_cat(simulation_path, low_freq=0.0, high_freq=np.inf, threshold=-np.inf):
     """
     Parses a simulation output, and filters the frequency and intensity to give
     a specific set of lines.
@@ -86,7 +83,7 @@ def parse_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf)
     cat_df = pd.read_fwf(
         simulation_path,
         widths=[13, 8, 8, 2, 10, 3, 7, 4, 2, 2, 2, 8, 2, 2],
-        header=None
+        header=None,
     )
     cat_df.columns = [
         "Frequency",
@@ -105,10 +102,14 @@ def parse_cat(simulation_path, low_freq=0., high_freq=np.inf, threshold=-np.inf)
         "J''",
     ]
     cat_df = cat_df.loc[
-        (cat_df["Frequency"].astype(float) >= low_freq) &  # threshold the simulation output
-        (cat_df["Frequency"].astype(float) <= high_freq) &  # based on user specified values
-        (cat_df["Intensity"].astype(float) >= threshold)          # or lack thereof
-        ]
+        (cat_df["Frequency"].astype(float) >= low_freq)
+        & (  # threshold the simulation output
+            cat_df["Frequency"].astype(float) <= high_freq
+        )
+        & (  # based on user specified values
+            cat_df["Intensity"].astype(float) >= threshold
+        )  # or lack thereof
+    ]
     return cat_df
 
 
@@ -156,13 +157,19 @@ def parse_blackchirp(dir_path):
                 buffer = fidfile.read(4)
                 ms_len = struct.unpack(">I", buffer)
                 buffer = fidfile.read(ms_len[0])
-                magic_string = buffer.decode('ascii')
+                magic_string = buffer.decode("ascii")
                 if not magic_string.startswith("BCFID"):
-                    raise ValueError("Could not read magic string from {}".format(fidfile.name))
+                    raise ValueError(
+                        "Could not read magic string from {}".format(fidfile.name)
+                    )
 
                 l = magic_string.split("v")
                 if len(l) < 2:
-                    raise ValueError("Could not determine version number from magic string {}".format(magic_string))
+                    raise ValueError(
+                        "Could not determine version number from magic string {}".format(
+                            magic_string
+                        )
+                    )
 
                 version = l[1]
 
@@ -170,9 +177,7 @@ def parse_blackchirp(dir_path):
                 fidlist_size = struct.unpack(">I", buffer)[0]
                 for i in range(0, fidlist_size):
                     # Create a BlackChirpFid object
-                    fid_list.append(
-                        fa.BlackChirpFid.from_binary(fidfile)
-                    )
+                    fid_list.append(fa.BlackChirpFid.from_binary(fidfile))
 
     time_data = dict()
     tdt_file = glob(os.path.join(dir_path, "*.tdt"))
@@ -187,21 +192,21 @@ def parse_blackchirp(dir_path):
             print(line)
             if line.strip() == "":
                 continue
-            if line.startswith('#') and "PlotData" in line:
+            if line.startswith("#") and "PlotData" in line:
                 look_for_header = True
                 header_list = []
                 continue
-            if line.startswith('#'):
+            if line.startswith("#"):
                 continue
 
-            l = line.split('\t')
+            l = line.split("\t")
             if len(l) < 1:
                 continue
 
             if look_for_header is True:
                 for i in range(0, len(l)):
                     name = ""
-                    l2 = str(l[i]).split('_')
+                    l2 = str(l[i]).split("_")
                     for j in range(0, len(l2) - 1):
                         name += str(l2[j]).strip()
                     time_data[name] = []
@@ -238,10 +243,7 @@ def read_binary_fid(filepath):
     """
     with open(filepath) as read_file:
         read_str = ">3dqHbI"
-        d = struct.unpack(
-            read_str,
-            read_file.read(struct.calcsize(read_str))
-        )
+        d = struct.unpack(read_str, read_file.read(struct.calcsize(read_str)))
         spacing = d[0] * 1e6
         probe_freq = d[1]
         v_mult = d[2]
@@ -260,42 +262,36 @@ def read_binary_fid(filepath):
             "shots": shots,
             "point_size": point_size,
             "size": size,
-            "sideband": sideband
+            "sideband": sideband,
         }
 
         if point_size == 2:
-            read_string = '>' + str(size) + 'h'
+            read_string = ">" + str(size) + "h"
             dat = struct.unpack(
-                read_string,
-                read_file.read(
-                    struct.calcsize(read_string))
+                read_string, read_file.read(struct.calcsize(read_string))
             )
         elif point_size == 3:
             for i in range(0, size):
                 chunk = read_file.read(3)
                 dat = struct.unpack(
-                    '>i', (b'\0' if chunk[0] < 128 else b'\xff') + chunk)[0]
+                    ">i", (b"\0" if chunk[0] < 128 else b"\xff") + chunk
+                )[0]
         elif point_size == 4:
-            read_string = '>' + str(size) + 'i'
+            read_string = ">" + str(size) + "i"
             dat = struct.unpack(
-                read_string,
-                read_file.read(
-                    struct.calcsize(read_string))
+                read_string, read_file.read(struct.calcsize(read_string))
             )
         elif point_size == 8:
-            read_string = '>' + str(size) + 'q'
+            read_string = ">" + str(size) + "q"
             dat = struct.unpack(
-                read_string,
-                read_file.read(
-                    struct.calcsize(read_string))
+                read_string, read_file.read(struct.calcsize(read_string))
             )
         else:
-            raise ValueError("Invalid point size: "
-                             + str(point_size))
+            raise ValueError("Invalid point size: " + str(point_size))
         # Now read in the data with broadcasting
         raw_data = np.array(dat[:size])
         data = raw_data * v_mult / shots
-        x_data = np.linspace(0., size * spacing, int(size))
+        x_data = np.linspace(0.0, size * spacing, int(size))
         xy_data = np.vstack((x_data, data))
     return param_dict, xy_data, raw_data
 
@@ -316,11 +312,7 @@ def parse_fit(filepath):
     fit_dict: dict
         Dictionary containing the parsed data.
     """
-    fit_dict = {
-        "o-c": {},
-        "parameters": {},
-        "rms": None
-    }
+    fit_dict = {"o-c": {}, "parameters": {}, "rms": None}
     with open(filepath) as read_file:
         lines = read_file.readlines()
     for index, line in enumerate(lines):
@@ -341,7 +333,7 @@ def parse_fit(filepath):
                     line_dict[entry_index] = {
                         "o-c": float(entry[-3]),
                         "qnos": entry[1:-5],
-                        "frequency": entry[-5]
+                        "frequency": entry[-5],
                     }
                     entry_index += 1
         if "NEW PARAMETER" in line:
@@ -350,7 +342,7 @@ def parse_fit(filepath):
             param_dict = dict()
             while stop_flag is False:
                 entry = lines[index + entry_index]
-                for bracket in ['''(''', ''')''']:
+                for bracket in ["""(""", """)"""]:
                     entry = entry.replace(bracket, " ")
                 entry = entry.split()
                 if entry[0] != "MICROWAVE":
@@ -366,4 +358,3 @@ def parse_fit(filepath):
     fit_dict["o-c"] = line_dict
     fit_dict["parameters"] = param_dict
     return fit_dict
-

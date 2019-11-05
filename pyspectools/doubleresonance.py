@@ -1,4 +1,3 @@
-
 """ Routines for fitting double resonance data """
 
 import numpy as np
@@ -34,16 +33,16 @@ def parse_data(filepath):
             # spectra - subtract off the "noise average"
             # and offset by 1 to make it easily convertible into
             # a percentage
-            df[str(column)+"-BS"]-=df[column].mean()
-            df[str(column)+"-BS"]+=1.
-            # for weighting the averages 
+            df[str(column) + "-BS"] -= df[column].mean()
+            df[str(column) + "-BS"] += 1.0
+            # for weighting the averages
             weight = df[column].std()
             # Calculate the weighted average
-            average+=(df[column] * weight) / weight
+            average += (df[column] * weight) / weight
     # Create composite average - this may or may not be used
-    average/=(index + 1)
-    average-=np.mean(average)
-    average+=1
+    average /= index + 1
+    average -= np.mean(average)
+    average += 1
     df["Average-BS"] = average
     df["Average"] = np.average(df[cols], axis=1)
     return df
@@ -66,13 +65,13 @@ def init_dr_model(baseline=False, guess=None):
     """
     model = GaussianModel()
     if baseline:
-        model+=LinearModel()
+        model += LinearModel()
     params = model.make_params()
     if guess:
         params.update(guess)
     # Constrain amplitude to always be negative
     # since we're measuring depletion.
-    params["amplitude"].set(max=0.)
+    params["amplitude"].set(max=0.0)
     return model, params
 
 
@@ -88,23 +87,24 @@ def peak_detect(dataframe, col="Average", interpolate=True):
         of the center frequency.
     """
     if interpolate:
-        interpolant = interp1d(dataframe["Frequency"], dataframe[col],"cubic")
+        interpolant = interp1d(dataframe["Frequency"], dataframe[col], "cubic")
         # Interpolate between the min and max with 10 times more
         # points than measured
         new_x = np.linspace(
             dataframe["Frequency"].min(),
             dataframe["Frequency"].max(),
-            len(dataframe["Frequency"]) * 20)
+            len(dataframe["Frequency"]) * 20,
+        )
         new_y = interpolant(new_x)
         # Set up dataframe for detection
         detect_df = pd.DataFrame(
-            data=list(zip(new_x, new_y)),
-            columns=["Frequency", col])
+            data=list(zip(new_x, new_y)), columns=["Frequency", col]
+        )
     else:
         # Use the experimental data
         detect_df = dataframe
     # Use pandas to find the 10 smallest values
-    trunc_df = detect_df.nsmallest(10,[col],"first")
+    trunc_df = detect_df.nsmallest(10, [col], "first")
     avg_freq = trunc_df["Frequency"].mean()
     # Guess amplitude given by negative value
     guess_ampl = trunc_df[col].min() - trunc_df[col].mean()
@@ -129,18 +129,15 @@ def fit_dr(dataframe, col="Average", baseline=True, guess=None):
     if guess is None:
         center, guess_ampl = peak_detect(dataframe, col)
         # Center guess is constrained to 500 kHz
-        params["center"].set(center, min=center-0.5, max=center+0.5)
-        params["amplitude"].set(guess_ampl, max=0., min=-10.)
-        params["sigma"].set(min=0., max=10.)
+        params["center"].set(center, min=center - 0.5, max=center + 0.5)
+        params["amplitude"].set(guess_ampl, max=0.0, min=-10.0)
+        params["sigma"].set(min=0.0, max=10.0)
         if baseline:
             pass
-            #params["intercept"].set(min=-., max=5.)
-            #params["slope"].set(min=-5., max=5.)
+            # params["intercept"].set(min=-., max=5.)
+            # params["slope"].set(min=-5., max=5.)
 
-    result = model.fit(
-        dataframe[col],
-        x=dataframe["Frequency"],
-        params=params)
+    result = model.fit(dataframe[col], x=dataframe["Frequency"], params=params)
 
     dataframe["Fit"] = result.best_fit
     dataframe.fit_result = result
@@ -150,6 +147,7 @@ def fit_dr(dataframe, col="Average", baseline=True, guess=None):
     zero = dataframe["Fit"].max()
     dataframe["Base Signal"] = 100 * (dataframe[col].values / zero)
     dataframe["Base Fit"] = 100 * (dataframe["Fit"].values / zero)
-    dataframe["Offset Frequency"] = dataframe["Frequency"].values - result.best_values["center"]
+    dataframe["Offset Frequency"] = (
+        dataframe["Frequency"].values - result.best_values["center"]
+    )
     print(result.fit_report())
-

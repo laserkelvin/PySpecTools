@@ -23,6 +23,7 @@ class SpectralCatalog(tinydb.TinyDB):
     Grand unified experimental catalog. Stores assignment and uline information
     across the board.
     """
+
     def __init__(self, dbpath=None):
         if dbpath is None:
             dbpath = os.path.expanduser("~/.pyspectools/pyspec_experiment.db")
@@ -30,8 +31,8 @@ class SpectralCatalog(tinydb.TinyDB):
             dbpath,
             sort_keys=True,
             indent=4,
-            separators=(',', ': '),
-            storage=CachingMiddleware(JSONStorage)
+            separators=(",", ": "),
+            storage=CachingMiddleware(JSONStorage),
         )
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -86,13 +87,8 @@ class SpectralCatalog(tinydb.TinyDB):
         if exist_df is not None:
             # drop all of the entries that are already in the catalog
             exist_freqs = exist_df["frequency"].values
-            cat_df = cat_df.loc[
-                ~cat_df["Frequency"].isin(list(exist_freqs)),
-                ]
-        assign_dict = {
-            "name": name,
-            "formula": formula,
-        }
+            cat_df = cat_df.loc[~cat_df["Frequency"].isin(list(exist_freqs)),]
+        assign_dict = {"name": name, "formula": formula}
         assign_dict.update(**kwargs)
         # slice out only the relevant information from the dataframe
         select_df = cat_df[["Frequency", "Intensity", "Lower state energy"]]
@@ -100,7 +96,8 @@ class SpectralCatalog(tinydb.TinyDB):
         select_dict = select_df.to_dict(orient="records")
         # update each line with the common data entries
         assignments = [
-            spectra.assignment.Transition(**line, **assign_dict).__dict__ for line in select_dict
+            spectra.assignment.Transition(**line, **assign_dict).__dict__
+            for line in select_dict
         ]
         # Insert all of the documents en masse
         self.insert_multiple(assignments)
@@ -122,8 +119,9 @@ class SpectralCatalog(tinydb.TinyDB):
             max_freq = frequency * (1 + freq_prox)
         Entry = tinydb.Query()
         matches = self.search(
-            (Entry["frequency"] <= max_freq) & (min_freq <= Entry["frequency"]) |
-            (Entry["catalog_frequency"] <= max_freq) & (min_freq <= Entry["catalog_frequency"])
+            (Entry["frequency"] <= max_freq) & (min_freq <= Entry["frequency"])
+            | (Entry["catalog_frequency"] <= max_freq)
+            & (min_freq <= Entry["catalog_frequency"])
         )
         if len(matches) != 0:
             if dataframe is True:
@@ -193,8 +191,8 @@ class TheoryCatalog(tinydb.TinyDB):
     """
     Grand unified theory catalog.
     """
+
     def __init__(self, dbpath=None):
         if dbpath is None:
             dbpath = os.path.expanduser("~/.pyspectools/pyspec_theory.db")
         super().__init__(dbpath)
-

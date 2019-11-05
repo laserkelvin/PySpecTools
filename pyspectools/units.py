@@ -1,4 +1,3 @@
-
 """ units.py
 
     Routines for performing unit conversions and quantities
@@ -17,7 +16,7 @@ from scipy import constants
 
     eha - Hartree energy in joules
 """
-kbcm = constants.value("Boltzmann constant in inverse meters per kelvin") / 100.
+kbcm = constants.value("Boltzmann constant in inverse meters per kelvin") / 100.0
 avo = constants.Avogadro
 eha = constants.value("Hartree energy")
 haev = constants.value("Hartree energy in eV")
@@ -42,7 +41,7 @@ def kappa(A: float, B: float, C: float):
     kappa: float
         Ray's asymmetry parameter
     """
-    return (2*B - A - C) / (A - C)
+    return (2 * B - A - C) / (A - C)
 
 
 def inertial_defect(A: float, B: float, C: float):
@@ -64,7 +63,7 @@ def inertial_defect(A: float, B: float, C: float):
     # Calculate the cumulative difference; i.e. 1/C - 1/B - 1/A
     for value in frac[1:]:
         cumdiff -= value
-    return cumdiff * 505379.
+    return cumdiff * 505379.0
 
 
 def rotcon2pmi(rotational_constant: float):
@@ -94,7 +93,7 @@ def hartree2wavenumber(hartree: float):
     :param hartree: float
     :return: corresponding value in 1/cm
     """
-    return hartree * (harm / 100.)
+    return hartree * (harm / 100.0)
 
 
 def kjmol2wavenumber(kj: float):
@@ -103,7 +102,7 @@ def kjmol2wavenumber(kj: float):
     :param kj: float
     :return: corresponding value in 1/cm
     """
-    return kj * (jm / 100.) / (avo * 1000.)
+    return kj * (jm / 100.0) / (avo * 1000.0)
 
 
 def MHz2cm(frequency: float):
@@ -112,7 +111,7 @@ def MHz2cm(frequency: float):
     :param frequency: float
     :return: corresponding value in 1/cm
     """
-    return (frequency / 1000.) / (constants.c / 1e7)
+    return (frequency / 1000.0) / (constants.c / 1e7)
 
 
 def cm2MHz(wavenumber: float):
@@ -121,7 +120,7 @@ def cm2MHz(wavenumber: float):
     :param wavenumber: float
     :return: corresponding value in MHz
     """
-    return (wavenumber * (constants.c / 1e7)) * 1000.
+    return (wavenumber * (constants.c / 1e7)) * 1000.0
 
 
 def hartree2kjmol(hartree: float):
@@ -130,7 +129,7 @@ def hartree2kjmol(hartree: float):
     :param hartree: float
     :return: converted value in kJ/mol
     """
-    return hartree * (eha * avo / 1000.)
+    return hartree * (eha * avo / 1000.0)
 
 
 def hartree2eV(hartree: float):
@@ -172,7 +171,7 @@ def wavenumber2kjmol(wavenumber: float):
     :param wavenumber: float
     :return: converted value in kJ/mol
     """
-    return wavenumber / (jm / 100.) / (avo * 1000.)
+    return wavenumber / (jm / 100.0) / (avo * 1000.0)
 
 
 def T2wavenumber(T: float):
@@ -216,16 +215,16 @@ def thermal_corrections(frequencies: List[float], T: float, linear=True, hartree
     translation = kbcm * T
     rotation = kbcm * T
     if linear is False:
-        rotation *= 3. / 2.
+        rotation *= 3.0 / 2.0
     # Convert frequencies into vibrational temperatures
     frequencies = np.asarray(frequencies)
     frequencies /= kbcm
     vibration = kbcm * np.sum(
-        frequencies * (0.5 * (1. / (np.exp(frequencies / T) - 1.)))
+        frequencies * (0.5 * (1.0 / (np.exp(frequencies / T) - 1.0)))
     )
     thermal = translation + rotation + vibration
     if hartree is True:
-        thermal *= 1. / hartree2wavenumber(1.)
+        thermal *= 1.0 / hartree2wavenumber(1.0)
     return thermal
 
 
@@ -254,7 +253,7 @@ def dop2freq(velocity: float, frequency: float):
     """
     # Frequency given in MHz, Doppler_shift given in km/s
     # Returns the expected Doppler shift in frequency (MHz)
-    return ((velocity * 1000. * frequency) / constants.c)
+    return (velocity * 1000.0 * frequency) / constants.c
 
 
 def freq2vel(frequency: float, offset: float):
@@ -273,7 +272,7 @@ def freq2vel(frequency: float, offset: float):
     doppler: float
         Doppler offset in km/s
     """
-    return ((constants.c * offset) / frequency) / 1000.
+    return ((constants.c * offset) / frequency) / 1000.0
 
 
 def gaussian_fwhm(sigma: float):
@@ -289,7 +288,7 @@ def gaussian_fwhm(sigma: float):
         --------------
         fwhm - float value for full-width at half-max
     """
-    return 2. * np.sqrt(2. * np.log(2.)) * sigma
+    return 2.0 * np.sqrt(2.0 * np.log(2.0)) * sigma
 
 
 def gaussian_height(amplitude: float, sigma: float):
@@ -307,7 +306,7 @@ def gaussian_height(amplitude: float, sigma: float):
         ----------------
         h - float
     """
-    h = amplitude / (np.sqrt(2. * np.pi) * sigma)
+    h = amplitude / (np.sqrt(2.0 * np.pi) * sigma)
     return h
 
 
@@ -319,11 +318,11 @@ def gaussian_integral(amplitude: float, sigma: float):
     :param sigma: width of the Gaussian
     :return: integrated area of the Gaussian
     """
-    integral = amplitude * np.sqrt(2. * np.pi**2. * sigma)
+    integral = amplitude * np.sqrt(2.0 * np.pi ** 2.0 * sigma)
     return integral
 
 
-def I2S(I: float, Q: float, frequency: float, E_lower, T=300.):
+def I2S(I: float, Q: float, frequency: float, E_lower, T=300.0):
     """
     Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.
 
@@ -347,17 +346,17 @@ def I2S(I: float, Q: float, frequency: float, E_lower, T=300.):
     """
     E_upper = calc_E_upper(frequency, E_lower)
     # top part of the equation
-    A = 10.**I * Q
-    lower_factor = boltzmann_factor(E_lower, T)       # Boltzmann factors
+    A = 10.0 ** I * Q
+    lower_factor = boltzmann_factor(E_lower, T)  # Boltzmann factors
     upper_factor = boltzmann_factor(E_upper, T)
     # Calculate the lower part of the equation
     # The prefactor included here is taken from Brian
     # Drouin's notes
-    B = (4.16231e-5 * frequency * (lower_factor - upper_factor))
+    B = 4.16231e-5 * frequency * (lower_factor - upper_factor)
     return A / B
 
 
-def S2I(S: float, Q: float, frequency: float, E_lower: float, T=300.):
+def S2I(S: float, Q: float, frequency: float, E_lower: float, T=300.0):
     """
     Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.
 
@@ -380,12 +379,12 @@ def S2I(S: float, Q: float, frequency: float, E_lower: float, T=300.):
         log10 of the intensity at the specified temperature
     """
     E_upper = calc_E_upper(frequency, E_lower)
-    lower_factor = boltzmann_factor(E_lower, T)       # Boltzmann factors
+    lower_factor = boltzmann_factor(E_lower, T)  # Boltzmann factors
     upper_factor = boltzmann_factor(E_upper, T)
     # Calculate the lower part of the equation
     # The prefactor included here is taken from Brian
     # Drouin's notes
-    B = (4.16231e-5 * frequency * (lower_factor - upper_factor))
+    B = 4.16231e-5 * frequency * (lower_factor - upper_factor)
     I = np.log((B * S) / Q)
     return I
 
@@ -497,7 +496,7 @@ def approx_Q_top(A: float, B: float, T: float, sigma=1, C=None):
     if C is None:
         # For a symmetric top, B = C
         C = B
-    Q = (5.34e6 / sigma) * (T**3. / (A * B * C))**0.5
+    Q = (5.34e6 / sigma) * (T ** 3.0 / (A * B * C)) ** 0.5
     return Q
 
 
@@ -523,4 +522,4 @@ def einsteinA(S: float, frequency: float):
     # Units of the prefactor are s^-1 MHz^-3 D^-2
     # Units of Einstein A coefficient should be in s^-1
     prefactor = 1.163965505e-20
-    return prefactor * frequency**3. * S
+    return prefactor * frequency ** 3.0 * S

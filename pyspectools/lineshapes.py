@@ -1,4 +1,3 @@
-
 import numpy as np
 
 """
@@ -13,10 +12,11 @@ import numpy as np
     lineshapes.
 """
 
+
 def gaussian(x, A, x0, w):
     # stock Gaussian distribution. The sign of A is such that the function
     # is flipped upside down.
-    return A * np.exp(-(x - x0)**2. / (2. * w**2.))
+    return A * np.exp(-(x - x0) ** 2.0 / (2.0 * w ** 2.0))
 
 
 def pair_gaussian(x, A1, A2, x0, w, xsep):
@@ -54,7 +54,7 @@ def lorentzian(x, x0, gamma, I):
     Numpy 1D array
         Values of the Lorentzian distribution
     """
-    return I * (gamma**2. / ((x - x0)**2. + gamma**2.))
+    return I * (gamma ** 2.0 / ((x - x0) ** 2.0 + gamma ** 2.0))
 
 
 def first_deriv_lorentzian(x, x0, gamma, I):
@@ -77,7 +77,13 @@ def first_deriv_lorentzian(x, x0, gamma, I):
     Numpy 1D array
         Values of the Lorentzian distribution
     """
-    return -2.0*I*gamma**2.0*(x - x0)**1.0/(gamma**2.0 + (x - x0)**2.0)**2
+    return (
+        -2.0
+        * I
+        * gamma ** 2.0
+        * (x - x0) ** 1.0
+        / (gamma ** 2.0 + (x - x0) ** 2.0) ** 2
+    )
 
 
 def sec_deriv_lorentzian(x, x0, gamma, I):
@@ -102,5 +108,9 @@ def sec_deriv_lorentzian(x, x0, gamma, I):
     Numpy 1D array
         Values of the Lorentzian distribution
     """
-    return -I*gamma**2.0*(2.0 - 8.0*(x - x0)**2.0/(gamma**2.0 + \
-         (x - x0)**2.0))/(gamma**2.0 + (x - x0)**2.0)**2
+    return (
+        -I
+        * gamma ** 2.0
+        * (2.0 - 8.0 * (x - x0) ** 2.0 / (gamma ** 2.0 + (x - x0) ** 2.0))
+        / (gamma ** 2.0 + (x - x0) ** 2.0) ** 2
+    )

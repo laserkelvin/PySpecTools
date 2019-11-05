@@ -4,7 +4,7 @@
 """
 
 import numpy as np
-import .routines
+from pyspectools import routines
 from collections import OrderedDict
 
 
@@ -13,6 +13,7 @@ class Autofit:
         Class for an Autofit object which handles
         all of the formatting and executable calls.
     """
+
     def __init__(self, input_dict):
         # Initialize the default settings for the Autofit
         # class.
@@ -29,8 +30,8 @@ class Autofit:
             "electron": 0,
             "frequencies": list(),
             "mode": "brute",
-            "fixed": dict()
-            }
+            "fixed": dict(),
+        }
         # Overwrite dictionary with specified values
         self.inp.update(input_dict)
 
@@ -58,37 +59,27 @@ class Autofit:
             These rules are hardcoded because certain aspects are
             already pre-ordained: e.g.
         """
-        N_u = np.random.randint(
-            self.inp["min_N"],
-            self.inp["max_N"] + 1
-            )
-        Ka_u = np.random.randint(
-            self.inp["min_Ka"],
-            self.inp["max_Ka"] + 1,
-            )
-        Kc_u = np.random.randint(
-            self.inp["min_Kc"],
-            self.inp["max_Kc"] + 1,
-            )
+        N_u = np.random.randint(self.inp["min_N"], self.inp["max_N"] + 1)
+        Ka_u = np.random.randint(self.inp["min_Ka"], self.inp["max_Ka"] + 1)
+        Kc_u = np.random.randint(self.inp["min_Kc"], self.inp["max_Kc"] + 1)
         # Generate lower state quantum numbers
         N_l = delta_no(N_u, True)
         Ka_l = delta_no(Ka_u, True)
         Kc_l = delta_no(Kc_u, True)
         # Store quantum numbers in an ordered dictionary
-        qnos = OrderedDict({
-            "N_u": N_u,
-            "Ka_u": Ka_u,
-            "Kc_u": Kc_u,
-            "N_l": N_l,
-            "Ka_l": Ka_l,
-            "Kc_l": Kc_l
-            })
+        qnos = OrderedDict(
+            {
+                "N_u": N_u,
+                "Ka_u": Ka_u,
+                "Kc_u": Kc_u,
+                "N_l": N_l,
+                "Ka_l": Ka_l,
+                "Kc_l": Kc_l,
+            }
+        )
         # Generate the funky stuff
         if self.inp["nuclei"] > 0:
-            F_u = np.random.randint(
-                0,
-                self.inp["max_hfs"] + 1
-                )
+            F_u = np.random.randint(0, self.inp["max_hfs"] + 1)
             # Generate lower level hf qno; delta F = -1, 0, +1
             F_l = delta_no(F_u)
 
@@ -129,6 +120,7 @@ class Autofit:
             assignments. Has access to methods for
             formatting.
         """
+
         def __init__(self, frequency, unc=0.002):
             self.freq = float(frequency)
             self.unc = unc
@@ -136,10 +128,7 @@ class Autofit:
         def __str__(self):
             # Formats the frequency and uncertainty to the
             # usual value(uncertainty) format.
-            form_str = routines.format_uncertainty(
-                self.freq,
-                self.unc
-                )
+            form_str = routines.format_uncertainty(self.freq, self.unc)
             return form_str
 
         def set_assignments(self, assignment):
@@ -167,11 +156,11 @@ class Autofit:
             """
             format_str = ""
             for key, value in self.assignments.items():
-                format_str+="{: >3d}".format(value)
-            format_str+=" "
-            format_str+="{:.4}".format(self.freq)
-            format_str+=" "
-            format_str+="{:.4}".format(self.unc)
-            format_str+=" "
-            format_str+="1E-5"
+                format_str += "{: >3d}".format(value)
+            format_str += " "
+            format_str += "{:.4}".format(self.freq)
+            format_str += " "
+            format_str += "{:.4}".format(self.unc)
+            format_str += " "
+            format_str += "1E-5"
             return format_str

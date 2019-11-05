@@ -1,4 +1,3 @@
-
 """
     formatting.py
 
@@ -30,7 +29,7 @@ def read_lin(filepath, labels):
     # Get rid of frequency
     hyperfine_labels.remove("Frequency")
     if len(hyperfine_labels) > 0:
-        df[hyperfine_labels]-=0.5
+        df[hyperfine_labels] -= 0.5
     return df
 
 
@@ -136,14 +135,13 @@ def lin2latex(dataframe, labels=None, deluxe=False):
                 values[0] = " "
                 values[1] = " "
             Jlast = Jcurr
-        data_str+= " & ".join(values) + "\\\\\n"
+        data_str += " & ".join(values) + "\\\\\n"
     # swap this out if you want columns to not be centered
     column_format = ["c"] * len(columns)
     column_format = "{" + " ".join(column_format) + "}"
     data_dict = {
-        "colformat": column_format,    # centered
+        "colformat": column_format,  # centered
         "data": data_str,
-        "header": " & ".join(columns) + "\\\\"
+        "header": " & ".join(columns) + "\\\\",
     }
     return template.format_map(data_dict)
-
