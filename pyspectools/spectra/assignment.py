@@ -23,7 +23,7 @@
 import os
 from shutil import rmtree
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Type
 from copy import copy, deepcopy
 import logging
 from pathlib import Path
@@ -140,13 +140,15 @@ class Transition:
     discharge: bool = False
     magnet: bool = False
 
-    def __eq__(self, other: Transition):
+    def __eq__(self, other: object) -> bool:
         """ Dunder method for comparing molecules.
             This method is simply a shortcut to see if
             two molecules are the same based on their
             SMILES code, the chemical name, and frequency.
         """
-        if type(self) == type(other):
+        if not isinstance(other, Transition):
+            return NotImplemented
+        else:
             comparisons = [
                 self.smiles == other.smiles,
                 self.name == other.name,
@@ -154,8 +156,6 @@ class Transition:
                 self.v_qnos == other.v_qnos,
             ]
             return all(comparisons)
-        else:
-            return False
 
     def __str__(self):
         """
@@ -284,7 +284,7 @@ class Transition:
             raise Exception("get_spectrum() with no fit data available!")
 
     @classmethod
-    def from_dict(obj, data_dict: Dict):
+    def from_dict(cls, data_dict: Dict):
         """ 
         Method for generating an Assignment object
         from a dictionary. All this method does is
@@ -300,11 +300,11 @@ class Transition:
         Transition
             Converted Assignment object from the input dictionary
         """
-        assignment_obj = obj(**data_dict)
+        assignment_obj = cls(**data_dict)
         return assignment_obj
 
     @classmethod
-    def from_yml(obj, yaml_path: str):
+    def from_yml(cls, yaml_path: str):
         """
         Method for initializing an Assignment object from a YAML file.
 
@@ -319,11 +319,11 @@ class Transition:
             Assignment object loaded from a YAML file.
         """
         yaml_dict = routines.read_yaml(yaml_path)
-        assignment_obj = obj(**yaml_dict)
+        assignment_obj = cls(**yaml_dict)
         return assignment_obj
 
     @classmethod
-    def from_json(obj, json_path: str):
+    def from_json(cls, json_path: str):
         """
         Method for initializing an Assignment object from a JSON file.
 
@@ -338,7 +338,7 @@ class Transition:
             Assignment object loaded from a JSON file.
         """
         json_dict = routines.read_json(json_path)
-        assignment_obj = obj(**json_dict)
+        assignment_obj = cls(**json_dict)
         return assignment_obj
     
     def reset_assignment(self):
@@ -656,10 +656,10 @@ class AssignmentSession:
         self.t_threshold = self.session.temperature * 3.0
         # Initial threshold for peak detection is set to None
         self.threshold = None
-        self.umol_names = dict()
+        self.umol_names: Dict[str, str] = dict()
         self.verbose = verbose
         # Holds catalogs
-        self.line_lists = dict()
+        self.line_lists: Dict[str, Type[LineList]] = dict()
         self._init_logging()
         # Default settings for columns
         if freq_col not in self.data.columns:
@@ -673,7 +673,7 @@ class AssignmentSession:
         if velocity != 0.0:
             self.set_velocity(velocity)
 
-    def __truediv__(self, other: AssignmentSession, copy=True):
+    def __truediv__(self, other: Type[AssignmentSession], copy=True):
         """
         Method to divide the spectral intensity of the current experiment by another.
         This gives the ratio of spectral intensities, and can be useful for determining
@@ -748,7 +748,7 @@ class AssignmentSession:
             )
             experiment.data[self.int_col] = blank_spectrum
             new_id = self.session.experiment - other.session.experiment
-            experiment.session.experiment = f"{new_id}"
+            experiment.session.experiment = new_id
             return experiment
         except AttributeError:
             raise Exception("Peak/Noise detection not yet run!")
@@ -851,7 +851,7 @@ class AssignmentSession:
                 f"{name} does not exist in {self.session.experiment} line_lists"
             )
             
-    def add_ulines(self, data: List[Tuple(float, float)], **kwargs):
+    def add_ulines(self, data: List[Tuple[float, float]], **kwargs):
         """
         Function to manually add multiple pairs of frequency/intensity to the current
         experiment's Peaks list.
@@ -1220,7 +1220,7 @@ class AssignmentSession:
         dataframe
             Pandas dataframe with the matches
         """
-        slice_df = []
+        slice_df = None
         if self.session.freq_abs is False:
             lower_freq = frequency * (1.0 - self.session.freq_prox)
             upper_freq = frequency * (1 + self.session.freq_prox)
@@ -1233,7 +1233,7 @@ class AssignmentSession:
                 & (self.table["frequency"] <= upper_freq)
             ]
         # If no hits turn up, look for it in U-lines
-        if len(slice_df) == 0:
+        if slice_df is not None:
             self.logger.info("No assignment found; searching U-lines")
             ulines = np.array(
                 [[index, uline.frequency] for index, uline in self.ulines.items()]
@@ -1646,6 +1646,7 @@ class AssignmentSession:
                 filepath=filepath,
                 min_freq=self.data[self.freq_col].min(),
                 max_freq=self.data[self.freq_col].max(),
+                max_lstate=self.t_threshold
             )
             if name not in self.line_lists:
                 self.line_lists[name] = linelist
@@ -1805,7 +1806,7 @@ class AssignmentSession:
         self.logger.info(f"Current number of ulines: {len(remaining_ulines)}")
         self.logger.info("Finished processing local database.")
 
-    def copy_assignments(self, other: AssignmentSession, thres_prox=1e-2):
+    def copy_assignments(self, other: Type[AssignmentSession], thres_prox=1e-2):
         """
         Function to copy assignments from another experiment. This class
         method wraps two analysis routines: first, correlations in detected
@@ -1859,6 +1860,7 @@ class AssignmentSession:
                 (self.table["source"] != "CDMS/JPL") & (self.table["public"] == False)
             ],
         ]
+        last_source = "Catalog"
         for index, (df, source) in enumerate(zip(slices, sources)):
             try:
                 if len(df) > 0:
@@ -2579,11 +2581,11 @@ class AssignmentSession:
             .bar(subset=["intensity"], color="#5fba7d")
             .format(
                 {
-                    "frequency": "{:,.4f}",
-                    "catalog_frequency": "{:,.4f}",
-                    "deviation": "{:,.3f}",
-                    "ustate_energy": "{:,.2f}",
-                    "intensity": "{:,.3f}",
+                    "frequency": "{:.4f}",
+                    "catalog_frequency": "{:.4f}",
+                    "deviation": "{:.3f}",
+                    "ustate_energy": "{:.2f}",
+                    "intensity": "{:.3f}",
                 }
             )
             .set_table_attributes("""class = "data-table hover compact" """)
@@ -2964,8 +2966,10 @@ class AssignmentSession:
         fig["layout"].update(autosize=True, height=1000, width=900, showlegend=False)
         return fig
 
-    def match_artifacts(self, artifact_exp: AssignmentSession, threshold=0.05):
+    def match_artifacts(self, artifact_exp: Type[AssignmentSession], threshold=0.05):
         """
+        TODO: Need to update this method; `process_artifacts` is no longer a method.
+        
         Remove artifacts based on another experiment which has the blank
         sample - i.e. only artifacts.
 
@@ -3230,7 +3234,7 @@ class LineList:
                 obj.catalog_frequency for obj in self.transitions
             ]
     
-    def __eq__(self, other: LineList):
+    def __eq__(self, other: object) -> bool:
         """
         Dunder method for comparison of LineLists. Since users can accidently
         use different method/formulas yet use the same catalog/lin file to
@@ -3246,11 +3250,12 @@ class LineList:
         bool
             If True, the two LineList objects are equal.
         """
+        if not isinstance(other, LineList):
+            return NotImplemented
         # Assert that we're comparing LineList objects
-        assert type(self) == type(other)
         return self.transitions == other.transitions
     
-    def __add__(self, transition_obj: Transition):
+    def __add__(self, transition_obj: Type[Transition]):
         """
         Dunder method to add Transitions to the LineList.
         
@@ -3272,7 +3277,7 @@ class LineList:
 
     @classmethod
     def from_catalog(
-        cls, name: str, formula: str, filepath: str, min_freq=0.0, max_freq=1e12, **kwargs
+        cls, name: str, formula: str, filepath: str, min_freq=0.0, max_freq=1e12, max_lstate=4., **kwargs
     ):
         """
         Create a Line List object from an SPCAT catalog.
@@ -3288,6 +3293,8 @@ class LineList:
             Minimum frequency in MHz for the frequency cutoff
         max_freq: float, optional
             Maximum frequency in MHz for the frequency cutoff
+        max_lstate: float, optional
+            Maximum lower state energy to filter out absurd lines
         kwargs: optional
             Additional attributes that are passed into the Transition objects.
 
@@ -3310,6 +3317,10 @@ class LineList:
             catalog_df["Upper state energy"] = units.calc_E_upper(
                 catalog_df["Frequency"], catalog_df["Lower state energy"]
             )
+            # Filter out the lower states
+            catalog_df = catalog_df.loc[
+                catalog_df["Lower state energy"] <= max_lstate
+            ]
             vfunc = np.vectorize(Transition)
             # Vectorized generation of all the Transition objects
             transitions = vfunc(
@@ -3808,7 +3819,7 @@ class LineList:
         if transition not in self.transitions:
             self.transitions.append(transition)
             
-    def add_ulines(self, data: List[Tuple(float, float)], **kwargs):
+    def add_ulines(self, data: List[Tuple[float, float]], **kwargs):
         """
         Function to add multiple pairs of frequency/intensity to the current
         LineList.

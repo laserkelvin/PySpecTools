@@ -50,21 +50,18 @@ if use_cython:
             "pyspectools.fast.lineshapes",
             ["pyspectools/fast/lineshapes.pyx"],
             include_dirs=[np.get_include()],
-            libraries=["m"],
             extra_compile_args=["-ffast-math", "-march=native", "-O3"]
         ),
         Extension(
             "pyspectools.fast.filters",
             ["pyspectools/fast/filters.pyx"],
             include_dirs=[np.get_include()],
-            libraries=["m"],
             extra_compile_args=["-ffast-math", "-march=native", "-O3"]
         ),
         Extension(
             "pyspectools.fast.routines",
             ["pyspectools/fast/routines.pyx"],
             include_dirs=[np.get_include()],
-            libraries=["m"],
             extra_compile_args=["-ffast-math", "-march=native", "-O3"]
         )
     ]
@@ -182,7 +179,7 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.1.3",
+    version="4.1.5",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
