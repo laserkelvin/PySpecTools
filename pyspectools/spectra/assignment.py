@@ -2039,7 +2039,7 @@ class AssignmentSession:
             Minimum frequency difference between cavity and DR frequency to actually perform
             the experiment
         """
-        dr_freqs = np.array(self.line_lists["Peaks"].frequencies)
+        dr_freqs = np.array(self.line_lists["Peaks"].get_frequencies())
         lines = ""
         for cindex, cavity in enumerate(cavity_freqs):
             for dindex, dr in enumerate(dr_freqs):
