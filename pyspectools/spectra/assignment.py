@@ -172,17 +172,17 @@ class Transition:
         else:
             frequency = self.catalog_frequency
         return f"{self.name}, {frequency:,.4f}"
-    
+
     def __repr__(self):
         if self.uline is True:
             frequency = self.frequency
         else:
             frequency = self.catalog_frequency
         return f"{self.name}, {frequency:,.4f}"
-    
+
     def __lt__(self, other):
         return self.frequency < other.frequency
-    
+
     def __gt__(self, other):
         return self.frequency > other.frequency
 
@@ -340,7 +340,7 @@ class Transition:
         json_dict = routines.read_json(json_path)
         assignment_obj = cls(**json_dict)
         return assignment_obj
-    
+
     def reset_assignment(self):
         """
         Function to reset an assigned line into its original state.
@@ -352,7 +352,7 @@ class Transition:
             "intensity": self.intensity,
             "experiment": self.experiment,
             "velocity": self.velocity,
-            "source": self.source
+            "source": self.source,
         }
         empty = Transition()
         self.__dict__.update(**empty.__dict__)
@@ -407,9 +407,11 @@ class Session:
     noise_region: List[float] = field(default_factory=list)
 
     def __str__(self):
-        form = f"Experiment: {self.experiment}," \
-        f"Composition: {self.composition}," \
-        f"Temperature: {self.temperature} K"
+        form = (
+            f"Experiment: {self.experiment},"
+            f"Composition: {self.composition},"
+            f"Temperature: {self.temperature} K"
+        )
         return form
 
 
@@ -850,7 +852,7 @@ class AssignmentSession:
             raise Exception(
                 f"{name} does not exist in {self.session.experiment} line_lists"
             )
-            
+
     def add_ulines(self, data: List[Tuple[float, float]], **kwargs):
         """
         Function to manually add multiple pairs of frequency/intensity to the current
@@ -870,7 +872,7 @@ class AssignmentSession:
         """
         default_dict = {
             "experiment": self.session.experiment,
-            "velocity": self.session.velocity
+            "velocity": self.session.velocity,
         }
         default_dict.update(**kwargs)
         if "Peaks" in self.line_lists:
@@ -900,9 +902,7 @@ class AssignmentSession:
             "warning": logging.FileHandler(
                 f"./logs/{self.session.experiment}-warnings.log"
             ),
-            "debug": logging.FileHandler(
-                f"./logs/{self.session.experiment}-debug.log"
-            ),
+            "debug": logging.FileHandler(f"./logs/{self.session.experiment}-debug.log"),
         }
         # If verbose is specified, the logging info is directly printed as well
         if self.verbose is True:
@@ -978,7 +978,10 @@ class AssignmentSession:
                 # Perform rudimentary peak detection
                 threshold = 0.2 * self.data[self.int_col].max()
                 peaks_df = analysis.peak_find(
-                    self.data, freq_col=self.freq_col, int_col=self.int_col, thres=threshold
+                    self.data,
+                    freq_col=self.freq_col,
+                    int_col=self.int_col,
+                    thres=threshold,
                 )
                 if len(peaks_df) >= 2:
                     # find largest gap in data, including the edges of the spectrum
@@ -998,7 +1001,9 @@ class AssignmentSession:
                     region[1] = region[1] - 30.0
                     # Make sure the frequencies are in ascending order
                     region = np.sort(region)
-                    self.logger.info("Noise region defined as {} to {}.".format(*region))
+                    self.logger.info(
+                        "Noise region defined as {} to {}.".format(*region)
+                    )
                     noise_df = self.data.loc[self.data[self.freq_col].between(*region)]
                     if len(noise_df) < 50:
                         noise_df = self.data.sample(int(len(self.data) * 0.1))
@@ -1029,23 +1034,23 @@ class AssignmentSession:
             self.logger.info(f"Noise RMS set to {rms}.")
         elif als is True:
             # Use the asymmetric least-squares method to determine the baseline
-            self.logger.info("Using asymmetric least squares method for baseline determination.")
-            als_params = {
-                "lam": 1e2,
-                "p": 0.05,
-                "niter": 10
-            }
+            self.logger.info(
+                "Using asymmetric least squares method for baseline determination."
+            )
+            als_params = {"lam": 1e2, "p": 0.05, "niter": 10}
             als_params.update(**kwargs)
             baseline = fitting.baseline_als(self.data[self.int_col], **als_params)
             # Decimate the noise with a huge Gaussian blur
-            baseline = gaussian_filter(baseline, 200.)
+            baseline = gaussian_filter(baseline, 200.0)
             rms = np.std(baseline)
             self.session.baseline = baseline
             self.session.noise_region = "als"
             self.session.noise_rms = rms
         return baseline, rms
 
-    def find_peaks(self, threshold=None, region=None, sigma=6, min_dist=10, als=True, **kwargs):
+    def find_peaks(
+        self, threshold=None, region=None, sigma=6, min_dist=10, als=True, **kwargs
+    ):
         """
             Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
             The method calls the peak_find function from the analysis module, which in itself wraps peakutils.
@@ -1123,7 +1128,7 @@ class AssignmentSession:
         )
         # Shift the peak intensities down by the noise baseline
         if als is False:
-            baseline = getattr(self.session, "baseline", 0.)
+            baseline = getattr(self.session, "baseline", 0.0)
             peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - baseline
         self.logger.info(f"Found {len(peaks_df)} peaks in total.")
         # Reindex the peaks
@@ -1197,9 +1202,7 @@ class AssignmentSession:
             )
             self.line_lists["Peaks"].update_linelist(transitions)
         new_remaining = len(self.line_lists["Peaks"])
-        self.logger.info(
-            f"There are now {new_remaining} line entries in this session."
-        )
+        self.logger.info(f"There are now {new_remaining} line entries in this session.")
         peaks_df = self.line_lists["Peaks"].to_dataframe()[["frequency", "intensity"]]
         peaks_df.columns = ["Frequency", "Intensity"]
         self.peaks = peaks_df
@@ -1320,9 +1323,7 @@ class AssignmentSession:
              If True the assignment process does not require user input, otherwise will prompt user.
         """
         ulines = self.line_lists["Peaks"].get_ulines()
-        self.logger.info(
-            f"Beginning Splatalogue lookup on {len(ulines)} lines."
-        )
+        self.logger.info(f"Beginning Splatalogue lookup on {len(ulines)} lines.")
         iterator = enumerate(ulines)
         if progressbar is True:
             iterator = tqdm(iterator)
@@ -1438,15 +1439,13 @@ class AssignmentSession:
                     except ValueError:
                         # If nothing matches, keep in the U-line
                         # pile.
-                        self.logger.info(
-                            f"Deferring assignment for index {index}."
-                        )
+                        self.logger.info(f"Deferring assignment for index {index}.")
                 else:
                     # Throw into U-line pile if no matches at all
                     self.logger.info(f"No species known for {frequency:,.4f}")
         self.logger.info("Splatalogue search finished.")
-        
-    def overlay_molecule(self, species: str, freq_range=None, threshold=-7.):
+
+    def overlay_molecule(self, species: str, freq_range=None, threshold=-7.0):
         """
         Function to query splatalogue for a specific molecule. By default, the
         frequency range that will be requested corresponds to the spectral range
@@ -1473,30 +1472,35 @@ class AssignmentSession:
         if freq_range is None:
             freq_range = [
                 self.data[self.freq_col].min(),
-                self.data[self.freq_col].max()
+                self.data[self.freq_col].max(),
             ]
-        molecule_df = analysis.search_molecule(
-            species,
-            freq_range
-            )
+        molecule_df = analysis.search_molecule(species, freq_range)
         # Threshold intensity
         molecule_df = molecule_df.loc[molecule_df["CDMS/JPL Intensity"] >= threshold]
         # This prevents missing values from blowing up the normalization
-        molecule_df.loc[molecule_df["CDMS/JPL Intensity"] > -1.]["CDMS/JPL Intensity"] = -1.
+        molecule_df.loc[molecule_df["CDMS/JPL Intensity"] > -1.0][
+            "CDMS/JPL Intensity"
+        ] = -1.0
         # Calculate the real intensity and normalize
-        molecule_df["Intensity"] = 10**molecule_df["CDMS/JPL Intensity"]
-        molecule_df["Normalized"] = molecule_df["Intensity"] / molecule_df["Intensity"].max()
+        molecule_df["Intensity"] = 10 ** molecule_df["CDMS/JPL Intensity"]
+        molecule_df["Normalized"] = (
+            molecule_df["Intensity"] / molecule_df["Intensity"].max()
+        )
         # Add annotations to the hovertext
-        molecule_df["Annotation"] = molecule_df["Resolved QNs"].astype(str) + \
-            "-" + molecule_df["E_U (K)"].astype(str)
+        molecule_df["Annotation"] = (
+            molecule_df["Resolved QNs"].astype(str)
+            + "-"
+            + molecule_df["E_U (K)"].astype(str)
+        )
         if len(molecule_df) != 0:
             fig = self.plot_spectrum()
             fig.add_bar(
-                x=molecule_df["Frequency"], y=molecule_df["Normalized"], 
-                hoverinfo="text", 
+                x=molecule_df["Frequency"],
+                y=molecule_df["Normalized"],
+                hoverinfo="text",
                 text=molecule_df["Annotation"],
                 name=species,
-                width=2.
+                width=2.0,
             )
             molecule_df.to_csv(f"linelists/{species}-splatalogue.csv", index=False)
             return fig, molecule_df
@@ -1567,7 +1571,7 @@ class AssignmentSession:
                 else:
                     raise ValueError(
                         f"File extension not recognized: {name} extension: {extension}"
-                        )
+                    )
                 linelist_obj = func(name=name, **subdict)
                 print(linelist_obj)
                 self.process_linelist(name=linelist_obj.name, linelist=linelist_obj)
@@ -1646,7 +1650,6 @@ class AssignmentSession:
                 filepath=filepath,
                 min_freq=self.data[self.freq_col].min(),
                 max_freq=self.data[self.freq_col].max(),
-                max_lstate=self.t_threshold
             )
             if name not in self.line_lists:
                 self.line_lists[name] = linelist
@@ -1657,14 +1660,25 @@ class AssignmentSession:
             # Sort the LineList by intensity if possible. If the strongest line isn't
             # there, the other lines shouldn't be there
             if linelist.source in ["Splatalogue", "Catalog"]:
-                linelist.transitions = sorted(linelist, key=lambda line: line.catalog_intensity)[::-1]
-            # Filter out out-of-band stuff
-            max_freq = max(self.line_lists["Peaks"].get_frequencies())
-            min_freq = min(self.line_lists["Peaks"].get_frequencies())
+                linelist.transitions = sorted(
+                    linelist, key=lambda line: line.catalog_intensity
+                )[::-1]
+            # Filter out out-of-band stuff, but with some small tolerance extending
+            # out just in case it's close
+            max_freq = max(self.line_lists["Peaks"].get_frequencies()) * 1.001
+            min_freq = min(self.line_lists["Peaks"].get_frequencies()) * 0.999
+            # Make sure we're only assigning with in-band
             transitions = [
-                transition for transition in linelist.transitions if \
-                    min_freq <= transition.catalog_frequency <= max_freq
-                ]
+                transition
+                for transition in linelist.transitions
+                if min_freq <= transition.catalog_frequency <= max_freq
+            ]
+            # Filter out the transitions with energies too high
+            transitions = [
+                transition
+                for transition in linelist.transitions
+                if transition.lstate_energy <= self.t_threshold
+            ]
             # Loop over the LineList lines
             if progressbar is True:
                 iterator = tqdm(transitions)
@@ -1675,7 +1689,7 @@ class AssignmentSession:
             for index, transition in iterator:
                 # Control the flow so that we're not wasting time looking for lines if the strongest
                 # transitions are not seen
-                #if (index > 5) and (nassigned == 0) and (linelist.source in ["Catalog", "Splatalogue"]):
+                # if (index > 5) and (nassigned == 0) and (linelist.source in ["Catalog", "Splatalogue"]):
                 #    self.logger.info(
                 #    "Searched for five strongest transitions in {linelist.name}, and nothing; aborting."
                 #    )
@@ -1901,7 +1915,9 @@ class AssignmentSession:
         self.identifications = {name: names.count(name) for name in self.names}
         return self.identifications
 
-    def create_uline_ftb_batch(self, filepath=None, shots=500, dipole=1.0, threshold=0., sort_int=False):
+    def create_uline_ftb_batch(
+        self, filepath=None, shots=500, dipole=1.0, threshold=0.0, sort_int=False
+    ):
         """
         Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
         frequencies.
@@ -1932,15 +1948,19 @@ class AssignmentSession:
             filepath = f"./ftb/{self.session.experiment}-ulines.ftb"
         lines = ""
         transitions = self.line_lists["Peaks"].get_ulines()
-        transitions = [transition for transition in transitions if transition.intensity >= threshold]
+        transitions = [
+            transition
+            for transition in transitions
+            if transition.intensity >= threshold
+        ]
         # Sort the intensities such that the strongest ones are scanned first.
         if sort_int is True:
-            transitions = sorted(
-                transitions, key=lambda line: line.intensity
-                )[::-1]
+            transitions = sorted(transitions, key=lambda line: line.intensity)[::-1]
         for index, uline in enumerate(transitions):
             if uline.intensity >= threshold:
-                lines += fa.generate_ftb_line(uline.frequency, shots, **{"dipole": dipole})
+                lines += fa.generate_ftb_line(
+                    uline.frequency, shots, **{"dipole": dipole}
+                )
         with open(filepath, "w+") as write_file:
             write_file.write(lines)
 
@@ -1951,7 +1971,7 @@ class AssignmentSession:
         shots=25,
         dipole=1.0,
         min_dist=500.0,
-        thres=None
+        thres=None,
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2015,7 +2035,12 @@ class AssignmentSession:
             write_file.write(lines)
 
     def create_full_dr_batch(
-        self, cavity_freqs: List[float], filepath=None, shots=25, dipole=1.0, min_dist=500.0
+        self,
+        cavity_freqs: List[float],
+        filepath=None,
+        shots=25,
+        dipole=1.0,
+        min_dist=500.0,
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2194,9 +2219,7 @@ class AssignmentSession:
         if len(assignments) > 0:
             for obj in assignments:
                 # Dump all the assignments into YAML format
-                obj.to_file(
-                    f"assignment_objs/{obj.experiment}-{obj.peak_id}", "yaml"
-                )
+                obj.to_file(f"assignment_objs/{obj.experiment}-{obj.peak_id}", "yaml")
                 obj.deviation = obj.catalog_frequency - obj.frequency
             # Convert all of the assignment data into a CSV file
             assignment_df = pd.DataFrame(data=[obj.__dict__ for obj in assignments])
@@ -2205,15 +2228,11 @@ class AssignmentSession:
             # Generate a LaTeX table for publication
             self.create_latex_table()
             # Dump assignments to disk
-            assignment_df.to_csv(
-                f"reports/{self.session.experiment}.csv", index=False
-            )
+            assignment_df.to_csv(f"reports/{self.session.experiment}.csv", index=False)
             # Dump Uline data to disk
             peak_data = [[peak.frequency, peak.intensity] for peak in ulines]
             peak_df = pd.DataFrame(peak_data, columns=["Frequency", "Intensity"])
-            peak_df.to_csv(
-                f"reports/{self.session.experiment}-ulines.csv", index=False
-            )
+            peak_df.to_csv(f"reports/{self.session.experiment}-ulines.csv", index=False)
 
             tally = self._get_assigned_names()
             combined_dict = {
@@ -2228,9 +2247,7 @@ class AssignmentSession:
             # Combine Session information
             combined_dict.update(self.session.__dict__)
             # Dump to disk
-            routines.dump_yaml(
-                f"sessions/{self.session.experiment}.yml", "yaml"
-            )
+            routines.dump_yaml(f"sessions/{self.session.experiment}.yml", "yaml")
             self._create_html_report()
             # Dump data to notebook output
             for key, value in combined_dict.items():
@@ -2276,8 +2293,15 @@ class AssignmentSession:
             ass_list = [assignment.__dict__ for assignment in self.assignments]
             db_obj.insert_multiple(ass_list)
 
-    def simulate_sticks(self, catalogpath: str, N: float, 
-                        Q: float, T: float, doppler=None, gaussian=False):
+    def simulate_sticks(
+        self,
+        catalogpath: str,
+        N: float,
+        Q: float,
+        T: float,
+        doppler=None,
+        gaussian=False,
+    ):
         """
         Simulates a stick spectrum with intensities in flux units (Jy) for
         a given catalog file, the column density, and the rotational partition
@@ -2330,8 +2354,14 @@ class AssignmentSession:
             )
             return simulated_df
 
-    def simulate_spectrum(self, x: np.ndarray, centers: List[float], 
-                          widths: List[float], amplitudes: List[float], fake=False):
+    def simulate_spectrum(
+        self,
+        x: np.ndarray,
+        centers: List[float],
+        widths: List[float],
+        amplitudes: List[float],
+        fake=False,
+    ):
         """
             Generate a synthetic spectrum with Gaussians with the
             specified parameters, on a given x axis.
@@ -2613,7 +2643,7 @@ class AssignmentSession:
             filepath = f"reports/{self.session.experiment}-summary.html"
         with open(filepath, "w+") as write_file:
             write_file.write(output)
-            
+
     def create_latex_table(self, filepath=None, header=None, cols=None, **kwargs):
         """
         Method to create a LaTeX table summarizing the measurements in this experiment.
@@ -2643,26 +2673,40 @@ class AssignmentSession:
             "frequency": "{:,.4f}".format,
             "intensity": "{:.2f}".format,
             "catalog_frequency": "{:,.4f}".format,
-            "deviation": "{:,.4f}".format
+            "deviation": "{:,.4f}".format,
         }
+
         def ref_formatter(x):
             noform = ["CDMS/JPL", "Artifact", "U"]
             if x not in noform:
                 return f"\cite{x}"
             else:
                 return x
+
         # Replace the source information to designate u-line if it is a u-line
         table.loc[table["uline"] == True, "source"] = "U"
         if header is None:
             header = [
-                "Frequency", "Intensity", "Catalog frequency", 
-                "Deviation", "Name", "Formula", "Quantum numbers", "Source"
-                ]
+                "Frequency",
+                "Intensity",
+                "Catalog frequency",
+                "Deviation",
+                "Name",
+                "Formula",
+                "Quantum numbers",
+                "Source",
+            ]
         if cols is None:
             cols = [
-                "frequency", "intensity", "catalog_frequency", 
-                "deviation", "name", "formula", "r_qnos", "source"
-                ]
+                "frequency",
+                "intensity",
+                "catalog_frequency",
+                "deviation",
+                "name",
+                "formula",
+                "r_qnos",
+                "source",
+            ]
         assert len(header) == len(cols)
         if "source" in cols:
             table["source"].apply(ref_formatter)
@@ -2676,7 +2720,7 @@ class AssignmentSession:
             "index": False,
             "longtable": True,
             "header": header,
-            "escape": False
+            "escape": False,
         }
         table_settings.update(**kwargs)
         # Write the table to file
@@ -3233,7 +3277,7 @@ class LineList:
             self.catalog_frequencies = [
                 obj.catalog_frequency for obj in self.transitions
             ]
-    
+
     def __eq__(self, other: object) -> bool:
         """
         Dunder method for comparison of LineLists. Since users can accidently
@@ -3254,7 +3298,7 @@ class LineList:
             return NotImplemented
         # Assert that we're comparing LineList objects
         return self.transitions == other.transitions
-    
+
     def __add__(self, transition_obj: Type[Transition]):
         """
         Dunder method to add Transitions to the LineList.
@@ -3266,7 +3310,7 @@ class LineList:
         """
         assert type(transition_obj) == Transition
         self.transitions.append(Transition)
-    
+
     def __iter__(self):
         """
         Sets up syntax for looping over a LineList. This is recommended more
@@ -3277,7 +3321,14 @@ class LineList:
 
     @classmethod
     def from_catalog(
-        cls, name: str, formula: str, filepath: str, min_freq=0.0, max_freq=1e12, max_lstate=4., **kwargs
+        cls,
+        name: str,
+        formula: str,
+        filepath: str,
+        min_freq=0.0,
+        max_freq=1e12,
+        max_lstate=9000.0,
+        **kwargs,
     ):
         """
         Create a Line List object from an SPCAT catalog.
@@ -3318,9 +3369,7 @@ class LineList:
                 catalog_df["Frequency"], catalog_df["Lower state energy"]
             )
             # Filter out the lower states
-            catalog_df = catalog_df.loc[
-                catalog_df["Lower state energy"] <= max_lstate
-            ]
+            catalog_df = catalog_df.loc[catalog_df["Lower state energy"] <= max_lstate]
             vfunc = np.vectorize(Transition)
             # Vectorized generation of all the Transition objects
             transitions = vfunc(
@@ -3383,7 +3432,7 @@ class LineList:
         )
         linelist_obj = cls(name=name, transitions=list(transitions), source="Peaks")
         return linelist_obj
-    
+
     @classmethod
     def from_list(cls, name: str, frequencies: List[float], formula="", **kwargs):
         """
@@ -3417,8 +3466,8 @@ class LineList:
             **kwargs,
         )
         linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
-        return linelist_obj  
-    
+        return linelist_obj
+
     @classmethod
     def from_pgopher(cls, name: str, filepath: str, formula="", **kwargs):
         """
@@ -3452,10 +3501,10 @@ class LineList:
             S=pgopher_df["Spol"],
             uline=False,
             name=name,
-            formula=formula
+            formula=formula,
         )
-        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")        
-        
+        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
+
     @classmethod
     def from_lin(cls, name: str, filepath: str, formula="", **kwargs):
         """
@@ -3496,7 +3545,7 @@ class LineList:
             source="Line file",
         )
         return linelist_obj
-    
+
     @classmethod
     def from_splatalogue_query(cls, dataframe: pd.DataFrame, **kwargs):
         """
@@ -3527,7 +3576,7 @@ class LineList:
             uline=False,
             source="Splatalogue",
             public=True,
-            **kwargs
+            **kwargs,
         )
         linelist_obj = cls(
             name=name, transitions=list(transitions), source="Splatalogue"
@@ -3707,7 +3756,7 @@ class LineList:
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
                     abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
-                    obj.uline == True
+                    obj.uline == True,
                 ]
             )
         ]
@@ -3793,7 +3842,7 @@ class LineList:
             [description]
         """
         return [transition.frequency for transition in self.transitions]
-    
+
     def add_uline(self, frequency: float, intensity: float, **kwargs):
         """
         Function to manually add a U-line to the LineList.
@@ -3811,14 +3860,11 @@ class LineList:
             a given unit.
         """
         transition = Transition(
-            frequency=frequency, 
-            intensity=intensity,
-            uline=True,
-            **kwargs
-            )
+            frequency=frequency, intensity=intensity, uline=True, **kwargs
+        )
         if transition not in self.transitions:
             self.transitions.append(transition)
-            
+
     def add_ulines(self, data: List[Tuple[float, float]], **kwargs):
         """
         Function to add multiple pairs of frequency/intensity to the current
@@ -3842,6 +3888,7 @@ class LineList:
             assert len(line) == 2
             self.add_uline(*line, **kwargs)
 
+
 @dataclass
 class Molecule(LineList):
     """
@@ -3851,10 +3898,11 @@ class Molecule(LineList):
     
     Attributes
     """
-    A: float = 20000.
-    B: float = 6000.
-    C: float = 3500.
+
+    A: float = 20000.0
+    B: float = 6000.0
+    C: float = 3500.0
     var_file: str = ""
-    
+
     def __post_init__(self, **kwargs):
         super().__init__(**kwargs)
