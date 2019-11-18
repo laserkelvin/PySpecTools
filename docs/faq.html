@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: PySpecTools FAQ</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>PySpecTools FAQ</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pyspectools-faq">
+<h1>PySpecTools FAQ<a class="headerlink" href="#pyspectools-faq" title="Permalink to this headline">¶</a></h1>
+<p>This lists some of the most commonly used functionality, and most easily
+forgotten functions accessible to PySpecTools.</p>
+<div class="section" id="creating-an-experiment">
+<h2>Creating an experiment<a class="headerlink" href="#creating-an-experiment" title="Permalink to this headline">¶</a></h2>
+<p>There are two main ways to create an <cite>AssignmentSession</cite> object, by creating the
+class directly, or by using the <cite>AssignmentSession.from_ascii()</cite> function.</p>
+<p>The latter method is a higher-level option, and allows spectra to be read in directly
+from a variety of file formats. The former requires you to pass the spectrum as a
+pandas <cite>DataFrame</cite> as a positional argument.</p>
+</div>
+<div class="section" id="creating-an-ftb-file">
+<h2>Creating an FTB file<a class="headerlink" href="#creating-an-ftb-file" title="Permalink to this headline">¶</a></h2>
+<p>You can create FTB files (batch files used by QtFTM) from two sources, depending on
+the type (either u-lines, or an existing catalog file) both of which wrap around the
+<cite>LineList.to_ftb</cite> method.</p>
+<p>For u-lines, I recommend using the <cite>AssignmentSession.create_uline_ftb_batch</cite>, or
+if you want to run a DR batch, <cite>AssignmentSession.create_uline_dr_batch</cite>. In both
+cases, there are a few keyword arguments that allow you to specify the conditions
+to carry out the batch, for example, the number of shots (<cite>shots</cite>), the dipole moment
+used for the RF attenuation (<cite>dipole</cite>), and the minimum distance between lines (<cite>gap</cite>).</p>
+<p>For other FTB files, say from a <cite>.cat</cite> or <cite>.lin</cite> file, you will want to create <cite>LineList</cite>
+objects first and then use the <cite>LineList.to_ftb()</cite>.</p>
+</div>
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/faq.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

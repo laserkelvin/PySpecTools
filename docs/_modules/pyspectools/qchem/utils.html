@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.qchem.utils</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../../index.html"><img src="../../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.qchem.utils</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.qchem.utils</h1><div class="highlight"><pre>
+<span></span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Contains all of the auxillary functions for CFOURviewer; i.e. file I/O,</span>
+<span class="sd">    storage to HDF5, copying and pasting, etc.</span>
+
+<span class="sd">    The scope of HDF5 will be to store the parsed data, as well as the full</span>
+<span class="sd">    output file as a string.</span>
+
+<span class="sd">    Settings will be stored in a dot folder in the user&#39;s home directory;</span>
+<span class="sd">    this includes templates for the PBS script as well as CFOURviewer settings.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="k">import</span> <span class="n">Popen</span><span class="p">,</span> <span class="n">PIPE</span><span class="p">,</span> <span class="n">run</span>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    File I/O</span>
+
+<span class="sd">    Includes YAML and HDF5 functions</span>
+
+<span class="sd">    HDF5 system is organized into IDs - an ID can contain one or several</span>
+<span class="sd">    calculations, and the attributes of an ID group are metadata regarding</span>
+<span class="sd">    the calculation batch, i.e. a SMILES code to identify the molecule.</span>
+
+<span class="sd">    Each calculation is then stored as datasets within this group, and the</span>
+<span class="sd">    parsed results of the calculation.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="obabel_xyz"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.utils.obabel_xyz">[docs]</a><span class="k">def</span> <span class="nf">obabel_xyz</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;g09&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Call open-babel to convert a specified file into an XYZ.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filepath: str</span>
+<span class="sd">        Filepath to save the XYZ file to. Extension is not mandated, but can be included.</span>
+<span class="sd">    format: str</span>
+<span class="sd">        File format to convert from. Must be supported by open-babel</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># if the extension was not included, add it on</span>
+    <span class="k">if</span> <span class="s2">&quot;.xyz&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">filepath</span><span class="p">:</span>
+        <span class="n">filepath</span> <span class="o">+=</span> <span class="s2">&quot;.xyz&quot;</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;obabel&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;obabel executable not found in path.&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">&quot;obabel&quot;</span><span class="p">,</span> <span class="s2">&quot;-i</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">format</span><span class="p">),</span> <span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;-oxyz&quot;</span><span class="p">],</span>
+            <span class="n">stdout</span><span class="o">=</span><span class="n">write_file</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="obabel_smi"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.utils.obabel_smi">[docs]</a><span class="k">def</span> <span class="nf">obabel_smi</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;xyz&quot;</span><span class="p">):</span>
+    <span class="c1"># Calls external obabel executable to convert an input xyz file</span>
+    <span class="c1"># Returns a SMILES string for identification</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;obabel&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;obabel executable not found in path.&quot;</span><span class="p">)</span>
+    <span class="n">proc</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;obabel&quot;</span><span class="p">,</span> <span class="s2">&quot;-i</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">format</span><span class="p">),</span> <span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;-osmi&quot;</span><span class="p">],</span>
+        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span>
+    <span class="p">)</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">proc</span><span class="o">.</span><span class="n">stdout</span><span class="o">.</span><span class="n">decode</span><span class="p">()</span>
+    <span class="n">smi</span> <span class="o">=</span> <span class="n">output</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">smi</span></div>
+
+
+<div class="viewcode-block" id="obabel_png"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.utils.obabel_png">[docs]</a><span class="k">def</span> <span class="nf">obabel_png</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;xyz&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Call open-babel to convert a obabel readable format file into a PNG. The conversion requires</span>
+<span class="sd">    that obabel linked to libcairo, and will dump the image in the current working directory.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filepath: str</span>
+<span class="sd">        Filepath to the target file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">shutil</span><span class="o">.</span><span class="n">which</span><span class="p">(</span><span class="s2">&quot;obabel&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;obabel executable not found in path.&quot;</span><span class="p">)</span>
+    <span class="n">filename</span> <span class="o">=</span> <span class="n">filepath</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="s2">&quot;</span><span class="si">{}</span><span class="s2">.png&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">filename</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">out_file</span><span class="p">:</span>
+        <span class="n">proc</span> <span class="o">=</span> <span class="n">run</span><span class="p">(</span>
+            <span class="p">[</span><span class="s2">&quot;obabel&quot;</span><span class="p">,</span> <span class="s2">&quot;-i</span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">format</span><span class="p">),</span> <span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;-opng&quot;</span><span class="p">],</span>
+            <span class="n">stdout</span><span class="o">=</span><span class="n">out_file</span>
+        <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="clean_string"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.utils.clean_string">[docs]</a><span class="k">def</span> <span class="nf">clean_string</span><span class="p">(</span><span class="n">string</span><span class="p">):</span>
+    <span class="n">symbols</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;(&#39;</span><span class="p">,</span> <span class="s1">&#39;)&#39;</span><span class="p">,</span> <span class="s1">&#39;&quot;&#39;</span><span class="p">,</span> <span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="n">symbols</span><span class="p">:</span>
+        <span class="n">string</span> <span class="o">=</span> <span class="n">string</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">symbol</span><span class="p">,</span> <span class="s1">&#39;&#39;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">string</span></div>
+
+
+<div class="viewcode-block" id="split_zmat"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.utils.split_zmat">[docs]</a><span class="k">def</span> <span class="nf">split_zmat</span><span class="p">(</span><span class="n">zmat_list</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function that will convert a ZMAT into a dictionary.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">connectivity</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># Loop over list containing ZMAT strings; first line is</span>
+    <span class="c1"># comment line</span>
+    <span class="n">read_next</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">zmat_list</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="k">if</span> <span class="n">line</span> <span class="o">==</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">read_next</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">break</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">read_next</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="n">read_next</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">connectivity</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">read_next</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">parameters</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">connectivity</span><span class="p">,</span> <span class="n">parameters</span></div>
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

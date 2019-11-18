@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.routines</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../index.html"><img src="../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.routines</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.routines</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; Routines to:</span>
+<span class="sd">    Parse cat files</span>
+<span class="sd">    Run SPFIT and/or SPCAT</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">subprocess</span>
+<span class="kn">import</span> <span class="nn">shutil</span>
+<span class="kn">import</span> <span class="nn">json</span>
+<span class="kn">import</span> <span class="nn">types</span>
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="k">import</span> <span class="n">glob</span>
+<span class="kn">from</span> <span class="nn">warnings</span> <span class="k">import</span> <span class="n">warn</span>
+
+<span class="kn">import</span> <span class="nn">ruamel.yaml</span> <span class="k">as</span> <span class="nn">yaml</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">joblib</span>
+<span class="kn">import</span> <span class="nn">paramiko</span>
+
+<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">pypickett</span> <span class="k">as</span> <span class="n">pp</span>
+
+
+<div class="viewcode-block" id="run_spcat"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.run_spcat">[docs]</a><span class="k">def</span> <span class="nf">run_spcat</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># Run SPCAT</span>
+    <span class="n">parameter_file</span> <span class="o">=</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.var&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.var&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;VAR file unavailable. Attempting to run with PAR file.&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.par&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;No .var or .par file found.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.par&quot;</span><span class="p">,</span> <span class="n">parameter_file</span><span class="p">)</span>
+    <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;spcat&quot;</span><span class="p">,</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.int&quot;</span><span class="p">,</span> <span class="n">parameter_file</span><span class="p">],</span>
+        <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">PIPE</span><span class="p">,</span>  <span class="c1"># suppress stdout</span>
+    <span class="p">)</span>
+    <span class="n">process</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="c1"># Extract the partition function at the specified temperature</span>
+    <span class="k">if</span> <span class="n">temperature</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Read in the piped standard output, and format into a list</span>
+        <span class="n">stdout</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">process</span><span class="o">.</span><span class="n">communicate</span><span class="p">()[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\\</span><span class="s2">n&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">stdout</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">temperature</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="c1"># If the specified temperature is found, get the partition</span>
+                <span class="c1"># function</span>
+                <span class="n">Q</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">Q</span></div>
+
+
+<div class="viewcode-block" id="run_calbak"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.run_calbak">[docs]</a><span class="k">def</span> <span class="nf">run_calbak</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Runs the calbak routine, which generates a .lin file from the .cat &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.cat&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.cat is missing; cannot run calbak.&quot;</span><span class="p">)</span>
+    <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">Popen</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;calbak&quot;</span><span class="p">,</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.cat&quot;</span><span class="p">,</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.lin&quot;</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">subprocess</span><span class="o">.</span><span class="n">DEVNULL</span>
+    <span class="p">)</span>
+    <span class="n">process</span><span class="o">.</span><span class="n">wait</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.lin&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="n">lin_length</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">lin_length</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">RuntimeError</span><span class="p">(</span><span class="s2">&quot;No lines produced in calbak! Check .cat file.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="run_spfit"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.run_spfit">[docs]</a><span class="k">def</span> <span class="nf">run_spfit</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">process</span> <span class="o">=</span> <span class="n">subprocess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span>
+        <span class="p">[</span><span class="s2">&quot;spfit&quot;</span><span class="p">,</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.lin&quot;</span><span class="p">,</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot;.par&quot;</span><span class="p">],</span>
+        <span class="n">timeout</span><span class="o">=</span><span class="mf">20.0</span><span class="p">,</span>
+        <span class="n">capture_output</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">process</span><span class="o">.</span><span class="n">returncode</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">OSError</span><span class="p">(</span><span class="s2">&quot;SPFIT failed to run.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="list_chunks"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.list_chunks">[docs]</a><span class="k">def</span> <span class="nf">list_chunks</span><span class="p">(</span><span class="n">target</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">],</span> <span class="n">n</span><span class="p">:</span> <span class="nb">int</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Split a list into a number of chunks with length n. If there are not enough elements,</span>
+<span class="sd">    the last chunk will finish the remaining elements.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    target: list</span>
+<span class="sd">        List to split into chunks</span>
+<span class="sd">    n: int</span>
+<span class="sd">        Number of elements per chunk</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    split_list: list</span>
+<span class="sd">        Nested list of chunks</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">split_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">target</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">target</span><span class="p">),</span> <span class="n">n</span><span class="p">)]</span>
+    <span class="k">return</span> <span class="n">split_list</span></div>
+
+
+<div class="viewcode-block" id="pickett_molecule"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.pickett_molecule">[docs]</a><span class="k">def</span> <span class="nf">pickett_molecule</span><span class="p">(</span><span class="n">json_filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="c1"># Provide a JSON file with all the Pickett settings, and generate an</span>
+    <span class="c1"># instance of the molecule class</span>
+    <span class="c1"># This method is superceded by serializing using classmethods for each</span>
+    <span class="c1"># file format</span>
+    <span class="n">warn</span><span class="p">(</span>
+        <span class="s2">&quot;pickett_molecule is now outdated. Please use the class </span><span class="se">\</span>
+<span class="s2">                       methods from_yaml or from_json.&quot;</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">json_filepath</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No JSON input file specified.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span>
+            <span class="s2">&quot;A template file will be created in your directory; please rerun</span><span class="se">\</span>
+<span class="s2">               after setting up the parameters.&quot;</span>
+        <span class="p">)</span>
+        <span class="n">copy_template</span><span class="p">()</span>
+        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;No input file specified.&quot;</span><span class="p">)</span>
+    <span class="n">json_data</span> <span class="o">=</span> <span class="n">read_json</span><span class="p">(</span><span class="n">json_filepath</span><span class="p">)</span>
+    <span class="n">molecule_object</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="n">MoleculeFit</span><span class="p">(</span><span class="n">json_data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">molecule_object</span></div>
+
+
+<div class="viewcode-block" id="human2pickett"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.human2pickett">[docs]</a><span class="k">def</span> <span class="nf">human2pickett</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="n">linear</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nuclei</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for translating a Hamiltonian parameter to a Pickett</span>
+<span class="sd">        identifier.</span>
+
+<span class="sd">        An alternative way of doing this is to programmatically</span>
+<span class="sd">        generate the Pickett identifiers, and just use format string</span>
+<span class="sd">        to output the identifier.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">pickett_parameters</span> <span class="o">=</span> <span class="n">read_yaml</span><span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">expanduser</span><span class="p">(</span><span class="s2">&quot;~&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/.pyspectools/pickett_terms.yml&quot;</span>
+    <span class="p">)</span>
+    <span class="k">if</span> <span class="n">name</span> <span class="ow">is</span> <span class="s2">&quot;B&quot;</span> <span class="ow">and</span> <span class="n">linear</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># Haven&#39;t thought of a clever way of doing this yet...</span>
+        <span class="n">identifier</span> <span class="o">=</span> <span class="mi">100</span>
+    <span class="k">elif</span> <span class="n">name</span> <span class="ow">is</span> <span class="s2">&quot;B&quot;</span> <span class="ow">and</span> <span class="n">linear</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">identifier</span> <span class="o">=</span> <span class="mi">20000</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Hyperfine terms</span>
+        <span class="k">if</span> <span class="n">name</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;eQq&quot;</span><span class="p">,</span> <span class="s2">&quot;eQq/2&quot;</span><span class="p">]:</span>
+            <span class="n">identifier</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pickett_parameters</span><span class="p">[</span><span class="n">name</span><span class="p">])</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">nuclei</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="s2">&quot;D_&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">or</span> <span class="s2">&quot;del&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+            <span class="n">identifier</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">pickett_parameters</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="n">reduction</span><span class="p">])</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">identifier</span> <span class="o">=</span> <span class="n">pickett_parameters</span><span class="p">[</span><span class="n">name</span><span class="p">]</span>
+            <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Parameter name unknown!&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">identifier</span></div>
+
+
+<div class="viewcode-block" id="read_json"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.read_json">[docs]</a><span class="k">def</span> <span class="nf">read_json</span><span class="p">(</span><span class="n">json_filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Load a JSON file into memory as a Python dictionary.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    json_filepath : str</span>
+<span class="sd">        Path to the JSON file</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict[Any, Any]</span>
+<span class="sd">        Dictionary from JSON file</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_filepath</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="n">json_data</span> <span class="o">=</span> <span class="n">json</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">read_file</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">json_data</span></div>
+
+
+<div class="viewcode-block" id="dump_json"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.dump_json">[docs]</a><span class="k">def</span> <span class="nf">dump_json</span><span class="p">(</span><span class="n">json_filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">json_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to serialize a Python dictionary into a JSON file.</span>
+<span class="sd">    The pretty printing is enabled by default.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    json_filepath : str</span>
+<span class="sd">        Path to the JSON file to save to</span>
+<span class="sd">    json_dict : Dict[Any, Any]</span>
+<span class="sd">        Dictionary to be serialized</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">json_filepath</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
+        <span class="n">json</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">json_dict</span><span class="p">,</span> <span class="n">write_file</span><span class="p">,</span> <span class="n">indent</span><span class="o">=</span><span class="mi">4</span><span class="p">,</span> <span class="n">sort_keys</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="read_yaml"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.read_yaml">[docs]</a><span class="k">def</span> <span class="nf">read_yaml</span><span class="p">(</span><span class="n">yaml_filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to load in a YAML file into a Python dictionary.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    yaml_filepath : str</span>
+<span class="sd">        Path to the YAML file</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Dict[Any, Any]</span>
+<span class="sd">        Dictionary based on the YAML contents</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="n">yaml_data</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">read_file</span><span class="p">,</span> <span class="n">Loader</span><span class="o">=</span><span class="n">yaml</span><span class="o">.</span><span class="n">Loader</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">yaml_data</span></div>
+
+
+<div class="viewcode-block" id="dump_yaml"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.dump_yaml">[docs]</a><span class="k">def</span> <span class="nf">dump_yaml</span><span class="p">(</span><span class="n">yaml_filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">yaml_dict</span><span class="p">:</span> <span class="n">Dict</span><span class="p">[</span><span class="n">Any</span><span class="p">,</span> <span class="n">Any</span><span class="p">]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to serialize a Python dictionary into a YAML file.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    yaml_filepath : str</span>
+<span class="sd">        Path to the YAML file</span>
+<span class="sd">    yaml_dict : Dict[Any, Any]</span>
+<span class="sd">        Dictionary to be serialized</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">yaml_filepath</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
+        <span class="n">yaml</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">yaml_dict</span><span class="p">,</span> <span class="n">write_file</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="generate_folder"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.generate_folder">[docs]</a><span class="k">def</span> <span class="nf">generate_folder</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generates the folder for the next calculation</span>
+<span class="sd">    and returns the next calculation number</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">folderlist</span> <span class="o">=</span> <span class="n">list_directories</span><span class="p">()</span>  <span class="c1"># get every file/folder in directory</span>
+    <span class="c1"># filter out any non-folders that happen to be here</span>
+    <span class="n">shortlist</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">folderlist</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">shortlist</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="n">folder</span><span class="p">))</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>  <span class="c1"># if it&#39;s not an integer</span>
+            <span class="k">pass</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">shortlist</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">lastcalc</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">lastcalc</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">shortlist</span><span class="p">)</span>
+    <span class="c1"># lastcalc = len(folderlist)</span>
+    <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">lastcalc</span> <span class="o">+</span> <span class="mi">1</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">lastcalc</span> <span class="o">+</span> <span class="mi">1</span></div>
+
+
+<div class="viewcode-block" id="format_uncertainty"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.format_uncertainty">[docs]</a><span class="k">def</span> <span class="nf">format_uncertainty</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">uncertainty</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to determine the number of decimal places to</span>
+<span class="sd">        format the uncertainty. Probably not the most elegant way of doing this.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert the value into a string, then determine the length by</span>
+    <span class="c1"># splitting at the decimal point</span>
+    <span class="n">decimal_places</span> <span class="o">=</span> <span class="n">decimal_length</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="n">uncertainty</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">uncertainty</span><span class="p">)</span>  <span class="c1"># make sure we&#39;re dealing floats</span>
+    <span class="n">uncertainty_places</span> <span class="o">=</span> <span class="n">decimal_length</span><span class="p">(</span><span class="n">uncertainty</span><span class="p">)</span>
+    <span class="c1"># Force the uncertainty into decimals</span>
+    <span class="n">uncertainty</span> <span class="o">=</span> <span class="n">uncertainty</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">**</span> <span class="o">-</span><span class="n">uncertainty_places</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="c1"># Work out how many places we&#39;ve moved now</span>
+    <span class="n">uncertainty_places</span> <span class="o">=</span> <span class="n">decimal_length</span><span class="p">(</span><span class="n">uncertainty</span><span class="p">)</span>
+    <span class="c1"># Move the precision of the uncertainty to match the precision of the value</span>
+    <span class="n">uncertainty</span> <span class="o">=</span> <span class="n">uncertainty</span> <span class="o">*</span> <span class="mi">10</span> <span class="o">**</span> <span class="p">(</span><span class="n">uncertainty_places</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="n">decimal_places</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">uncertainty</span></div>
+
+
+<div class="viewcode-block" id="decimal_length"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.decimal_length">[docs]</a><span class="k">def</span> <span class="nf">decimal_length</span><span class="p">(</span><span class="n">value</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="c1"># Function that determines the decimal length of a float; convert the value</span>
+    <span class="c1"># into a string, then work out the length by splitting at the decimal point</span>
+    <span class="n">decimal_split</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">position</span><span class="p">)</span> <span class="k">for</span> <span class="n">position</span> <span class="ow">in</span> <span class="n">decimal_split</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="copy_template"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.copy_template">[docs]</a><span class="k">def</span> <span class="nf">copy_template</span><span class="p">():</span>
+    <span class="n">script_location</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">realpath</span><span class="p">(</span><span class="vm">__file__</span><span class="p">))</span>
+    <span class="n">templates_folder</span> <span class="o">=</span> <span class="n">script_location</span> <span class="o">+</span> <span class="s2">&quot;/templates/&quot;</span>
+    <span class="n">available_templates</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">templates_folder</span> <span class="o">+</span> <span class="s2">&quot;*.json&quot;</span><span class="p">)</span>
+    <span class="n">available_templates</span> <span class="o">=</span> <span class="p">[</span><span class="n">template</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span> <span class="k">for</span> <span class="n">template</span> <span class="ow">in</span> <span class="n">available_templates</span><span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;The templates available are:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">template</span> <span class="ow">in</span> <span class="n">available_templates</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">template</span><span class="p">)</span>
+    <span class="n">target</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;Please specify which template to copy:      &quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">target</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">available_templates</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Not a template; probably a typo.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Please re-run the script.&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">templates_folder</span> <span class="o">+</span> <span class="n">target</span><span class="p">,</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;/parameters.json&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Copied template &quot;</span> <span class="o">+</span> <span class="n">target</span> <span class="o">+</span> <span class="s2">&quot; to your folder as parameters.json.&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Edit the .json input file and re-run the script.&quot;</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="flatten_list"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.flatten_list">[docs]</a><span class="k">def</span> <span class="nf">flatten_list</span><span class="p">(</span><span class="n">input_list</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Any</span><span class="p">]]):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Takes a nested list of values and flattens it. The code is written as a try/except that makes the assumption</span>
+<span class="sd">    that the data is a list/tuple/array, and in the case that it isn&#39;t will simply append the item to the</span>
+<span class="sd">    output instead.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    input_list: list</span>
+<span class="sd">        List of values, where some of the elements are lists</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    output_list: list</span>
+<span class="sd">        Flattened version of input_list</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">output_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">input_list</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">output_list</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+        <span class="c1"># Ask for forgiveness</span>
+        <span class="k">except</span> <span class="ne">TypeError</span><span class="p">:</span>
+            <span class="n">output_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">output_list</span></div>
+
+
+<div class="viewcode-block" id="list_directories"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.list_directories">[docs]</a><span class="k">def</span> <span class="nf">list_directories</span><span class="p">():</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">directory</span> <span class="k">for</span> <span class="n">directory</span> <span class="ow">in</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">()</span> <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">directory</span><span class="p">)]</span></div>
+
+
+<div class="viewcode-block" id="backup_files"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.backup_files">[docs]</a><span class="k">def</span> <span class="nf">backup_files</span><span class="p">(</span><span class="n">molecule_name</span><span class="p">,</span> <span class="n">save_location</span><span class="p">):</span>
+    <span class="n">extensions</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;.cat&quot;</span><span class="p">,</span> <span class="s2">&quot;.var&quot;</span><span class="p">,</span> <span class="s2">&quot;.par&quot;</span><span class="p">,</span> <span class="s2">&quot;.int&quot;</span><span class="p">,</span> <span class="s2">&quot;.json&quot;</span><span class="p">,</span> <span class="s2">&quot;.lin&quot;</span><span class="p">]</span>
+    <span class="n">filenames</span> <span class="o">=</span> <span class="p">[</span><span class="n">molecule_name</span> <span class="o">+</span> <span class="n">ext</span> <span class="k">for</span> <span class="n">ext</span> <span class="ow">in</span> <span class="n">extensions</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">filename</span> <span class="ow">in</span> <span class="n">filenames</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">shutil</span><span class="o">.</span><span class="n">copy2</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">save_location</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Backing up &quot;</span> <span class="o">+</span> <span class="n">filename</span> <span class="o">+</span> <span class="s2">&quot; to &quot;</span> <span class="o">+</span> <span class="n">save_location</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">pass</span></div>
+
+
+<div class="viewcode-block" id="isnotebook"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.isnotebook">[docs]</a><span class="k">def</span> <span class="nf">isnotebook</span><span class="p">():</span>
+    <span class="c1"># Check if the code is being run in a notebook, IPython shell, or Python</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">shell</span> <span class="o">=</span> <span class="n">get_ipython</span><span class="p">()</span><span class="o">.</span><span class="vm">__class__</span><span class="o">.</span><span class="vm">__name__</span>
+        <span class="k">if</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;ZMQInteractiveShell&quot;</span><span class="p">:</span>  <span class="c1"># Jupyter notebook or qtconsole?</span>
+            <span class="k">return</span> <span class="kc">True</span>
+        <span class="k">elif</span> <span class="n">shell</span> <span class="o">==</span> <span class="s2">&quot;TerminalInteractiveShell&quot;</span><span class="p">:</span>  <span class="c1"># Terminal running IPython?</span>
+            <span class="k">return</span> <span class="kc">False</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># Other type (?)</span>
+    <span class="k">except</span> <span class="ne">NameError</span><span class="p">:</span>
+        <span class="k">return</span> <span class="kc">False</span>  <span class="c1"># Probably standard Python interpreter</span></div>
+
+
+<div class="viewcode-block" id="save_obj"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.save_obj">[docs]</a><span class="k">def</span> <span class="nf">save_obj</span><span class="p">(</span><span class="n">obj</span><span class="p">:</span> <span class="n">Any</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to serialize an object using dump from joblib.</span>
+
+<span class="sd">        Additional kwargs are passed into the dump, which can</span>
+<span class="sd">        be compression parameters, etc.</span>
+
+<span class="sd">        parameters:</span>
+<span class="sd">        ---------------</span>
+<span class="sd">        obj - instance of object to be serialized</span>
+<span class="sd">        filepath - filepath to save to</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;compress&quot;</span><span class="p">:</span> <span class="p">(</span><span class="s2">&quot;gzip&quot;</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="s2">&quot;protocol&quot;</span><span class="p">:</span> <span class="mi">4</span><span class="p">}</span>
+    <span class="n">settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">kwargs</span><span class="p">)</span>
+    <span class="n">joblib</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">settings</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="read_obj"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.read_obj">[docs]</a><span class="k">def</span> <span class="nf">read_obj</span><span class="p">(</span><span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Wrapper for joblib.load to load an object from disk</span>
+
+<span class="sd">        parameters:</span>
+<span class="sd">        ---------------</span>
+<span class="sd">        filepath - path to object</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">obj</span> <span class="o">=</span> <span class="n">joblib</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">obj</span></div>
+
+
+<div class="viewcode-block" id="dump_packages"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.dump_packages">[docs]</a><span class="k">def</span> <span class="nf">dump_packages</span><span class="p">():</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function that will return a list of packages that</span>
+<span class="sd">        have been loaded and their version numbers.</span>
+
+<span class="sd">        This function will ignore system packages:</span>
+<span class="sd">        sys, __builtins__, types, os</span>
+<span class="sd">        </span>
+<span class="sd">        as well as modules with no version.</span>
+
+
+<span class="sd">        This is not working the way I want it to...</span>
+
+<span class="sd">        returns:</span>
+<span class="sd">        -------------</span>
+<span class="sd">        mod_dict - dict with keys corresponding to module name,</span>
+<span class="sd">                   and values the version number.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mod_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">sys_packages</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;sys&quot;</span><span class="p">,</span> <span class="s2">&quot;__builtins__&quot;</span><span class="p">,</span> <span class="s2">&quot;types&quot;</span><span class="p">,</span> <span class="s2">&quot;os&quot;</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">module</span> <span class="ow">in</span> <span class="nb">globals</span><span class="p">()</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">module</span><span class="p">,</span> <span class="n">types</span><span class="o">.</span><span class="n">ModuleType</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">module</span><span class="o">.</span><span class="vm">__name__</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">sys_packages</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">mod_name</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="vm">__name__</span>
+                    <span class="n">mod_ver</span> <span class="o">=</span> <span class="n">module</span><span class="o">.</span><span class="n">__version__</span>
+                    <span class="n">mod_dict</span><span class="p">[</span><span class="n">mod_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">mod_ver</span>
+                <span class="k">except</span> <span class="ne">AttributeError</span><span class="p">:</span>
+                    <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">mod_dict</span></div>
+
+
+<div class="viewcode-block" id="find_nearest"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.find_nearest">[docs]</a><span class="k">def</span> <span class="nf">find_nearest</span><span class="p">(</span><span class="n">array</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">value</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">])</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="nb">int</span><span class="p">]:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that will find the nearest value in a NumPy array to a specified</span>
+<span class="sd">    value.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    array : np.ndarray</span>
+<span class="sd">        NumPy 1D array</span>
+<span class="sd">    value : float</span>
+<span class="sd">        Value to search the array for</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Tuple[np.ndarray, int]</span>
+<span class="sd">        Returns the closest value, as well as the index</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">array</span><span class="p">)</span>
+    <span class="n">idx</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">array</span> <span class="o">-</span> <span class="n">value</span><span class="p">))</span><span class="o">.</span><span class="n">argmin</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">array</span><span class="p">[</span><span class="n">idx</span><span class="p">],</span> <span class="n">idx</span></div>
+
+
+<div class="viewcode-block" id="RemoteClient"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient">[docs]</a><span class="k">class</span> <span class="nc">RemoteClient</span><span class="p">(</span><span class="n">paramiko</span><span class="o">.</span><span class="n">SSHClient</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">hostname</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">set_missing_host_key_policy</span><span class="p">(</span><span class="n">paramiko</span><span class="o">.</span><span class="n">AutoAddPolicy</span><span class="p">())</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">connect</span><span class="p">(</span><span class="n">hostname</span><span class="o">=</span><span class="n">hostname</span><span class="p">,</span> <span class="n">username</span><span class="o">=</span><span class="n">username</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">sftp</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">open_sftp</span><span class="p">()</span>
+
+<div class="viewcode-block" id="RemoteClient.from_file"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient.from_file">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_file</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reload a remote session from a pickle file created by the save_session.</span>
+<span class="sd">        :param filepath: str path to RemoteClient pickle file</span>
+<span class="sd">        :return: RemoteClient object</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">remote</span> <span class="o">=</span> <span class="n">read_obj</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+        <span class="c1"># Make sure that the pickle file is a RemoteClient object</span>
+        <span class="k">if</span> <span class="n">remote</span><span class="o">.</span><span class="vm">__name__</span> <span class="o">!=</span> <span class="s2">&quot;RemoteClient&quot;</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
+                <span class="s2">&quot;File was not a RemoteClient session; </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">remote</span><span class="o">.</span><span class="vm">__name__</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">read_obj</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">__exit__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">exc_type</span><span class="p">,</span> <span class="n">exc_value</span><span class="p">,</span> <span class="n">traceback</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Dunder method that should be called when the object is destroyed. In this case,</span>
+<span class="sd">        the remote connection should be closed automatically.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sftp</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+<div class="viewcode-block" id="RemoteClient.get_file"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient.get_file">[docs]</a>    <span class="k">def</span> <span class="nf">get_file</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">local_path</span><span class="o">=</span><span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Download a file from remote server to disk. If no local path is provided, defaults</span>
+<span class="sd">        to the current working directory.</span>
+<span class="sd">        :param remote_path: str remote file path target</span>
+<span class="sd">        :param local_path: str optional path to save the file to</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sftp</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">remote_path</span><span class="p">,</span> <span class="n">local_path</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RemoteClient.run_command"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient.run_command">[docs]</a>    <span class="k">def</span> <span class="nf">run_command</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">command</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="n">stdin</span><span class="p">,</span> <span class="n">stdout</span><span class="p">,</span> <span class="n">stderr</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">exec_command</span><span class="p">(</span><span class="n">command</span><span class="p">)</span>
+        <span class="n">error_msg</span> <span class="o">=</span> <span class="n">stderr</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">error_msg</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span> <span class="n">stdout</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Error in running command: </span><span class="si">{error_msg}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+
+<div class="viewcode-block" id="RemoteClient.open_remote"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient.open_remote">[docs]</a>    <span class="k">def</span> <span class="nf">open_remote</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_path</span><span class="p">:</span> <span class="nb">str</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to stream the file contents of a remote file. Can be used to directly</span>
+<span class="sd">        provide data into memory without downloading it to disk.</span>
+<span class="sd">        :param remote_path: str remote path to target file</span>
+<span class="sd">        :return: list of contents of the target file</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">contents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_command</span><span class="p">(</span><span class="s2">&quot;cat </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">remote_path</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">contents</span></div>
+
+<div class="viewcode-block" id="RemoteClient.ls"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient.ls">[docs]</a>    <span class="k">def</span> <span class="nf">ls</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">remote_path</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to get the list of files present in a specified directory.</span>
+<span class="sd">        Defaults to the current ssh directory.</span>
+<span class="sd">        :param remote_path: str remote path to inspect</span>
+<span class="sd">        :return: list of files and folders</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">contents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">run_command</span><span class="p">(</span><span class="s2">&quot;ls </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">remote_path</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">contents</span></div>
+
+<div class="viewcode-block" id="RemoteClient.save_session"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.RemoteClient.save_session">[docs]</a>    <span class="k">def</span> <span class="nf">save_session</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="o">=</span><span class="s2">&quot;ssh.pkl&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to dump the ssh settings object to a pickle file. Keep in mind</span>
+<span class="sd">        that while this is a matter of convenience, the file is unencrypted and</span>
+<span class="sd">        so storing passwords in here is not exactly the safest thing to do!</span>
+<span class="sd">        :param filepath: str optional path to save the session to.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">save_obj</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
+
+
+<div class="viewcode-block" id="group_consecutives"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.group_consecutives">[docs]</a><span class="k">def</span> <span class="nf">group_consecutives</span><span class="p">(</span><span class="n">vals</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">step</span><span class="o">=</span><span class="mi">1</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to group all consecutive values in a list together. The primary purpose of this</span>
+<span class="sd">    is to split concatenated spectra that are given in a single list of frequencies</span>
+<span class="sd">    into individual windows.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    vals : list</span>
+<span class="sd">        List of floats to be split</span>
+<span class="sd">    step : int, optional</span>
+<span class="sd">        [description], by default 1</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    [type]</span>
+<span class="sd">        [description]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">run</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="p">[</span><span class="n">run</span><span class="p">]</span>
+    <span class="n">expect</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">vals</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">v</span> <span class="o">==</span> <span class="n">expect</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">expect</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">run</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">run</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span><span class="p">]</span>
+            <span class="n">result</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">run</span><span class="p">)</span>
+        <span class="n">expect</span> <span class="o">=</span> <span class="n">v</span> <span class="o">+</span> <span class="n">step</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

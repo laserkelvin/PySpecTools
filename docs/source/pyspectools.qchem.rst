@@ -4,6 +4,14 @@ pyspectools.qchem package
 Submodules
 ----------
 
+pyspectools.qchem.analysis module
+---------------------------------
+
+.. automodule:: pyspectools.qchem.analysis
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 pyspectools.qchem.extrapolation module
 --------------------------------------
 
@@ -20,18 +28,18 @@ pyspectools.qchem.heat\_analysis module
     :undoc-members:
     :show-inheritance:
 
-pyspectools.qchem.parse\_G3 module
+pyspectools.qchem.multiwell module
 ----------------------------------
 
-.. automodule:: pyspectools.qchem.parse_G3
+.. automodule:: pyspectools.qchem.multiwell
     :members:
     :undoc-members:
     :show-inheritance:
 
-pyspectools.qchem.parse\_cfour module
--------------------------------------
+pyspectools.qchem.parsers module
+--------------------------------
 
-.. automodule:: pyspectools.qchem.parse_cfour
+.. automodule:: pyspectools.qchem.parsers
     :members:
     :undoc-members:
     :show-inheritance:

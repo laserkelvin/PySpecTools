@@ -7,6 +7,7 @@ Subpackages
 .. toctree::
 
     pyspectools.astro
+    pyspectools.fast
     pyspectools.mmw
     pyspectools.qchem
     pyspectools.spectra
@@ -74,14 +75,6 @@ pyspectools.lineshapes module
 -----------------------------
 
 .. automodule:: pyspectools.lineshapes
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-pyspectools.parsefit module
----------------------------
-
-.. automodule:: pyspectools.parsefit
     :members:
     :undoc-members:
     :show-inheritance:

@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.mmw.plotting_func</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../../index.html"><img src="../../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.mmw.plotting_func</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.mmw.plotting_func</h1><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">plotly.offline</span> <span class="k">import</span> <span class="n">iplot</span><span class="p">,</span> <span class="n">plot</span><span class="p">,</span> <span class="n">init_notebook_mode</span>
+<span class="kn">import</span> <span class="nn">plotly.graph_objs</span> <span class="k">as</span> <span class="nn">go</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="k">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">colorlover</span> <span class="k">as</span> <span class="nn">cl</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="n">plt</span><span class="o">.</span><span class="n">style</span><span class="o">.</span><span class="n">use</span><span class="p">(</span><span class="s2">&quot;seaborn&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="static_comparison"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.plotting_func.static_comparison">[docs]</a><span class="k">def</span> <span class="nf">static_comparison</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="n">sample_on_df</span><span class="p">,</span> <span class="n">sample_off_df</span><span class="p">,</span> <span class="n">window_size</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method for plotting the sample on-off spectra side-by-side.</span>
+<span class="sd">        Takes a list of frequencies, which will be </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fig</span><span class="p">,</span> <span class="n">axarray</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">frequencies</span><span class="p">),</span> <span class="mi">2</span><span class="p">,</span> <span class="n">figsize</span><span class="o">=</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="mi">24</span><span class="p">))</span>
+    
+    <span class="k">for</span> <span class="n">row_index</span><span class="p">,</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequencies</span><span class="p">):</span>
+        <span class="n">xrange</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">frequency</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">-</span> <span class="n">window_size</span><span class="p">),</span>
+            <span class="n">frequency</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.</span> <span class="o">+</span> <span class="n">window_size</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">col_index</span><span class="p">,</span> <span class="n">df</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="n">sample_on_df</span><span class="p">,</span> <span class="n">sample_off_df</span><span class="p">]):</span>
+            <span class="n">slice_df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">xrange</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">xrange</span><span class="p">[</span><span class="mi">1</span><span class="p">])]</span>
+            <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">-=</span> <span class="n">frequency</span>
+            <span class="n">axarray</span><span class="p">[</span><span class="n">row_index</span><span class="p">,</span> <span class="n">col_index</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Field off&quot;</span><span class="p">],</span>
+                <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Field Off&quot;</span><span class="p">,</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span>
+            <span class="p">)</span>
+            <span class="n">axarray</span><span class="p">[</span><span class="n">row_index</span><span class="p">,</span> <span class="n">col_index</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Field on&quot;</span><span class="p">],</span>
+                <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Field On&quot;</span><span class="p">,</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">0.4</span>
+            <span class="p">)</span>
+            <span class="n">axarray</span><span class="p">[</span><span class="n">row_index</span><span class="p">,</span> <span class="n">col_index</span><span class="p">]</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+                <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                <span class="n">slice_df</span><span class="p">[</span><span class="s2">&quot;Off - On&quot;</span><span class="p">],</span>
+                <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Off - On&quot;</span><span class="p">,</span>
+                <span class="n">alpha</span><span class="o">=</span><span class="mf">1.</span>
+            <span class="p">)</span>
+            <span class="n">axarray</span><span class="p">[</span><span class="n">row_index</span><span class="p">,</span> <span class="n">col_index</span><span class="p">]</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+            <span class="n">axarray</span><span class="p">[</span><span class="n">row_index</span><span class="p">,</span> <span class="n">col_index</span><span class="p">]</span><span class="o">.</span><span class="n">set_title</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">4</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">row_index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">axarray</span><span class="p">[</span><span class="n">row_index</span><span class="p">,</span> <span class="n">col_index</span><span class="p">]</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Frequency (MHz)&quot;</span><span class="p">)</span>
+                
+    <span class="n">fig</span><span class="o">.</span><span class="n">tight_layout</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">axarray</span></div>
+
+
+<div class="viewcode-block" id="plot_spectrum"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.plotting_func.plot_spectrum">[docs]</a><span class="k">def</span> <span class="nf">plot_spectrum</span><span class="p">(</span><span class="n">dataframe</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function used to plot a dataframe using Plotly.</span>
+<span class="sd">        </span>
+<span class="sd">        Uses colorlover to generate palettes.</span>
+
+<span class="sd">        Args: dataframe - pandas dataframe containing a frequency</span>
+<span class="sd">        column. Every other column is treated as an intensity column</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">plots</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">keys</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;Frequency&quot;</span><span class="p">]</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+        <span class="c1"># If there are fewer than 3 plots, colorlover doesn&#39;t have</span>
+        <span class="c1"># a coded case and so the colors are done manually</span>
+        <span class="n">color_palette</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;#e41a1c&quot;</span><span class="p">,</span> <span class="s2">&quot;#377eb8&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Use color lover palettes</span>
+        <span class="n">color_palette</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">to_rgb</span><span class="p">(</span><span class="n">cl</span><span class="o">.</span><span class="n">scales</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">keys</span><span class="p">))][</span><span class="s2">&quot;qual&quot;</span><span class="p">][</span><span class="s2">&quot;Set1&quot;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">keys</span><span class="p">,</span> <span class="n">color_palette</span><span class="p">):</span>
+        <span class="c1"># Loop over all the dataframe columns and colors</span>
+        <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+                <span class="n">x</span><span class="o">=</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">dataframe</span><span class="p">[</span><span class="n">key</span><span class="p">],</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">key</span><span class="p">,</span>
+                <span class="n">marker</span> <span class="o">=</span> <span class="p">{</span>
+                   <span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span>
+               <span class="p">},</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+            
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Layout</span><span class="p">(</span>
+        <span class="n">xaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Frequency (MHz)&quot;</span><span class="p">,</span> <span class="s2">&quot;tickformat&quot;</span><span class="p">:</span> <span class="s2">&quot;0.2f&quot;</span><span class="p">},</span>
+        <span class="n">yaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+        <span class="n">autosize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">paper_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">plots</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+    
+    <span class="n">iplot</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="id_survey"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.plotting_func.id_survey">[docs]</a><span class="k">def</span> <span class="nf">id_survey</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">intensity</span><span class="p">,</span> <span class="n">catdict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function for plotting predicted lines as stick spectra</span>
+<span class="sd">        on top of a broadband survey spectrum.</span>
+<span class="sd">        </span>
+<span class="sd">        Frequency and intensity are 1D arrays of the spectrum</span>
+<span class="sd">        frequency and intensity.</span>
+<span class="sd">        </span>
+<span class="sd">        catdict is a dictionary with keys corresponding to</span>
+<span class="sd">        the name of the molecule, and values corresponding</span>
+<span class="sd">        to dataframes of the parsed .cat file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">plots</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    
+    <span class="c1"># Plot out the experiment first</span>
+    
+    <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+        <span class="n">go</span><span class="o">.</span><span class="n">Scatter</span><span class="p">(</span>
+            <span class="n">x</span><span class="o">=</span><span class="n">frequency</span><span class="p">,</span>
+            <span class="n">y</span><span class="o">=</span><span class="n">intensity</span><span class="p">,</span>
+            <span class="n">marker</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)}</span>
+        <span class="p">)</span>
+    <span class="p">)</span>
+    
+    <span class="c1"># Set the colour palette, and interpolate colours to</span>
+    <span class="c1"># accommodate for the number of cat files</span>
+    <span class="n">spectral_palette</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">scales</span><span class="p">[</span><span class="s2">&quot;8&quot;</span><span class="p">][</span><span class="s2">&quot;div&quot;</span><span class="p">][</span><span class="s2">&quot;Spectral&quot;</span><span class="p">]</span>
+    <span class="n">colors</span> <span class="o">=</span> <span class="n">cl</span><span class="o">.</span><span class="n">interp</span><span class="p">(</span><span class="n">spectral_palette</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">catdict</span><span class="p">))</span>
+    
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">color</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">catdict</span><span class="p">,</span> <span class="n">colors</span><span class="p">):</span>
+        <span class="n">plots</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">go</span><span class="o">.</span><span class="n">Bar</span><span class="p">(</span>
+                <span class="n">x</span><span class="o">=</span><span class="n">catdict</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">catdict</span><span class="p">[</span><span class="n">name</span><span class="p">][</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]),</span>
+                <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
+                <span class="n">width</span><span class="o">=</span><span class="mf">2.</span><span class="p">,</span>
+                <span class="n">marker</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;color&quot;</span><span class="p">:</span> <span class="n">color</span><span class="p">}</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+    
+    <span class="n">layout</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Layout</span><span class="p">(</span>
+        <span class="n">xaxis</span><span class="o">=</span><span class="p">{</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;Frequency (MHz)&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;range&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">frequency</span><span class="p">),</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">frequency</span><span class="p">)],</span>
+            <span class="s2">&quot;tickformat&quot;</span><span class="p">:</span> <span class="s2">&quot;0.2f&quot;</span>
+        <span class="p">},</span>
+        <span class="n">yaxis</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="s2">&quot;&quot;</span><span class="p">},</span>
+        <span class="n">autosize</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">height</span><span class="o">=</span><span class="mi">800</span><span class="p">,</span>
+        <span class="n">width</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">paper_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+        <span class="n">plot_bgcolor</span><span class="o">=</span><span class="s2">&quot;#f0f0f0&quot;</span><span class="p">,</span>
+    <span class="p">)</span>
+    
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">go</span><span class="o">.</span><span class="n">Figure</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">plots</span><span class="p">,</span> <span class="n">layout</span><span class="o">=</span><span class="n">layout</span><span class="p">)</span>
+    
+    <span class="n">iplot</span><span class="p">(</span><span class="n">fig</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="save_plot"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.plotting_func.save_plot">[docs]</a><span class="k">def</span> <span class="nf">save_plot</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">filename</span><span class="p">):</span>
+    <span class="n">plot</span><span class="p">(</span>
+        <span class="n">fig</span><span class="p">,</span>
+        <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+        <span class="n">show_link</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+        <span class="n">auto_open</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span></div>
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

@@ -1,0 +1,3036 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.spectra Module</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1><cite>pyspectools.spectra</cite> Module</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pyspectools-spectra-module">
+<h1><cite>pyspectools.spectra</cite> Module<a class="headerlink" href="#pyspectools-spectra-module" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyspectools.spectra.assignment">
+<span id="assignment-submodule"></span><h2><cite>assignment</cite> Submodule<a class="headerlink" href="#module-pyspectools.spectra.assignment" title="Permalink to this headline">¶</a></h2>
+<p><cite>assignment</cite> module</p>
+<p>This module contains three main classes for performing analysis of broad-
+band spectra. The <cite>AssignmentSession</cite> class will be what the user will
+mainly interact with, which will digest a spectrum, find peaks, make
+assignments and keep track of them, and generate the reports at the end.</p>
+<p>To perform the assignments, the user can use the <cite>LineList</cite> class, which
+does the grunt work of homogenizing the different sources of frequency
+and molecular information: it is able to take SPCAT and .lin formats, as
+well as simply a list of frequencies. <cite>LineList</cite> then interacts with the
+<cite>AssignmentSession</cite> class, which handles the assignments.</p>
+<p>The smallest building block in this procedure is the <cite>Transition</cite> class;
+every peak, every molecule transition, every artifact is considered as
+a <cite>Transition</cite> object. The <cite>LineList</cite> contains a list of <cite>Transition`s,
+and the peaks found by the `AssignmentSession</cite> are also kept as a
+<cite>LineList</cite>.</p>
+<dl class="class">
+<dt id="pyspectools.spectra.assignment.AssignmentSession">
+<em class="property">class </em><code class="descclassname">pyspectools.spectra.assignment.</code><code class="descname">AssignmentSession</code><span class="sig-paren">(</span><em>exp_dataframe: pandas.core.frame.DataFrame, experiment: int, composition: List[str], temperature=4.0, velocity=0.0, freq_col='Frequency', int_col='Intensity', verbose=True, **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Main class for bookkeeping and analyzing broadband spectra. This class
+revolves around operating on a single continuous spectrum, using the
+class functions to automatically assess the noise statistics, find
+peaks, and do the bulk of the bookkeeping on what molecules are assigned
+to what peak.</p>
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.add_ulines">
+<code class="descname">add_ulines</code><span class="sig-paren">(</span><em>data: List[Tuple[float, float]], **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.add_ulines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.add_ulines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to manually add multiple pairs of frequency/intensity to the current
+experiment’s Peaks list.</p>
+<p>Kwargs are passed to the creation of the Transition object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>iterable of 2-tuple</em>) – <p>List-like of 2-tuples corresponding to frequency and intensity.
+Data should look like this example:
+[</p>
+<blockquote>
+<div>(12345.213, 5.),
+(18623.125, 12.3)</div></blockquote>
+<p>]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.analyze_molecule">
+<code class="descname">analyze_molecule</code><span class="sig-paren">(</span><em>Q=None</em>, <em>T=None</em>, <em>name=None</em>, <em>formula=None</em>, <em>smiles=None</em>, <em>chi_thres=10.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.analyze_molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.analyze_molecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for providing some astronomically relevant parameters by analyzing Gaussian line shapes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>chi_thres</em>) – Partition function at temperature T</li>
+<li><strong>- float</strong> – Temperature in Kelvin</li>
+<li><strong>- str</strong><strong>, </strong><strong>optional</strong> (<em>smiles</em>) – Name of the molecule to perform the analysis on. Can be used as a selector.</li>
+<li><strong>- str</strong><strong>, </strong><strong>optional</strong> – Chemical formula of the molecule to perform the analysis on. Can be used as a selector.</li>
+<li><strong>- str</strong><strong>, </strong><strong>optional</strong> – SMILES code of the molecule to perform the analysis on. Can be used as a selector,</li>
+<li><strong>- float</strong> – Threshold for the Chi Squared value to consider fits for statistics. Any instances of fits with Chi
+squared values above this value will not be used to calculate line profile statistics.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">First element is the profile dataframe, and second element is the fitted velocity.
+If a rotational temperature analysis is also performed, the third element will be the least-squares
+regression.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">return_data - list</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.apply_filter">
+<code class="descname">apply_filter</code><span class="sig-paren">(</span><em>window: Union[str, List[str]], sigma=0.5, int_col=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.apply_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.apply_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Applies a filter to the spectral signal. If multiple window functions
+are to be used, a list of windows can be provided, which will then
+perform the convolution stepwise. With the exception of the gaussian
+window function, the others functions use the SciPy signal functions.</p>
+<p>A reference copy of the original signal is kept as the “Ref” column;
+this is used if a new window function is applied, rather than on the
+already convolved signal.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>window</strong> (<em>str</em><em>, or </em><em>iterable of str</em>) – Name of the window function</li>
+<li><strong>sigma</strong> (<em>float</em><em>, </em><em>optional</em>) – Specifies the magnitude of the gaussian blur. Only used when the
+window function asked for is “gaussian”.</li>
+<li><strong>int_col</strong> (<em>None</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – Specifies which column to apply the window function to. If None,
+defaults to the session-wide intensity column</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.blank_spectrum">
+<code class="descname">blank_spectrum</code><span class="sig-paren">(</span><em>noise=None</em>, <em>noise_std=None</em>, <em>window=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.blank_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.blank_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
+and standard deviation of the noise, typically estimated by picking a region free of spectral features.</p>
+<p>The spectra are sequentially blanked - online catalogs first, followed by literature species, finally the
+private assignments.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>- float</strong> (<em>window</em>) – Average noise value for the spectrum. Typically measured by choosing a region void of spectral lines.</li>
+<li><strong>- float</strong> – Standard deviation for the spectrum noise.</li>
+<li><strong>- float</strong> – Value to use for the range to blank. This region blanked corresponds to frequency+/-window.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.calculate_assignment_statistics">
+<code class="descname">calculate_assignment_statistics</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.calculate_assignment_statistics"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.calculate_assignment_statistics" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for calculating some aggregate statistics of the assignments and u-lines. This
+breaks the assignments sources up to identify what the dominant source of information was.
+The two metrics for assignments are the number of transitions and the intensity contribution
+assigned by a particular source.
+:return: dict</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.clean_folder">
+<code class="descname">clean_folder</code><span class="sig-paren">(</span><em>action=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.clean_folder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.clean_folder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for cleaning up all of the directories used by this routine.
+Use with caution!!!</p>
+<p>Requires passing a True statement to actually clean up.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>action</strong> (<em>bool</em>) – If True, folders will be deleted. If False (default) nothing is done.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.clean_spectral_assignments">
+<code class="descname">clean_spectral_assignments</code><span class="sig-paren">(</span><em>window=1.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.clean_spectral_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.clean_spectral_assignments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to blank regions of the spectrum that have already been
+assigned. This function takes the frequencies of assignments, and
+uses the noise statistics to generate white noise to replace the
+peak. This is to let one focus on unidentified features, rather than
+be distracted by the assignments with large amplitudes.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>window</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequency value in MHz to blank. The region corresponds to the
+frequency +/- this value.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.copy_assignments">
+<code class="descname">copy_assignments</code><span class="sig-paren">(</span><em>other: pyspectools.spectra.assignment.AssignmentSession</em>, <em>thres_prox=0.01</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.copy_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.copy_assignments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to copy assignments from another experiment. This class
+method wraps two analysis routines: first, correlations in detected
+peaks are found, and indexes of where correlations are found will be
+used to locate the corresponding Transition object, and copy its data
+over to the current experiment.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>other</strong> (<em>AssignmentSession object</em>) – The reference AssignmentSession object to copy assignments from</li>
+<li><strong>thres_prox</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for considering coincidences between spectra.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.create_full_dr_batch">
+<code class="descname">create_full_dr_batch</code><span class="sig-paren">(</span><em>cavity_freqs: List[float], filepath=None, shots=25, dipole=1.0, min_dist=500.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.create_full_dr_batch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.create_full_dr_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an FTB batch file for use in QtFTM to perform a DR experiment.
+A list of selected frequencies can be used as the cavity frequencies, which will
+subsequently be exhaustively DR’d against by ALL frequencies in the
+experiment.</p>
+<p>The file is then saved to “ftb/XXX-full-dr.ftb”.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cavity_freqs</strong> (<em>iterable of floats</em>) – Iterable of frequencies to tune to, in MHz.</li>
+<li><strong>filepath</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the ftb file to. Defaults to ftb/{}-dr.ftb</li>
+<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of integration shots</li>
+<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Dipole moment used for attenuation setting</li>
+<li><strong>min_dist</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum frequency difference between cavity and DR frequency to actually perform
+the experiment</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.create_latex_table">
+<code class="descname">create_latex_table</code><span class="sig-paren">(</span><em>filepath=None</em>, <em>header=None</em>, <em>cols=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.create_latex_table"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.create_latex_table" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to create a LaTeX table summarizing the measurements in this experiment.</p>
+<p>Without any additional inputs, the table will be printed into a .tex file
+in the reports folder. The table will be created with the minimum amount
+of information required for a paper, including the frequency and intensity
+information, assignments, and the source of the information.</p>
+<p>The user can override the default settings by supplying <cite>header</cite> and <cite>col</cite>
+arguments, and any other kwargs are passed into the <cite>to_latex</cite> pandas
+DataFrame method. The header and col lengths must match.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>filepath</strong> (<em>str</em><em>, </em><em>optional</em>) – Filepath to save the LaTeX table to; by default None</li>
+<li><strong>header</strong> (<em>iterable of str</em><em>, </em><em>optional</em>) – An iterable of strings specifying the header to be printed. By default None</li>
+<li><strong>cols</strong> (<em>iterable of str</em><em>, </em><em>optional</em>) – An iterable of strings specifying which columns to include. If this is
+changed, the header must also be changed to reflect the new columns.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.create_uline_dr_batch">
+<code class="descname">create_uline_dr_batch</code><span class="sig-paren">(</span><em>filepath=None</em>, <em>select=None</em>, <em>shots=25</em>, <em>dipole=1.0</em>, <em>min_dist=500.0</em>, <em>thres=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.create_uline_dr_batch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.create_uline_dr_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an FTB batch file for use in QtFTM to perform a DR experiment.
+A list of selected frequencies can be used as the cavity frequencies, which will
+subsequently be exhaustively DR’d against by all of the U-line frequencies
+remaining in this experiment.</p>
+<p>The file is then saved to “ftb/XXX-dr.ftb”.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>filepath</strong> (<em>str</em><em>, </em><em>optional</em>) – Path to save the ftb file to. Defaults to ftb/{}-dr.ftb</li>
+<li><strong>select</strong> (<em>list of floats</em><em>, </em><em>optional</em>) – List of frequencies to use as cavity frequencies. Defaults to None, which
+will just DR every frequency against each other.</li>
+<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of integration shots</li>
+<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Dipole moment used for attenuation setting</li>
+<li><strong>gap</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum frequency difference between cavity and DR frequency to actually perform
+the experiment</li>
+<li><strong>thres</strong> (<em>None</em><em> or </em><em>float</em><em>, </em><em>optional</em>) – Minimum value in absolute intensity units to consider in the DR
+batch. If None, this is ignored (default).</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.create_uline_ftb_batch">
+<code class="descname">create_uline_ftb_batch</code><span class="sig-paren">(</span><em>filepath=None</em>, <em>shots=500</em>, <em>dipole=1.0</em>, <em>threshold=0.0</em>, <em>sort_int=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.create_uline_ftb_batch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.create_uline_ftb_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
+frequencies.</p>
+<p>If a filepath is not specified, a -uline.ftb file will be created in the
+ftb folder.</p>
+<p>The user has the ability to control parameters of the batch by setting
+a global shot count, dipole moment, and minimum intensity value for
+creation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>filepath</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Path to save the .ftb file to. If None, defaults to the session ID.</li>
+<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of shots to integrate on each frequency</li>
+<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Dipole moment in Debye attenuation target for each frequency</li>
+<li><strong>threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum value for the line intensity to be considered. For example,
+if the spectrum is analyzed in units of SNR, this would be the minimum
+value of SNR to consider in the FTB file.</li>
+<li><strong>sort_int</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, sorts the FTB entries in descending intensity order.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.create_ulinelist">
+<code class="descname">create_ulinelist</code><span class="sig-paren">(</span><em>filepath: str</em>, <em>silly=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.create_ulinelist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.create_ulinelist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a LineList object for an unidentified molecule. This uses the
+class method <cite>umol_gen</cite> to automatically generate names for U-molecules
+which can then be renamed once it has been identified.</p>
+<p>The session attribute <cite>umol_names</cite> also keeps track of filepaths to
+catalog names. If the filepath has been used previously, then it will
+raise an Exception noting that the filepath is already associated with
+another catalog.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filepath</strong> (<em>str</em>) – File path to the catalog or .lin file to use as a reference</li>
+<li><strong>silly</strong> (<em>bool</em><em>, </em><em>optional</em>) – Flag whether to use boring numbered identifiers, or randomly
+generated <cite>AdjectiveAdjectiveAnimal</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">LineList object</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.detect_noise_floor">
+<code class="descname">detect_noise_floor</code><span class="sig-paren">(</span><em>region=None</em>, <em>als=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.detect_noise_floor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.detect_noise_floor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the noise parameters for the current spectrum. Control over what “defines” the noise floor
+is specified with the parameter region. By default, if region is None then the function will
+perform an initial peak find using 1% of the maximum intensity as the threshold. The noise region
+will be established based on the largest gap between peaks, i.e. hopefully capturing as little
+features in the statistics as possible.</p>
+<p>The alternative method is invoked when the <cite>als</cite> argument is set to True, which will use the
+asymmetric least-squares method to determine the baseline. Afterwards, the baseline is decimated
+by an extremely heavy Gaussian blur, and one ends up with a smoothly varying baseline. In this
+case, there is no <cite>noise_rms</cite> attribute to be returned as it is not required to determine the
+minimum peak threshold.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>region</strong> (<em>2-tuple</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
+in frequency to use for noise statistics.</li>
+<li><strong>als</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, will use the asymmetric least squares method to determine the baseline.</li>
+<li><strong>kwargs</strong> – Additional kwargs are passed into the ALS function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><em>baseline - float</em> – Value of the noise floor</li>
+<li><em>rms - float</em> – Noise RMS/standard deviation</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.df2ulines">
+<code class="descname">df2ulines</code><span class="sig-paren">(</span><em>dataframe: pandas.core.frame.DataFrame</em>, <em>freq_col=None</em>, <em>int_col=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.df2ulines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.df2ulines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Add a dataframe of frequency and intensities to the session U-line dictionary. This function provides more
+manual control over what can be processed in the assignment pipeline, as not everything can be picked
+up by the peak finding algorithm.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>dataframe</strong> (<em>pandas dataframe</em>) – Dataframe containing a frequency and intensity column to add to the uline list.</li>
+<li><strong>freq_col</strong> (<em>None</em><em> or </em><em>str</em>) – Specify column to use for frequencies. If None, uses the session value freq_col.</li>
+<li><strong>int_col</strong> (<em>None</em><em> or </em><em>str</em>) – Specify column to use for intensities. If None, uses the session value int_col.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.finalize_assignments">
+<code class="descname">finalize_assignments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.finalize_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.finalize_assignments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will complete the assignment process by
+serializing DataClass objects and formatting a report.</p>
+<p>Creates summary pandas dataframes as self.table and self.profiles,
+which correspond to the assignments and fitted line profiles respectively.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.find_peaks">
+<code class="descname">find_peaks</code><span class="sig-paren">(</span><em>threshold=None</em>, <em>region=None</em>, <em>sigma=6</em>, <em>min_dist=10</em>, <em>als=True</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.find_peaks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.find_peaks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.
+The method calls the peak_find function from the analysis module, which in itself wraps peakutils.</p>
+<p>The function works by finding regions of the intensity where the first derivative goes to zero
+and changes sign. This gives peak frequency/intensities from the digitized spectrum, which is
+then “refined” by interpolating over each peak and fitting a Gaussian to determine the peak.</p>
+<p>The peaks are then returned as a pandas DataFrame, which can also be accessed in the peaks_df
+attribute of AssignmentSession.</p>
+<p>When a value of threshold is not provided, the function will turn to use automated methods for
+noise detection, either by taking a single value as the baseline (not ALS), or by using the
+asymmetric least-squares method for fitting the baseline. In both instances, the primary intensity
+column to be used for analysis will be changed to “SNR”, which is the recommended approach.</p>
+<p>To use the ALS algorithm there may be some tweaking involved for the parameters.
+These are typically found empirically, but for reference here are some “optimal” values
+that have been tested.</p>
+<p>For millimeter-wave spectra, larger values of lambda are favored:</p>
+<p>lambda = 1e5
+p = 0.1</p>
+<p>This should get rid of periodic (fringe) baselines, and leave the “real” signal behind.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>threshold</strong> (<em>float</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Peak detection threshold. If None, will take 1.5 times the noise RMS.</li>
+<li><strong>region</strong> (<em>2-tuple</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – If None, use the automatic algorithm. Otherwise, a 2-tuple specifies the region of the spectrum
+in frequency to use for noise statistics.</li>
+<li><strong>sigma</strong> (<em>float</em><em>, </em><em>optional</em>) – Defines the number of sigma (noise RMS) above the baseline to use as the peak detection threshold.</li>
+<li><strong>min_dist</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of channels between peaks to be detected.</li>
+<li><strong>als</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, uses ALS fitting to determine a baseline.</li>
+<li><strong>kwargs</strong> – Additional keyword arguments are passed to the ALS fitting routine.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>peaks_df</strong> – Pandas dataframe with Frequency/Intensity columns, corresponding to peaks</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.find_progressions">
+<code class="descname">find_progressions</code><span class="sig-paren">(</span><em>search=0.001</em>, <em>low_B=400.0</em>, <em>high_B=9000.0</em>, <em>refit=False</em>, <em>plot=True</em>, <em>preferences=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.find_progressions"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.find_progressions" title="Permalink to this definition">¶</a></dt>
+<dd><p>Performs a search for possible harmonically related U-lines.
+The first step loops over every possible U-line pair, and uses the
+difference to estimate an effective B value for predicting the next
+transition. If the search is successful, the U-line is added to the
+list. The search is repeated until there are no more U-lines within
+frequency range of the next predicted line.</p>
+<p>Once the possible series are identified, the frequencies are fit to
+an effective linear molecule model (B and D terms). An affinity propa-
+gation cluster model is then used to group similar progressions toge-
+ther, with either a systematic test of preference values or a user
+specified value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>search</strong> (<em>float</em><em>, </em><em>optional</em>) – Percentage value of the target frequency cutoff for excluding
+possible candidates in the harmonic search</li>
+<li><strong>high_B</strong> (<em>low_B</em><em>,</em>) – Minimum and maximum value of B in MHz to be considered. This
+constrains the size of the molecule you are looking for.</li>
+<li><strong>refit</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, B and D are refit to the cluster frequencies.</li>
+<li><strong>plot</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, creates a Plotly scatter plot of the clusters, as a funct-
+ion of the preference values.</li>
+<li><strong>preferences</strong> (<em>float</em><em> or </em><em>array_like of floats</em><em>, </em><em>optional</em>) – A single value or an array of preference values for the AP cluster
+model. If None, the clustering will be performed on a default grid,
+where all of the results are returned.</li>
+<li><strong>kwargs</strong> (<em>optional</em>) – Additional kwargs are passed to the AP model initialization.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">fig</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.from_ascii">
+<em class="property">classmethod </em><code class="descname">from_ascii</code><span class="sig-paren">(</span><em>filepath: str, experiment: int, composition=['C', 'H'], delimiter='\t', temperature=4.0, velocity=0.0, col_names=None, freq_col='Frequency', int_col='Intensity', skiprows=0, verbose=False, **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.from_ascii"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.from_ascii" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class method for AssignmentSession to generate a session using an ASCII
+file. This is the preferred method for starting an AssignmentSession.
+The ASCII files are parsed using the pandas method <cite>read_csv</cite>, with
+the arguments for reading simply passed to that function.</p>
+<p>Example based on blackchirp spectrum:
+The first row in an ASCII output from blackchirp contains the headers,
+which typically should be renamed to “Frequency, Intensity”. This can
+be done with this call:</p>
+<p><a href="#id1"><span class="problematic" id="id2">``</span></a>`
+session = AssignmentSession.from_ascii(</p>
+<blockquote>
+<div>filepath=”ft1020.txt”,
+experiment=0,
+col_names=[“Frequency”, “Intensity”],
+skiprows=1
+)</div></blockquote>
+<p><a href="#id3"><span class="problematic" id="id4">``</span></a><a href="#id5"><span class="problematic" id="id6">`</span></a></p>
+<p>Example based on astronomical spectra:
+File formats are not homogenized, and delimiters may change. This exam-
+ple reads in a comma-separated spectrum, with a radial velocity of
++26.2 km/s.</p>
+<p><a href="#id7"><span class="problematic" id="id8">``</span></a>`
+session = AssignmentSession.from_ascii(</p>
+<blockquote>
+<div>filepath=”spectrum.mid.dat”,
+experiment=0,
+col_names=[“Frequency”, “Intensity”],
+velocity=26.2,
+delimiter=”,”
+)</div></blockquote>
+<p><a href="#id9"><span class="problematic" id="id10">``</span></a><a href="#id11"><span class="problematic" id="id12">`</span></a></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>filepath</strong> (<em>str</em>) – Filepath to the ASCII spectrum</li>
+<li><strong>experiment</strong> (<em>int</em>) – Integer identifier for the experiment</li>
+<li><strong>composition</strong> (<em>list of str</em><em>, </em><em>optional</em>) – List of atomic symbols, representing the atomic composition of the experiment</li>
+<li><strong>delimiter</strong> (<em>str</em><em>, </em><em>optional</em>) – Delimiter character used in the ASCII file. For example, ”  “, “s”, “,”</li>
+<li><strong>velocity</strong> (<em>float</em><em>, </em><em>optional</em>) – Radial velocity to offset the frequency in km/s.</li>
+<li><strong>temperature</strong> (<em>float</em><em>, </em><em>optional</em>) – Rotational temperature in Kelvin used for the experiment.</li>
+<li><strong>col_names</strong> (<em>None</em><em> or </em><em>list of str</em><em>, </em><em>optional</em>) – Names to rename the columns. If None, this is ignored.</li>
+<li><strong>freq_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the column to be used for the frequency axis</li>
+<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the column to be used for the intensity axis</li>
+<li><strong>skip_rows</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of rows to skip reading.</li>
+<li><strong>verbose</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, the logging module will also print statements and display
+any interaction that happens.</li>
+<li><strong>kwargs</strong> – Additional kwargs are passed onto initializing the Session class</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#pyspectools.spectra.assignment.AssignmentSession" title="pyspectools.spectra.assignment.AssignmentSession">AssignmentSession</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.load_session">
+<em class="property">classmethod </em><code class="descname">load_session</code><span class="sig-paren">(</span><em>filepath: str</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.load_session"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.load_session" title="Permalink to this definition">¶</a></dt>
+<dd><p>Load an AssignmentSession from disk, once it has
+been saved with the save_session method which creates a pickle
+file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filepath</strong> (<em>str</em>) – path to the AssignmentSession pickle file; typically in the sessions/{experiment_id}.pkl</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Instance of the AssignmentSession loaded from disk</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#pyspectools.spectra.assignment.AssignmentSession" title="pyspectools.spectra.assignment.AssignmentSession">AssignmentSession</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.match_artifacts">
+<code class="descname">match_artifacts</code><span class="sig-paren">(</span><em>artifact_exp: pyspectools.spectra.assignment.AssignmentSession</em>, <em>threshold=0.05</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.match_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.match_artifacts" title="Permalink to this definition">¶</a></dt>
+<dd><p>TODO: Need to update this method; <cite>process_artifacts</cite> is no longer a method.</p>
+<p>Remove artifacts based on another experiment which has the blank
+sample - i.e. only artifacts.</p>
+<p>The routine will simple match peaks found in the artifact
+experiment, and assign all coincidences in the present experiment
+as artifacts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>- AssignmentSession object</strong> (<em>artifact_exp</em>) – Experiment with no sample present</li>
+<li><strong>- float</strong><strong>, </strong><strong>optional</strong> (<em>threshold</em>) – Threshold in absolute frequency units for matching</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.overlay_molecule">
+<code class="descname">overlay_molecule</code><span class="sig-paren">(</span><em>species: str</em>, <em>freq_range=None</em>, <em>threshold=-7.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.overlay_molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.overlay_molecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to query splatalogue for a specific molecule. By default, the
+frequency range that will be requested corresponds to the spectral range
+available in the experiment.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>species</strong> (<em>str</em>) – Identifier for a specific molecule, typically name</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>FigureWidget</em> – Plotly FigureWidget that shows the experimental spectrum along
+with the detected peaks, and the molecule spectrum.</li>
+<li><em>DataFrame</em> – Pandas DataFrame from the Splatalogue query.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Raises:</th><td class="field-body"><code class="xref py py-exc docutils literal notranslate"><span class="pre">Exception</span></code> – If no species are found in the query, raises Exception.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.plot_assigned">
+<code class="descname">plot_assigned</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.plot_assigned"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.plot_assigned" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a Plotly figure with the assignments overlaid
+on the experimental spectrum.</p>
+<p>Does not require any parameters, but requires that
+the assignments and peak finding functions have been
+run previously.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.plot_breakdown">
+<code class="descname">plot_breakdown</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.plot_breakdown"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.plot_breakdown" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate two charts to summarize the breakdown of spectral features.
+The left column plot shows the number of ulines being assigned by
+the various sources of frequency data.</p>
+<p>Artifacts - instrumental interference, from the function <cite>process_artifacts</cite>
+Splatalogue - uses the astroquery API, from the function <cite>splat_assign_spectrum</cite>
+Published - local catalogs, but with the <cite>public</cite> kwarg flagged as True
+Unpublished - local catalogs, but with the <cite>public</cite> kwarg flagged as False
+:return: Plotly FigureWidget object</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.plot_spectrum">
+<code class="descname">plot_spectrum</code><span class="sig-paren">(</span><em>simulate=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.plot_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.plot_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generates a Plotly figure of the spectrum. If U-lines are
+present, it will plot the simulated spectrum also.</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.process_db">
+<code class="descname">process_db</code><span class="sig-paren">(</span><em>auto=True</em>, <em>dbpath=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.process_db"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.process_db" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for assigning peaks based on a local database file.
+The database is controlled with the SpectralCatalog class, which will handle all of the searching.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>auto</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, the assignments are made automatically.</li>
+<li><strong>dbpath</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – Filepath to the local database. If none is supplied, uses the default value from the user’s home directory.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.process_linelist">
+<code class="descname">process_linelist</code><span class="sig-paren">(</span><em>name=None</em>, <em>formula=None</em>, <em>filepath=None</em>, <em>linelist=None</em>, <em>auto=True</em>, <em>thres=-10.0</em>, <em>progressbar=True</em>, <em>tol=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.process_linelist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.process_linelist" title="Permalink to this definition">¶</a></dt>
+<dd><p>General purpose function for performing line assignments using local catalog and line data. The two main ways
+of running this function is to either provide a linelist or filepath argument. The type of linelist will be
+checked to determine how the catalog data will be processed: if it’s a string, it will be used to use</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the molecule being assigned. This should be specified when providing a new line list, which then
+gets added to the experiment.</li>
+<li><strong>formula</strong> (<em>str</em><em>, </em><em>optional</em>) – Chemical formula for the molecule being assigned. Should be added in conjuction with name.</li>
+<li><strong>filepath</strong> (<em>str</em><em>, </em><em>optional</em>) – If a linelist is not given, a filepath can be specified corresponding to a .cat or .lin file, which will
+be used to create a LineList object.</li>
+<li><strong>linelist</strong> (<em>str</em><em> or </em><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList"><em>LineList</em></a><em>, </em><em>optional</em>) – Can be the name of a molecule or LineList object; the former is specified as a string which looks up the
+experiment line_list attribute for an existing LineList object. If a LineList object is provided, the
+function will use this directly.</li>
+<li><strong>auto</strong> (<em>bool</em><em>, </em><em>optional</em>) – Specifies whether the assignment procedure works without intervention. If False, the user will be prompted
+to provide a candidate index.</li>
+<li><strong>thres</strong> (<em>float</em><em>, </em><em>optional</em>) – log Intensity cut off used to screen candidates.</li>
+<li><strong>progressbar</strong> (<em>bool</em><em>, </em><em>optional</em>) – If True, a tqdm progressbar will indicate assignment progress.</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Tolerance for making assignments. If None, the function will default to the session-wide values of
+freq_abs and freq_prox to determine the tolerance.</li>
+<li><strong>kwargs</strong> – Kwargs are passed to the Transition object update when assignments are made.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.process_linelist_batch">
+<code class="descname">process_linelist_batch</code><span class="sig-paren">(</span><em>param_dict=None</em>, <em>yml_path=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.process_linelist_batch"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.process_linelist_batch" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for processing a whole folder of catalog files. This takes a user-specified
+mapping scheme that will associate catalog files with molecule names, formulas, and
+any other <cite>LineList</cite>/<cite>Transition</cite> attributes. This can be in the form of a dictionary
+or a YAML file; one has to be provided.</p>
+<p>An example scheme is given here:
+{</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>“cyclopentadiene”: {</dt>
+<dd>“formula”: “c5h6”,
+“filepath”: “../data/catalogs/cyclopentadiene.cat”</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>}
+The top dictionary has keys corresponding to the name of the molecule,
+and the value as a sub dictionary containing the formula and filepath
+to the catalog file as minimum input.</p>
+<p>You can also provide additional details that are <cite>Transition</cite> attributes:
+{</p>
+<blockquote>
+<div><dl class="docutils">
+<dt>“benzene”: {</dt>
+<dd>“formula”: “c6h6”,
+“filepath”: “../data/catalogs/benzene.cat”,
+“smiles”: “c1ccccc1”,
+“publc”: False</dd>
+</dl>
+<p>}</p>
+</div></blockquote>
+<p>}</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>param_dict</strong> (<em>dict</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – If not None, a dictionary containing the mapping scheme will be used
+to process the catalogs. Defaults to None.</li>
+<li><strong>yml_path</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – If not None, corresponds to a str filepath to the YAML file to be read.</li>
+<li><strong>kwargs</strong> – Additional keyword arguments will be passed into the assignment process,
+which are the args for <cite>process_linelist</cite>.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last">ValueError : If yml_path and param_dict args are the same value.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.process_splatalogue">
+<code class="descname">process_splatalogue</code><span class="sig-paren">(</span><em>auto=True</em>, <em>progressbar=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.process_splatalogue"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.process_splatalogue" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="docutils">
+<dt>Function that will provide an “interface” for interactive</dt>
+<dd><p class="first">line assignment in a notebook environment.</p>
+<p class="last">Basic functionality is looping over a series of peaks,
+which will query splatalogue for known transitions in the
+vicinity. If the line is known in Splatalogue, it will
+throw it into an Transition object and flag it as known.
+Conversely, if it’s not known in Splatalogue it will defer
+assignment, flagging it as unassigned and dumping it into
+the <cite>uline</cite> attribute.</p>
+</dd>
+</dl>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>auto</strong> (<em>bool</em>) – If True the assignment process does not require user input, otherwise will prompt user.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.rename_umolecule">
+<code class="descname">rename_umolecule</code><span class="sig-paren">(</span><em>name: str</em>, <em>new_name: str</em>, <em>formula=''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.rename_umolecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.rename_umolecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to update the name of a LineList. This function should be used
+to update a LineList, particularly when the identity of an unidentified
+molecule is discovered.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>name</strong> (<em>str</em>) – Old name of the LineList.</li>
+<li><strong>new_name</strong> (<em>str</em>) – New name of the LineList - preferably, a real molecule name.</li>
+<li><strong>formula</strong> (<em>str</em><em>, </em><em>optional</em>) – New formula of the LineList.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.save_session">
+<code class="descname">save_session</code><span class="sig-paren">(</span><em>filepath=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.save_session"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.save_session" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to save an AssignmentSession to disk.</p>
+<p>The underlying mechanics are based on the joblib library,
+and so there can be cross-compatibility issues particularly
+when loading from different versions of Python.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>- str</strong> (<em>filepath</em>) – Path to save the file to. By default it will go into the sessions folder.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.search_frequency">
+<code class="descname">search_frequency</code><span class="sig-paren">(</span><em>frequency: float</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.search_frequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.search_frequency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for searching the experiment for a particular frequency. The search range is defined by
+the Session attribute freq_prox, and will first look for the frequency in the assigned features
+if any have been made. The routine will then look for it in the U-lines.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>frequency</strong> (<em>float</em>) – Center frequency in MHz</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Pandas dataframe with the matches</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">dataframe</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.search_species">
+<code class="descname">search_species</code><span class="sig-paren">(</span><em>formula=None</em>, <em>name=None</em>, <em>smiles=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.search_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.search_species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for finding species in the assigned dataframe,
+with the intention of showing where the observed frequencies
+are.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- str for chemical formula lookup</strong> (<em>formula</em>) – </li>
+<li><strong>- str for common name</strong> (<em>name</em>) – </li>
+<li><strong>- str for unique SMILES string</strong> (<em>smiles</em>) – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">pandas dataframe slice with corresponding lookup</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.set_velocity">
+<code class="descname">set_velocity</code><span class="sig-paren">(</span><em>value: float</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.set_velocity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.set_velocity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set the radial velocity offset for the spectrum. The velocity is specified in km/s, and is set up
+such that the notation is positive velocity yields a redshifted spectrum (i.e. moving towards us).</p>
+<p>This method should be used to change the velocity, as it will automatically re-calculate the dataframe
+frequency column to the new velocity.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>value</strong> (<em>float</em>) – Velocity in km/s</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.simulate_spectrum">
+<code class="descname">simulate_spectrum</code><span class="sig-paren">(</span><em>x: numpy.ndarray, centers: List[float], widths: List[float], amplitudes: List[float], fake=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.simulate_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.simulate_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a synthetic spectrum with Gaussians with the
+specified parameters, on a given x axis.</p>
+<p>GaussianModel is used here to remain internally consistent
+with the rest of the code.</p>
+<blockquote>
+<div>x: array of x values to evaluate Gaussians on
+centers: array of Gaussian centers
+widths: array of Gaussian widths
+amplitudes: array of Gaussian amplitudes
+fake: bool indicating whether false intensities are used for the simulation</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Return y:</th><td class="field-body">array of y values</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.simulate_sticks">
+<code class="descname">simulate_sticks</code><span class="sig-paren">(</span><em>catalogpath: str</em>, <em>N: float</em>, <em>Q: float</em>, <em>T: float</em>, <em>doppler=None</em>, <em>gaussian=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.simulate_sticks"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.simulate_sticks" title="Permalink to this definition">¶</a></dt>
+<dd><p>Simulates a stick spectrum with intensities in flux units (Jy) for
+a given catalog file, the column density, and the rotational partition
+function at temperature T.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>catalogpath</strong> (<em>str</em>) – path to SPCAT catalog file</li>
+<li><strong>N</strong> (<em>float</em>) – column density in cm^-2</li>
+<li><strong>Q</strong> (<em>float</em>) – partition function at temperature T</li>
+<li><strong>T</strong> (<em>float</em>) – temperature in Kelvin</li>
+<li><strong>doppler</strong> (<em>float</em><em>, </em><em>optional</em>) – doppler width in km/s; defaults to session wide value</li>
+<li><strong>gaussian</strong> (<em>bool</em><em>, </em><em>optional</em>) – if True, simulates Gaussian profiles instead of sticks</li>
+<li><strong>Returns</strong> – </li>
+<li><strong>-------</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">if gaussian is False, returns a dataframe with sticks; if True,
+returns a simulated Gaussian line profile spectrum</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.splat_assign_spectrum">
+<code class="descname">splat_assign_spectrum</code><span class="sig-paren">(</span><em>auto=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.splat_assign_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.splat_assign_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Alias for <cite>process_splatalogue</cite>. Function will be removed in a later version.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>auto</strong> (<em>bool</em>) – Specifies whether the assignment procedure is automatic.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.stacked_plot">
+<code class="descname">stacked_plot</code><span class="sig-paren">(</span><em>frequencies: List[float], int_col=None, freq_range=0.05</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.stacked_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.stacked_plot" title="Permalink to this definition">¶</a></dt>
+<dd><p>Special implementation of the stacked_plot from the figurefactory module, adapted
+for AssignmentSession. In this version, the assigned/u-lines are also indicated.</p>
+<p>This function will generate a Plotly figure that stacks up the spectra as subplots,
+with increasing frequencies going up the plot. This function was written primarily
+to identify harmonically related lines, which in the absence of centrifugal distortion
+should line up perfectly in the center of the plot.</p>
+<p>Due to limitations with Plotly, there is a maximum of ~8 plots that can stacked
+and will return an Exception if &gt; 8 frequencies are provided.</p>
+<blockquote>
+<div>frequencies: list of floats, corresponding to center frequencies
+freq_range: float percentage value of each center frequency to use as cutoffs</div></blockquote>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Plotly Figure object</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.umol_gen">
+<code class="descname">umol_gen</code><span class="sig-paren">(</span><em>silly=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.umol_gen"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.umol_gen" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generator for unidentified molecule names. Wraps
+:Yields: <em>str</em> – Formatted as “UMol_XXX”</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.update_database">
+<code class="descname">update_database</code><span class="sig-paren">(</span><em>dbpath=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.update_database"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.update_database" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds all of the entries to a specified SpectralCatalog database. The database defaults
+to the global database stored in the home directory. This method will remove everything
+in the database associated with this experiment’s ID, and re-add the entries.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dbpath</strong> (<em>str</em><em>, </em><em>optional</em>) – path to a SpectralCatalog database. Defaults to the system-wide catalog.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pyspectools.spectra.assignment.LineList">
+<em class="property">class </em><code class="descclassname">pyspectools.spectra.assignment.</code><code class="descname">LineList</code><span class="sig-paren">(</span><em>name: str = ''</em>, <em>formula: str = ''</em>, <em>smi: str = ''</em>, <em>filecontents: str = ''</em>, <em>filepath: str = ''</em>, <em>transitions: List[T] = &lt;factory&gt;</em>, <em>frequencies: List[float] = &lt;factory&gt;</em>, <em>catalog_frequencies: List[float] = &lt;factory&gt;</em>, <em>source: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for handling and homogenizing all of the possible line lists: from peaks to assignments to catalog files.</p>
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.name">
+<code class="descname">name</code><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>Name of the line list. Can be used to identify the molecule, or to simply state the purpose of the list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str, optional</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.formula">
+<code class="descname">formula</code><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.formula" title="Permalink to this definition">¶</a></dt>
+<dd><p>Chemical formula for the molecule, if applicable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str, optional</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.smi">
+<code class="descname">smi</code><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.smi" title="Permalink to this definition">¶</a></dt>
+<dd><p>SMILES representation of the molecule, if applicable.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str, optional</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.filecontents">
+<code class="descname">filecontents</code><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.filecontents" title="Permalink to this definition">¶</a></dt>
+<dd><p>String representation of the file contents used to make the line list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str, optional</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.filepath">
+<code class="descname">filepath</code><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.filepath" title="Permalink to this definition">¶</a></dt>
+<dd><p>Path to the file used to make the list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str, optional</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.transitions">
+<code class="descname">transitions</code><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.transitions" title="Permalink to this definition">¶</a></dt>
+<dd><p>A designated list for holding Transition objects. This is the bulk of the information for a given
+line list.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list, optional</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.add_uline">
+<code class="descname">add_uline</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>intensity: float</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.add_uline"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.add_uline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to manually add a U-line to the LineList.
+The function creates a Transition object with the frequency and
+intensity values provided by a user, which is then compared with
+the other transition entries within the LineList. If it doesn’t
+already exist, it will then add the new Transition to the LineList.</p>
+<p>Kwargs are passed to the creation of the Transition object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>intensity</strong> (<em>frequency</em><em>,</em>) – Floats corresponding to the frequency and intensity of the line in
+a given unit.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.add_ulines">
+<code class="descname">add_ulines</code><span class="sig-paren">(</span><em>data: List[Tuple[float, float]], **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.add_ulines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.add_ulines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to add multiple pairs of frequency/intensity to the current
+LineList.</p>
+<p>Kwargs are passed to the creation of the Transition object.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data</strong> (<em>iterable of 2-tuple</em>) – <p>List-like of 2-tuples corresponding to frequency and intensity.
+Data should look like this example:
+[</p>
+<blockquote>
+<div>(12345.213, 5.),
+(18623.125, 12.3)</div></blockquote>
+<p>]</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">filecontents</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">filepath</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.find_candidates">
+<code class="descname">find_candidates</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>lstate_threshold=4.0</em>, <em>freq_tol=0.1</em>, <em>int_tol=-10.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.find_candidates"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.find_candidates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
+that meet three criteria: the lower state energy, the catalog intensity, and the frequency distance.</p>
+<p>If no candidates are found, the function will return None. Otherwise, it will return the list of transitions
+and a list of associated normalized weights.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequency</strong> (<em>float</em>) – Frequency in MHz to try and match.</li>
+<li><strong>lstate_threshold</strong> (<em>float</em><em>, </em><em>optional</em>) – Lower state energy threshold in Kelvin</li>
+<li><strong>freq_tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Frequency tolerance in MHz for matching two frequencies</li>
+<li><strong>int_tol</strong> (<em>float</em><em>, </em><em>optional</em>) – log Intensity threshold</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If candidates are found, lists of the transitions and the associated weights are returned.
+Otherwise, returns None</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">transitions, weighting or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.find_nearest">
+<code class="descname">find_nearest</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>tol=0.001</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.find_nearest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.find_nearest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Look up transitions to find the nearest in frequency to the query. If the matched frequency is within a
+tolerance, then the function will return the corresponding Transition. Otherwise, it returns None.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequency</strong> (<em>float</em>) – Frequency in MHz to search for.</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum tolerance for the deviation from the LineList frequency and query frequency</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Transition object or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">formula</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_artifacts">
+<em class="property">classmethod </em><code class="descname">from_artifacts</code><span class="sig-paren">(</span><em>frequencies: List[float], **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_artifacts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialized class method for creating a LineList object specifically for artifacts/RFI. These Transitions are
+specially flagged as Artifacts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequencies</strong> (<em>iterable of floats</em>) – List or array of floats corresponding to known artifact frequencies.</li>
+<li><strong>kwargs</strong> – Kwargs are passed into the Transition object creation.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList">LineList</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_catalog">
+<em class="property">classmethod </em><code class="descname">from_catalog</code><span class="sig-paren">(</span><em>name: str</em>, <em>formula: str</em>, <em>filepath: str</em>, <em>min_freq=0.0</em>, <em>max_freq=1000000000000.0</em>, <em>max_lstate=4.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_catalog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_catalog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a Line List object from an SPCAT catalog.
+:param name: Name of the molecule the catalog belongs to
+:type name: str
+:param formula: Chemical formula of the molecule
+:type formula: str
+:param filepath: Path to the catalog file.
+:type filepath: str
+:param min_freq: Minimum frequency in MHz for the frequency cutoff
+:type min_freq: float, optional
+:param max_freq: Maximum frequency in MHz for the frequency cutoff
+:type max_freq: float, optional
+:param max_lstate: Maximum lower state energy to filter out absurd lines
+:type max_lstate: float, optional
+:param kwargs: Additional attributes that are passed into the Transition objects.
+:type kwargs: optional</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of LineList with the digested catalog.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">linelist_obj</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_dataframe">
+<em class="property">classmethod </em><code class="descname">from_dataframe</code><span class="sig-paren">(</span><em>dataframe: pandas.core.frame.DataFrame</em>, <em>name='Peaks'</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_dataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Specialized class method for creating a LineList object from a Pandas Dataframe. This method is called by
+the AssignmentSession.df2ulines function to generate a Peaks LineList during peak detection.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dataframe</strong> (<em>pandas DataFrame</em>) – DataFrame containing frequency and intensity information</li>
+<li><strong>freq_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the frequency column</li>
+<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the intensity column</li>
+<li><strong>kwargs</strong> – Optional settings are passed into the creation of Transition objects.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList">LineList</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_lin">
+<em class="property">classmethod </em><code class="descname">from_lin</code><span class="sig-paren">(</span><em>name: str</em>, <em>filepath: str</em>, <em>formula=''</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_lin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_lin" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a LineList object from a .lin file. This method should be used for intermediate assignments, when one
+does not know what the identity of a molecule is but has measured some frequency data.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Name of the molecule</li>
+<li><strong>filepath</strong> (<em>str</em>) – File path to the .lin file.</li>
+<li><strong>formula</strong> (<em>str</em><em>, </em><em>optional</em>) – Chemical formula of the molecule if known.</li>
+<li><strong>kwargs</strong> – Additional kwargs are passed into the Transition objects.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList">LineList</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_list">
+<em class="property">classmethod </em><code class="descname">from_list</code><span class="sig-paren">(</span><em>name: str, frequencies: List[float], formula='', **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_list"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_list" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generic, low level method for creating a LineList object from a list
+of frequencies. This method can be used when neither lin, catalog, nor
+splatalogue is appropriate and you would like to manually create it
+by handpicked frequencies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Name of the species - doesn’t have to be its real name, just an identifier.</li>
+<li><strong>frequencies</strong> (<em>list</em>) – A list of floats corresponding to the “catalog” frequencies.</li>
+<li><strong>formula</strong> (<em>str</em><em>, </em><em>optional</em>) – Formula of the species, if known.</li>
+<li><strong>kwargs</strong> – Optional settings are passed into the creation of Transition objects.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList">LineList</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_pgopher">
+<em class="property">classmethod </em><code class="descname">from_pgopher</code><span class="sig-paren">(</span><em>name: str</em>, <em>filepath: str</em>, <em>formula=''</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_pgopher"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_pgopher" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to take the output of a PGopher file and create a LineList
+object. The PGopher output must be in the comma delimited specification.</p>
+<p>This is actually the ideal way to generate LineList objects: it fills
+in all of the relevant fields, such as linestrength and state energies.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>name</strong> (<em>str</em>) – Name of the molecule</li>
+<li><strong>filepath</strong> (<em>str</em>) – Path to the PGopher CSV output</li>
+<li><strong>formula</strong> (<em>str</em><em>, </em><em>optional</em>) – Chemical formula of the molecule, defaults to an empty string.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last"><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList">LineList</a></p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_splatalogue_query">
+<em class="property">classmethod </em><code class="descname">from_splatalogue_query</code><span class="sig-paren">(</span><em>dataframe: pandas.core.frame.DataFrame</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_splatalogue_query"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_splatalogue_query" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for converting a Splatalogue query dataframe into a LineList
+object. This is designed with the intention of pre-querying a set
+of molecules ahead of time, so that the user can have direct control
+over which molecules are specifically targeted without having to
+generate specific catalog files.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>dataframe</strong> (<em>pandas DataFrame</em>) – DataFrame generated by the function <cite>analysis.search_molecule</cite></td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"></td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList">LineList</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.get_assignments">
+<code class="descname">get_assignments</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.get_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.get_assignments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for retrieving assigned lines in a Line List.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>assign_objs</strong> – List of all of the transition objects where the uline flag is set to False.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.get_frequencies">
+<code class="descname">get_frequencies</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.get_frequencies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.get_frequencies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method to extract all the frequencies out of a LineList</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">[description]</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">[type]</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.get_ulines">
+<code class="descname">get_ulines</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.get_ulines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.get_ulines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for retrieving unidentified lines in a Line List.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>uline_objs</strong> – List of all of the transition objects where the uline flag is set to True.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">list</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">name</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">smi</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.LineList.source">
+<code class="descname">source</code><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.source" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.to_dataframe">
+<code class="descname">to_dataframe</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.to_dataframe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.to_dataframe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the transition data into a Pandas DataFrame.
+:returns: Pandas Dataframe with all of the transitions in the line list.
+:rtype: dataframe</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.to_ftb">
+<code class="descname">to_ftb</code><span class="sig-paren">(</span><em>filepath=None</em>, <em>thres=-10.0</em>, <em>shots=500</em>, <em>dipole=1.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.to_ftb"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.to_ftb" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to create an FTB file from a LineList object. This will
+create entries for every transition entry above a certain intensity
+threshold, in whatever units the intensities are in; i.e. SPCAT will
+be in log units, while experimental peaks will be in whatever arbitrary
+voltage scale.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>filepath</strong> (<em>None</em><em> or </em><em>str</em><em>, </em><em>optional</em>) – Path to write the ftb file to. If None (default), uses the name of
+the LineList and writes to the ftb folder.</li>
+<li><strong>thres</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold to cutoff transitions in the ftb file. Transitions with
+less intensity than this value not be included. Units are in the
+same units as whatever the LineList units are.</li>
+<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of shots to integrate.</li>
+<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Target dipole moment for the species</li>
+<li><strong>kwargs</strong> – Additional kwargs are passed into the ftb creation, e.g. magnet,
+discharge, etc.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.to_pickle">
+<code class="descname">to_pickle</code><span class="sig-paren">(</span><em>filepath=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.to_pickle"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.to_pickle" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to serialize the LineList to a Pickle file. If no filepath is provided, the function will default
+to using the name attribute of the LineList to name the file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>filepath</strong> (<em>str</em><em> or </em><em>None</em><em>, </em><em>optional</em>) – If None, uses name attribute for the filename, and saves to the linelists folder.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.update_linelist">
+<code class="descname">update_linelist</code><span class="sig-paren">(</span><em>transition_objs: List[pyspectools.spectra.assignment.Transition]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.update_linelist"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.update_linelist" title="Permalink to this definition">¶</a></dt>
+<dd><p>Adds transitions to a LineList if they do not exist in the list already.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>transition_objs</strong> (<em>list</em>) – List of Transition objects</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.LineList.update_transition">
+<code class="descname">update_transition</code><span class="sig-paren">(</span><em>index: int</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.update_transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.update_transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for updating a specific Transition object within the Line List.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>index</strong> (<em>int</em>) – Index for the list Transition object</li>
+<li><strong>kwargs</strong> (<em>optional</em>) – Updates to the Transition object</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pyspectools.spectra.assignment.Molecule">
+<em class="property">class </em><code class="descclassname">pyspectools.spectra.assignment.</code><code class="descname">Molecule</code><span class="sig-paren">(</span><em>name: str = ''</em>, <em>formula: str = ''</em>, <em>smi: str = ''</em>, <em>filecontents: str = ''</em>, <em>filepath: str = ''</em>, <em>transitions: List[T] = &lt;factory&gt;</em>, <em>frequencies: List[float] = &lt;factory&gt;</em>, <em>catalog_frequencies: List[float] = &lt;factory&gt;</em>, <em>source: str = ''</em>, <em>A: float = 20000.0</em>, <em>B: float = 6000.0</em>, <em>C: float = 3500.0</em>, <em>var_file: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Molecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <a class="reference internal" href="#pyspectools.spectra.assignment.LineList" title="pyspectools.spectra.assignment.LineList"><code class="xref py py-class docutils literal notranslate"><span class="pre">pyspectools.spectra.assignment.LineList</span></code></a></p>
+<p>Special instance of the LineList class. The idea is to eventually
+use the high speed fitting/cataloguing routines by Brandon to provide
+quick simulations overlaid on chirp spectra.</p>
+<p>Attributes</p>
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Molecule.A">
+<code class="descname">A</code><em class="property"> = 20000.0</em><a class="headerlink" href="#pyspectools.spectra.assignment.Molecule.A" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Molecule.B">
+<code class="descname">B</code><em class="property"> = 6000.0</em><a class="headerlink" href="#pyspectools.spectra.assignment.Molecule.B" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Molecule.C">
+<code class="descname">C</code><em class="property"> = 3500.0</em><a class="headerlink" href="#pyspectools.spectra.assignment.Molecule.C" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Molecule.var_file">
+<code class="descname">var_file</code><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.spectra.assignment.Molecule.var_file" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pyspectools.spectra.assignment.Session">
+<em class="property">class </em><code class="descclassname">pyspectools.spectra.assignment.</code><code class="descname">Session</code><span class="sig-paren">(</span><em>experiment: int</em>, <em>composition: List[str] = &lt;factory&gt;</em>, <em>temperature: float = 4.0</em>, <em>doppler: float = 0.01</em>, <em>velocity: float = 0.0</em>, <em>freq_prox: float = 0.1</em>, <em>freq_abs: bool = True</em>, <em>baseline: float = 0.0</em>, <em>noise_rms: float = 0.0</em>, <em>noise_region: List[float] = &lt;factory&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Session"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Session" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Data class for handling parameters used for an AssignmentSession.
+The user generally shouldn’t need to directly interact with this class,
+but can give some level of dynamic control and bookkeeping to how and
+what molecules can be assigned, particularly with the composition, the
+frequency thresholds for matching, and the noise statistics.</p>
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.experiment">
+<code class="descname">experiment</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.experiment" title="Permalink to this definition">¶</a></dt>
+<dd><p>ID for experiment</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.composition">
+<code class="descname">composition</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.composition" title="Permalink to this definition">¶</a></dt>
+<dd><p>List of atomic symbols. Used for filtering out species in the Splatalogue assignment procedure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.temperature">
+<code class="descname">temperature</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.temperature" title="Permalink to this definition">¶</a></dt>
+<dd><p>Temperature in K. Used for filtering transitions in the automated assigment, which are 3 times this value.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.doppler">
+<code class="descname">doppler</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.doppler" title="Permalink to this definition">¶</a></dt>
+<dd><p>Doppler width in km/s; default value is about 5 kHz at 15 GHz. Used for simulating lineshapes and
+for lineshape analysis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.velocity">
+<code class="descname">velocity</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.velocity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Radial velocity of the source in km/s; used to offset the frequency spectrum</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.freq_prox">
+<code class="descname">freq_prox</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.freq_prox" title="Permalink to this definition">¶</a></dt>
+<dd><p>frequency cutoff for line assignments. If freq_abs attribute is True, this value is taken as the absolute value.
+Otherwise, it is a percentage of the frequency being compared.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.freq_abs">
+<code class="descname">freq_abs</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.freq_abs" title="Permalink to this definition">¶</a></dt>
+<dd><p>If True, freq_prox attribute is taken as the absolute value of frequency, otherwise as a decimal percentage of
+the frequency being compared.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.baseline">
+<code class="descname">baseline</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.baseline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Baseline level of signal used for intensity calculations and peak detection</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.noise_rms">
+<code class="descname">noise_rms</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.noise_rms" title="Permalink to this definition">¶</a></dt>
+<dd><p>RMS of the noise used for intensity calculations and peak detection</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Session.noise_region">
+<code class="descname">noise_region</code><a class="headerlink" href="#pyspectools.spectra.assignment.Session.noise_region" title="Permalink to this definition">¶</a></dt>
+<dd><p>The frequency region used to define the noise floor.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">2-tuple of floats</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">baseline</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">doppler</code><em class="property"> = 0.01</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">freq_abs</code><em class="property"> = True</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">freq_prox</code><em class="property"> = 0.1</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">noise_rms</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">temperature</code><em class="property"> = 4.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">velocity</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="class">
+<dt id="pyspectools.spectra.assignment.Transition">
+<em class="property">class </em><code class="descclassname">pyspectools.spectra.assignment.</code><code class="descname">Transition</code><span class="sig-paren">(</span><em>name: str = ''</em>, <em>smiles: str = ''</em>, <em>formula: str = ''</em>, <em>frequency: float = 0.0</em>, <em>catalog_frequency: float = 0.0</em>, <em>catalog_intensity: float = 0.0</em>, <em>deviation: float = 0.0</em>, <em>intensity: float = 0.0</em>, <em>S: float = 0.0</em>, <em>peak_id: int = 0</em>, <em>experiment: int = 0</em>, <em>uline: bool = True</em>, <em>composition: List[str] = &lt;factory&gt;</em>, <em>v_qnos: List[int] = &lt;factory&gt;</em>, <em>r_qnos: str = ''</em>, <em>fit: Dict[KT</em>, <em>VT] = &lt;factory&gt;</em>, <em>ustate_energy: float = 0.0</em>, <em>lstate_energy: float = 0.0</em>, <em>interference: bool = False</em>, <em>weighting: float = 0.0</em>, <em>source: str = 'Catalog'</em>, <em>public: bool = True</em>, <em>velocity: float = 0.0</em>, <em>discharge: bool = False</em>, <em>magnet: bool = False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>DataClass for handling assignments.
+Attributes are assigned in order to be sufficiently informative for a
+line assignment to be unambiguous and reproduce it later in a form
+that is both machine and human readable.</p>
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.name">
+<code class="descname">name</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.name" title="Permalink to this definition">¶</a></dt>
+<dd><p>IUPAC/common name; the former is preferred to be unambiguous</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.formula">
+<code class="descname">formula</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.formula" title="Permalink to this definition">¶</a></dt>
+<dd><p>Chemical formula, or usually the stochiometry</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.smiles">
+<code class="descname">smiles</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.smiles" title="Permalink to this definition">¶</a></dt>
+<dd><p>SMILES code that provides a machine and human readable chemical specification</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.frequency">
+<code class="descname">frequency</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.frequency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Observed frequency in MHz</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.intensity">
+<code class="descname">intensity</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Observed intensity, in whatever units the experiments are in. Examples are Jy/beam, or micro volts.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.catalog_frequency">
+<code class="descname">catalog_frequency</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.catalog_frequency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Catalog frequency in MHz</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.catalog_intensity">
+<code class="descname">catalog_intensity</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.catalog_intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Catalog line intensity, typically in SPCAT units</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.S">
+<code class="descname">S</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.S" title="Permalink to this definition">¶</a></dt>
+<dd><p>Theoretical line strength; differs from the catalog line strength as it may be used for intrinsic line
+strength S u^2</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.peak_id">
+<code class="descname">peak_id</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.peak_id" title="Permalink to this definition">¶</a></dt>
+<dd><p>Peak id from specific experiment</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.uline">
+<code class="descname">uline</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.uline" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flag to indicate whether line is identified or not</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.composition">
+<code class="descname">composition</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.composition" title="Permalink to this definition">¶</a></dt>
+<dd><p>A list of atomic symbols specifying what the experimental elemental composition is. Influences which
+molecules are considered possible in the Splatalogue assignment procedure.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.v_qnos">
+<code class="descname">v_qnos</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.v_qnos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Quantum numbers for vibrational modes. Index corresponds to mode, and int value to number of quanta.
+Length should be equal to 3N-6.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">list of int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.r_qnos">
+<code class="descname">r_qnos</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.r_qnos" title="Permalink to this definition">¶</a></dt>
+<dd><p>Rotational quantum numbers. TODO - better way of managing rotational quantum numbers</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.experiment">
+<code class="descname">experiment</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.experiment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Experiment ID to use as a prefix/suffix for record keeping</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">int</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.weighting">
+<code class="descname">weighting</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.weighting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Value for weighting factor used in the automated assignment</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.fit">
+<code class="descname">fit</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.fit" title="Permalink to this definition">¶</a></dt>
+<dd><p>Contains the fitted parameters and model</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">dict</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.ustate_energy">
+<code class="descname">ustate_energy</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.ustate_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Energy of the upper state in Kelvin</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.lstate_energy">
+<code class="descname">lstate_energy</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.lstate_energy" title="Permalink to this definition">¶</a></dt>
+<dd><p>Energy of the lower state in Kelvin</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.intereference">
+<code class="descname">intereference</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.intereference" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flag to indicate if this assignment is not molecular in nature</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.source">
+<code class="descname">source</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.source" title="Permalink to this definition">¶</a></dt>
+<dd><p>Indicates what the source used for this assignment is</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">str</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.public">
+<code class="descname">public</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.public" title="Permalink to this definition">¶</a></dt>
+<dd><p>Flag to indicate if the information for this assignment is public/published</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.velocity">
+<code class="descname">velocity</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.velocity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Velocity of the source used to make the assignment in km/s</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.discharge">
+<code class="descname">discharge</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.discharge" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not the line is discharge dependent</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.magnet">
+<code class="descname">magnet</code><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.magnet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Whether or not the line is magnet dependent (i.e. open shell)</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Type:</th><td class="field-body">bool</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">S</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.Transition.calc_intensity">
+<code class="descname">calc_intensity</code><span class="sig-paren">(</span><em>Q: float</em>, <em>T=300.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.calc_intensity"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.calc_intensity" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert linestrength into intensity.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>T</em>) – Partition function for the molecule at temperature T</li>
+<li><strong>- float</strong> – Temperature to calculate the intensity at in Kelvin</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">log10 of the intensity in SPCAT format</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">I - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.Transition.calc_linestrength">
+<code class="descname">calc_linestrength</code><span class="sig-paren">(</span><em>Q: float</em>, <em>T=300.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.calc_linestrength"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.calc_linestrength" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert intensity into linestrength.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>T</em>) – Partition function for the molecule at temperature T</li>
+<li><strong>- float</strong> – Temperature to calculate the intensity at in Kelvin</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">intrinsic linestrength of the transition</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">intensity - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">catalog_frequency</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">catalog_intensity</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.deviation">
+<code class="descname">deviation</code><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.deviation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">discharge</code><em class="property"> = False</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">experiment</code><em class="property"> = 0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">formula</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">frequency</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.Transition.from_dict">
+<em class="property">classmethod </em><code class="descname">from_dict</code><span class="sig-paren">(</span><em>data_dict: Dict[KT, VT]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.from_dict"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.from_dict" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for generating an Assignment object
+from a dictionary. All this method does is
+unpack a dictionary into the __init__ method.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>data_dict</strong> (<em>dict</em>) – Dictionary containing all of the Assignment DataClass fields that are to be populated.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Converted Assignment object from the input dictionary</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyspectools.html#pyspectools.pypickett.Transition" title="pyspectools.pypickett.Transition">Transition</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.Transition.from_json">
+<em class="property">classmethod </em><code class="descname">from_json</code><span class="sig-paren">(</span><em>json_path: str</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.from_json"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.from_json" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for initializing an Assignment object from a JSON file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>json_path</strong> (<em>str</em>) – Path to JSON file</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Assignment object loaded from a JSON file.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyspectools.html#pyspectools.pypickett.Transition" title="pyspectools.pypickett.Transition">Transition</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.Transition.from_yml">
+<em class="property">classmethod </em><code class="descname">from_yml</code><span class="sig-paren">(</span><em>yaml_path: str</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.from_yml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.from_yml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for initializing an Assignment object from a YAML file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>yaml_path</strong> (<em>str</em>) – path to yaml file</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Assignment object loaded from a YAML file.</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><a class="reference internal" href="pyspectools.html#pyspectools.pypickett.Transition" title="pyspectools.pypickett.Transition">Transition</a></td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.Transition.get_spectrum">
+<code class="descname">get_spectrum</code><span class="sig-paren">(</span><em>x: numpy.ndarray</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.get_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.get_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a synthetic peak by supplying
+the x axis for a particular spectrum. This method
+assumes that some fit parameters have been determined
+previously.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>x</strong> (<em>Numpy 1D array</em>) – Frequency bins from an experiment to simulate the line features.</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">Values of the model function spectrum at each particular value of x</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">Numpy 1D array</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">intensity</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.assignment.Transition.interference">
+<code class="descname">interference</code><em class="property"> = False</em><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.interference" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">lstate_energy</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">magnet</code><em class="property"> = False</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">name</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">peak_id</code><em class="property"> = 0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">public</code><em class="property"> = True</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">r_qnos</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.Transition.reset_assignment">
+<code class="descname">reset_assignment</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.reset_assignment"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.reset_assignment" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to reset an assigned line into its original state.
+The only information that is kept regards to the frequency,
+intensity, and aspects about the experiment.</p>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">smiles</code><em class="property"> = ''</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">source</code><em class="property"> = 'Catalog'</em></dt>
+<dd></dd></dl>
+
+<dl class="method">
+<dt id="pyspectools.spectra.assignment.Transition.to_file">
+<code class="descname">to_file</code><span class="sig-paren">(</span><em>filepath: str</em>, <em>format='yaml'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#Transition.to_file"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.Transition.to_file" title="Permalink to this definition">¶</a></dt>
+<dd><p>Save an Transition object to disk with a specified file format.
+Defaults to YAML.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>filepath</strong> (<em>str</em>) – Path to yaml file</li>
+<li><strong>format</strong> (<em>str</em><em>, </em><em>optional</em>) – Denoting the syntax used for dumping. Defaults to YAML.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">uline</code><em class="property"> = True</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">ustate_energy</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">velocity</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+<dl class="attribute">
+<dt>
+<code class="descname">weighting</code><em class="property"> = 0.0</em></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.spectra.analysis">
+<span id="analysis-submodule"></span><h2><cite>analysis</cite> Submodule<a class="headerlink" href="#module-pyspectools.spectra.analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.blank_spectrum">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">blank_spectrum</code><span class="sig-paren">(</span><em>spectrum_df: pandas.core.frame.DataFrame</em>, <em>frequencies: numpy.ndarray</em>, <em>noise=None</em>, <em>noise_std=None</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>window=1.0</em>, <em>df=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#blank_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.blank_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
+noise corresponding to the average noise floor and standard deviation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- pandas DataFrame</strong> (<em>spectrum_df</em>) – Pandas DataFrame containing the spectral data</li>
+<li><strong>- iterable of floats</strong> (<em>frequencies</em>) – An iterable containing the center frequencies to blank</li>
+<li><strong>- float</strong> (<em>window</em>) – Average noise value for the spectrum. Typically measured by choosing a region void of spectral lines.</li>
+<li><strong>- float</strong> – Standard deviation for the spectrum noise.</li>
+<li><strong>- str</strong> (<em>int_col</em>) – Name of the column in spectrum_df to use for the frequency axis</li>
+<li><strong>- str</strong> – Name of the column in spectrum_df to use for the intensity axis</li>
+<li><strong>- float</strong> – Value to use for the range to blank. This region blanked corresponds to frequency+/-window.</li>
+<li><strong>- bool</strong> (<em>df</em>) – If True, returns a copy of the Pandas Dataframe with the blanked intensity.
+If False, returns a numpy 1D array corresponding to the blanked intensity.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If df is True, Pandas DataFrame with the intensity regions blanked.
+If df is False, numpy 1D array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">new_spec - pandas DataFrame or numpy 1D array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.bokeh_create_experiment_comparison">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">bokeh_create_experiment_comparison</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em>, <em>filepath=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#bokeh_create_experiment_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.bokeh_create_experiment_comparison" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to create a plot comparing multiple experiments. This is a high
+level function that wraps the <cite>correlate_experiments</cite> function,
+and provides a visual and interactive view of the spectra output from
+this function using Bokeh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>experiments</strong> – </li>
+<li><strong>thres_prox</strong> – </li>
+<li><strong>index</strong> – </li>
+<li><strong>filepath</strong> – </li>
+<li><strong>kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.brute_harmonic_search">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">brute_harmonic_search</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>maxJ=10</em>, <em>dev_thres=5.0</em>, <em>prefilter=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#brute_harmonic_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.brute_harmonic_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will search for possible harmonic candidates
+in a list of frequencies. Wraps the lower level function.</p>
+<p>Generates every possible 4 membered combination of the
+frequencies, and makes a first pass filtering out unreasonable
+combinations.</p>
+<p>frequencies - iterable containing floats of frequencies (ulines)
+maxJ - maximum value of J considered for quantum numbers
+dev_thres - standard deviation threshold for filtering unlikely</p>
+<blockquote>
+<div>combinations of frequencies</div></blockquote>
+<dl class="docutils">
+<dt>prefilter - bool dictating whether or not the frequency lists</dt>
+<dd>are prescreened by standard deviation. This potentially
+biases away from missing transitions!</dd>
+</dl>
+<dl class="docutils">
+<dt>results_df - pandas dataframe containing RMS information and fitted</dt>
+<dd>constants</dd>
+</dl>
+<p>fit_results - list containing all of ModelResult objects</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.calc_line_weighting">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">calc_line_weighting</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>catalog_df: pandas.core.frame.DataFrame</em>, <em>prox=5e-05</em>, <em>abs=True</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#calc_line_weighting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.calc_line_weighting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for calculating the weighting factor for determining
+the likely hood of an assignment. The weighting factor is
+determined by the proximity of the catalog frequency to the
+observed frequency, as well as the theoretical intensity if it
+is available.
+:param frequency: Observed frequency in MHz
+:type frequency: float
+:param catalog_df: Pandas dataframe containing the catalog data entries
+:type catalog_df: dataframe
+:param prox: Frequency proximity threshold
+:type prox: float, optional
+:param abs: Specifies whether argument prox is taken as the absolute value
+:type abs: bool</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>None</em> – If nothing matches the frequency, returns None.</li>
+<li><em>dataframe</em> – If matches are found, calculate the weights and return the
+candidates in a dataframe.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.cluster_AP_analysis">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">cluster_AP_analysis</code><span class="sig-paren">(</span><em>progression_df: pandas.core.frame.DataFrame</em>, <em>sil_calc=False</em>, <em>refit=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#cluster_AP_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.cluster_AP_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for the AffinityPropagation cluster method from
+scikit-learn.</p>
+<p>The dataframe provided will also receive new columns: Cluster index,
+and Silhouette. The latter corresponds to how likely a sample is
+sandwiched between clusters (0), how squarely it belongs in the
+assigned cluster (+1), or does not belong (-1). The cluster index
+corresponds to which cluster the sample belongs to.</p>
+<dl class="docutils">
+<dt>progression_df - pandas dataframe taken from the result of progression</dt>
+<dd>fits</dd>
+<dt>sil_calc - bool indicating whether silhouettes are calculated</dt>
+<dd>after the AP model is fit</dd>
+</dl>
+<p>data - dict containing clustered frequencies and associated fits
+ap_obj - AffinityPropagation object containing all the information</p>
+<blockquote>
+<div>as attributes.</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.copy_assignments">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">copy_assignments</code><span class="sig-paren">(</span><em>A</em>, <em>B</em>, <em>corr_mat</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#copy_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.copy_assignments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to copy assignments from experiment B over to experiment A. The
+correlation matrix argument requires the output from the
+<cite>correlate_experiments</cite> function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>B</strong> (<em>A</em><em>,</em>) – AssignmentSession objects, where the assignments from B are copied
+into A</li>
+<li><strong>corr_mat</strong> (<em>2D array</em>) – 2D array mask with length A x B</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.correlate_experiments">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">correlate_experiments</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#correlate_experiments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.correlate_experiments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to find correlations between experiments, looking for common
+peaks detected in every provided experiment. This function uses by the first
+experiment as the base for comparison by default. Coincidences are searched
+for between this base and the other provided experiment, and ultimately combined
+to determine the common peaks.</p>
+<p>A copy of the base experiment is returned, along with a dictionary with
+frequencies of correlations between a given experiment and the base.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>experiments</strong> (<em>tuple-like</em>) – Iterable list/tuple of AssignmentSession objects.</li>
+<li><strong>thres_prox</strong> (<em>float</em><em>, </em><em>optional</em>) – Proximity in frequency units for determining if peaks are the same.
+If thres-abs is False, this value is treated as a percentage of the
+center frequency.</li>
+<li><strong>index</strong> (<em>int</em><em>, </em><em>optional</em>) – Index for the experiment to use as a base for comparisons.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>base_exp</strong> (<em>AssignmentSession object</em>) – A deep copy of the first experiment, with the updated spectra.</li>
+<li><strong>return_dict</strong> (<em>dict</em>) – Dictionary where keys correspond to the experiment number and
+values are 1D arrays of frequencies that are coincident</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.create_cluster_tests">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">create_cluster_tests</code><span class="sig-paren">(</span><em>cluster_dict: Dict[Any, Any], shots=25, dipole=1.0, min_dist=500.0, **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#create_cluster_tests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.create_cluster_tests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take the output of the cluster AP analysis, and generate the FTB batch
+files for a targeted DR search.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cluster_dict</strong> (<em>dict</em>) – Cluster dictionary with keys corresponding to the cluster number,
+and values are subdictionaries holding the frequencies associated
+with the cluster.</li>
+<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of integration counts</li>
+<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Approximate dipole moment to target</li>
+<li><strong>min_dist</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum frequency difference between the cavity and DR frequencies.</li>
+<li><strong>kwargs</strong> – Additional kwargs are passed to the ftb line generation.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.analysis.cross_correlate">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">cross_correlate</code><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#cross_correlate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.cross_correlate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cross-correlate two arrays a and b that are of equal length by
+lagging b with respect to a. Uses np.roll to shift b by values
+of lag, and appropriately zeros out “out of bounds” values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>b</strong> (<em>a</em><em>,</em>) – Arrays containing the values to cross-correlate. Must be the
+same length.</li>
+<li><strong>lags</strong> (<em>[</em><em>type</em><em>]</em><em>, </em><em>optional</em>) – [description], by default None</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.detect_artifacts">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">detect_artifacts</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>tol=0.002</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#detect_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.detect_artifacts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Quick one-liner function to perform a very rudimentary test for
+RFI. This method relies on the assumption that any frequency that
+is suspiciously close to an exact number (e.g. 16250.0000) is very
+likely an artifact.</p>
+<p>The function will calculate the difference between each frequency
+and its nearest whole number, and return frequencies that are
+within a specified tolerance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequencies</strong> (<em>NumPy 1D array</em>) – Array of frequencies to check for artifacts.</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum tolerance to be used to check whether frequency
+is close enough to its rounded value, by default 2e-3</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns the frequencies that match the specified criteria.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">NumPy 1D array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.filter_spectrum">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">filter_spectrum</code><span class="sig-paren">(</span><em>intensity: float</em>, <em>window='hanning'</em>, <em>sigma=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#filter_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.filter_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a specified window function to a signal. The window functions are
+taken from the <cite>signal.windows</cite> module of SciPy, so check what is available
+before throwing it into this function.</p>
+<p>The window function is convolved with the signal by taking the time-
+domain product, and doing the inverse FFT to get the convolved spectrum
+back.</p>
+<p>The one exception is the gaussian window - if a user specifies “gaussian”
+for the window function, the actual window function applied here is a
+half gaussian, i.e. a 1D gaussian blur.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dataframe</strong> (<em>pandas DataFrame</em>) – Pandas dataframe containing the spectral information</li>
+<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name to reference the signal</li>
+<li><strong>window</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the window function as implemented in SciPy.</li>
+<li><strong>sigma</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_y</strong> – Numpy 1D array containing the convolved signal</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.find_series">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">find_series</code><span class="sig-paren">(</span><em>combo: Tuple[float, float], frequencies: numpy.ndarray, search=0.005</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#find_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.find_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will exhaustively search for candidate
+progressions based on a pair of frequencies.</p>
+<p>The difference of the pair is used to estimate B,
+which is then used to calculate J. These values of
+J are then used to predict the next set of lines,
+which are searched for in the soup of frequencies.
+The closest matches are added to a list which is returned.</p>
+<p>This is done so that even if frequencies are missing
+a series of lines can still be considered.</p>
+<p>combo - pair of frequencies corresponding to initial guess
+frequencies - array of frequencies to be searched
+search - optional threshold for determining the search range</p>
+<blockquote>
+<div>to look for candidates</div></blockquote>
+<p>array of candidate frequencies</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.fit_line_profile">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">fit_line_profile</code><span class="sig-paren">(</span><em>spec_df: pandas.core.frame.DataFrame</em>, <em>center: float</em>, <em>width=None</em>, <em>intensity=None</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>fit_func=&lt;class 'lmfit.models.GaussianModel'&gt;</em>, <em>sigma=2</em>, <em>logger=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#fit_line_profile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.fit_line_profile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Somewhat high level function that wraps lmfit for
+fitting Gaussian lineshapes to a spectrum.</p>
+<p>For a given guess center and optional intensity,
+the</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.harmonic_finder">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">harmonic_finder</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>search=0.001</em>, <em>low_B=400.0</em>, <em>high_B=9000.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#harmonic_finder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.harmonic_finder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will generate candidates for progressions.
+Every possible pair combination of frequencies are
+looped over, consider whether or not the B value is either
+too small (like C60 large) or too large (you won’t have
+enough lines to make a progression), and search the
+frequencies to find the nearest candidates based on a
+prediction.</p>
+<dl class="docutils">
+<dt>frequencies - array or tuple-like containing the progressions</dt>
+<dd>we expect to find</dd>
+<dt>search - optional argument threshold for determining if something</dt>
+<dd>is close enough</dd>
+</dl>
+<p>progressions - list of arrays corresponding to candidate progressions</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.line_weighting">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">line_weighting</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>catalog_frequency: float</em>, <em>intensity=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#line_weighting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.line_weighting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for calculating the line weighting associated with each assignment candidate. The formula is based on
+intensity and frequency offset, such as to favor strong lines that are spot on over weak lines that are further
+away.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequency</strong> (<em>float</em>) – Center frequency in MHz; typically the u-line frequency.</li>
+<li><strong>catalog_frequency</strong> (<em>float</em>) – Catalog frequency of the candidate</li>
+<li><strong>intensity</strong> (<em>float</em><em>, </em><em>optional</em>) – log Intensity of the transition; includes the line strength and the temperature factor.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>weighting</strong> – Associated weight value. Requires normalization</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.match_artifacts">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">match_artifacts</code><span class="sig-paren">(</span><em>on_exp</em>, <em>off_exp</em>, <em>thres=0.05</em>, <em>freq_col='Frequency'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#match_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.match_artifacts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to remove a set of artifacts found in a blank spectrum.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- AssignmentSession object</strong> (<em>off_exp</em>) – Experiment with the sample on; i.e. contains molecular features</li>
+<li><strong>- AssignmentSession object</strong> – Experiment with no sample; i.e. only artifacts</li>
+<li><strong>- float</strong><strong>, </strong><strong>optional</strong> (<em>thres</em>) – Threshold in absolute frequency units to match</li>
+<li><strong>- str</strong><strong>, </strong><strong>optional</strong> (<em>freq_col</em>) – Column specifying frequency in the pandas dataframes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dictionary with keys corresponding to the uline index, and
+values the frequency</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">candidates - dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.peak_find">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">peak_find</code><span class="sig-paren">(</span><em>spec_df: pandas.core.frame.DataFrame</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>thres=0.015</em>, <em>min_dist=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#peak_find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.peak_find" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for peakutils applied to pandas dataframes. First finds
+the peak indices, which are then used to fit Gaussians to determine
+the center frequency for each peak.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>spec_df</strong> (<em>dataframe</em>) – Pandas dataframe containing the spectrum information, with columns corresponding to frequency and intensity.</li>
+<li><strong>freq_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the frequency column in <cite>spec_df</cite></li>
+<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the intensity column in <cite>spec_df</cite></li>
+<li><strong>thres</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for peak detection</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing the peaks frequency/intensity</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">peak_df</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.plotly_create_experiment_comparison">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">plotly_create_experiment_comparison</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em>, <em>filepath=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#plotly_create_experiment_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.plotly_create_experiment_comparison" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to create a plot comparing multiple experiments. This is a high
+level function that wraps the <cite>correlate_experiments</cite> function,
+and provides a visual and interactive view of the spectra output from
+this function using Plotly.</p>
+<p>This function is effectively equivalent to
+<cite>bokeh_create_experiment_comparison</cite>, however uses Plotly as the front
+end instead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>experiments</strong> – </li>
+<li><strong>thres_prox</strong> – </li>
+<li><strong>index</strong> – </li>
+<li><strong>filepath</strong> – </li>
+<li><strong>kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.search_center_frequency">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">search_center_frequency</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>width=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#search_center_frequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.search_center_frequency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for wrapping the astroquery Splatalogue API for looking up a frequency and finding candidate molecules
+for assignment. The width parameter adjusts the +/- range to include in the search: for high frequency surveys,
+it’s probably preferable to use a percentage to accommodate for the typically larger uncertainties (sub-mm
+experiments).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequency</strong> (<em>float</em>) – Frequency in MHz to search Splatalogue for.</li>
+<li><strong>width</strong> (<em>float</em><em>, </em><em>optional</em>) – Absolute frequency offset in MHz to include in the search.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing frequency matches, or None if no matches are found.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.search_molecule">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">search_molecule</code><span class="sig-paren">(</span><em>species: str, freq_range=[0.0, 40000.0], **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#search_molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.search_molecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to search Splatalogue for a specific molecule. Technically I’d prefer to
+download entries from CDMS instead, but this is probably the most straight
+forward way.</p>
+<p>The main use for this function is to verify line identifications - if a line is
+tentatively assigned to a U-line, then other transitions for the molecule that
+are stronger or comparatively strong should be visible.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>species</strong> (<em>str</em>) – Chemical name of the molecule</li>
+<li><strong>freq_range</strong> (<em>list</em>) – The frequency range to perform the lookup</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing transitions for the given molecule. If no matches are found, returns None.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">DataFrame or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.spectra">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.spectra" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/pyspectools.spectra.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

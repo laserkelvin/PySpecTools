@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.astro package</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.astro package</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pyspectools-astro-package">
+<h1>pyspectools.astro package<a class="headerlink" href="#pyspectools-astro-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyspectools.astro.analysis">
+<span id="pyspectools-astro-analysis-module"></span><h2>pyspectools.astro.analysis module<a class="headerlink" href="#module-pyspectools.astro.analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.astro.analysis.calculate_L">
+<code class="descclassname">pyspectools.astro.analysis.</code><code class="descname">calculate_L</code><span class="sig-paren">(</span><em>W</em>, <em>frequency</em>, <em>S</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/analysis.html#calculate_L"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.analysis.calculate_L" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate L, which is subsequently used to perform rotational temperature analysis.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>S</em>) – Integrated flux of a line</li>
+<li><strong>- float</strong> – Frequency of a transition in MHz</li>
+<li><strong>- float</strong> – Intrinsic linestrength of the transition</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">L - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.analysis.lineprofile_analysis">
+<code class="descclassname">pyspectools.astro.analysis.</code><code class="descname">lineprofile_analysis</code><span class="sig-paren">(</span><em>fit</em>, <em>I</em>, <em>Q</em>, <em>T</em>, <em>E_lower</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/analysis.html#lineprofile_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.analysis.lineprofile_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Low-level function to provide some analysis
+based on a fitted line profile and some theoretical
+parameters.</p>
+<p>Basically a collection of various parameters
+that are of interest to astronomy.</p>
+<p>fit - lmfit ModelResult object
+I - log10(theoretical intensity)
+Q - rotational partition function
+T - temperature in K
+E - lower state energy in K</p>
+<p>data_dict - dict results of lineprofile analysis</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.analysis.rotational_temperature_analysis">
+<code class="descclassname">pyspectools.astro.analysis.</code><code class="descname">rotational_temperature_analysis</code><span class="sig-paren">(</span><em>L</em>, <em>E_upper</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/analysis.html#rotational_temperature_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.analysis.rotational_temperature_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will perform a rotational temperature analysis. This will perform a least-squares fit of log(L),
+which is related to the theoretical line strength and integrated flux, and the upper state energy for the same
+transition.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- 1D array</strong> (<em>E_upper</em>) – Value L related to the line and theoretical line strength</li>
+<li><strong>- 1D array</strong> – The upper state energy in wavenumbers.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Result of the least-squares fit</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">ModelResult - object</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.analysis.simulate_catalog">
+<code class="descclassname">pyspectools.astro.analysis.</code><code class="descname">simulate_catalog</code><span class="sig-paren">(</span><em>catalogpath</em>, <em>N</em>, <em>Q</em>, <em>T</em>, <em>doppler=10.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/analysis.html#simulate_catalog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.analysis.simulate_catalog" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for simulating what the expected flux would be for
+a given molecule and its catalog file from SPCAT. Returns a
+spectrum of Gaussian line shapes, predicted by either a supplied
+Doppler width or session-wide value (self.doppler), and
+the parameters required to calculate the flux in Jy.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>catalogpath</strong> – path to the SPCAT catalog file</li>
+<li><strong>N</strong> – column density in cm^-2</li>
+<li><strong>Q</strong> – rotational partition function</li>
+<li><strong>T</strong> – temperature in Kelvin</li>
+<li><strong>doppler</strong> – Doppler width in km/s</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last">simulated_df; pandas dataframe with frequency/intensity</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.astro.conversions">
+<span id="pyspectools-astro-conversions-module"></span><h2>pyspectools.astro.conversions module<a class="headerlink" href="#module-pyspectools.astro.conversions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.astro.conversions.N2flux">
+<code class="descclassname">pyspectools.astro.conversions.</code><code class="descname">N2flux</code><span class="sig-paren">(</span><em>N</em>, <em>S</em>, <em>v</em>, <em>Q</em>, <em>E</em>, <em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/conversions.html#N2flux"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.conversions.N2flux" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the expected integrated flux based on
+column density. This can be used to simulate a
+spectrum purely from theoretical terms.</p>
+<p>N - column density in cm^-2
+S - intrinsic line strength; Su^2
+v - transition frequency in MHz
+Q - rotational partition function
+E - state energy
+T - temperature</p>
+<p>flux - the integrated flux in Jy</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.conversions.flux2N">
+<code class="descclassname">pyspectools.astro.conversions.</code><code class="descname">flux2N</code><span class="sig-paren">(</span><em>W</em>, <em>Q</em>, <em>E</em>, <em>T</em>, <em>S</em>, <em>v</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/conversions.html#flux2N"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.conversions.flux2N" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the column density (1/cm^2) based on theoretical
+intensities for rotational transitions, and the observed
+flux per beam (Jy/beam)</p>
+<p>W - integrated area of line profile; Jy
+Q - rotational partition function at given temperature
+E - upper state energy; Kelvin
+T - temperature; Kelvin
+S - formally Su^2; intrinsic linestrength
+v - transition frequency in MHz</p>
+<p>N - column density in 1/cm^2</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.astro.radiative">
+<span id="pyspectools-astro-radiative-module"></span><h2>pyspectools.astro.radiative module<a class="headerlink" href="#module-pyspectools.astro.radiative" title="Permalink to this headline">¶</a></h2>
+<p>radiative.py</p>
+<p>Routines for calculating quantities useful for
+radiative transfer, such as Einstein coefficients</p>
+<dl class="function">
+<dt id="pyspectools.astro.radiative.I2S">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">I2S</code><span class="sig-paren">(</span><em>I</em>, <em>Q</em>, <em>frequency</em>, <em>E_lower</em>, <em>T=300.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#I2S"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.I2S" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>T</em>) – The log of the transition intensity, typically given in catalog files</li>
+<li><strong>- float</strong> – Partition function at specified temperature T</li>
+<li><strong>- float</strong> – Frequency of the transition in MHz</li>
+<li><strong>- float</strong> – Energy of the lower state in wavenumbers</li>
+<li><strong>- float</strong> – Temperature in Kelvin</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Value of the intrinsic linestrength</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">siju - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.approx_Q_linear">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">approx_Q_linear</code><span class="sig-paren">(</span><em>B</em>, <em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#approx_Q_linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.approx_Q_linear" title="Permalink to this definition">¶</a></dt>
+<dd><p>Approximate rotational partition function for a linear molecule.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>T</em>) – Rotational constant in MHz.</li>
+<li><strong>- float</strong> – Temperature in Kelvin.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Rotational partition function at temperature T.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Q - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.approx_Q_top">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">approx_Q_top</code><span class="sig-paren">(</span><em>A</em>, <em>B</em>, <em>T</em>, <em>sigma=1</em>, <em>C=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#approx_Q_top"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.approx_Q_top" title="Permalink to this definition">¶</a></dt>
+<dd><p>Approximate expression for the (a)symmetric top partition function. The expression is adapted from Gordy and Cook,
+p.g. 57 equation 3.68. By default, the prolate top is used if the C constant is not specified, where B = C.
+Oblate case can also be specified if A = C.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>T</em>) – Rotational constant for the A principal axis, in MHz.</li>
+<li><strong>- float</strong> – Rotational constant for the B principal axis, in MHz.</li>
+<li><strong>- float</strong> – Temperature in Kelvin</li>
+<li><strong>- int</strong> (<em>sigma</em>) – Rotational level degeneracy; i.e. spin statistics</li>
+<li><strong>- float</strong><strong>, </strong><strong>optional</strong> (<em>C</em>) – Rotational constant for the C principal axis, in MHz. Defaults to None, which will reduce to the prolate
+top case.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Partition function for the molecule at temperature T</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">Q - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.boltzmann_factor">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">boltzmann_factor</code><span class="sig-paren">(</span><em>E</em>, <em>T</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#boltzmann_factor"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.boltzmann_factor" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Boltzmann weighting for a given state and temperature.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>T</em>) – State energy in wavenumbers</li>
+<li><strong>- float</strong> – Temperature in Kelvin</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Unitless Boltzmann factor for the state</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">boltzmann_factor - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.calc_E_upper">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">calc_E_upper</code><span class="sig-paren">(</span><em>frequency</em>, <em>E_lower</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#calc_E_upper"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.calc_E_upper" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the upper state energy, for a given lower state energy and the frequency of the transition.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- float</strong> (<em>E_lower</em>) – Frequency of the transition in MHz</li>
+<li><strong>- float</strong> – Lower state energy in wavenumbers</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Upper state energy in wavenumbers</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">E_upper - float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.calc_einstein">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">calc_einstein</code><span class="sig-paren">(</span><em>str_filepath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#calc_einstein"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.calc_einstein" title="Permalink to this definition">¶</a></dt>
+<dd><p>High-level function for calculating Einstein A
+coefficients for a given .str file output from
+SPCAT.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.einsteinA">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">einsteinA</code><span class="sig-paren">(</span><em>S</em>, <em>frequency</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#einsteinA"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.einsteinA" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.astro.radiative.parse_str">
+<code class="descclassname">pyspectools.astro.radiative.</code><code class="descname">parse_str</code><span class="sig-paren">(</span><em>filepath</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/astro/radiative.html#parse_str"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.astro.radiative.parse_str" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.astro">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.astro" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/pyspectools.astro.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

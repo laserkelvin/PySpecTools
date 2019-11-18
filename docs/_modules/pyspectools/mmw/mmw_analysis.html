@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.mmw.mmw_analysis</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../../index.html"><img src="../../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.mmw.mmw_analysis</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.mmw.mmw_analysis</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">lmfit</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">os</span>
+
+<span class="kn">from</span> <span class="nn">.fft_routines</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.interpolation</span> <span class="k">import</span> <span class="o">*</span>
+<span class="kn">from</span> <span class="nn">.plotting_func</span> <span class="k">import</span> <span class="o">*</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Miscellanous routines for parsing and batch processing</span>
+<span class="sd">    the millimeter-wave data.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="parse_data"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.parse_data">[docs]</a><span class="k">def</span> <span class="nf">parse_data</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function for parsing data from a millimeter-wave</span>
+<span class="sd">        data file.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">settings</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">intensity</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># Boolean flags to check when to start/stop</span>
+    <span class="c1"># reading parameters</span>
+    <span class="n">read_params</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">read_int</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">read_zeeman</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">finished</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">fieldoff_intensities</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">fieldon_intensities</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">read_file</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;*****&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">read_int</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">if</span> <span class="n">finished</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="s2">&quot;Scan&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">if</span> <span class="s2">&quot;[Field ON]&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                    <span class="n">read_zeeman</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">scan_details</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;ID&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">scan_details</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Date&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">scan_details</span><span class="p">[</span><span class="mi">4</span><span class="p">])</span>
+                <span class="n">read_params</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">read_int</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">read_int</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">read_zeeman</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                    <span class="n">fieldoff_intensities</span> <span class="o">+=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">fieldon_intensities</span> <span class="o">+=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">value</span><span class="p">)</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()]</span>
+                    <span class="n">finished</span> <span class="o">=</span> <span class="kc">True</span>
+            <span class="k">if</span> <span class="n">read_params</span> <span class="ow">is</span> <span class="kc">True</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">())</span> <span class="o">&gt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="c1"># Read in the frequency step, frequency, and other info</span>
+                <span class="c1"># needed to reconstruct the frequency data</span>
+                <span class="n">scan_params</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="n">shift</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">scan_params</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">scan_params</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">scan_params</span><span class="p">)</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+                    <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Multiplier&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.</span>
+                    <span class="n">shift</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="c1"># If the multiplier data is there, we don&#39;t shift the read</span>
+                <span class="c1"># index over by one</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Multiplier&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">scan_params</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+                <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Center&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">scan_params</span><span class="p">[</span><span class="mi">2</span> <span class="o">+</span> <span class="n">shift</span><span class="p">])</span>
+                <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Points&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">scan_params</span><span class="p">[</span><span class="mi">3</span> <span class="o">+</span> <span class="n">shift</span><span class="p">])</span>
+                <span class="n">read_params</span> <span class="o">=</span> <span class="kc">False</span>
+                <span class="c1"># Start reading intensities immediately afterwards</span>
+                <span class="n">read_int</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">continue</span>
+    <span class="n">fieldoff_intensities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fieldoff_intensities</span><span class="p">)</span>
+    <span class="n">fieldon_intensities</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">fieldon_intensities</span><span class="p">)</span>
+
+    <span class="c1"># Generate the frequency grid</span>
+    <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Multiplier&quot;</span><span class="p">]</span>
+    <span class="n">start_freq</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="p">(</span><span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Points&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">end_freq</span> <span class="o">=</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="p">(</span><span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Points&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mi">2</span><span class="p">)</span>
+    <span class="n">frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">start_freq</span><span class="p">,</span> <span class="n">end_freq</span><span class="p">,</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">])</span>
+
+    <span class="k">return</span> <span class="n">frequency</span><span class="p">,</span> <span class="n">fieldoff_intensities</span><span class="p">,</span> <span class="n">fieldon_intensities</span><span class="p">,</span> <span class="n">settings</span></div>
+
+
+<div class="viewcode-block" id="open_mmw"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.open_mmw">[docs]</a><span class="k">def</span> <span class="nf">open_mmw</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">window_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pass_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function for opening and processing a single millimeter</span>
+<span class="sd">        wave data file.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns a pandas dataframe containing Frequency and</span>
+<span class="sd">        Intensity information.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">frequency</span><span class="p">,</span> <span class="n">fieldoff_intensities</span><span class="p">,</span> <span class="n">fieldon_intensities</span><span class="p">,</span> <span class="n">settings</span> <span class="o">=</span> <span class="n">parse_data</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    <span class="n">sample_rate</span> <span class="o">=</span> <span class="mf">1.</span> <span class="o">/</span> <span class="n">settings</span><span class="p">[</span><span class="s2">&quot;Frequency step&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span>
+    
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">fieldoff_intensities</span> <span class="o">=</span> <span class="n">fft_filter</span><span class="p">(</span><span class="n">fieldoff_intensities</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+        <span class="n">fieldon_intensities</span> <span class="o">=</span> <span class="n">fft_filter</span><span class="p">(</span><span class="n">fieldon_intensities</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">,</span> <span class="n">sample_rate</span><span class="o">=</span><span class="n">sample_rate</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span>
+    
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">intensity</span> <span class="o">=</span> <span class="n">fieldoff_intensities</span> <span class="o">-</span> <span class="n">fieldon_intensities</span>
+    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">filepath</span> <span class="o">+</span> <span class="s2">&quot; had error loading.&quot;</span><span class="p">)</span>
+    <span class="n">mmw_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">fieldoff_intensities</span><span class="p">,</span> <span class="n">fieldon_intensities</span><span class="p">,</span> <span class="n">intensity</span><span class="p">)),</span>
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Zeeman OFF&quot;</span><span class="p">,</span> <span class="s2">&quot;Zeeman ON&quot;</span><span class="p">,</span> <span class="s2">&quot;OFF - ON&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">mmw_df</span></div>
+
+
+<div class="viewcode-block" id="interp_mmw"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.interp_mmw">[docs]</a><span class="k">def</span> <span class="nf">interp_mmw</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">nelements</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span> <span class="n">window_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cutoff</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function that will process archival millimeter-wave data</span>
+<span class="sd">        by providing a list of filepaths.</span>
+<span class="sd">        </span>
+<span class="sd">        The function will parse the data out of each file, and</span>
+<span class="sd">        produce a plot that is stitched together.</span>
+<span class="sd">        </span>
+<span class="sd">        The first step is to read in all the data, and append</span>
+<span class="sd">        the parsed data into full_freq and full_int, corresponding</span>
+<span class="sd">        to the experimental frequency and intensities. This is</span>
+<span class="sd">        used to then determine the limits to the x axis for plotting.</span>
+<span class="sd">        </span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">full_freq</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">full_int</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Parsing files.&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+        <span class="n">frequency</span><span class="p">,</span> <span class="n">intensity</span><span class="p">,</span> <span class="n">settings</span> <span class="o">=</span> <span class="n">parse_data</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+        <span class="n">intensity</span> <span class="o">=</span> <span class="n">fft_filter</span><span class="p">(</span><span class="n">intensity</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">cutoff</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">minx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+            <span class="n">maxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">curr_minx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+            <span class="n">curr_maxx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">curr_minx</span> <span class="o">&lt;</span> <span class="n">minx</span><span class="p">:</span>
+                <span class="n">minx</span> <span class="o">=</span> <span class="n">curr_minx</span>
+            <span class="k">if</span> <span class="n">curr_maxx</span> <span class="o">&gt;</span> <span class="n">maxx</span><span class="p">:</span>
+                <span class="n">maxx</span> <span class="o">=</span> <span class="n">curr_maxx</span>
+        <span class="n">full_freq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+        <span class="n">full_int</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">intensity</span><span class="p">)</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Stitching the spectrum together using a weighted</span>
+<span class="sd">        Shepard interpolation.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Lowest frequency: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">minx</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Highest frequency: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">maxx</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Performing Shepard interpolation&quot;</span><span class="p">)</span>
+    <span class="n">frequency</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">minx</span><span class="p">,</span> <span class="n">maxx</span><span class="p">,</span> <span class="n">nelements</span><span class="p">)</span>
+    <span class="n">interp_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">nelements</span><span class="p">)</span>
+    
+    <span class="c1"># Loop over each frequency bin</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">interp_freq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequency</span><span class="p">):</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">index</span> <span class="o">/</span> <span class="nb">len</span><span class="p">(</span><span class="n">frequency</span><span class="p">))</span> <span class="o">&gt;</span> <span class="mf">0.5</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;50</span><span class="si">% d</span><span class="s2">one.&quot;</span><span class="p">)</span>
+        <span class="c1"># Calculate the Shepard interpolation at the given frequency point</span>
+        <span class="n">interp_y</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="n">eval_shep_interp</span><span class="p">(</span><span class="n">full_freq</span><span class="p">,</span> <span class="n">full_int</span><span class="p">,</span> <span class="n">interp_freq</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">16.</span><span class="p">)</span>
+    
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">interp_y</span><span class="p">)),</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="batch_interpolate"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.batch_interpolate">[docs]</a><span class="k">def</span> <span class="nf">batch_interpolate</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">datapoints</span><span class="o">=</span><span class="mi">50000</span><span class="p">,</span> <span class="n">zeeman_on</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">window_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pass_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function for batch processing multiple scan files, and concetanates them</span>
+<span class="sd">        together to generate a single, interactive spectrum.</span>
+<span class="sd">        </span>
+<span class="sd">        Takes input argument files as a list of filepaths corresponding to scans</span>
+<span class="sd">        that are (generally) without Zeeman. The optional argument, zeeman_on,</span>
+<span class="sd">        is a list of filepaths corresponding to scans with Zeeman on.</span>
+<span class="sd">        </span>
+<span class="sd">        All of the scans will be processed with the same window functions and</span>
+<span class="sd">        cut offs, so be sure to optimize them before batch processing.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns a dataframe with up to three columns: Zeeman off/on, and off - on.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">spectrum_df</span> <span class="o">=</span> <span class="n">interp_mmw</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">datapoints</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">)</span>
+    <span class="c1"># If Zeeman on spectra are provided, we process those too, and perform subtraction</span>
+    <span class="k">if</span> <span class="n">zeeman_on</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">zeeman_on_df</span> <span class="o">=</span> <span class="n">interp_mmw</span><span class="p">(</span><span class="n">zeeman_on</span><span class="p">,</span> <span class="n">datapoints</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">)</span>
+        <span class="n">spectrum_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Zeeman OFF&quot;</span><span class="p">]</span>
+        <span class="n">spectrum_df</span><span class="p">[</span><span class="s2">&quot;Zeeman ON&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">zeeman_on_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">()</span>
+        <span class="n">spectrum_df</span><span class="p">[</span><span class="s2">&quot;OFF - ON&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">spectrum_df</span><span class="p">[</span><span class="s2">&quot;Zeeman OFF&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">spectrum_df</span><span class="p">[</span><span class="s2">&quot;Zeeman ON&quot;</span><span class="p">]</span>
+    
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plot_spectrum</span><span class="p">(</span><span class="n">spectrum_df</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="batch_shepard"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.batch_shepard">[docs]</a><span class="k">def</span> <span class="nf">batch_shepard</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">stepsize</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">xrange</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">p</span><span class="o">=</span><span class="mf">4.</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.1</span><span class="p">,</span> <span class="n">npoints</span><span class="o">=</span><span class="mi">15</span><span class="p">,</span> <span class="n">window_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pass_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Routine for performing mass interpolation using Shepard&#39;s interpolation method</span>
+<span class="sd">        on mmw data. Input is a list of files, and parameters used to interpolate and</span>
+<span class="sd">        to filter the data.</span>
+<span class="sd">        </span>
+<span class="sd">        Stepsize is given in units of MHz.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading data...&quot;</span><span class="p">)</span>
+    <span class="n">datalist</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="n">open_mmw</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">)</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">files</span>
+    <span class="p">]</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Load complete.&quot;</span><span class="p">)</span>
+    <span class="n">min_freq</span> <span class="o">=</span> <span class="mf">1e9</span>
+    <span class="n">max_freq</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Finding frequency range&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">datalist</span><span class="p">:</span>
+        <span class="n">current_min</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+        <span class="n">current_max</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">current_min</span> <span class="o">&lt;</span> <span class="n">min_freq</span><span class="p">:</span>
+            <span class="n">min_freq</span> <span class="o">=</span> <span class="n">current_min</span>
+        <span class="k">if</span> <span class="n">current_max</span> <span class="o">&gt;</span> <span class="n">max_freq</span><span class="p">:</span>
+            <span class="n">max_freq</span> <span class="o">=</span> <span class="n">current_max</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Max freq: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">max_freq</span><span class="p">))</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Min freq: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">min_freq</span><span class="p">))</span>
+    <span class="c1"># Initialize the new frequency range in one MHz steps</span>
+    <span class="n">xnew</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">min_freq</span><span class="p">,</span> <span class="n">max_freq</span><span class="p">,</span> <span class="n">stepsize</span><span class="p">)</span>
+    <span class="n">new_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">xnew</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">])</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Performing interpolation&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">column</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;Zeeman OFF&quot;</span><span class="p">,</span> <span class="s2">&quot;Zeeman ON&quot;</span><span class="p">]:</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">column</span><span class="p">)</span>
+        <span class="n">new_df</span><span class="p">[</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">calc_shep_interp</span><span class="p">(</span>
+            <span class="n">datalist</span><span class="p">,</span>
+            <span class="n">xnew</span><span class="p">,</span>
+            <span class="n">column</span><span class="p">,</span>
+            <span class="n">p</span><span class="p">,</span>
+            <span class="n">threshold</span><span class="p">,</span>
+            <span class="n">npoints</span>
+        <span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Interpolation done&quot;</span><span class="p">)</span>
+    <span class="n">new_df</span><span class="p">[</span><span class="s2">&quot;OFF - ON&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">new_df</span><span class="p">[</span><span class="s2">&quot;Zeeman OFF&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">new_df</span><span class="p">[</span><span class="s2">&quot;Zeeman ON&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">new_df</span>  </div>
+
+
+<div class="viewcode-block" id="batch_plot"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.batch_plot">[docs]</a><span class="k">def</span> <span class="nf">batch_plot</span><span class="p">(</span><span class="n">files</span><span class="p">,</span> <span class="n">window_function</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">pass_filter</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">files</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">full_df</span> <span class="o">=</span> <span class="n">open_mmw</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">full_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span>
+                <span class="n">full_df</span><span class="p">,</span>
+                <span class="n">open_mmw</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">window_function</span><span class="p">,</span> <span class="n">pass_filter</span><span class="p">)</span>
+            <span class="p">])</span>
+    <span class="n">full_df</span> <span class="o">=</span> <span class="n">full_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plot_spectrum</span><span class="p">(</span><span class="n">full_df</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">full_df</span><span class="p">,</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="fit_chunk"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.fit_chunk">[docs]</a><span class="k">def</span> <span class="nf">fit_chunk</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">min_freq</span><span class="p">,</span> <span class="n">max_freq</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">,</span> <span class="n">ycol</span><span class="o">=</span><span class="s2">&quot;Field off&quot;</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function that will fit second-derivative lineprofiles to chunks</span>
+<span class="sd">        of a spectrum.</span>
+<span class="sd">        </span>
+<span class="sd">        The full spectrum is provided as a dataframe, and uses pandas</span>
+<span class="sd">        to slice the minimum and maximum frequencies. The frequencies</span>
+<span class="sd">        are provided as a list of center frequencies to fit.</span>
+<span class="sd">        </span>
+<span class="sd">        An optional argument, ycol, is used to specify which dataframe</span>
+<span class="sd">        column to use.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">sliced_df</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="n">min_freq</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">&lt;</span> <span class="n">max_freq</span><span class="p">)]</span>
+    <span class="n">exp_string</span> <span class="o">=</span> <span class="s2">&quot;(-2. * A</span><span class="si">{index}</span><span class="s2"> * width</span><span class="si">{index}</span><span class="s2">**3.) / (pi * (width</span><span class="si">{index}</span><span class="s2">**2. + (x - center</span><span class="si">{index}</span><span class="s2">)**2.)**2.) </span><span class="se">\</span>
+<span class="s2">             + (8. * A</span><span class="si">{index}</span><span class="s2"> * width</span><span class="si">{index}</span><span class="s2">**3. * (x - center</span><span class="si">{index}</span><span class="s2">)**2.) / (pi * (width</span><span class="si">{index}</span><span class="s2">**2. + (x - center</span><span class="si">{index}</span><span class="s2">)**2.)**3.)&quot;</span>
+    
+    <span class="c1"># Build fitting objective function from sum of second derivative</span>
+    <span class="c1"># profiles</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequencies</span><span class="p">):</span>
+        <span class="n">curr_model</span> <span class="o">=</span> <span class="n">lmfit</span><span class="o">.</span><span class="n">models</span><span class="o">.</span><span class="n">ExpressionModel</span><span class="p">(</span>
+            <span class="n">exp_string</span><span class="o">.</span><span class="n">format_map</span><span class="p">({</span><span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)})</span>
+        <span class="p">)</span>
+        <span class="c1"># Set up a dictionary with parameters</span>
+        <span class="n">string_params</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;width&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">):</span> <span class="mf">1.</span><span class="p">,</span>
+            <span class="s2">&quot;A&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">):</span> <span class="mf">1.</span><span class="p">,</span>
+            <span class="s2">&quot;center&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">):</span> <span class="n">frequency</span>
+        <span class="p">}</span>
+        <span class="c1"># Build parameters</span>
+        <span class="n">curr_parameters</span> <span class="o">=</span> <span class="n">curr_model</span><span class="o">.</span><span class="n">make_params</span><span class="p">(</span><span class="o">**</span><span class="n">string_params</span><span class="p">)</span>
+        <span class="c1"># Constrain amplitude to be positive - no absorption!</span>
+        <span class="n">curr_parameters</span><span class="p">[</span><span class="s2">&quot;A&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)]</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="mf">1.</span><span class="p">,</span> <span class="nb">min</span><span class="o">=</span><span class="mf">0.</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="n">curr_model</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="n">curr_parameters</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">model</span><span class="o">+=</span><span class="n">curr_model</span>
+            <span class="n">parameters</span><span class="o">+=</span><span class="n">curr_parameters</span>
+    <span class="c1"># Fit the peaks</span>
+    <span class="n">fit_results</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">sliced_df</span><span class="p">[</span><span class="n">ycol</span><span class="p">],</span>
+        <span class="n">parameters</span><span class="p">,</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">sliced_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="n">sliced_df</span><span class="p">[</span><span class="s2">&quot;Fit&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_results</span><span class="o">.</span><span class="n">eval</span><span class="p">()</span>
+    
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">plot_spectrum</span><span class="p">(</span><span class="n">sliced_df</span><span class="p">)</span>
+    
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Results of the fit:&quot;</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">param</span><span class="p">,</span> <span class="n">covar</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">fit_results</span><span class="o">.</span><span class="n">best_values</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">fit_results</span><span class="o">.</span><span class="n">covar</span><span class="p">))):</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">param</span> <span class="o">+</span> <span class="s2">&quot;: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">fit_results</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="n">param</span><span class="p">])</span> <span class="o">+</span> <span class="s2">&quot;  +/-  &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">covar</span><span class="p">))</span>
+    
+    <span class="k">return</span> <span class="n">fit_results</span><span class="p">,</span> <span class="n">fig</span></div>
+
+
+<div class="viewcode-block" id="fit_lines"><a class="viewcode-back" href="../../../pyspectools.mmw.html#pyspectools.mmw.mmw_analysis.fit_lines">[docs]</a><span class="k">def</span> <span class="nf">fit_lines</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">window_length</span><span class="o">=</span><span class="mf">10.</span><span class="p">,</span> <span class="n">ycol</span><span class="o">=</span><span class="s2">&quot;Field off&quot;</span><span class="p">,</span> <span class="n">off_dataframe</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Wrapper for the fit_chunk function, for when you want to</span>
+<span class="sd">        try and fit many lines in a catalog.</span>
+<span class="sd">        </span>
+<span class="sd">        The input arguments are the survey dataframe, a list of</span>
+<span class="sd">        center frequencies you want to try and fit, the name of</span>
+<span class="sd">        the species. Optional argument is the name of column you</span>
+<span class="sd">        want to use for the intensities.</span>
+<span class="sd">        </span>
+<span class="sd">        The function will iterate through each center frequency</span>
+<span class="sd">        and try to fit it.</span>
+<span class="sd">    &quot;&quot;&quot;</span> 
+    <span class="n">foldername</span> <span class="o">=</span> <span class="s2">&quot;../data/mmw_fits/&quot;</span> <span class="o">+</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;_&quot;</span> <span class="o">+</span> <span class="n">ycol</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot; &quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">foldername</span><span class="p">)</span>
+    <span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span>
+        <span class="k">pass</span>
+    
+    <span class="n">successes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">fit_freq</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">amplitudes</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">uncertainties</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    
+    <span class="c1"># Loop over each catalog frequency</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">frequencies</span><span class="p">):</span>
+        
+        <span class="c1"># Slice out a 20 MHz window - this should be sufficiently</span>
+        <span class="c1"># large to capture uncertainty in lines</span>
+        <span class="n">min_freq</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">-</span> <span class="n">window_length</span>
+        <span class="n">max_freq</span> <span class="o">=</span> <span class="n">frequency</span> <span class="o">+</span> <span class="n">window_length</span>
+        <span class="c1"># Attempt to fit the window</span>
+        <span class="n">fit</span><span class="p">,</span> <span class="n">fig</span> <span class="o">=</span> <span class="n">fit_chunk</span><span class="p">(</span>
+            <span class="n">dataframe</span><span class="p">,</span>
+            <span class="n">min_freq</span><span class="p">,</span>
+            <span class="n">max_freq</span><span class="p">,</span>
+            <span class="p">[</span><span class="n">frequency</span><span class="p">],</span>
+            <span class="n">ycol</span>
+        <span class="p">)</span>
+        <span class="n">fit_freq</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center0&quot;</span><span class="p">],</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">amplitudes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;A0&quot;</span><span class="p">],</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">uncertainties</span><span class="o">.</span><span class="n">append</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">covar</span><span class="p">))[</span><span class="o">-</span><span class="mi">1</span><span class="p">],</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">successes</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">save_plot</span><span class="p">(</span><span class="n">fig</span><span class="p">,</span> <span class="n">foldername</span> <span class="o">+</span> <span class="s2">&quot;/peak&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.html&quot;</span><span class="p">)</span>
+        <span class="c1">#except:</span>
+        <span class="c1">#    successes.append(False)</span>
+        <span class="c1">#    fit_freq.append(None)</span>
+        <span class="c1">#    amplitudes.append(0.)</span>
+        <span class="c1">#    uncertainties.append(None)</span>
+    <span class="n">package</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="n">successes</span><span class="p">,</span> <span class="n">fit_freq</span><span class="p">,</span> <span class="n">uncertainties</span><span class="p">,</span> <span class="n">amplitudes</span><span class="p">))</span>
+    <span class="n">fit_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">package</span><span class="p">,</span> 
+        <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Catalog frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Success&quot;</span><span class="p">,</span> <span class="s2">&quot;Fitted frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Uncertainty&quot;</span><span class="p">,</span> <span class="s2">&quot;Amplitude&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    
+    <span class="n">fit_df</span><span class="p">[</span><span class="s2">&quot;Calc. vs Obs.&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">fit_df</span><span class="p">[</span><span class="s2">&quot;Catalog frequency&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">fit_df</span><span class="p">[</span><span class="s2">&quot;Fitted frequency&quot;</span><span class="p">]</span>
+    
+    <span class="n">fit_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">foldername</span> <span class="o">+</span> <span class="s2">&quot;/fit_results.csv&quot;</span><span class="p">)</span>
+    
+    <span class="c1"># Make the static comparison</span>
+    <span class="k">if</span> <span class="n">off_dataframe</span><span class="p">:</span>
+        <span class="n">fig</span><span class="p">,</span> <span class="n">axarray</span> <span class="o">=</span> <span class="n">static_comparison</span><span class="p">(</span>
+            <span class="n">fit_df</span><span class="p">[</span><span class="s2">&quot;Fitted frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+            <span class="n">dataframe</span><span class="p">,</span>
+            <span class="n">off_dataframe</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">fig</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">foldername</span> <span class="o">+</span> <span class="s2">&quot;/on-off-comparison.pdf&quot;</span><span class="p">,</span> <span class="n">dpi</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;pdf&quot;</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">fit_df</span></div>
+            
+        
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

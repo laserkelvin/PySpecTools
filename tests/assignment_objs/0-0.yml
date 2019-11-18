@@ -1,0 +1,23 @@
+S: 0.0
+catalog_frequency: 16711.5085
+catalog_intensity: -3.6631
+composition: []
+deviation: 0.038499999998748535
+experiment: 0
+fit: {}
+formula: c5h
+frequency: 16711.47
+intensity: 48.40109
+interference: false
+lstate_energy: 0.7173
+name: c5h
+peak_id: 0
+public: true
+r_qnos: N'=4, J'=4 - N''=3     3, J''=3
+smiles: ''
+source: Catalog
+uline: false
+ustate_energy: 1.2747359212198728
+v_qnos: []
+velocity: 0.0
+weighting: 0.0

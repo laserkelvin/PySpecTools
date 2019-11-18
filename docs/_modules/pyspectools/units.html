@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.units</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../index.html"><img src="../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.units</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.units</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot; units.py</span>
+
+<span class="sd">    Routines for performing unit conversions and quantities</span>
+<span class="sd">    that are often used in spectroscopy.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">scipy</span> <span class="k">import</span> <span class="n">constants</span>
+
+<span class="sd">&quot;&quot;&quot; Commonly used values</span>
+
+<span class="sd">    kbcm - Boltzmann&#39;s constant in wavenumbers per Kelvin</span>
+<span class="sd">    The others are pretty self-explanatory</span>
+
+<span class="sd">    eha - Hartree energy in joules</span>
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="n">kbcm</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;Boltzmann constant in inverse meters per kelvin&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="mf">100.0</span>
+<span class="n">avo</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">Avogadro</span>
+<span class="n">eha</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;Hartree energy&quot;</span><span class="p">)</span>
+<span class="n">haev</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;Hartree energy in eV&quot;</span><span class="p">)</span>
+<span class="n">hak</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;hartree-kelvin relationship&quot;</span><span class="p">)</span>
+<span class="n">harm</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;hartree-inverse meter relationship&quot;</span><span class="p">)</span>
+<span class="n">jm</span> <span class="o">=</span> <span class="n">constants</span><span class="o">.</span><span class="n">value</span><span class="p">(</span><span class="s2">&quot;joule-inverse meter relationship&quot;</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="kappa"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.kappa">[docs]</a><span class="k">def</span> <span class="nf">kappa</span><span class="p">(</span><span class="n">A</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">B</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">C</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate Ray&#39;s asymmetry parameter for a given set of A, B, and C rotational constants.</span>
+<span class="sd">    This parameter determines how asymmetric a molecule is by setting a range between two limits: the prolate (+1)</span>
+<span class="sd">    and the oblate (-1) limits.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A, B, C: float</span>
+<span class="sd">        Rotational constant in MHz for each respective axis</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    kappa: float</span>
+<span class="sd">        Ray&#39;s asymmetry parameter</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">B</span> <span class="o">-</span> <span class="n">A</span> <span class="o">-</span> <span class="n">C</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">A</span> <span class="o">-</span> <span class="n">C</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="inertial_defect"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.inertial_defect">[docs]</a><span class="k">def</span> <span class="nf">inertial_defect</span><span class="p">(</span><span class="n">A</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">B</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">C</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the inertial defect of a molecule with a set of A, B, and C rotational constants.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A, B, C - float</span>
+<span class="sd">        Rotational constant along the respective principal axis in units of MHz.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    delta - float</span>
+<span class="sd">        The inertial defect in units of amu Ang**2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">frac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">reciprocal</span><span class="p">([</span><span class="n">C</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">A</span><span class="p">])</span>
+    <span class="n">cumdiff</span> <span class="o">=</span> <span class="n">frac</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="c1"># Calculate the cumulative difference; i.e. 1/C - 1/B - 1/A</span>
+    <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">frac</span><span class="p">[</span><span class="mi">1</span><span class="p">:]:</span>
+        <span class="n">cumdiff</span> <span class="o">-=</span> <span class="n">value</span>
+    <span class="k">return</span> <span class="n">cumdiff</span> <span class="o">*</span> <span class="mf">505379.0</span></div>
+
+
+<div class="viewcode-block" id="rotcon2pmi"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.rotcon2pmi">[docs]</a><span class="k">def</span> <span class="nf">rotcon2pmi</span><span class="p">(</span><span class="n">rotational_constant</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert rotational constants in units of MHz to</span>
+<span class="sd">    Inertia, in units of amu A^2.</span>
+
+<span class="sd">    The conversion factor is adapted from:</span>
+<span class="sd">    Oka &amp; Morino, JMS (1962) 8, 9-21</span>
+<span class="sd">    This factor comprises h / pi^2 c.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    rotational_constant:</span>
+<span class="sd">        Corresponding rotational constant in MHz</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Rotational constant converted to units of amu A^2</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="n">rotational_constant</span> <span class="o">/</span> <span class="mf">134.901</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="hartree2wavenumber"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.hartree2wavenumber">[docs]</a><span class="k">def</span> <span class="nf">hartree2wavenumber</span><span class="p">(</span><span class="n">hartree</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert Hartrees to wavenumbers.</span>
+<span class="sd">    :param hartree: float</span>
+<span class="sd">    :return: corresponding value in 1/cm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">hartree</span> <span class="o">*</span> <span class="p">(</span><span class="n">harm</span> <span class="o">/</span> <span class="mf">100.0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="kjmol2wavenumber"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.kjmol2wavenumber">[docs]</a><span class="k">def</span> <span class="nf">kjmol2wavenumber</span><span class="p">(</span><span class="n">kj</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert kJ/mol to wavenumbers</span>
+<span class="sd">    :param kj: float</span>
+<span class="sd">    :return: corresponding value in 1/cm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">kj</span> <span class="o">*</span> <span class="p">(</span><span class="n">jm</span> <span class="o">/</span> <span class="mf">100.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">avo</span> <span class="o">*</span> <span class="mf">1000.0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="MHz2cm"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.MHz2cm">[docs]</a><span class="k">def</span> <span class="nf">MHz2cm</span><span class="p">(</span><span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert MHz to wavenumbers</span>
+<span class="sd">    :param frequency: float</span>
+<span class="sd">    :return: corresponding value in 1/cm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">frequency</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">constants</span><span class="o">.</span><span class="n">c</span> <span class="o">/</span> <span class="mf">1e7</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="cm2MHz"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.cm2MHz">[docs]</a><span class="k">def</span> <span class="nf">cm2MHz</span><span class="p">(</span><span class="n">wavenumber</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert wavenumbers to MHz</span>
+<span class="sd">    :param wavenumber: float</span>
+<span class="sd">    :return: corresponding value in MHz</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">wavenumber</span> <span class="o">*</span> <span class="p">(</span><span class="n">constants</span><span class="o">.</span><span class="n">c</span> <span class="o">/</span> <span class="mf">1e7</span><span class="p">))</span> <span class="o">*</span> <span class="mf">1000.0</span></div>
+
+
+<div class="viewcode-block" id="hartree2kjmol"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.hartree2kjmol">[docs]</a><span class="k">def</span> <span class="nf">hartree2kjmol</span><span class="p">(</span><span class="n">hartree</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert Hartrees to kJ/mol.</span>
+<span class="sd">    :param hartree: float</span>
+<span class="sd">    :return: converted value in kJ/mol</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">hartree</span> <span class="o">*</span> <span class="p">(</span><span class="n">eha</span> <span class="o">*</span> <span class="n">avo</span> <span class="o">/</span> <span class="mf">1000.0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="hartree2eV"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.hartree2eV">[docs]</a><span class="k">def</span> <span class="nf">hartree2eV</span><span class="p">(</span><span class="n">hartree</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert Hartrees to eV.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hartree: float</span>
+<span class="sd">        Electronic energy in Hartrees</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    eV: float</span>
+<span class="sd">        Corresponding value in eV</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">haev</span> <span class="o">*</span> <span class="n">hartree</span></div>
+
+
+<div class="viewcode-block" id="hartree2K"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.hartree2K">[docs]</a><span class="k">def</span> <span class="nf">hartree2K</span><span class="p">(</span><span class="n">hartree</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert Hartrees to temperature in Kelvin.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    hartree: float</span>
+<span class="sd">        Electronic energy in Hartrees</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    kelvin: float</span>
+<span class="sd">        Corresponding value in Kelvin</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">hartree</span> <span class="o">*</span> <span class="n">hak</span></div>
+
+
+<div class="viewcode-block" id="wavenumber2kjmol"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.wavenumber2kjmol">[docs]</a><span class="k">def</span> <span class="nf">wavenumber2kjmol</span><span class="p">(</span><span class="n">wavenumber</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert wavenumbers to kJ/mol.</span>
+<span class="sd">    :param wavenumber: float</span>
+<span class="sd">    :return: converted value in kJ/mol</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">wavenumber</span> <span class="o">/</span> <span class="p">(</span><span class="n">jm</span> <span class="o">/</span> <span class="mf">100.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">avo</span> <span class="o">*</span> <span class="mf">1000.0</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="T2wavenumber"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.T2wavenumber">[docs]</a><span class="k">def</span> <span class="nf">T2wavenumber</span><span class="p">(</span><span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert temperature in Kelvin to wavenumbers.</span>
+<span class="sd">    :param T: float</span>
+<span class="sd">    :return: corresponding value in 1/cm</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">T</span> <span class="o">*</span> <span class="n">kbcm</span></div>
+
+
+<div class="viewcode-block" id="wavenumber2T"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.wavenumber2T">[docs]</a><span class="k">def</span> <span class="nf">wavenumber2T</span><span class="p">(</span><span class="n">wavenumber</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert wavenumbers to Kelvin</span>
+<span class="sd">    :param wavenumber: float</span>
+<span class="sd">    :return: corresponding value in K</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">wavenumber</span> <span class="o">/</span> <span class="n">kbcm</span></div>
+
+
+<div class="viewcode-block" id="thermal_corrections"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.thermal_corrections">[docs]</a><span class="k">def</span> <span class="nf">thermal_corrections</span><span class="p">(</span><span class="n">frequencies</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">linear</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">hartree</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the thermal contributions from nuclear motion, in the same way as</span>
+<span class="sd">    Gaussian does.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    frequencies: list of floats or Numpy 1-D array</span>
+<span class="sd">        Iterable of vibrational frequencies in wavenumbers. Can be Harmonic or Anharmonic fundamentals.</span>
+<span class="sd">    T: float</span>
+<span class="sd">        Value of the temperature to calculate thermal corrections at</span>
+<span class="sd">    linear: bool, optional</span>
+<span class="sd">        Specifies whether molecule is linear or not. Affects the rotational contribution.</span>
+<span class="sd">    hartree: bool, optional</span>
+<span class="sd">        If True, converts the contribution into Hartrees. Otherwise, in units of Kelvin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    thermal: float</span>
+<span class="sd">        Total thermal contribution at a given temperature</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">translation</span> <span class="o">=</span> <span class="n">kbcm</span> <span class="o">*</span> <span class="n">T</span>
+    <span class="n">rotation</span> <span class="o">=</span> <span class="n">kbcm</span> <span class="o">*</span> <span class="n">T</span>
+    <span class="k">if</span> <span class="n">linear</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">rotation</span> <span class="o">*=</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="mf">2.0</span>
+    <span class="c1"># Convert frequencies into vibrational temperatures</span>
+    <span class="n">frequencies</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)</span>
+    <span class="n">frequencies</span> <span class="o">/=</span> <span class="n">kbcm</span>
+    <span class="n">vibration</span> <span class="o">=</span> <span class="n">kbcm</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+        <span class="n">frequencies</span> <span class="o">*</span> <span class="p">(</span><span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">frequencies</span> <span class="o">/</span> <span class="n">T</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)))</span>
+    <span class="p">)</span>
+    <span class="n">thermal</span> <span class="o">=</span> <span class="n">translation</span> <span class="o">+</span> <span class="n">rotation</span> <span class="o">+</span> <span class="n">vibration</span>
+    <span class="k">if</span> <span class="n">hartree</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">thermal</span> <span class="o">*=</span> <span class="mf">1.0</span> <span class="o">/</span> <span class="n">hartree2wavenumber</span><span class="p">(</span><span class="mf">1.0</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">thermal</span></div>
+
+
+<span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Astronomy units </span>
+
+<span class="sd">    Conversions and useful expressions</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="dop2freq"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.dop2freq">[docs]</a><span class="k">def</span> <span class="nf">dop2freq</span><span class="p">(</span><span class="n">velocity</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the expected frequency in MHz based on a Doppler shift in km/s and a center frequency.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    velocity: float</span>
+<span class="sd">        Radial velocity in km/s</span>
+<span class="sd">    frequency: float</span>
+<span class="sd">        Center frequency in MHz</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    offset: float</span>
+<span class="sd">        The change in frequency associated with the velocity and</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Frequency given in MHz, Doppler_shift given in km/s</span>
+    <span class="c1"># Returns the expected Doppler shift in frequency (MHz)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">velocity</span> <span class="o">*</span> <span class="mf">1000.0</span> <span class="o">*</span> <span class="n">frequency</span><span class="p">)</span> <span class="o">/</span> <span class="n">constants</span><span class="o">.</span><span class="n">c</span></div>
+
+
+<div class="viewcode-block" id="freq2vel"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.freq2vel">[docs]</a><span class="k">def</span> <span class="nf">freq2vel</span><span class="p">(</span><span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">offset</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculates the Doppler shift in km/s based on a center frequency in MHz and n offset frequency in MHz (delta nu).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    frequency: float</span>
+<span class="sd">        Center frequency in MHz</span>
+<span class="sd">    offset: float</span>
+<span class="sd">        Frequency offset from the center in MHz</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    doppler: float</span>
+<span class="sd">        Doppler offset in km/s</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">constants</span><span class="o">.</span><span class="n">c</span> <span class="o">*</span> <span class="n">offset</span><span class="p">)</span> <span class="o">/</span> <span class="n">frequency</span><span class="p">)</span> <span class="o">/</span> <span class="mf">1000.0</span></div>
+
+
+<div class="viewcode-block" id="gaussian_fwhm"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.gaussian_fwhm">[docs]</a><span class="k">def</span> <span class="nf">gaussian_fwhm</span><span class="p">(</span><span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the full-width half maximum</span>
+<span class="sd">        value assuming a Gaussian function.</span>
+
+<span class="sd">        parameters:</span>
+<span class="sd">        --------------</span>
+<span class="sd">        sigma - float for width</span>
+
+<span class="sd">        returns:</span>
+<span class="sd">        --------------</span>
+<span class="sd">        fwhm - float value for full-width at half-max</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span> <span class="o">*</span> <span class="n">sigma</span></div>
+
+
+<div class="viewcode-block" id="gaussian_height"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.gaussian_height">[docs]</a><span class="k">def</span> <span class="nf">gaussian_height</span><span class="p">(</span><span class="n">amplitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the height of a Gaussian distribution,</span>
+<span class="sd">        based on the amplitude and sigma. This value</span>
+<span class="sd">        corresponds to the peak height at the centroid.</span>
+
+<span class="sd">        parameters:</span>
+<span class="sd">        ----------------</span>
+<span class="sd">        amplitude - float</span>
+<span class="sd">        sigma - float</span>
+
+<span class="sd">        returns:</span>
+<span class="sd">        ----------------</span>
+<span class="sd">        h - float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">/</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">h</span></div>
+
+
+<div class="viewcode-block" id="gaussian_integral"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.gaussian_integral">[docs]</a><span class="k">def</span> <span class="nf">gaussian_integral</span><span class="p">(</span><span class="n">amplitude</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sigma</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the integral of a Gaussian analytically using</span>
+<span class="sd">    the amplitude and sigma.</span>
+<span class="sd">    :param amplitude: amplitude of the Gaussian</span>
+<span class="sd">    :param sigma: width of the Gaussian</span>
+<span class="sd">    :return: integrated area of the Gaussian</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">integral</span> <span class="o">=</span> <span class="n">amplitude</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">sigma</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">integral</span></div>
+
+
+<div class="viewcode-block" id="I2S"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.I2S">[docs]</a><span class="k">def</span> <span class="nf">I2S</span><span class="p">(</span><span class="n">I</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Q</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">E_lower</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mf">300.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    I - float</span>
+<span class="sd">        The log of the transition intensity, typically given in catalog files</span>
+<span class="sd">    Q - float</span>
+<span class="sd">        Partition function at specified temperature T</span>
+<span class="sd">    frequency - float</span>
+<span class="sd">        Frequency of the transition in MHz</span>
+<span class="sd">    E_lower - float</span>
+<span class="sd">        ENergy of the lower state in wavenumbers</span>
+<span class="sd">    T - float</span>
+<span class="sd">        Temperature in Kelvin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    siju - float</span>
+<span class="sd">        Value of the intrinsic linestrength</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">E_upper</span> <span class="o">=</span> <span class="n">calc_E_upper</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">E_lower</span><span class="p">)</span>
+    <span class="c1"># top part of the equation</span>
+    <span class="n">A</span> <span class="o">=</span> <span class="mf">10.0</span> <span class="o">**</span> <span class="n">I</span> <span class="o">*</span> <span class="n">Q</span>
+    <span class="n">lower_factor</span> <span class="o">=</span> <span class="n">boltzmann_factor</span><span class="p">(</span><span class="n">E_lower</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>  <span class="c1"># Boltzmann factors</span>
+    <span class="n">upper_factor</span> <span class="o">=</span> <span class="n">boltzmann_factor</span><span class="p">(</span><span class="n">E_upper</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+    <span class="c1"># Calculate the lower part of the equation</span>
+    <span class="c1"># The prefactor included here is taken from Brian</span>
+    <span class="c1"># Drouin&#39;s notes</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="mf">4.16231e-5</span> <span class="o">*</span> <span class="n">frequency</span> <span class="o">*</span> <span class="p">(</span><span class="n">lower_factor</span> <span class="o">-</span> <span class="n">upper_factor</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">A</span> <span class="o">/</span> <span class="n">B</span></div>
+
+
+<div class="viewcode-block" id="S2I"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.S2I">[docs]</a><span class="k">def</span> <span class="nf">S2I</span><span class="p">(</span><span class="n">S</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">Q</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">E_lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">T</span><span class="o">=</span><span class="mf">300.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for converting intensity (in nm^2 MHz) to the more standard intrinsic linestrength, S_ij mu^2.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    S - float</span>
+<span class="sd">        Intrinsic linestrength; Sij mu^2</span>
+<span class="sd">    Q - float</span>
+<span class="sd">        Partition function at specified temperature T</span>
+<span class="sd">    frequency - float</span>
+<span class="sd">        Frequency of the transition in MHz</span>
+<span class="sd">    E_lower - float</span>
+<span class="sd">        ENergy of the lower state in wavenumbers</span>
+<span class="sd">    T - float</span>
+<span class="sd">        Temperature in Kelvin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    I - float</span>
+<span class="sd">        log10 of the intensity at the specified temperature</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">E_upper</span> <span class="o">=</span> <span class="n">calc_E_upper</span><span class="p">(</span><span class="n">frequency</span><span class="p">,</span> <span class="n">E_lower</span><span class="p">)</span>
+    <span class="n">lower_factor</span> <span class="o">=</span> <span class="n">boltzmann_factor</span><span class="p">(</span><span class="n">E_lower</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>  <span class="c1"># Boltzmann factors</span>
+    <span class="n">upper_factor</span> <span class="o">=</span> <span class="n">boltzmann_factor</span><span class="p">(</span><span class="n">E_upper</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+    <span class="c1"># Calculate the lower part of the equation</span>
+    <span class="c1"># The prefactor included here is taken from Brian</span>
+    <span class="c1"># Drouin&#39;s notes</span>
+    <span class="n">B</span> <span class="o">=</span> <span class="mf">4.16231e-5</span> <span class="o">*</span> <span class="n">frequency</span> <span class="o">*</span> <span class="p">(</span><span class="n">lower_factor</span> <span class="o">-</span> <span class="n">upper_factor</span><span class="p">)</span>
+    <span class="n">I</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">((</span><span class="n">B</span> <span class="o">*</span> <span class="n">S</span><span class="p">)</span> <span class="o">/</span> <span class="n">Q</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">I</span></div>
+
+
+<div class="viewcode-block" id="calc_E_upper"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.calc_E_upper">[docs]</a><span class="k">def</span> <span class="nf">calc_E_upper</span><span class="p">(</span><span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">E_lower</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the upper state energy, for a given lower state energy and the frequency of the transition.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    frequency - float</span>
+<span class="sd">        Frequency of the transition in MHz</span>
+<span class="sd">    E_lower - float</span>
+<span class="sd">        Lower state energy in wavenumbers</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    E_upper - float</span>
+<span class="sd">        Upper state energy in wavenumbers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">transition_freq</span> <span class="o">=</span> <span class="n">MHz2cm</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">transition_freq</span> <span class="o">+</span> <span class="n">E_lower</span></div>
+
+
+<div class="viewcode-block" id="calc_E_lower"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.calc_E_lower">[docs]</a><span class="k">def</span> <span class="nf">calc_E_lower</span><span class="p">(</span><span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">E_upper</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the lower state energy, for a given lower state energy and the frequency of the transition.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    frequency - float</span>
+<span class="sd">        Frequency of the transition in MHz</span>
+<span class="sd">    E_upper - float</span>
+<span class="sd">        Upper state energy in wavenumbers</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    E_lower - float</span>
+<span class="sd">        Lower state energy in wavenumbers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">transition_freq</span> <span class="o">=</span> <span class="n">MHz2cm</span><span class="p">(</span><span class="n">frequency</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">E_upper</span> <span class="o">-</span> <span class="n">transition_freq</span></div>
+
+
+<div class="viewcode-block" id="boltzmann_factor"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.boltzmann_factor">[docs]</a><span class="k">def</span> <span class="nf">boltzmann_factor</span><span class="p">(</span><span class="n">E</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the Boltzmann weighting for a given state and temperature.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    E - float</span>
+<span class="sd">        State energy in wavenumbers</span>
+<span class="sd">    T - float</span>
+<span class="sd">        Temperature in Kelvin</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    boltzmann_factor - float</span>
+<span class="sd">        Unitless Boltzmann factor for the state</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">E</span> <span class="o">/</span> <span class="p">(</span><span class="n">kbcm</span> <span class="o">*</span> <span class="n">T</span><span class="p">))</span></div>
+
+
+<div class="viewcode-block" id="approx_Q_linear"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.approx_Q_linear">[docs]</a><span class="k">def</span> <span class="nf">approx_Q_linear</span><span class="p">(</span><span class="n">B</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Approximate rotational partition function for a linear molecule.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    B - float</span>
+<span class="sd">        Rotational constant in MHz.</span>
+<span class="sd">    T - float</span>
+<span class="sd">        Temperature in Kelvin.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Q - float</span>
+<span class="sd">        Rotational partition function at temperature T.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="mf">2.0837e4</span> <span class="o">*</span> <span class="p">(</span><span class="n">T</span> <span class="o">/</span> <span class="n">B</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">Q</span></div>
+
+
+<div class="viewcode-block" id="approx_Q_top"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.approx_Q_top">[docs]</a><span class="k">def</span> <span class="nf">approx_Q_top</span><span class="p">(</span><span class="n">A</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">B</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Approximate expression for the (a)symmetric top partition function. The expression is adapted from Gordy and Cook,</span>
+<span class="sd">    p.g. 57 equation 3.68. By default, the prolate top is used if the C constant is not specified, where B = C.</span>
+<span class="sd">    Oblate case can also be specified if A = C.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    A - float</span>
+<span class="sd">        Rotational constant for the A principal axis, in MHz.</span>
+<span class="sd">    B - float</span>
+<span class="sd">        Rotational constant for the B principal axis, in MHz.</span>
+<span class="sd">    T - float</span>
+<span class="sd">        Temperature in Kelvin</span>
+<span class="sd">    sigma - int</span>
+<span class="sd">        Rotational level degeneracy; i.e. spin statistics</span>
+<span class="sd">    C - float, optional</span>
+<span class="sd">        Rotational constant for the C principal axis, in MHz. Defaults to None, which will reduce to the prolate</span>
+<span class="sd">        top case.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    Q - float</span>
+<span class="sd">        Partition function for the molecule at temperature T</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">C</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># For a symmetric top, B = C</span>
+        <span class="n">C</span> <span class="o">=</span> <span class="n">B</span>
+    <span class="n">Q</span> <span class="o">=</span> <span class="p">(</span><span class="mf">5.34e6</span> <span class="o">/</span> <span class="n">sigma</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">T</span> <span class="o">**</span> <span class="mf">3.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">A</span> <span class="o">*</span> <span class="n">B</span> <span class="o">*</span> <span class="n">C</span><span class="p">))</span> <span class="o">**</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">Q</span></div>
+
+
+<div class="viewcode-block" id="einsteinA"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.units.einsteinA">[docs]</a><span class="k">def</span> <span class="nf">einsteinA</span><span class="p">(</span><span class="n">S</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate the Einstein A coefficient for a transition with</span>
+<span class="sd">    specified transition frequency and intrinsic linestrength.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    S : float</span>
+<span class="sd">        Intrinsic linestrength; unitless</span>
+<span class="sd">    frequency : float</span>
+<span class="sd">        Transition frequency in MHz</span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        Einstein A coefficient in units of per second</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Prefactor is given in the PGopher Intensity formulae</span>
+    <span class="c1"># http://pgopher.chm.bris.ac.uk/Help/intensityformulae.htm</span>
+    <span class="c1"># Units of the prefactor are s^-1 MHz^-3 D^-2</span>
+    <span class="c1"># Units of Einstein A coefficient should be in s^-1</span>
+    <span class="n">prefactor</span> <span class="o">=</span> <span class="mf">1.163965505e-20</span>
+    <span class="k">return</span> <span class="n">prefactor</span> <span class="o">*</span> <span class="n">frequency</span> <span class="o">**</span> <span class="mf">3.0</span> <span class="o">*</span> <span class="n">S</span></div>
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>
