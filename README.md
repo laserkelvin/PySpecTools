@@ -10,6 +10,8 @@ From version >= 3 of this module, Python 3.7 is required to support the new
 
 ## Introduction
 
+![pst-logo](docs/source/pst_logo_landscape.png)
+
 `PySpecTools` is a library written to help with analyzing rotational
 spectroscopy data. The main sorts of functionality are:
 
@@ -28,8 +30,7 @@ spectroscopy data. The main sorts of functionality are:
 5. Autofit routines are available for a set of special cases, like linear/prolate
    molecules. Eventually, SPFIT will be a backend option.
 
-The library is very much in development, and is gradually being cleaned
-up/improved on as my coding ability gets better.
+The documentation for PySpecTools can be found ![here](https://laserkelvin.github.io/PySpecTools).
 
 ---
 
