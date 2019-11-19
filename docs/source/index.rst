@@ -13,6 +13,8 @@ Welcome to PySpecTools's documentation!
    install
    pyspectools.spectra
 
+.. image:: pst_logo_landscape.png
+
 
 Introduction
 ------------
