@@ -30,7 +30,7 @@ spectroscopy data. The main sorts of functionality are:
 5. Autofit routines are available for a set of special cases, like linear/prolate
    molecules. Eventually, SPFIT will be a backend option.
 
-The documentation for PySpecTools can be found ![here](https://laserkelvin.github.io/PySpecTools).
+The documentation for PySpecTools can be found [here](https://laserkelvin.github.io/PySpecTools).
 
 ---
 
