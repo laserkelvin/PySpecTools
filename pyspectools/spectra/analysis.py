@@ -13,6 +13,7 @@ from lmfit import models, MinimizerException
 from sklearn.cluster import AffinityPropagation
 from sklearn.metrics import silhouette_samples
 from scipy.signal import windows
+from scipy.fftpack import rfft, irfft
 from uncertainties import ufloat
 from bokeh.layouts import layout
 from bokeh.io import save
@@ -1221,3 +1222,70 @@ def cross_correlate(a: np.ndarray, b: np.ndarray, lags=None):
         C[index] = (a * b_temp).sum()
         index += 1
     return C, lags
+
+
+def average_spectra(*arrays, **options) -> np.ndarray:
+    """
+    Averages multiple spectra together, with a few options available to
+    the user. User provides a iterable of arrays, where the frequency
+    axis of each of the arrays are the same, and the length of the arrays
+    are also the same.
+    
+    Options include performing a noise-weighted average, where the spectra
+    are averaged based on their inverse of their average baseline determined
+    by an ALS fit. The lower the average noise, the larger weighting given
+    to the spectrum.
+    
+    Parameters
+    ----------
+    arrays - np.ndarray
+        Iterable of NumPy arrays corresponding to the intensity
+        
+    time_domain - bool
+        If True, the averaging is done in the time domain, providing
+        the input spectra are frequency domain. Defaults to False.
+        
+    weighted - bool
+        If True, weights the averaging by the average noise in each
+        spectrum. Defaults to True.    
+    
+    Returns
+    -------
+    np.ndarray
+        Averaged intensities.
+    
+    Raises
+    ------
+    ValueError
+        Error is raised if fewer than two spectra are given.
+    """
+    n_spectra = len(arrays)
+    if n_spectra <= 1:
+        raise ValueError("Need at least two spectra to coaverage!")
+    time_domain = options.pop("time_domain", False)
+    weighted = options.pop("weighted", True)
+    averaged_spectra = np.zeros(arrays[0].size)
+    weighting = list()
+    # Loop over the spectra
+    for index, spectra in enumerate(arrays):
+        y = spectra.copy()
+        als_params = {"lam": 1e2, "p": 0.05, "niter": 10}
+        if time_domain is True:
+            y = rfft(y)
+        if weighted is True:
+            baseline = fitting.baseline_als(y, **als_params)
+            # Inverse of noise is used for weighting
+            noise = 1 / np.average(baseline)
+            weighting.append(noise)
+            y *= noise
+        averaged_spectra += y
+    if weighted is True:
+        # Divide through by the sum of weights
+        norm = np.sum(weighting)
+    else:
+        # Otherwise, simple arthimetic mean
+        norm = n_spectra
+    averaged_spectra /= norm
+    if time_domain is True:
+        averaged_spectra = irfft(averaged_spectra)            
+    return averaged_spectra
