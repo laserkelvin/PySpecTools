@@ -25,6 +25,7 @@ from shutil import rmtree
 from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Union, Type
 from copy import copy, deepcopy
+from itertools import combinations
 import logging
 from pathlib import Path
 
@@ -1304,6 +1305,27 @@ class AssignmentSession:
             Specifies whether the assignment procedure is automatic.
         """
         self.process_splatalogue(auto=auto)
+    
+    def process_clock_spurs(self, **kwargs):
+        """
+        Method that will generate a LineList corresponding to possible
+        harmonics, sum, and difference frequencies based on a given clock
+        frequency (default: 65,000 MHz).
+        
+        It is advised to run this function at the end of assignments, owing
+        to the sheer number of possible combinations of lines, which may
+        interfere with real molecular features.
+        
+        Parameters
+        ----------
+        kwargs
+            Optional kwargs are passed into the creation of the LineList
+            with `LineList.from_clock`.
+        """
+        self.logger.info(f"Processing electronics RFI peaks.")
+        clock_linelist = LineList.from_clock(**kwargs)
+        self.process_linelist(name="Clock", linelist=clock_linelist)
+        self.logger.info(f"Done processing electronic RFI peaks.")
 
     def process_splatalogue(self, auto=True, progressbar=True):
         """ Function that will provide an "interface" for interactive
@@ -3611,6 +3633,53 @@ class LineList:
         )
         linelist_obj = cls(
             name="Artifacts", transitions=list(transitions), source="Artifacts"
+        )
+        return linelist_obj
+    
+    @classmethod
+    def from_clock(cls, max_multi=64, clock=65000.):
+        """
+        Method of generating a LineList object by calculating all possible
+        combinations of the
+        
+        Parameters
+        ----------
+        max_multi : int, optional
+            [description], by default 64
+        
+        clock : float, optional
+            Clock frequency to calculate sub-harmonics of,
+            in units of MHz. Defaults to 65,000 MHz, which corresponds
+            to the Keysight AWG
+        
+        Returns
+        -------
+        LineList object
+            LineList object with the full list of possible clock
+            spurs, as harmonics, sum, and difference frequencies.
+        """
+        frequencies = [
+            clock / i for i in range(1, max_multi + 1)
+        ]
+        for pair in combinations(frequencies, 2):
+            # Round to 4 decimal places
+            frequencies.append(np.round(sum(pair), 4))
+            frequencies.append(np.round(pair[0] - pair[1], 4))
+        # Remove duplicates
+        frequencies = list(set(frequencies))
+        frequencies = sorted(frequencies)
+        # Generate Transition objects from this list of frequencies
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            name="Artifact",
+            catalog_frequency=np.asarray(frequencies),
+            uline=False,
+            source="Artifact",
+            public=False,
+            **kwargs,
+        )
+        linelist_obj = cls(
+            name="ClockSpurs", transitions=list(transitions), source="Artifacts"
         )
         return linelist_obj
 
