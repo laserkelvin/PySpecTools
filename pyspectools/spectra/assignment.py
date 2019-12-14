@@ -3637,7 +3637,7 @@ class LineList:
         return linelist_obj
     
     @classmethod
-    def from_clock(cls, max_multi=64, clock=65000.):
+    def from_clock(cls, max_multi=64, clock=65000., **kwargs):
         """
         Method of generating a LineList object by calculating all possible
         combinations of the
@@ -3675,8 +3675,7 @@ class LineList:
             catalog_frequency=np.asarray(frequencies),
             uline=False,
             source="Artifact",
-            public=False,
-            **kwargs,
+            public=False
         )
         linelist_obj = cls(
             name="ClockSpurs", transitions=list(transitions), source="Artifacts"
