@@ -17,8 +17,6 @@ import numpy as np
 import joblib
 import paramiko
 
-from pyspectools import pypickett as pp
-
 
 def run_spcat(filename: str, temperature=None):
     # Run SPCAT
@@ -99,28 +97,6 @@ def list_chunks(target: List[Any], n: int):
     """
     split_list = [target[i : i + n] for i in range(0, len(target), n)]
     return split_list
-
-
-def pickett_molecule(json_filepath=None):
-    # Provide a JSON file with all the Pickett settings, and generate an
-    # instance of the molecule class
-    # This method is superceded by serializing using classmethods for each
-    # file format
-    warn(
-        "pickett_molecule is now outdated. Please use the class \
-                       methods from_yaml or from_json."
-    )
-    if json_filepath is None:
-        print("No JSON input file specified.")
-        print(
-            "A template file will be created in your directory; please rerun\
-               after setting up the parameters."
-        )
-        copy_template()
-        raise FileNotFoundError("No input file specified.")
-    json_data = read_json(json_filepath)
-    molecule_object = pp.MoleculeFit(json_data)
-    return molecule_object
 
 
 def human2pickett(name: str, reduction="A", linear=True, nuclei=0):

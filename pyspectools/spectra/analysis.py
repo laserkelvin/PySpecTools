@@ -24,7 +24,7 @@ from pyspectools import fitting
 from pyspectools import lineshapes
 from pyspectools import routines
 from pyspectools import ftmw_analysis as fa
-from pyspectools.fast.routines import isin_array, hot_match_arrays
+from pyspectools.fast import routines as fr
 from pyspectools import figurefactory
 
 
@@ -999,12 +999,12 @@ def correlate_experiments(experiments, thres_prox=0.2, index=0):
                 comp_freqs = np.array(
                     experiment.line_lists["Peaks"].frequencies
                 )
-                mask = isin_array(base_freqs, comp_freqs, thres_prox)
+                mask = fr.isin_array(base_freqs, comp_freqs, thres_prox)
                 # Convert to boolean mask
                 mask.dtype = bool
                 # Work out a correlation matrix to find indices where the two
                 # arrays are matched
-                correlations = hot_match_arrays(
+                correlations = fr.hot_match_arrays(
                     base_freqs,
                     comp_freqs,
                     thres_prox
