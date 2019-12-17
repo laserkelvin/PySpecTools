@@ -1,6 +1,7 @@
 import os
 import shutil
 import stat
+import platform
 import sys
 from warnings import warn
 from distutils.command.sdist import sdist as _sdist
@@ -35,40 +36,51 @@ class sdist(_sdist):
 
 try:
     from Cython.Distutils import build_ext
-except ImportError:
-    use_cython = False
-else:
+    from Cython.Build import cythonize
     use_cython = True
+    print("Building Cython routines.")
+except ImportError:
+    print("Not building cython!")
+    use_cython = False
+
+# Determine if the system is Linux, which makes Cython
+# require additional library args
+if platform.system() == "Linux":
+    libraries = ["m"]
+else:
+    libraries = list()
+
 
 cmdclass = dict()
 ext_modules = list()
 
 if use_cython:
-    print("Building Cython routines.")
     ext_modules += [
         Extension(
             "pyspectools.fast.lineshapes",
             ["pyspectools/fast/lineshapes.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-ffast-math", "-march=native", "-O3"]
+            extra_compile_args=["-ffast-math", "-march=native", "-O3"],
+            libraries=libraries
         ),
         Extension(
             "pyspectools.fast.filters",
             ["pyspectools/fast/filters.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-ffast-math", "-march=native", "-O3"]
+            extra_compile_args=["-ffast-math", "-march=native", "-O3"],
+            libraries=libraries
         ),
         Extension(
             "pyspectools.fast.routines",
             ["pyspectools/fast/routines.pyx"],
             include_dirs=[np.get_include()],
-            extra_compile_args=["-ffast-math", "-march=native", "-O3"]
+            extra_compile_args=["-ffast-math", "-march=native", "-O3"],
+            libraries=libraries
         )
     ]
     cmdclass.update(**{"build_ext": build_ext, "sdist": sdist})
 else:
     # If Cython is not available, then use the latest C files
-    print("Not building cython!")
     ext_modules += [
         Extension(
             "pyspectools.fast.lineshapes",
@@ -116,16 +128,21 @@ class PostInstallCommand(install):
     def setup_files(self):
         try:
             # Copy over YAML file containing the parameter coding
-            shutil.copy(
-                "./pyspectools/pickett_terms.yml",
-                os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
-            )
-            # Copy over templates for molecule types
-            shutil.copytree(
-                "./pyspectools/templates",
-                os.path.expanduser("~") + "/.pyspectools/templates"
-            )
+            # shutil.copy(
+            #     "./pyspectools/pickett_terms.yml",
+            #     os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
+            # )
+            # # Copy over templates for molecule types
+            # shutil.copytree(
+            #     "./pyspectools/templates",
+            #     os.path.expanduser("~") + "/.pyspectools/templates"
+            # )
             # Copy over matplotlib stylesheets
+            home_dir = os.path.expanduser("~")
+            if os.path.exists(
+                home_dir + "/.config/matplotlib/stylelib"
+            ) is False:
+                os.mkdir(home_dir + "/.config/matplotlib/stylelib")
             for sheet in os.listdir("./pyspectools/mpl_stylesheets"):
                 if ".yml" not in sheet:
                     path = os.path.expanduser("~") + \
@@ -163,10 +180,12 @@ class PostInstallCommand(install):
     def run(self):
         # Check for SPFIT/SPCAT executables in PATH
         self.check_pickett()
+        # Ensure folders exist
+        # self.setup_folders()
         # Copy files for schemes and parameters over
-        self.setup_files()
+        # self.setup_files()
         # Set up any scripts
-        self.setup_scripts()
+        # self.setup_scripts()
         install.run(self)
 
 
