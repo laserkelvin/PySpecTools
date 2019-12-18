@@ -73,6 +73,7 @@
 <span class="kn">from</span> <span class="nn">sklearn.cluster</span> <span class="k">import</span> <span class="n">AffinityPropagation</span>
 <span class="kn">from</span> <span class="nn">sklearn.metrics</span> <span class="k">import</span> <span class="n">silhouette_samples</span>
 <span class="kn">from</span> <span class="nn">scipy.signal</span> <span class="k">import</span> <span class="n">windows</span>
+<span class="kn">from</span> <span class="nn">scipy.fftpack</span> <span class="k">import</span> <span class="n">rfft</span><span class="p">,</span> <span class="n">irfft</span>
 <span class="kn">from</span> <span class="nn">uncertainties</span> <span class="k">import</span> <span class="n">ufloat</span>
 <span class="kn">from</span> <span class="nn">bokeh.layouts</span> <span class="k">import</span> <span class="n">layout</span>
 <span class="kn">from</span> <span class="nn">bokeh.io</span> <span class="k">import</span> <span class="n">save</span>
@@ -83,7 +84,7 @@
 <span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">lineshapes</span>
 <span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">routines</span>
 <span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">ftmw_analysis</span> <span class="k">as</span> <span class="n">fa</span>
-<span class="kn">from</span> <span class="nn">pyspectools.fast.routines</span> <span class="k">import</span> <span class="n">isin_array</span><span class="p">,</span> <span class="n">hot_match_arrays</span>
+<span class="kn">from</span> <span class="nn">pyspectools.fast</span> <span class="k">import</span> <span class="n">routines</span> <span class="k">as</span> <span class="n">fr</span>
 <span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">figurefactory</span>
 
 
@@ -1058,12 +1059,12 @@
                 <span class="n">comp_freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
                     <span class="n">experiment</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">frequencies</span>
                 <span class="p">)</span>
-                <span class="n">mask</span> <span class="o">=</span> <span class="n">isin_array</span><span class="p">(</span><span class="n">base_freqs</span><span class="p">,</span> <span class="n">comp_freqs</span><span class="p">,</span> <span class="n">thres_prox</span><span class="p">)</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">isin_array</span><span class="p">(</span><span class="n">base_freqs</span><span class="p">,</span> <span class="n">comp_freqs</span><span class="p">,</span> <span class="n">thres_prox</span><span class="p">)</span>
                 <span class="c1"># Convert to boolean mask</span>
                 <span class="n">mask</span><span class="o">.</span><span class="n">dtype</span> <span class="o">=</span> <span class="nb">bool</span>
                 <span class="c1"># Work out a correlation matrix to find indices where the two</span>
                 <span class="c1"># arrays are matched</span>
-                <span class="n">correlations</span> <span class="o">=</span> <span class="n">hot_match_arrays</span><span class="p">(</span>
+                <span class="n">correlations</span> <span class="o">=</span> <span class="n">fr</span><span class="o">.</span><span class="n">hot_match_arrays</span><span class="p">(</span>
                     <span class="n">base_freqs</span><span class="p">,</span>
                     <span class="n">comp_freqs</span><span class="p">,</span>
                     <span class="n">thres_prox</span>
@@ -1281,6 +1282,73 @@
         <span class="n">C</span><span class="p">[</span><span class="n">index</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">a</span> <span class="o">*</span> <span class="n">b_temp</span><span class="p">)</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>
         <span class="n">index</span> <span class="o">+=</span> <span class="mi">1</span>
     <span class="k">return</span> <span class="n">C</span><span class="p">,</span> <span class="n">lags</span></div>
+
+
+<div class="viewcode-block" id="average_spectra"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.analysis.average_spectra">[docs]</a><span class="k">def</span> <span class="nf">average_spectra</span><span class="p">(</span><span class="o">*</span><span class="n">arrays</span><span class="p">,</span> <span class="o">**</span><span class="n">options</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Averages multiple spectra together, with a few options available to</span>
+<span class="sd">    the user. User provides a iterable of arrays, where the frequency</span>
+<span class="sd">    axis of each of the arrays are the same, and the length of the arrays</span>
+<span class="sd">    are also the same.</span>
+<span class="sd">    </span>
+<span class="sd">    Options include performing a noise-weighted average, where the spectra</span>
+<span class="sd">    are averaged based on their inverse of their average baseline determined</span>
+<span class="sd">    by an ALS fit. The lower the average noise, the larger weighting given</span>
+<span class="sd">    to the spectrum.</span>
+<span class="sd">    </span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    arrays - np.ndarray</span>
+<span class="sd">        Iterable of NumPy arrays corresponding to the intensity</span>
+<span class="sd">        </span>
+<span class="sd">    time_domain - bool</span>
+<span class="sd">        If True, the averaging is done in the time domain, providing</span>
+<span class="sd">        the input spectra are frequency domain. Defaults to False.</span>
+<span class="sd">        </span>
+<span class="sd">    weighted - bool</span>
+<span class="sd">        If True, weights the averaging by the average noise in each</span>
+<span class="sd">        spectrum. Defaults to True.    </span>
+<span class="sd">    </span>
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    np.ndarray</span>
+<span class="sd">        Averaged intensities.</span>
+<span class="sd">    </span>
+<span class="sd">    Raises</span>
+<span class="sd">    ------</span>
+<span class="sd">    ValueError</span>
+<span class="sd">        Error is raised if fewer than two spectra are given.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">n_spectra</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">arrays</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">n_spectra</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Need at least two spectra to coaverage!&quot;</span><span class="p">)</span>
+    <span class="n">time_domain</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;time_domain&quot;</span><span class="p">,</span> <span class="kc">False</span><span class="p">)</span>
+    <span class="n">weighted</span> <span class="o">=</span> <span class="n">options</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="s2">&quot;weighted&quot;</span><span class="p">,</span> <span class="kc">True</span><span class="p">)</span>
+    <span class="n">averaged_spectra</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">arrays</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">size</span><span class="p">)</span>
+    <span class="n">weighting</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># Loop over the spectra</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">spectra</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">arrays</span><span class="p">):</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">spectra</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">als_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lam&quot;</span><span class="p">:</span> <span class="mf">1e2</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s2">&quot;niter&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
+        <span class="k">if</span> <span class="n">time_domain</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">rfft</span><span class="p">(</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">weighted</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="n">baseline</span> <span class="o">=</span> <span class="n">fitting</span><span class="o">.</span><span class="n">baseline_als</span><span class="p">(</span><span class="n">y</span><span class="p">,</span> <span class="o">**</span><span class="n">als_params</span><span class="p">)</span>
+            <span class="c1"># Inverse of noise is used for weighting</span>
+            <span class="n">noise</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
+            <span class="n">weighting</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">noise</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">*=</span> <span class="n">noise</span>
+        <span class="n">averaged_spectra</span> <span class="o">+=</span> <span class="n">y</span>
+    <span class="k">if</span> <span class="n">weighted</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="c1"># Divide through by the sum of weights</span>
+        <span class="n">norm</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weighting</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Otherwise, simple arthimetic mean</span>
+        <span class="n">norm</span> <span class="o">=</span> <span class="n">n_spectra</span>
+    <span class="n">averaged_spectra</span> <span class="o">/=</span> <span class="n">norm</span>
+    <span class="k">if</span> <span class="n">time_domain</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">averaged_spectra</span> <span class="o">=</span> <span class="n">irfft</span><span class="p">(</span><span class="n">averaged_spectra</span><span class="p">)</span>            
+    <span class="k">return</span> <span class="n">averaged_spectra</span></div>
 </pre></div>
 
         </div>
@@ -1306,7 +1374,11 @@
     <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
 </ul>
 
   

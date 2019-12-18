@@ -85,6 +85,7 @@
 <span class="kn">from</span> <span class="nn">dataclasses</span> <span class="k">import</span> <span class="n">dataclass</span><span class="p">,</span> <span class="n">field</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="k">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Dict</span><span class="p">,</span> <span class="n">Tuple</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Type</span>
 <span class="kn">from</span> <span class="nn">copy</span> <span class="k">import</span> <span class="n">copy</span><span class="p">,</span> <span class="n">deepcopy</span>
+<span class="kn">from</span> <span class="nn">itertools</span> <span class="k">import</span> <span class="n">combinations</span>
 <span class="kn">import</span> <span class="nn">logging</span>
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="k">import</span> <span class="n">Path</span>
 
@@ -232,17 +233,17 @@
         <span class="k">else</span><span class="p">:</span>
             <span class="n">frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog_frequency</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.name}</span><span class="s2">, </span><span class="si">{frequency:,.4f}</span><span class="s2">&quot;</span>
-    
+
     <span class="k">def</span> <span class="nf">__repr__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">uline</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span>
         <span class="k">else</span><span class="p">:</span>
             <span class="n">frequency</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">catalog_frequency</span>
         <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;</span><span class="si">{self.name}</span><span class="s2">, </span><span class="si">{frequency:,.4f}</span><span class="s2">&quot;</span>
-    
+
     <span class="k">def</span> <span class="nf">__lt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">&lt;</span> <span class="n">other</span><span class="o">.</span><span class="n">frequency</span>
-    
+
     <span class="k">def</span> <span class="nf">__gt__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">frequency</span> <span class="o">&gt;</span> <span class="n">other</span><span class="o">.</span><span class="n">frequency</span>
 
@@ -400,7 +401,7 @@
         <span class="n">json_dict</span> <span class="o">=</span> <span class="n">routines</span><span class="o">.</span><span class="n">read_json</span><span class="p">(</span><span class="n">json_path</span><span class="p">)</span>
         <span class="n">assignment_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">json_dict</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">assignment_obj</span></div>
-    
+
 <div class="viewcode-block" id="Transition.reset_assignment"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.Transition.reset_assignment">[docs]</a>    <span class="k">def</span> <span class="nf">reset_assignment</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to reset an assigned line into its original state.</span>
@@ -412,7 +413,7 @@
             <span class="s2">&quot;intensity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">intensity</span><span class="p">,</span>
             <span class="s2">&quot;experiment&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span>
             <span class="s2">&quot;velocity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">velocity</span><span class="p">,</span>
-            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span>
+            <span class="s2">&quot;source&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">source</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">empty</span> <span class="o">=</span> <span class="n">Transition</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="vm">__dict__</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">empty</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
@@ -467,9 +468,11 @@
     <span class="n">noise_region</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">]</span> <span class="o">=</span> <span class="n">field</span><span class="p">(</span><span class="n">default_factory</span><span class="o">=</span><span class="nb">list</span><span class="p">)</span>
 
     <span class="k">def</span> <span class="nf">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="n">form</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;Experiment: </span><span class="si">{self.experiment}</span><span class="s2">,&quot;</span> \
-        <span class="n">f</span><span class="s2">&quot;Composition: </span><span class="si">{self.composition}</span><span class="s2">,&quot;</span> \
-        <span class="n">f</span><span class="s2">&quot;Temperature: </span><span class="si">{self.temperature}</span><span class="s2"> K&quot;</span>
+        <span class="n">form</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">f</span><span class="s2">&quot;Experiment: </span><span class="si">{self.experiment}</span><span class="s2">,&quot;</span>
+            <span class="n">f</span><span class="s2">&quot;Composition: </span><span class="si">{self.composition}</span><span class="s2">,&quot;</span>
+            <span class="n">f</span><span class="s2">&quot;Temperature: </span><span class="si">{self.temperature}</span><span class="s2"> K&quot;</span>
+        <span class="p">)</span>
         <span class="k">return</span> <span class="n">form</span></div>
 
 
@@ -910,7 +913,7 @@
             <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span>
                 <span class="n">f</span><span class="s2">&quot;</span><span class="si">{name}</span><span class="s2"> does not exist in </span><span class="si">{self.session.experiment}</span><span class="s2"> line_lists&quot;</span>
             <span class="p">)</span></div>
-            
+
 <div class="viewcode-block" id="AssignmentSession.add_ulines"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.add_ulines">[docs]</a>    <span class="k">def</span> <span class="nf">add_ulines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to manually add multiple pairs of frequency/intensity to the current</span>
@@ -930,7 +933,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">default_dict</span> <span class="o">=</span> <span class="p">{</span>
             <span class="s2">&quot;experiment&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">experiment</span><span class="p">,</span>
-            <span class="s2">&quot;velocity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">velocity</span>
+            <span class="s2">&quot;velocity&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">velocity</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">default_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="k">if</span> <span class="s2">&quot;Peaks&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">:</span>
@@ -960,9 +963,7 @@
             <span class="s2">&quot;warning&quot;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span>
                 <span class="n">f</span><span class="s2">&quot;./logs/</span><span class="si">{self.session.experiment}</span><span class="s2">-warnings.log&quot;</span>
             <span class="p">),</span>
-            <span class="s2">&quot;debug&quot;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span>
-                <span class="n">f</span><span class="s2">&quot;./logs/</span><span class="si">{self.session.experiment}</span><span class="s2">-debug.log&quot;</span>
-            <span class="p">),</span>
+            <span class="s2">&quot;debug&quot;</span><span class="p">:</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;./logs/</span><span class="si">{self.session.experiment}</span><span class="s2">-debug.log&quot;</span><span class="p">),</span>
         <span class="p">}</span>
         <span class="c1"># If verbose is specified, the logging info is directly printed as well</span>
         <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">verbose</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
@@ -1038,7 +1039,10 @@
                 <span class="c1"># Perform rudimentary peak detection</span>
                 <span class="n">threshold</span> <span class="o">=</span> <span class="mf">0.2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">int_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
                 <span class="n">peaks_df</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">peak_find</span><span class="p">(</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">freq_col</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">,</span> <span class="n">int_col</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int_col</span><span class="p">,</span> <span class="n">thres</span><span class="o">=</span><span class="n">threshold</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">,</span>
+                    <span class="n">freq_col</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">,</span>
+                    <span class="n">int_col</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">int_col</span><span class="p">,</span>
+                    <span class="n">thres</span><span class="o">=</span><span class="n">threshold</span><span class="p">,</span>
                 <span class="p">)</span>
                 <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">peaks_df</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">2</span><span class="p">:</span>
                     <span class="c1"># find largest gap in data, including the edges of the spectrum</span>
@@ -1058,7 +1062,9 @@
                     <span class="n">region</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">region</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">-</span> <span class="mf">30.0</span>
                     <span class="c1"># Make sure the frequencies are in ascending order</span>
                     <span class="n">region</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">region</span><span class="p">)</span>
-                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Noise region defined as </span><span class="si">{}</span><span class="s2"> to </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">region</span><span class="p">))</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                        <span class="s2">&quot;Noise region defined as </span><span class="si">{}</span><span class="s2"> to </span><span class="si">{}</span><span class="s2">.&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">*</span><span class="n">region</span><span class="p">)</span>
+                    <span class="p">)</span>
                     <span class="n">noise_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">between</span><span class="p">(</span><span class="o">*</span><span class="n">region</span><span class="p">)]</span>
                     <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">noise_df</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">50</span><span class="p">:</span>
                         <span class="n">noise_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.1</span><span class="p">))</span>
@@ -1089,23 +1095,23 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Noise RMS set to </span><span class="si">{rms}</span><span class="s2">.&quot;</span><span class="p">)</span>
         <span class="k">elif</span> <span class="n">als</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
             <span class="c1"># Use the asymmetric least-squares method to determine the baseline</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Using asymmetric least squares method for baseline determination.&quot;</span><span class="p">)</span>
-            <span class="n">als_params</span> <span class="o">=</span> <span class="p">{</span>
-                <span class="s2">&quot;lam&quot;</span><span class="p">:</span> <span class="mf">1e2</span><span class="p">,</span>
-                <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span>
-                <span class="s2">&quot;niter&quot;</span><span class="p">:</span> <span class="mi">10</span>
-            <span class="p">}</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
+                <span class="s2">&quot;Using asymmetric least squares method for baseline determination.&quot;</span>
+            <span class="p">)</span>
+            <span class="n">als_params</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;lam&quot;</span><span class="p">:</span> <span class="mf">1e2</span><span class="p">,</span> <span class="s2">&quot;p&quot;</span><span class="p">:</span> <span class="mf">0.05</span><span class="p">,</span> <span class="s2">&quot;niter&quot;</span><span class="p">:</span> <span class="mi">10</span><span class="p">}</span>
             <span class="n">als_params</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
             <span class="n">baseline</span> <span class="o">=</span> <span class="n">fitting</span><span class="o">.</span><span class="n">baseline_als</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">int_col</span><span class="p">],</span> <span class="o">**</span><span class="n">als_params</span><span class="p">)</span>
             <span class="c1"># Decimate the noise with a huge Gaussian blur</span>
-            <span class="n">baseline</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="mf">200.</span><span class="p">)</span>
+            <span class="n">baseline</span> <span class="o">=</span> <span class="n">gaussian_filter</span><span class="p">(</span><span class="n">baseline</span><span class="p">,</span> <span class="mf">200.0</span><span class="p">)</span>
             <span class="n">rms</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">std</span><span class="p">(</span><span class="n">baseline</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">baseline</span> <span class="o">=</span> <span class="n">baseline</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">noise_region</span> <span class="o">=</span> <span class="s2">&quot;als&quot;</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">noise_rms</span> <span class="o">=</span> <span class="n">rms</span>
         <span class="k">return</span> <span class="n">baseline</span><span class="p">,</span> <span class="n">rms</span></div>
 
-<div class="viewcode-block" id="AssignmentSession.find_peaks"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.find_peaks">[docs]</a>    <span class="k">def</span> <span class="nf">find_peaks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">als</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<div class="viewcode-block" id="AssignmentSession.find_peaks"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.find_peaks">[docs]</a>    <span class="k">def</span> <span class="nf">find_peaks</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">region</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">sigma</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">als</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Find peaks in the experiment spectrum, with a specified threshold value or automatic threshold.</span>
 <span class="sd">            The method calls the peak_find function from the analysis module, which in itself wraps peakutils.</span>
@@ -1183,7 +1189,7 @@
         <span class="p">)</span>
         <span class="c1"># Shift the peak intensities down by the noise baseline</span>
         <span class="k">if</span> <span class="n">als</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
-            <span class="n">baseline</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">,</span> <span class="s2">&quot;baseline&quot;</span><span class="p">,</span> <span class="mf">0.</span><span class="p">)</span>
+            <span class="n">baseline</span> <span class="o">=</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="p">,</span> <span class="s2">&quot;baseline&quot;</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
             <span class="n">peaks_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">peaks_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">baseline</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Found {len(peaks_df)} peaks in total.&quot;</span><span class="p">)</span>
         <span class="c1"># Reindex the peaks</span>
@@ -1257,9 +1263,7 @@
             <span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">update_linelist</span><span class="p">(</span><span class="n">transitions</span><span class="p">)</span>
         <span class="n">new_remaining</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">])</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="n">f</span><span class="s2">&quot;There are now </span><span class="si">{new_remaining}</span><span class="s2"> line entries in this session.&quot;</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;There are now </span><span class="si">{new_remaining}</span><span class="s2"> line entries in this session.&quot;</span><span class="p">)</span>
         <span class="n">peaks_df</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()[[</span><span class="s2">&quot;frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;intensity&quot;</span><span class="p">]]</span>
         <span class="n">peaks_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">peaks</span> <span class="o">=</span> <span class="n">peaks_df</span></div>
@@ -1361,6 +1365,27 @@
 <span class="sd">            Specifies whether the assignment procedure is automatic.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">process_splatalogue</span><span class="p">(</span><span class="n">auto</span><span class="o">=</span><span class="n">auto</span><span class="p">)</span></div>
+    
+<div class="viewcode-block" id="AssignmentSession.process_clock_spurs"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.process_clock_spurs">[docs]</a>    <span class="k">def</span> <span class="nf">process_clock_spurs</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method that will generate a LineList corresponding to possible</span>
+<span class="sd">        harmonics, sum, and difference frequencies based on a given clock</span>
+<span class="sd">        frequency (default: 65,000 MHz).</span>
+<span class="sd">        </span>
+<span class="sd">        It is advised to run this function at the end of assignments, owing</span>
+<span class="sd">        to the sheer number of possible combinations of lines, which may</span>
+<span class="sd">        interfere with real molecular features.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        kwargs</span>
+<span class="sd">            Optional kwargs are passed into the creation of the LineList</span>
+<span class="sd">            with `LineList.from_clock`.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Processing electronics RFI peaks.&quot;</span><span class="p">)</span>
+        <span class="n">clock_linelist</span> <span class="o">=</span> <span class="n">LineList</span><span class="o">.</span><span class="n">from_clock</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">process_linelist</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;Clock&quot;</span><span class="p">,</span> <span class="n">linelist</span><span class="o">=</span><span class="n">clock_linelist</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Done processing electronic RFI peaks.&quot;</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AssignmentSession.process_splatalogue"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.process_splatalogue">[docs]</a>    <span class="k">def</span> <span class="nf">process_splatalogue</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">auto</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">progressbar</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot; Function that will provide an &quot;interface&quot; for interactive</span>
@@ -1380,9 +1405,7 @@
 <span class="sd">             If True the assignment process does not require user input, otherwise will prompt user.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">ulines</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_ulines</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-            <span class="n">f</span><span class="s2">&quot;Beginning Splatalogue lookup on {len(ulines)} lines.&quot;</span>
-        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Beginning Splatalogue lookup on {len(ulines)} lines.&quot;</span><span class="p">)</span>
         <span class="n">iterator</span> <span class="o">=</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">ulines</span><span class="p">)</span>
         <span class="k">if</span> <span class="n">progressbar</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
             <span class="n">iterator</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">iterator</span><span class="p">)</span>
@@ -1498,15 +1521,13 @@
                     <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
                         <span class="c1"># If nothing matches, keep in the U-line</span>
                         <span class="c1"># pile.</span>
-                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span>
-                            <span class="n">f</span><span class="s2">&quot;Deferring assignment for index </span><span class="si">{index}</span><span class="s2">.&quot;</span>
-                        <span class="p">)</span>
+                        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;Deferring assignment for index </span><span class="si">{index}</span><span class="s2">.&quot;</span><span class="p">)</span>
                 <span class="k">else</span><span class="p">:</span>
                     <span class="c1"># Throw into U-line pile if no matches at all</span>
                     <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;No species known for </span><span class="si">{frequency:,.4f}</span><span class="s2">&quot;</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Splatalogue search finished.&quot;</span><span class="p">)</span></div>
-        
-<div class="viewcode-block" id="AssignmentSession.overlay_molecule"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.overlay_molecule">[docs]</a>    <span class="k">def</span> <span class="nf">overlay_molecule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=-</span><span class="mf">7.</span><span class="p">):</span>
+
+<div class="viewcode-block" id="AssignmentSession.overlay_molecule"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.overlay_molecule">[docs]</a>    <span class="k">def</span> <span class="nf">overlay_molecule</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">species</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">freq_range</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=-</span><span class="mf">7.0</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to query splatalogue for a specific molecule. By default, the</span>
 <span class="sd">        frequency range that will be requested corresponds to the spectral range</span>
@@ -1533,30 +1554,35 @@
         <span class="k">if</span> <span class="n">freq_range</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">freq_range</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
-                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
             <span class="p">]</span>
-        <span class="n">molecule_df</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">search_molecule</span><span class="p">(</span>
-            <span class="n">species</span><span class="p">,</span>
-            <span class="n">freq_range</span>
-            <span class="p">)</span>
+        <span class="n">molecule_df</span> <span class="o">=</span> <span class="n">analysis</span><span class="o">.</span><span class="n">search_molecule</span><span class="p">(</span><span class="n">species</span><span class="p">,</span> <span class="n">freq_range</span><span class="p">)</span>
         <span class="c1"># Threshold intensity</span>
         <span class="n">molecule_df</span> <span class="o">=</span> <span class="n">molecule_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">]</span>
         <span class="c1"># This prevents missing values from blowing up the normalization</span>
-        <span class="n">molecule_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mf">1.</span><span class="p">][</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.</span>
+        <span class="n">molecule_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">]</span> <span class="o">&gt;</span> <span class="o">-</span><span class="mf">1.0</span><span class="p">][</span>
+            <span class="s2">&quot;CDMS/JPL Intensity&quot;</span>
+        <span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
         <span class="c1"># Calculate the real intensity and normalize</span>
-        <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span><span class="o">**</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">]</span>
-        <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Normalized&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span> <span class="o">**</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;CDMS/JPL Intensity&quot;</span><span class="p">]</span>
+        <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Normalized&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        <span class="p">)</span>
         <span class="c1"># Add annotations to the hovertext</span>
-        <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Annotation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Resolved QNs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">+</span> \
-            <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;E_U (K)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+        <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Annotation&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span>
+            <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Resolved QNs&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+            <span class="o">+</span> <span class="s2">&quot;-&quot;</span>
+            <span class="o">+</span> <span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;E_U (K)&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">molecule_df</span><span class="p">)</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
             <span class="n">fig</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">plot_spectrum</span><span class="p">()</span>
             <span class="n">fig</span><span class="o">.</span><span class="n">add_bar</span><span class="p">(</span>
-                <span class="n">x</span><span class="o">=</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span> <span class="n">y</span><span class="o">=</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Normalized&quot;</span><span class="p">],</span> 
-                <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;text&quot;</span><span class="p">,</span> 
+                <span class="n">x</span><span class="o">=</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span>
+                <span class="n">y</span><span class="o">=</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Normalized&quot;</span><span class="p">],</span>
+                <span class="n">hoverinfo</span><span class="o">=</span><span class="s2">&quot;text&quot;</span><span class="p">,</span>
                 <span class="n">text</span><span class="o">=</span><span class="n">molecule_df</span><span class="p">[</span><span class="s2">&quot;Annotation&quot;</span><span class="p">],</span>
                 <span class="n">name</span><span class="o">=</span><span class="n">species</span><span class="p">,</span>
-                <span class="n">width</span><span class="o">=</span><span class="mf">2.</span>
+                <span class="n">width</span><span class="o">=</span><span class="mf">2.0</span><span class="p">,</span>
             <span class="p">)</span>
             <span class="n">molecule_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;linelists/</span><span class="si">{species}</span><span class="s2">-splatalogue.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="k">return</span> <span class="n">fig</span><span class="p">,</span> <span class="n">molecule_df</span>
@@ -1627,7 +1653,7 @@
                 <span class="k">else</span><span class="p">:</span>
                     <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
                         <span class="n">f</span><span class="s2">&quot;File extension not recognized: </span><span class="si">{name}</span><span class="s2"> extension: </span><span class="si">{extension}</span><span class="s2">&quot;</span>
-                        <span class="p">)</span>
+                    <span class="p">)</span>
                 <span class="n">linelist_obj</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="o">**</span><span class="n">subdict</span><span class="p">)</span>
                 <span class="nb">print</span><span class="p">(</span><span class="n">linelist_obj</span><span class="p">)</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">process_linelist</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">linelist_obj</span><span class="o">.</span><span class="n">name</span><span class="p">,</span> <span class="n">linelist</span><span class="o">=</span><span class="n">linelist_obj</span><span class="p">)</span>
@@ -1706,7 +1732,6 @@
                 <span class="n">filepath</span><span class="o">=</span><span class="n">filepath</span><span class="p">,</span>
                 <span class="n">min_freq</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">min</span><span class="p">(),</span>
                 <span class="n">max_freq</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">freq_col</span><span class="p">]</span><span class="o">.</span><span class="n">max</span><span class="p">(),</span>
-                <span class="n">max_lstate</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">t_threshold</span>
             <span class="p">)</span>
             <span class="k">if</span> <span class="n">name</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">linelist</span>
@@ -1717,14 +1742,25 @@
             <span class="c1"># Sort the LineList by intensity if possible. If the strongest line isn&#39;t</span>
             <span class="c1"># there, the other lines shouldn&#39;t be there</span>
             <span class="k">if</span> <span class="n">linelist</span><span class="o">.</span><span class="n">source</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;Splatalogue&quot;</span><span class="p">,</span> <span class="s2">&quot;Catalog&quot;</span><span class="p">]:</span>
-                <span class="n">linelist</span><span class="o">.</span><span class="n">transitions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">linelist</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="n">line</span><span class="o">.</span><span class="n">catalog_intensity</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
-            <span class="c1"># Filter out out-of-band stuff</span>
-            <span class="n">max_freq</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_frequencies</span><span class="p">())</span>
-            <span class="n">min_freq</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_frequencies</span><span class="p">())</span>
+                <span class="n">linelist</span><span class="o">.</span><span class="n">transitions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
+                    <span class="n">linelist</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="n">line</span><span class="o">.</span><span class="n">catalog_intensity</span>
+                <span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="c1"># Filter out out-of-band stuff, but with some small tolerance extending</span>
+            <span class="c1"># out just in case it&#39;s close</span>
+            <span class="n">max_freq</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_frequencies</span><span class="p">())</span> <span class="o">*</span> <span class="mf">1.001</span>
+            <span class="n">min_freq</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_frequencies</span><span class="p">())</span> <span class="o">*</span> <span class="mf">0.999</span>
+            <span class="c1"># Make sure we&#39;re only assigning with in-band</span>
             <span class="n">transitions</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="n">transition</span> <span class="k">for</span> <span class="n">transition</span> <span class="ow">in</span> <span class="n">linelist</span><span class="o">.</span><span class="n">transitions</span> <span class="k">if</span> \
-                    <span class="n">min_freq</span> <span class="o">&lt;=</span> <span class="n">transition</span><span class="o">.</span><span class="n">catalog_frequency</span> <span class="o">&lt;=</span> <span class="n">max_freq</span>
-                <span class="p">]</span>
+                <span class="n">transition</span>
+                <span class="k">for</span> <span class="n">transition</span> <span class="ow">in</span> <span class="n">linelist</span><span class="o">.</span><span class="n">transitions</span>
+                <span class="k">if</span> <span class="n">min_freq</span> <span class="o">&lt;=</span> <span class="n">transition</span><span class="o">.</span><span class="n">catalog_frequency</span> <span class="o">&lt;=</span> <span class="n">max_freq</span>
+            <span class="p">]</span>
+            <span class="c1"># Filter out the transitions with energies too high</span>
+            <span class="n">transitions</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="n">transition</span>
+                <span class="k">for</span> <span class="n">transition</span> <span class="ow">in</span> <span class="n">linelist</span><span class="o">.</span><span class="n">transitions</span>
+                <span class="k">if</span> <span class="n">transition</span><span class="o">.</span><span class="n">lstate_energy</span> <span class="o">&lt;=</span> <span class="bp">self</span><span class="o">.</span><span class="n">t_threshold</span>
+            <span class="p">]</span>
             <span class="c1"># Loop over the LineList lines</span>
             <span class="k">if</span> <span class="n">progressbar</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
                 <span class="n">iterator</span> <span class="o">=</span> <span class="n">tqdm</span><span class="p">(</span><span class="n">transitions</span><span class="p">)</span>
@@ -1735,7 +1771,7 @@
             <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">transition</span> <span class="ow">in</span> <span class="n">iterator</span><span class="p">:</span>
                 <span class="c1"># Control the flow so that we&#39;re not wasting time looking for lines if the strongest</span>
                 <span class="c1"># transitions are not seen</span>
-                <span class="c1">#if (index &gt; 5) and (nassigned == 0) and (linelist.source in [&quot;Catalog&quot;, &quot;Splatalogue&quot;]):</span>
+                <span class="c1"># if (index &gt; 5) and (nassigned == 0) and (linelist.source in [&quot;Catalog&quot;, &quot;Splatalogue&quot;]):</span>
                 <span class="c1">#    self.logger.info(</span>
                 <span class="c1">#    &quot;Searched for five strongest transitions in {linelist.name}, and nothing; aborting.&quot;</span>
                 <span class="c1">#    )</span>
@@ -1961,7 +1997,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">identifications</span> <span class="o">=</span> <span class="p">{</span><span class="n">name</span><span class="p">:</span> <span class="n">names</span><span class="o">.</span><span class="n">count</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">names</span><span class="p">}</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">identifications</span>
 
-<div class="viewcode-block" id="AssignmentSession.create_uline_ftb_batch"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.create_uline_ftb_batch">[docs]</a>    <span class="k">def</span> <span class="nf">create_uline_ftb_batch</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shots</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">dipole</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">sort_int</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="AssignmentSession.create_uline_ftb_batch"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.create_uline_ftb_batch">[docs]</a>    <span class="k">def</span> <span class="nf">create_uline_ftb_batch</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shots</span><span class="o">=</span><span class="mi">500</span><span class="p">,</span> <span class="n">dipole</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">sort_int</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity</span>
 <span class="sd">        frequencies.</span>
@@ -1992,15 +2030,19 @@
             <span class="n">filepath</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;./ftb/</span><span class="si">{self.session.experiment}</span><span class="s2">-ulines.ftb&quot;</span>
         <span class="n">lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="n">transitions</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_ulines</span><span class="p">()</span>
-        <span class="n">transitions</span> <span class="o">=</span> <span class="p">[</span><span class="n">transition</span> <span class="k">for</span> <span class="n">transition</span> <span class="ow">in</span> <span class="n">transitions</span> <span class="k">if</span> <span class="n">transition</span><span class="o">.</span><span class="n">intensity</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">]</span>
+        <span class="n">transitions</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">transition</span>
+            <span class="k">for</span> <span class="n">transition</span> <span class="ow">in</span> <span class="n">transitions</span>
+            <span class="k">if</span> <span class="n">transition</span><span class="o">.</span><span class="n">intensity</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
+        <span class="p">]</span>
         <span class="c1"># Sort the intensities such that the strongest ones are scanned first.</span>
         <span class="k">if</span> <span class="n">sort_int</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
-            <span class="n">transitions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span>
-                <span class="n">transitions</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="n">line</span><span class="o">.</span><span class="n">intensity</span>
-                <span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+            <span class="n">transitions</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">transitions</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">line</span><span class="p">:</span> <span class="n">line</span><span class="o">.</span><span class="n">intensity</span><span class="p">)[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
         <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">uline</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">transitions</span><span class="p">):</span>
             <span class="k">if</span> <span class="n">uline</span><span class="o">.</span><span class="n">intensity</span> <span class="o">&gt;=</span> <span class="n">threshold</span><span class="p">:</span>
-                <span class="n">lines</span> <span class="o">+=</span> <span class="n">fa</span><span class="o">.</span><span class="n">generate_ftb_line</span><span class="p">(</span><span class="n">uline</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="n">shots</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;dipole&quot;</span><span class="p">:</span> <span class="n">dipole</span><span class="p">})</span>
+                <span class="n">lines</span> <span class="o">+=</span> <span class="n">fa</span><span class="o">.</span><span class="n">generate_ftb_line</span><span class="p">(</span>
+                    <span class="n">uline</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="n">shots</span><span class="p">,</span> <span class="o">**</span><span class="p">{</span><span class="s2">&quot;dipole&quot;</span><span class="p">:</span> <span class="n">dipole</span><span class="p">}</span>
+                <span class="p">)</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
             <span class="n">write_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
 
@@ -2011,7 +2053,7 @@
         <span class="n">shots</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
         <span class="n">dipole</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
         <span class="n">min_dist</span><span class="o">=</span><span class="mf">500.0</span><span class="p">,</span>
-        <span class="n">thres</span><span class="o">=</span><span class="kc">None</span>
+        <span class="n">thres</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an FTB batch file for use in QtFTM to perform a DR experiment.</span>
@@ -2075,7 +2117,12 @@
             <span class="n">write_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">lines</span><span class="p">)</span></div>
 
 <div class="viewcode-block" id="AssignmentSession.create_full_dr_batch"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.create_full_dr_batch">[docs]</a>    <span class="k">def</span> <span class="nf">create_full_dr_batch</span><span class="p">(</span>
-        <span class="bp">self</span><span class="p">,</span> <span class="n">cavity_freqs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">shots</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span> <span class="n">dipole</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span> <span class="n">min_dist</span><span class="o">=</span><span class="mf">500.0</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">cavity_freqs</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">shots</span><span class="o">=</span><span class="mi">25</span><span class="p">,</span>
+        <span class="n">dipole</span><span class="o">=</span><span class="mf">1.0</span><span class="p">,</span>
+        <span class="n">min_dist</span><span class="o">=</span><span class="mf">500.0</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create an FTB batch file for use in QtFTM to perform a DR experiment.</span>
@@ -2099,7 +2146,7 @@
 <span class="sd">            Minimum frequency difference between cavity and DR frequency to actually perform</span>
 <span class="sd">            the experiment</span>
 <span class="sd">        &quot;&quot;&quot;</span>
-        <span class="n">dr_freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">frequencies</span><span class="p">)</span>
+        <span class="n">dr_freqs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">line_lists</span><span class="p">[</span><span class="s2">&quot;Peaks&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">get_frequencies</span><span class="p">())</span>
         <span class="n">lines</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
         <span class="k">for</span> <span class="n">cindex</span><span class="p">,</span> <span class="n">cavity</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">cavity_freqs</span><span class="p">):</span>
             <span class="k">for</span> <span class="n">dindex</span><span class="p">,</span> <span class="n">dr</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">dr_freqs</span><span class="p">):</span>
@@ -2254,9 +2301,7 @@
         <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">assignments</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
             <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">assignments</span><span class="p">:</span>
                 <span class="c1"># Dump all the assignments into YAML format</span>
-                <span class="n">obj</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span>
-                    <span class="n">f</span><span class="s2">&quot;assignment_objs/</span><span class="si">{obj.experiment}</span><span class="s2">-</span><span class="si">{obj.peak_id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;yaml&quot;</span>
-                <span class="p">)</span>
+                <span class="n">obj</span><span class="o">.</span><span class="n">to_file</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;assignment_objs/</span><span class="si">{obj.experiment}</span><span class="s2">-</span><span class="si">{obj.peak_id}</span><span class="s2">&quot;</span><span class="p">,</span> <span class="s2">&quot;yaml&quot;</span><span class="p">)</span>
                 <span class="n">obj</span><span class="o">.</span><span class="n">deviation</span> <span class="o">=</span> <span class="n">obj</span><span class="o">.</span><span class="n">catalog_frequency</span> <span class="o">-</span> <span class="n">obj</span><span class="o">.</span><span class="n">frequency</span>
             <span class="c1"># Convert all of the assignment data into a CSV file</span>
             <span class="n">assignment_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="p">[</span><span class="n">obj</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="n">assignments</span><span class="p">])</span>
@@ -2265,15 +2310,11 @@
             <span class="c1"># Generate a LaTeX table for publication</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">create_latex_table</span><span class="p">()</span>
             <span class="c1"># Dump assignments to disk</span>
-            <span class="n">assignment_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span>
-                <span class="n">f</span><span class="s2">&quot;reports/</span><span class="si">{self.session.experiment}</span><span class="s2">.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span>
-            <span class="p">)</span>
+            <span class="n">assignment_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;reports/</span><span class="si">{self.session.experiment}</span><span class="s2">.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
             <span class="c1"># Dump Uline data to disk</span>
             <span class="n">peak_data</span> <span class="o">=</span> <span class="p">[[</span><span class="n">peak</span><span class="o">.</span><span class="n">frequency</span><span class="p">,</span> <span class="n">peak</span><span class="o">.</span><span class="n">intensity</span><span class="p">]</span> <span class="k">for</span> <span class="n">peak</span> <span class="ow">in</span> <span class="n">ulines</span><span class="p">]</span>
             <span class="n">peak_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">peak_data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">])</span>
-            <span class="n">peak_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span>
-                <span class="n">f</span><span class="s2">&quot;reports/</span><span class="si">{self.session.experiment}</span><span class="s2">-ulines.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span>
-            <span class="p">)</span>
+            <span class="n">peak_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;reports/</span><span class="si">{self.session.experiment}</span><span class="s2">-ulines.csv&quot;</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
 
             <span class="n">tally</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_assigned_names</span><span class="p">()</span>
             <span class="n">combined_dict</span> <span class="o">=</span> <span class="p">{</span>
@@ -2288,9 +2329,7 @@
             <span class="c1"># Combine Session information</span>
             <span class="n">combined_dict</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="vm">__dict__</span><span class="p">)</span>
             <span class="c1"># Dump to disk</span>
-            <span class="n">routines</span><span class="o">.</span><span class="n">dump_yaml</span><span class="p">(</span>
-                <span class="n">f</span><span class="s2">&quot;sessions/</span><span class="si">{self.session.experiment}</span><span class="s2">.yml&quot;</span><span class="p">,</span> <span class="s2">&quot;yaml&quot;</span>
-            <span class="p">)</span>
+            <span class="n">routines</span><span class="o">.</span><span class="n">dump_yaml</span><span class="p">(</span><span class="n">f</span><span class="s2">&quot;sessions/</span><span class="si">{self.session.experiment}</span><span class="s2">.yml&quot;</span><span class="p">,</span> <span class="s2">&quot;yaml&quot;</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">_create_html_report</span><span class="p">()</span>
             <span class="c1"># Dump data to notebook output</span>
             <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">combined_dict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
@@ -2336,8 +2375,15 @@
             <span class="n">ass_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">assignment</span><span class="o">.</span><span class="vm">__dict__</span> <span class="k">for</span> <span class="n">assignment</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">assignments</span><span class="p">]</span>
             <span class="n">db_obj</span><span class="o">.</span><span class="n">insert_multiple</span><span class="p">(</span><span class="n">ass_list</span><span class="p">)</span></div>
 
-<div class="viewcode-block" id="AssignmentSession.simulate_sticks"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.simulate_sticks">[docs]</a>    <span class="k">def</span> <span class="nf">simulate_sticks</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">catalogpath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">N</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> 
-                        <span class="n">Q</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">doppler</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">gaussian</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="AssignmentSession.simulate_sticks"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.simulate_sticks">[docs]</a>    <span class="k">def</span> <span class="nf">simulate_sticks</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">catalogpath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">N</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">Q</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span>
+        <span class="n">doppler</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">gaussian</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Simulates a stick spectrum with intensities in flux units (Jy) for</span>
 <span class="sd">        a given catalog file, the column density, and the rotational partition</span>
@@ -2390,8 +2436,14 @@
             <span class="p">)</span>
             <span class="k">return</span> <span class="n">simulated_df</span></div>
 
-<div class="viewcode-block" id="AssignmentSession.simulate_spectrum"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.simulate_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">simulate_spectrum</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">centers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> 
-                          <span class="n">widths</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">amplitudes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">fake</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<div class="viewcode-block" id="AssignmentSession.simulate_spectrum"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.simulate_spectrum">[docs]</a>    <span class="k">def</span> <span class="nf">simulate_spectrum</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+        <span class="n">centers</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">widths</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">amplitudes</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span>
+        <span class="n">fake</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">            Generate a synthetic spectrum with Gaussians with the</span>
 <span class="sd">            specified parameters, on a given x axis.</span>
@@ -2673,7 +2725,7 @@
             <span class="n">filepath</span> <span class="o">=</span> <span class="n">f</span><span class="s2">&quot;reports/</span><span class="si">{self.session.experiment}</span><span class="s2">-summary.html&quot;</span>
         <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
             <span class="n">write_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
-            
+
 <div class="viewcode-block" id="AssignmentSession.create_latex_table"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.create_latex_table">[docs]</a>    <span class="k">def</span> <span class="nf">create_latex_table</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">cols</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Method to create a LaTeX table summarizing the measurements in this experiment.</span>
@@ -2703,26 +2755,40 @@
             <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">,</span>
             <span class="s2">&quot;intensity&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{:.2f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">,</span>
             <span class="s2">&quot;catalog_frequency&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">,</span>
-            <span class="s2">&quot;deviation&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span>
+            <span class="s2">&quot;deviation&quot;</span><span class="p">:</span> <span class="s2">&quot;</span><span class="si">{:,.4f}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">,</span>
         <span class="p">}</span>
+
         <span class="k">def</span> <span class="nf">ref_formatter</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
             <span class="n">noform</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;CDMS/JPL&quot;</span><span class="p">,</span> <span class="s2">&quot;Artifact&quot;</span><span class="p">,</span> <span class="s2">&quot;U&quot;</span><span class="p">]</span>
             <span class="k">if</span> <span class="n">x</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">noform</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">f</span><span class="s2">&quot;\cite</span><span class="si">{x}</span><span class="s2">&quot;</span>
             <span class="k">else</span><span class="p">:</span>
                 <span class="k">return</span> <span class="n">x</span>
+
         <span class="c1"># Replace the source information to designate u-line if it is a u-line</span>
         <span class="n">table</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">table</span><span class="p">[</span><span class="s2">&quot;uline&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">True</span><span class="p">,</span> <span class="s2">&quot;source&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;U&quot;</span>
         <span class="k">if</span> <span class="n">header</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">header</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">,</span> <span class="s2">&quot;Catalog frequency&quot;</span><span class="p">,</span> 
-                <span class="s2">&quot;Deviation&quot;</span><span class="p">,</span> <span class="s2">&quot;Name&quot;</span><span class="p">,</span> <span class="s2">&quot;Formula&quot;</span><span class="p">,</span> <span class="s2">&quot;Quantum numbers&quot;</span><span class="p">,</span> <span class="s2">&quot;Source&quot;</span>
-                <span class="p">]</span>
+                <span class="s2">&quot;Frequency&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Intensity&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Catalog frequency&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Deviation&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Name&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Formula&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Quantum numbers&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;Source&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
         <span class="k">if</span> <span class="n">cols</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
             <span class="n">cols</span> <span class="o">=</span> <span class="p">[</span>
-                <span class="s2">&quot;frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;intensity&quot;</span><span class="p">,</span> <span class="s2">&quot;catalog_frequency&quot;</span><span class="p">,</span> 
-                <span class="s2">&quot;deviation&quot;</span><span class="p">,</span> <span class="s2">&quot;name&quot;</span><span class="p">,</span> <span class="s2">&quot;formula&quot;</span><span class="p">,</span> <span class="s2">&quot;r_qnos&quot;</span><span class="p">,</span> <span class="s2">&quot;source&quot;</span>
-                <span class="p">]</span>
+                <span class="s2">&quot;frequency&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;intensity&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;catalog_frequency&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;deviation&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;name&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;formula&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;r_qnos&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;source&quot;</span><span class="p">,</span>
+            <span class="p">]</span>
         <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">header</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="n">cols</span><span class="p">)</span>
         <span class="k">if</span> <span class="s2">&quot;source&quot;</span> <span class="ow">in</span> <span class="n">cols</span><span class="p">:</span>
             <span class="n">table</span><span class="p">[</span><span class="s2">&quot;source&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="n">ref_formatter</span><span class="p">)</span>
@@ -2736,7 +2802,7 @@
             <span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
             <span class="s2">&quot;longtable&quot;</span><span class="p">:</span> <span class="kc">True</span><span class="p">,</span>
             <span class="s2">&quot;header&quot;</span><span class="p">:</span> <span class="n">header</span><span class="p">,</span>
-            <span class="s2">&quot;escape&quot;</span><span class="p">:</span> <span class="kc">False</span>
+            <span class="s2">&quot;escape&quot;</span><span class="p">:</span> <span class="kc">False</span><span class="p">,</span>
         <span class="p">}</span>
         <span class="n">table_settings</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
         <span class="c1"># Write the table to file</span>
@@ -3293,7 +3359,7 @@
             <span class="bp">self</span><span class="o">.</span><span class="n">catalog_frequencies</span> <span class="o">=</span> <span class="p">[</span>
                 <span class="n">obj</span><span class="o">.</span><span class="n">catalog_frequency</span> <span class="k">for</span> <span class="n">obj</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">transitions</span>
             <span class="p">]</span>
-    
+
     <span class="k">def</span> <span class="nf">__eq__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">other</span><span class="p">:</span> <span class="nb">object</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">bool</span><span class="p">:</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Dunder method for comparison of LineLists. Since users can accidently</span>
@@ -3314,7 +3380,7 @@
             <span class="k">return</span> <span class="bp">NotImplemented</span>
         <span class="c1"># Assert that we&#39;re comparing LineList objects</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">transitions</span> <span class="o">==</span> <span class="n">other</span><span class="o">.</span><span class="n">transitions</span>
-    
+
     <span class="k">def</span> <span class="nf">__add__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">transition_obj</span><span class="p">:</span> <span class="n">Type</span><span class="p">[</span><span class="n">Transition</span><span class="p">]):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Dunder method to add Transitions to the LineList.</span>
@@ -3326,7 +3392,7 @@
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">assert</span> <span class="nb">type</span><span class="p">(</span><span class="n">transition_obj</span><span class="p">)</span> <span class="o">==</span> <span class="n">Transition</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">transitions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Transition</span><span class="p">)</span>
-    
+
     <span class="k">def</span> <span class="nf">__iter__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Sets up syntax for looping over a LineList. This is recommended more</span>
@@ -3337,7 +3403,14 @@
 
 <div class="viewcode-block" id="LineList.from_catalog"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.from_catalog">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_catalog</span><span class="p">(</span>
-        <span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">formula</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">min_freq</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">max_freq</span><span class="o">=</span><span class="mf">1e12</span><span class="p">,</span> <span class="n">max_lstate</span><span class="o">=</span><span class="mf">4.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="bp">cls</span><span class="p">,</span>
+        <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">formula</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span>
+        <span class="n">min_freq</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span>
+        <span class="n">max_freq</span><span class="o">=</span><span class="mf">1e12</span><span class="p">,</span>
+        <span class="n">max_lstate</span><span class="o">=</span><span class="mf">9000.0</span><span class="p">,</span>
+        <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
     <span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Create a Line List object from an SPCAT catalog.</span>
@@ -3378,9 +3451,7 @@
                 <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">],</span> <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Lower state energy&quot;</span><span class="p">]</span>
             <span class="p">)</span>
             <span class="c1"># Filter out the lower states</span>
-            <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">catalog_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
-                <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Lower state energy&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_lstate</span>
-            <span class="p">]</span>
+            <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">catalog_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Lower state energy&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">max_lstate</span><span class="p">]</span>
             <span class="n">vfunc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">Transition</span><span class="p">)</span>
             <span class="c1"># Vectorized generation of all the Transition objects</span>
             <span class="n">transitions</span> <span class="o">=</span> <span class="n">vfunc</span><span class="p">(</span>
@@ -3443,7 +3514,7 @@
         <span class="p">)</span>
         <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Peaks&quot;</span><span class="p">)</span>
         <span class="k">return</span> <span class="n">linelist_obj</span></div>
-    
+
 <div class="viewcode-block" id="LineList.from_list"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.from_list">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_list</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">frequencies</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="nb">float</span><span class="p">],</span> <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -3477,8 +3548,8 @@
             <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Catalog&quot;</span><span class="p">)</span>
-        <span class="k">return</span> <span class="n">linelist_obj</span>  </div>
-    
+        <span class="k">return</span> <span class="n">linelist_obj</span></div>
+
 <div class="viewcode-block" id="LineList.from_pgopher"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.from_pgopher">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_pgopher</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -3512,10 +3583,10 @@
             <span class="n">S</span><span class="o">=</span><span class="n">pgopher_df</span><span class="p">[</span><span class="s2">&quot;Spol&quot;</span><span class="p">],</span>
             <span class="n">uline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
             <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span>
-            <span class="n">formula</span><span class="o">=</span><span class="n">formula</span>
+            <span class="n">formula</span><span class="o">=</span><span class="n">formula</span><span class="p">,</span>
         <span class="p">)</span>
-        <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Catalog&quot;</span><span class="p">)</span>        </div>
-        
+        <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Catalog&quot;</span><span class="p">)</span></div>
+
 <div class="viewcode-block" id="LineList.from_lin"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.from_lin">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_lin</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">filepath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -3556,7 +3627,7 @@
             <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Line file&quot;</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">linelist_obj</span></div>
-    
+
 <div class="viewcode-block" id="LineList.from_splatalogue_query"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.from_splatalogue_query">[docs]</a>    <span class="nd">@classmethod</span>
     <span class="k">def</span> <span class="nf">from_splatalogue_query</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">dataframe</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
@@ -3587,7 +3658,7 @@
             <span class="n">uline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
             <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Splatalogue&quot;</span><span class="p">,</span>
             <span class="n">public</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">kwargs</span>
+            <span class="o">**</span><span class="n">kwargs</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
             <span class="n">name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Splatalogue&quot;</span>
@@ -3622,6 +3693,52 @@
         <span class="p">)</span>
         <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
             <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Artifacts&quot;</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Artifacts&quot;</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="n">linelist_obj</span></div>
+    
+<div class="viewcode-block" id="LineList.from_clock"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.from_clock">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">from_clock</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">max_multi</span><span class="o">=</span><span class="mi">64</span><span class="p">,</span> <span class="n">clock</span><span class="o">=</span><span class="mf">65000.</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Method of generating a LineList object by calculating all possible</span>
+<span class="sd">        combinations of the</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        max_multi : int, optional</span>
+<span class="sd">            [description], by default 64</span>
+<span class="sd">        </span>
+<span class="sd">        clock : float, optional</span>
+<span class="sd">            Clock frequency to calculate sub-harmonics of,</span>
+<span class="sd">            in units of MHz. Defaults to 65,000 MHz, which corresponds</span>
+<span class="sd">            to the Keysight AWG</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        LineList object</span>
+<span class="sd">            LineList object with the full list of possible clock</span>
+<span class="sd">            spurs, as harmonics, sum, and difference frequencies.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">frequencies</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">clock</span> <span class="o">/</span> <span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">max_multi</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="p">]</span>
+        <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">combinations</span><span class="p">(</span><span class="n">frequencies</span><span class="p">,</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="c1"># Round to 4 decimal places</span>
+            <span class="n">frequencies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">pair</span><span class="p">),</span> <span class="mi">4</span><span class="p">))</span>
+            <span class="n">frequencies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">pair</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="n">pair</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">4</span><span class="p">))</span>
+        <span class="c1"># Remove duplicates</span>
+        <span class="n">frequencies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">set</span><span class="p">(</span><span class="n">frequencies</span><span class="p">))</span>
+        <span class="n">frequencies</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">frequencies</span><span class="p">)</span>
+        <span class="c1"># Generate Transition objects from this list of frequencies</span>
+        <span class="n">vfunc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vectorize</span><span class="p">(</span><span class="n">Transition</span><span class="p">)</span>
+        <span class="n">transitions</span> <span class="o">=</span> <span class="n">vfunc</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;Artifact&quot;</span><span class="p">,</span>
+            <span class="n">catalog_frequency</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">frequencies</span><span class="p">),</span>
+            <span class="n">uline</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+            <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Artifact&quot;</span><span class="p">,</span>
+            <span class="n">public</span><span class="o">=</span><span class="kc">False</span>
+        <span class="p">)</span>
+        <span class="n">linelist_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span>
+            <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ClockSpurs&quot;</span><span class="p">,</span> <span class="n">transitions</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="n">transitions</span><span class="p">),</span> <span class="n">source</span><span class="o">=</span><span class="s2">&quot;Artifacts&quot;</span>
         <span class="p">)</span>
         <span class="k">return</span> <span class="n">linelist_obj</span></div>
 
@@ -3767,7 +3884,7 @@
                     <span class="n">obj</span><span class="o">.</span><span class="n">lstate_energy</span> <span class="o">&lt;=</span> <span class="n">lstate_threshold</span><span class="p">,</span>
                     <span class="n">obj</span><span class="o">.</span><span class="n">catalog_intensity</span> <span class="o">&gt;=</span> <span class="n">int_tol</span><span class="p">,</span>
                     <span class="nb">abs</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">freq_attr</span><span class="p">)</span> <span class="o">-</span> <span class="n">frequency</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">freq_tol</span><span class="p">,</span>
-                    <span class="n">obj</span><span class="o">.</span><span class="n">uline</span> <span class="o">==</span> <span class="kc">True</span>
+                    <span class="n">obj</span><span class="o">.</span><span class="n">uline</span> <span class="o">==</span> <span class="kc">True</span><span class="p">,</span>
                 <span class="p">]</span>
             <span class="p">)</span>
         <span class="p">]</span>
@@ -3853,7 +3970,7 @@
 <span class="sd">            [description]</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="k">return</span> <span class="p">[</span><span class="n">transition</span><span class="o">.</span><span class="n">frequency</span> <span class="k">for</span> <span class="n">transition</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">transitions</span><span class="p">]</span></div>
-    
+
 <div class="viewcode-block" id="LineList.add_uline"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.add_uline">[docs]</a>    <span class="k">def</span> <span class="nf">add_uline</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">frequency</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">intensity</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to manually add a U-line to the LineList.</span>
@@ -3871,14 +3988,11 @@
 <span class="sd">            a given unit.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="n">transition</span> <span class="o">=</span> <span class="n">Transition</span><span class="p">(</span>
-            <span class="n">frequency</span><span class="o">=</span><span class="n">frequency</span><span class="p">,</span> 
-            <span class="n">intensity</span><span class="o">=</span><span class="n">intensity</span><span class="p">,</span>
-            <span class="n">uline</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
-            <span class="o">**</span><span class="n">kwargs</span>
-            <span class="p">)</span>
+            <span class="n">frequency</span><span class="o">=</span><span class="n">frequency</span><span class="p">,</span> <span class="n">intensity</span><span class="o">=</span><span class="n">intensity</span><span class="p">,</span> <span class="n">uline</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span>
+        <span class="p">)</span>
         <span class="k">if</span> <span class="n">transition</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">transitions</span><span class="p">:</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">transitions</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transition</span><span class="p">)</span></div>
-            
+
 <div class="viewcode-block" id="LineList.add_ulines"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.LineList.add_ulines">[docs]</a>    <span class="k">def</span> <span class="nf">add_ulines</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data</span><span class="p">:</span> <span class="n">List</span><span class="p">[</span><span class="n">Tuple</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">float</span><span class="p">]],</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Function to add multiple pairs of frequency/intensity to the current</span>
@@ -3902,6 +4016,7 @@
             <span class="k">assert</span> <span class="nb">len</span><span class="p">(</span><span class="n">line</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">add_uline</span><span class="p">(</span><span class="o">*</span><span class="n">line</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div></div>
 
+
 <div class="viewcode-block" id="Molecule"><a class="viewcode-back" href="../../../pyspectools.spectra.html#pyspectools.spectra.assignment.Molecule">[docs]</a><span class="nd">@dataclass</span>
 <span class="k">class</span> <span class="nc">Molecule</span><span class="p">(</span><span class="n">LineList</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
@@ -3911,11 +4026,12 @@
 <span class="sd">    </span>
 <span class="sd">    Attributes</span>
 <span class="sd">    &quot;&quot;&quot;</span>
-    <span class="n">A</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">20000.</span>
-    <span class="n">B</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">6000.</span>
-    <span class="n">C</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3500.</span>
+
+    <span class="n">A</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">20000.0</span>
+    <span class="n">B</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">6000.0</span>
+    <span class="n">C</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">3500.0</span>
     <span class="n">var_file</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
-    
+
     <span class="k">def</span> <span class="nf">__post_init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
 </pre></div>
@@ -3943,7 +4059,11 @@
     <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
 </ul>
 
   

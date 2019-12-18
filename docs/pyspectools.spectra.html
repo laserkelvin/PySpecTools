@@ -5,15 +5,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#2D2D2D" />
   
-  <title>PySpecTools :: pyspectools.spectra Module</title>
+  <title>PySpecTools :: pyspectools.spectra package</title>
   
 
-  <link rel="icon" type="image/png" sizes="32x32" href="static/img/favicon-32x32.png">
-  <link rel="icon" type="image/png" sizes="16x16" href="static/img/favicon-16x16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
         <link rel="index" title="Index"
               href="genindex.html"/>
 
-  <link rel="stylesheet" href="static/css/insegel.css"/>
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
 
   <script type="text/javascript">
     var DOCUMENTATION_OPTIONS = {
@@ -26,10 +26,10 @@
         SOURCELINK_SUFFIX: '.txt'
     };
   </script>
-    <script type="text/javascript" src="static/jquery.js"></script>
-    <script type="text/javascript" src="static/underscore.js"></script>
-    <script type="text/javascript" src="static/doctools.js"></script>
-    <script type="text/javascript" src="static/language_data.js"></script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
 
   <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
 
@@ -40,7 +40,7 @@
     <header>
       <div id="logo-container">
           
-          <a href="index.html"><img src="static/img/logo.svg"></a>
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
           
 
       </div>
@@ -53,17 +53,571 @@
 
       <div id="main-content-container">
         <div id="main-content-header">
-          <h1><cite>pyspectools.spectra</cite> Module</h1>
+          <h1>pyspectools.spectra package</h1>
         </div>
         <div id="main-content">
           
-  <div class="section" id="pyspectools-spectra-module">
-<h1><cite>pyspectools.spectra</cite> Module<a class="headerlink" href="#pyspectools-spectra-module" title="Permalink to this headline">¶</a></h1>
+  <div class="section" id="pyspectools-spectra-package">
+<h1>pyspectools.spectra package<a class="headerlink" href="#pyspectools-spectra-package" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="submodules">
 <h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
 </div>
+<div class="section" id="module-pyspectools.spectra.analysis">
+<span id="pyspectools-spectra-analysis-module"></span><h2>pyspectools.spectra.analysis module<a class="headerlink" href="#module-pyspectools.spectra.analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.average_spectra">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">average_spectra</code><span class="sig-paren">(</span><em>*arrays</em>, <em>**options</em><span class="sig-paren">)</span> &#x2192; numpy.ndarray<a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#average_spectra"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.average_spectra" title="Permalink to this definition">¶</a></dt>
+<dd><p>Averages multiple spectra together, with a few options available to
+the user. User provides a iterable of arrays, where the frequency
+axis of each of the arrays are the same, and the length of the arrays
+are also the same.</p>
+<p>Options include performing a noise-weighted average, where the spectra
+are averaged based on their inverse of their average baseline determined
+by an ALS fit. The lower the average noise, the larger weighting given
+to the spectrum.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- np.ndarray</strong> (<em>arrays</em>) – Iterable of NumPy arrays corresponding to the intensity</li>
+<li><strong>- bool</strong> (<em>weighted</em>) – If True, the averaging is done in the time domain, providing
+the input spectra are frequency domain. Defaults to False.</li>
+<li><strong>- bool</strong> – If True, weights the averaging by the average noise in each
+spectrum. Defaults to True.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Averaged intensities.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">np.ndarray</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><code class="xref py py-exc docutils literal notranslate"><span class="pre">ValueError</span></code> – Error is raised if fewer than two spectra are given.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.blank_spectrum">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">blank_spectrum</code><span class="sig-paren">(</span><em>spectrum_df: pandas.core.frame.DataFrame</em>, <em>frequencies: numpy.ndarray</em>, <em>noise=None</em>, <em>noise_std=None</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>window=1.0</em>, <em>df=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#blank_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.blank_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
+noise corresponding to the average noise floor and standard deviation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- pandas DataFrame</strong> (<em>spectrum_df</em>) – Pandas DataFrame containing the spectral data</li>
+<li><strong>- iterable of floats</strong> (<em>frequencies</em>) – An iterable containing the center frequencies to blank</li>
+<li><strong>- float</strong> (<em>window</em>) – Average noise value for the spectrum. Typically measured by choosing a region void of spectral lines.</li>
+<li><strong>- float</strong> – Standard deviation for the spectrum noise.</li>
+<li><strong>- str</strong> (<em>int_col</em>) – Name of the column in spectrum_df to use for the frequency axis</li>
+<li><strong>- str</strong> – Name of the column in spectrum_df to use for the intensity axis</li>
+<li><strong>- float</strong> – Value to use for the range to blank. This region blanked corresponds to frequency+/-window.</li>
+<li><strong>- bool</strong> (<em>df</em>) – If True, returns a copy of the Pandas Dataframe with the blanked intensity.
+If False, returns a numpy 1D array corresponding to the blanked intensity.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If df is True, Pandas DataFrame with the intensity regions blanked.
+If df is False, numpy 1D array</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">new_spec - pandas DataFrame or numpy 1D array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.bokeh_create_experiment_comparison">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">bokeh_create_experiment_comparison</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em>, <em>filepath=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#bokeh_create_experiment_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.bokeh_create_experiment_comparison" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to create a plot comparing multiple experiments. This is a high
+level function that wraps the <cite>correlate_experiments</cite> function,
+and provides a visual and interactive view of the spectra output from
+this function using Bokeh.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>experiments</strong> – </li>
+<li><strong>thres_prox</strong> – </li>
+<li><strong>index</strong> – </li>
+<li><strong>filepath</strong> – </li>
+<li><strong>kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.brute_harmonic_search">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">brute_harmonic_search</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>maxJ=10</em>, <em>dev_thres=5.0</em>, <em>prefilter=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#brute_harmonic_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.brute_harmonic_search" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will search for possible harmonic candidates
+in a list of frequencies. Wraps the lower level function.</p>
+<p>Generates every possible 4 membered combination of the
+frequencies, and makes a first pass filtering out unreasonable
+combinations.</p>
+<p>frequencies - iterable containing floats of frequencies (ulines)
+maxJ - maximum value of J considered for quantum numbers
+dev_thres - standard deviation threshold for filtering unlikely</p>
+<blockquote>
+<div>combinations of frequencies</div></blockquote>
+<dl class="docutils">
+<dt>prefilter - bool dictating whether or not the frequency lists</dt>
+<dd>are prescreened by standard deviation. This potentially
+biases away from missing transitions!</dd>
+</dl>
+<dl class="docutils">
+<dt>results_df - pandas dataframe containing RMS information and fitted</dt>
+<dd>constants</dd>
+</dl>
+<p>fit_results - list containing all of ModelResult objects</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.calc_line_weighting">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">calc_line_weighting</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>catalog_df: pandas.core.frame.DataFrame</em>, <em>prox=5e-05</em>, <em>abs=True</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#calc_line_weighting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.calc_line_weighting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for calculating the weighting factor for determining
+the likely hood of an assignment. The weighting factor is
+determined by the proximity of the catalog frequency to the
+observed frequency, as well as the theoretical intensity if it
+is available.
+:param frequency: Observed frequency in MHz
+:type frequency: float
+:param catalog_df: Pandas dataframe containing the catalog data entries
+:type catalog_df: dataframe
+:param prox: Frequency proximity threshold
+:type prox: float, optional
+:param abs: Specifies whether argument prox is taken as the absolute value
+:type abs: bool</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
+<li><em>None</em> – If nothing matches the frequency, returns None.</li>
+<li><em>dataframe</em> – If matches are found, calculate the weights and return the
+candidates in a dataframe.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.cluster_AP_analysis">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">cluster_AP_analysis</code><span class="sig-paren">(</span><em>progression_df: pandas.core.frame.DataFrame</em>, <em>sil_calc=False</em>, <em>refit=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#cluster_AP_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.cluster_AP_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for the AffinityPropagation cluster method from
+scikit-learn.</p>
+<p>The dataframe provided will also receive new columns: Cluster index,
+and Silhouette. The latter corresponds to how likely a sample is
+sandwiched between clusters (0), how squarely it belongs in the
+assigned cluster (+1), or does not belong (-1). The cluster index
+corresponds to which cluster the sample belongs to.</p>
+<dl class="docutils">
+<dt>progression_df - pandas dataframe taken from the result of progression</dt>
+<dd>fits</dd>
+<dt>sil_calc - bool indicating whether silhouettes are calculated</dt>
+<dd>after the AP model is fit</dd>
+</dl>
+<p>data - dict containing clustered frequencies and associated fits
+ap_obj - AffinityPropagation object containing all the information</p>
+<blockquote>
+<div>as attributes.</div></blockquote>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.copy_assignments">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">copy_assignments</code><span class="sig-paren">(</span><em>A</em>, <em>B</em>, <em>corr_mat</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#copy_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.copy_assignments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to copy assignments from experiment B over to experiment A. The
+correlation matrix argument requires the output from the
+<cite>correlate_experiments</cite> function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>B</strong> (<em>A</em><em>,</em>) – AssignmentSession objects, where the assignments from B are copied
+into A</li>
+<li><strong>corr_mat</strong> (<em>2D array</em>) – 2D array mask with length A x B</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.correlate_experiments">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">correlate_experiments</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#correlate_experiments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.correlate_experiments" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to find correlations between experiments, looking for common
+peaks detected in every provided experiment. This function uses by the first
+experiment as the base for comparison by default. Coincidences are searched
+for between this base and the other provided experiment, and ultimately combined
+to determine the common peaks.</p>
+<p>A copy of the base experiment is returned, along with a dictionary with
+frequencies of correlations between a given experiment and the base.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>experiments</strong> (<em>tuple-like</em>) – Iterable list/tuple of AssignmentSession objects.</li>
+<li><strong>thres_prox</strong> (<em>float</em><em>, </em><em>optional</em>) – Proximity in frequency units for determining if peaks are the same.
+If thres-abs is False, this value is treated as a percentage of the
+center frequency.</li>
+<li><strong>index</strong> (<em>int</em><em>, </em><em>optional</em>) – Index for the experiment to use as a base for comparisons.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
+<li><strong>base_exp</strong> (<em>AssignmentSession object</em>) – A deep copy of the first experiment, with the updated spectra.</li>
+<li><strong>return_dict</strong> (<em>dict</em>) – Dictionary where keys correspond to the experiment number and
+values are 1D arrays of frequencies that are coincident</li>
+</ul>
+</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.create_cluster_tests">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">create_cluster_tests</code><span class="sig-paren">(</span><em>cluster_dict: Dict[Any, Any], shots=25, dipole=1.0, min_dist=500.0, **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#create_cluster_tests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.create_cluster_tests" title="Permalink to this definition">¶</a></dt>
+<dd><p>Take the output of the cluster AP analysis, and generate the FTB batch
+files for a targeted DR search.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>cluster_dict</strong> (<em>dict</em>) – Cluster dictionary with keys corresponding to the cluster number,
+and values are subdictionaries holding the frequencies associated
+with the cluster.</li>
+<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of integration counts</li>
+<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Approximate dipole moment to target</li>
+<li><strong>min_dist</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum frequency difference between the cavity and DR frequencies.</li>
+<li><strong>kwargs</strong> – Additional kwargs are passed to the ftb line generation.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="pyspectools.spectra.analysis.cross_correlate">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">cross_correlate</code><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#cross_correlate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.cross_correlate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cross-correlate two arrays a and b that are of equal length by
+lagging b with respect to a. Uses np.roll to shift b by values
+of lag, and appropriately zeros out “out of bounds” values.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>b</strong> (<em>a</em><em>,</em>) – Arrays containing the values to cross-correlate. Must be the
+same length.</li>
+<li><strong>lags</strong> (<em>[</em><em>type</em><em>]</em><em>, </em><em>optional</em>) – [description], by default None</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.detect_artifacts">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">detect_artifacts</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>tol=0.002</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#detect_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.detect_artifacts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Quick one-liner function to perform a very rudimentary test for
+RFI. This method relies on the assumption that any frequency that
+is suspiciously close to an exact number (e.g. 16250.0000) is very
+likely an artifact.</p>
+<p>The function will calculate the difference between each frequency
+and its nearest whole number, and return frequencies that are
+within a specified tolerance.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequencies</strong> (<em>NumPy 1D array</em>) – Array of frequencies to check for artifacts.</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum tolerance to be used to check whether frequency
+is close enough to its rounded value, by default 2e-3</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns the frequencies that match the specified criteria.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">NumPy 1D array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.filter_spectrum">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">filter_spectrum</code><span class="sig-paren">(</span><em>intensity: float</em>, <em>window='hanning'</em>, <em>sigma=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#filter_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.filter_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Apply a specified window function to a signal. The window functions are
+taken from the <cite>signal.windows</cite> module of SciPy, so check what is available
+before throwing it into this function.</p>
+<p>The window function is convolved with the signal by taking the time-
+domain product, and doing the inverse FFT to get the convolved spectrum
+back.</p>
+<p>The one exception is the gaussian window - if a user specifies “gaussian”
+for the window function, the actual window function applied here is a
+half gaussian, i.e. a 1D gaussian blur.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>dataframe</strong> (<em>pandas DataFrame</em>) – Pandas dataframe containing the spectral information</li>
+<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name to reference the signal</li>
+<li><strong>window</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the window function as implemented in SciPy.</li>
+<li><strong>sigma</strong> – </li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_y</strong> – Numpy 1D array containing the convolved signal</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.find_series">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">find_series</code><span class="sig-paren">(</span><em>combo: Tuple[float, float], frequencies: numpy.ndarray, search=0.005</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#find_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.find_series" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will exhaustively search for candidate
+progressions based on a pair of frequencies.</p>
+<p>The difference of the pair is used to estimate B,
+which is then used to calculate J. These values of
+J are then used to predict the next set of lines,
+which are searched for in the soup of frequencies.
+The closest matches are added to a list which is returned.</p>
+<p>This is done so that even if frequencies are missing
+a series of lines can still be considered.</p>
+<p>combo - pair of frequencies corresponding to initial guess
+frequencies - array of frequencies to be searched
+search - optional threshold for determining the search range</p>
+<blockquote>
+<div>to look for candidates</div></blockquote>
+<p>array of candidate frequencies</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.fit_line_profile">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">fit_line_profile</code><span class="sig-paren">(</span><em>spec_df: pandas.core.frame.DataFrame</em>, <em>center: float</em>, <em>width=None</em>, <em>intensity=None</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>fit_func=&lt;class 'lmfit.models.GaussianModel'&gt;</em>, <em>sigma=2</em>, <em>logger=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#fit_line_profile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.fit_line_profile" title="Permalink to this definition">¶</a></dt>
+<dd><p>Somewhat high level function that wraps lmfit for
+fitting Gaussian lineshapes to a spectrum.</p>
+<p>For a given guess center and optional intensity,
+the</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.harmonic_finder">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">harmonic_finder</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>search=0.001</em>, <em>low_B=400.0</em>, <em>high_B=9000.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#harmonic_finder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.harmonic_finder" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will generate candidates for progressions.
+Every possible pair combination of frequencies are
+looped over, consider whether or not the B value is either
+too small (like C60 large) or too large (you won’t have
+enough lines to make a progression), and search the
+frequencies to find the nearest candidates based on a
+prediction.</p>
+<dl class="docutils">
+<dt>frequencies - array or tuple-like containing the progressions</dt>
+<dd>we expect to find</dd>
+<dt>search - optional argument threshold for determining if something</dt>
+<dd>is close enough</dd>
+</dl>
+<p>progressions - list of arrays corresponding to candidate progressions</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.line_weighting">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">line_weighting</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>catalog_frequency: float</em>, <em>intensity=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#line_weighting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.line_weighting" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for calculating the line weighting associated with each assignment candidate. The formula is based on
+intensity and frequency offset, such as to favor strong lines that are spot on over weak lines that are further
+away.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequency</strong> (<em>float</em>) – Center frequency in MHz; typically the u-line frequency.</li>
+<li><strong>catalog_frequency</strong> (<em>float</em>) – Catalog frequency of the candidate</li>
+<li><strong>intensity</strong> (<em>float</em><em>, </em><em>optional</em>) – log Intensity of the transition; includes the line strength and the temperature factor.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>weighting</strong> – Associated weight value. Requires normalization</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.match_artifacts">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">match_artifacts</code><span class="sig-paren">(</span><em>on_exp</em>, <em>off_exp</em>, <em>thres=0.05</em>, <em>freq_col='Frequency'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#match_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.match_artifacts" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to remove a set of artifacts found in a blank spectrum.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>- AssignmentSession object</strong> (<em>off_exp</em>) – Experiment with the sample on; i.e. contains molecular features</li>
+<li><strong>- AssignmentSession object</strong> – Experiment with no sample; i.e. only artifacts</li>
+<li><strong>- float</strong><strong>, </strong><strong>optional</strong> (<em>thres</em>) – Threshold in absolute frequency units to match</li>
+<li><strong>- str</strong><strong>, </strong><strong>optional</strong> (<em>freq_col</em>) – Column specifying frequency in the pandas dataframes</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dictionary with keys corresponding to the uline index, and
+values the frequency</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">candidates - dict</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.peak_find">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">peak_find</code><span class="sig-paren">(</span><em>spec_df: pandas.core.frame.DataFrame</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>thres=0.015</em>, <em>min_dist=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#peak_find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.peak_find" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for peakutils applied to pandas dataframes. First finds
+the peak indices, which are then used to fit Gaussians to determine
+the center frequency for each peak.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>spec_df</strong> (<em>dataframe</em>) – Pandas dataframe containing the spectrum information, with columns corresponding to frequency and intensity.</li>
+<li><strong>freq_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the frequency column in <cite>spec_df</cite></li>
+<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the intensity column in <cite>spec_df</cite></li>
+<li><strong>thres</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for peak detection</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing the peaks frequency/intensity</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">peak_df</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.plotly_create_experiment_comparison">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">plotly_create_experiment_comparison</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em>, <em>filepath=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#plotly_create_experiment_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.plotly_create_experiment_comparison" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to create a plot comparing multiple experiments. This is a high
+level function that wraps the <cite>correlate_experiments</cite> function,
+and provides a visual and interactive view of the spectra output from
+this function using Plotly.</p>
+<p>This function is effectively equivalent to
+<cite>bokeh_create_experiment_comparison</cite>, however uses Plotly as the front
+end instead.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>experiments</strong> – </li>
+<li><strong>thres_prox</strong> – </li>
+<li><strong>index</strong> – </li>
+<li><strong>filepath</strong> – </li>
+<li><strong>kwargs</strong> – </li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.search_center_frequency">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">search_center_frequency</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>width=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#search_center_frequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.search_center_frequency" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for wrapping the astroquery Splatalogue API for looking up a frequency and finding candidate molecules
+for assignment. The width parameter adjusts the +/- range to include in the search: for high frequency surveys,
+it’s probably preferable to use a percentage to accommodate for the typically larger uncertainties (sub-mm
+experiments).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>frequency</strong> (<em>float</em>) – Frequency in MHz to search Splatalogue for.</li>
+<li><strong>width</strong> (<em>float</em><em>, </em><em>optional</em>) – Absolute frequency offset in MHz to include in the search.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing frequency matches, or None if no matches are found.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.spectra.analysis.search_molecule">
+<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">search_molecule</code><span class="sig-paren">(</span><em>species: str, freq_range=[0.0, 40000.0], **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#search_molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.search_molecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to search Splatalogue for a specific molecule. Technically I’d prefer to
+download entries from CDMS instead, but this is probably the most straight
+forward way.</p>
+<p>The main use for this function is to verify line identifications - if a line is
+tentatively assigned to a U-line, then other transitions for the molecule that
+are stronger or comparatively strong should be visible.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>species</strong> (<em>str</em>) – Chemical name of the molecule</li>
+<li><strong>freq_range</strong> (<em>list</em>) – The frequency range to perform the lookup</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing transitions for the given molecule. If no matches are found, returns None.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">DataFrame or None</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
 <div class="section" id="module-pyspectools.spectra.assignment">
-<span id="assignment-submodule"></span><h2><cite>assignment</cite> Submodule<a class="headerlink" href="#module-pyspectools.spectra.assignment" title="Permalink to this headline">¶</a></h2>
+<span id="pyspectools-spectra-assignment-module"></span><h2>pyspectools.spectra.assignment module<a class="headerlink" href="#module-pyspectools.spectra.assignment" title="Permalink to this headline">¶</a></h2>
 <p><cite>assignment</cite> module</p>
 <p>This module contains three main classes for performing analysis of broad-
 band spectra. The <cite>AssignmentSession</cite> class will be what the user will
@@ -719,6 +1273,26 @@ present, it will plot the simulated spectrum also.</p>
 </dd></dl>
 
 <dl class="method">
+<dt id="pyspectools.spectra.assignment.AssignmentSession.process_clock_spurs">
+<code class="descname">process_clock_spurs</code><span class="sig-paren">(</span><em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.process_clock_spurs"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.process_clock_spurs" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method that will generate a LineList corresponding to possible
+harmonics, sum, and difference frequencies based on a given clock
+frequency (default: 65,000 MHz).</p>
+<p>It is advised to run this function at the end of assignments, owing
+to the sheer number of possible combinations of lines, which may
+interfere with real molecular features.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>kwargs</strong> – Optional kwargs are passed into the creation of the LineList
+with <cite>LineList.from_clock</cite>.</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
 <dt id="pyspectools.spectra.assignment.AssignmentSession.process_db">
 <code class="descname">process_db</code><span class="sig-paren">(</span><em>auto=True</em>, <em>dbpath=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#AssignmentSession.process_db"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.AssignmentSession.process_db" title="Permalink to this definition">¶</a></dt>
 <dd><p>Function for assigning peaks based on a local database file.
@@ -1297,7 +1871,7 @@ specially flagged as Artifacts.</p>
 
 <dl class="classmethod">
 <dt id="pyspectools.spectra.assignment.LineList.from_catalog">
-<em class="property">classmethod </em><code class="descname">from_catalog</code><span class="sig-paren">(</span><em>name: str</em>, <em>formula: str</em>, <em>filepath: str</em>, <em>min_freq=0.0</em>, <em>max_freq=1000000000000.0</em>, <em>max_lstate=4.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_catalog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_catalog" title="Permalink to this definition">¶</a></dt>
+<em class="property">classmethod </em><code class="descname">from_catalog</code><span class="sig-paren">(</span><em>name: str</em>, <em>formula: str</em>, <em>filepath: str</em>, <em>min_freq=0.0</em>, <em>max_freq=1000000000000.0</em>, <em>max_lstate=9000.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_catalog"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_catalog" title="Permalink to this definition">¶</a></dt>
 <dd><p>Create a Line List object from an SPCAT catalog.
 :param name: Name of the molecule the catalog belongs to
 :type name: str
@@ -1320,6 +1894,34 @@ specially flagged as Artifacts.</p>
 <tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">Instance of LineList with the digested catalog.</td>
 </tr>
 <tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">linelist_obj</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="classmethod">
+<dt id="pyspectools.spectra.assignment.LineList.from_clock">
+<em class="property">classmethod </em><code class="descname">from_clock</code><span class="sig-paren">(</span><em>max_multi=64</em>, <em>clock=65000.0</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/assignment.html#LineList.from_clock"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.assignment.LineList.from_clock" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method of generating a LineList object by calculating all possible
+combinations of the</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>max_multi</strong> (<em>int</em><em>, </em><em>optional</em>) – [description], by default 64</li>
+<li><strong>clock</strong> (<em>float</em><em>, </em><em>optional</em>) – Clock frequency to calculate sub-harmonics of,
+in units of MHz. Defaults to 65,000 MHz, which corresponds
+to the Keysight AWG</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">LineList object with the full list of possible clock
+spurs, as harmonics, sum, and difference frequencies.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">LineList object</p>
+</td>
 </tr>
 </tbody>
 </table>
@@ -2438,523 +3040,6 @@ Defaults to YAML.</p>
 </dd></dl>
 
 </div>
-<div class="section" id="module-pyspectools.spectra.analysis">
-<span id="analysis-submodule"></span><h2><cite>analysis</cite> Submodule<a class="headerlink" href="#module-pyspectools.spectra.analysis" title="Permalink to this headline">¶</a></h2>
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.blank_spectrum">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">blank_spectrum</code><span class="sig-paren">(</span><em>spectrum_df: pandas.core.frame.DataFrame</em>, <em>frequencies: numpy.ndarray</em>, <em>noise=None</em>, <em>noise_std=None</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>window=1.0</em>, <em>df=True</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#blank_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.blank_spectrum" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
-noise corresponding to the average noise floor and standard deviation.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>- pandas DataFrame</strong> (<em>spectrum_df</em>) – Pandas DataFrame containing the spectral data</li>
-<li><strong>- iterable of floats</strong> (<em>frequencies</em>) – An iterable containing the center frequencies to blank</li>
-<li><strong>- float</strong> (<em>window</em>) – Average noise value for the spectrum. Typically measured by choosing a region void of spectral lines.</li>
-<li><strong>- float</strong> – Standard deviation for the spectrum noise.</li>
-<li><strong>- str</strong> (<em>int_col</em>) – Name of the column in spectrum_df to use for the frequency axis</li>
-<li><strong>- str</strong> – Name of the column in spectrum_df to use for the intensity axis</li>
-<li><strong>- float</strong> – Value to use for the range to blank. This region blanked corresponds to frequency+/-window.</li>
-<li><strong>- bool</strong> (<em>df</em>) – If True, returns a copy of the Pandas Dataframe with the blanked intensity.
-If False, returns a numpy 1D array corresponding to the blanked intensity.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">If df is True, Pandas DataFrame with the intensity regions blanked.
-If df is False, numpy 1D array</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">new_spec - pandas DataFrame or numpy 1D array</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.bokeh_create_experiment_comparison">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">bokeh_create_experiment_comparison</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em>, <em>filepath=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#bokeh_create_experiment_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.bokeh_create_experiment_comparison" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to create a plot comparing multiple experiments. This is a high
-level function that wraps the <cite>correlate_experiments</cite> function,
-and provides a visual and interactive view of the spectra output from
-this function using Bokeh.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>experiments</strong> – </li>
-<li><strong>thres_prox</strong> – </li>
-<li><strong>index</strong> – </li>
-<li><strong>filepath</strong> – </li>
-<li><strong>kwargs</strong> – </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.brute_harmonic_search">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">brute_harmonic_search</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>maxJ=10</em>, <em>dev_thres=5.0</em>, <em>prefilter=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#brute_harmonic_search"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.brute_harmonic_search" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that will search for possible harmonic candidates
-in a list of frequencies. Wraps the lower level function.</p>
-<p>Generates every possible 4 membered combination of the
-frequencies, and makes a first pass filtering out unreasonable
-combinations.</p>
-<p>frequencies - iterable containing floats of frequencies (ulines)
-maxJ - maximum value of J considered for quantum numbers
-dev_thres - standard deviation threshold for filtering unlikely</p>
-<blockquote>
-<div>combinations of frequencies</div></blockquote>
-<dl class="docutils">
-<dt>prefilter - bool dictating whether or not the frequency lists</dt>
-<dd>are prescreened by standard deviation. This potentially
-biases away from missing transitions!</dd>
-</dl>
-<dl class="docutils">
-<dt>results_df - pandas dataframe containing RMS information and fitted</dt>
-<dd>constants</dd>
-</dl>
-<p>fit_results - list containing all of ModelResult objects</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.calc_line_weighting">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">calc_line_weighting</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>catalog_df: pandas.core.frame.DataFrame</em>, <em>prox=5e-05</em>, <em>abs=True</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#calc_line_weighting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.calc_line_weighting" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function for calculating the weighting factor for determining
-the likely hood of an assignment. The weighting factor is
-determined by the proximity of the catalog frequency to the
-observed frequency, as well as the theoretical intensity if it
-is available.
-:param frequency: Observed frequency in MHz
-:type frequency: float
-:param catalog_df: Pandas dataframe containing the catalog data entries
-:type catalog_df: dataframe
-:param prox: Frequency proximity threshold
-:type prox: float, optional
-:param abs: Specifies whether argument prox is taken as the absolute value
-:type abs: bool</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><ul class="simple">
-<li><em>None</em> – If nothing matches the frequency, returns None.</li>
-<li><em>dataframe</em> – If matches are found, calculate the weights and return the
-candidates in a dataframe.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.cluster_AP_analysis">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">cluster_AP_analysis</code><span class="sig-paren">(</span><em>progression_df: pandas.core.frame.DataFrame</em>, <em>sil_calc=False</em>, <em>refit=False</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#cluster_AP_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.cluster_AP_analysis" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper for the AffinityPropagation cluster method from
-scikit-learn.</p>
-<p>The dataframe provided will also receive new columns: Cluster index,
-and Silhouette. The latter corresponds to how likely a sample is
-sandwiched between clusters (0), how squarely it belongs in the
-assigned cluster (+1), or does not belong (-1). The cluster index
-corresponds to which cluster the sample belongs to.</p>
-<dl class="docutils">
-<dt>progression_df - pandas dataframe taken from the result of progression</dt>
-<dd>fits</dd>
-<dt>sil_calc - bool indicating whether silhouettes are calculated</dt>
-<dd>after the AP model is fit</dd>
-</dl>
-<p>data - dict containing clustered frequencies and associated fits
-ap_obj - AffinityPropagation object containing all the information</p>
-<blockquote>
-<div>as attributes.</div></blockquote>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.copy_assignments">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">copy_assignments</code><span class="sig-paren">(</span><em>A</em>, <em>B</em>, <em>corr_mat</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#copy_assignments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.copy_assignments" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to copy assignments from experiment B over to experiment A. The
-correlation matrix argument requires the output from the
-<cite>correlate_experiments</cite> function.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>B</strong> (<em>A</em><em>,</em>) – AssignmentSession objects, where the assignments from B are copied
-into A</li>
-<li><strong>corr_mat</strong> (<em>2D array</em>) – 2D array mask with length A x B</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.correlate_experiments">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">correlate_experiments</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#correlate_experiments"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.correlate_experiments" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to find correlations between experiments, looking for common
-peaks detected in every provided experiment. This function uses by the first
-experiment as the base for comparison by default. Coincidences are searched
-for between this base and the other provided experiment, and ultimately combined
-to determine the common peaks.</p>
-<p>A copy of the base experiment is returned, along with a dictionary with
-frequencies of correlations between a given experiment and the base.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>experiments</strong> (<em>tuple-like</em>) – Iterable list/tuple of AssignmentSession objects.</li>
-<li><strong>thres_prox</strong> (<em>float</em><em>, </em><em>optional</em>) – Proximity in frequency units for determining if peaks are the same.
-If thres-abs is False, this value is treated as a percentage of the
-center frequency.</li>
-<li><strong>index</strong> (<em>int</em><em>, </em><em>optional</em>) – Index for the experiment to use as a base for comparisons.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first last"><ul class="simple">
-<li><strong>base_exp</strong> (<em>AssignmentSession object</em>) – A deep copy of the first experiment, with the updated spectra.</li>
-<li><strong>return_dict</strong> (<em>dict</em>) – Dictionary where keys correspond to the experiment number and
-values are 1D arrays of frequencies that are coincident</li>
-</ul>
-</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.create_cluster_tests">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">create_cluster_tests</code><span class="sig-paren">(</span><em>cluster_dict: Dict[Any, Any], shots=25, dipole=1.0, min_dist=500.0, **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#create_cluster_tests"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.create_cluster_tests" title="Permalink to this definition">¶</a></dt>
-<dd><p>Take the output of the cluster AP analysis, and generate the FTB batch
-files for a targeted DR search.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>cluster_dict</strong> (<em>dict</em>) – Cluster dictionary with keys corresponding to the cluster number,
-and values are subdictionaries holding the frequencies associated
-with the cluster.</li>
-<li><strong>shots</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of integration counts</li>
-<li><strong>dipole</strong> (<em>float</em><em>, </em><em>optional</em>) – Approximate dipole moment to target</li>
-<li><strong>min_dist</strong> (<em>float</em><em>, </em><em>optional</em>) – Minimum frequency difference between the cavity and DR frequencies.</li>
-<li><strong>kwargs</strong> – Additional kwargs are passed to the ftb line generation.</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="attribute">
-<dt id="pyspectools.spectra.analysis.cross_correlate">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">cross_correlate</code><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#cross_correlate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.cross_correlate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Cross-correlate two arrays a and b that are of equal length by
-lagging b with respect to a. Uses np.roll to shift b by values
-of lag, and appropriately zeros out “out of bounds” values.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>b</strong> (<em>a</em><em>,</em>) – Arrays containing the values to cross-correlate. Must be the
-same length.</li>
-<li><strong>lags</strong> (<em>[</em><em>type</em><em>]</em><em>, </em><em>optional</em>) – [description], by default None</li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.detect_artifacts">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">detect_artifacts</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>tol=0.002</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#detect_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.detect_artifacts" title="Permalink to this definition">¶</a></dt>
-<dd><p>Quick one-liner function to perform a very rudimentary test for
-RFI. This method relies on the assumption that any frequency that
-is suspiciously close to an exact number (e.g. 16250.0000) is very
-likely an artifact.</p>
-<p>The function will calculate the difference between each frequency
-and its nearest whole number, and return frequencies that are
-within a specified tolerance.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>frequencies</strong> (<em>NumPy 1D array</em>) – Array of frequencies to check for artifacts.</li>
-<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Maximum tolerance to be used to check whether frequency
-is close enough to its rounded value, by default 2e-3</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Returns the frequencies that match the specified criteria.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">NumPy 1D array</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.filter_spectrum">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">filter_spectrum</code><span class="sig-paren">(</span><em>intensity: float</em>, <em>window='hanning'</em>, <em>sigma=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#filter_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.filter_spectrum" title="Permalink to this definition">¶</a></dt>
-<dd><p>Apply a specified window function to a signal. The window functions are
-taken from the <cite>signal.windows</cite> module of SciPy, so check what is available
-before throwing it into this function.</p>
-<p>The window function is convolved with the signal by taking the time-
-domain product, and doing the inverse FFT to get the convolved spectrum
-back.</p>
-<p>The one exception is the gaussian window - if a user specifies “gaussian”
-for the window function, the actual window function applied here is a
-half gaussian, i.e. a 1D gaussian blur.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>dataframe</strong> (<em>pandas DataFrame</em>) – Pandas dataframe containing the spectral information</li>
-<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Column name to reference the signal</li>
-<li><strong>window</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the window function as implemented in SciPy.</li>
-<li><strong>sigma</strong> – </li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>new_y</strong> – Numpy 1D array containing the convolved signal</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.find_series">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">find_series</code><span class="sig-paren">(</span><em>combo: Tuple[float, float], frequencies: numpy.ndarray, search=0.005</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#find_series"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.find_series" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that will exhaustively search for candidate
-progressions based on a pair of frequencies.</p>
-<p>The difference of the pair is used to estimate B,
-which is then used to calculate J. These values of
-J are then used to predict the next set of lines,
-which are searched for in the soup of frequencies.
-The closest matches are added to a list which is returned.</p>
-<p>This is done so that even if frequencies are missing
-a series of lines can still be considered.</p>
-<p>combo - pair of frequencies corresponding to initial guess
-frequencies - array of frequencies to be searched
-search - optional threshold for determining the search range</p>
-<blockquote>
-<div>to look for candidates</div></blockquote>
-<p>array of candidate frequencies</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.fit_line_profile">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">fit_line_profile</code><span class="sig-paren">(</span><em>spec_df: pandas.core.frame.DataFrame</em>, <em>center: float</em>, <em>width=None</em>, <em>intensity=None</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>fit_func=&lt;class 'lmfit.models.GaussianModel'&gt;</em>, <em>sigma=2</em>, <em>logger=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#fit_line_profile"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.fit_line_profile" title="Permalink to this definition">¶</a></dt>
-<dd><p>Somewhat high level function that wraps lmfit for
-fitting Gaussian lineshapes to a spectrum.</p>
-<p>For a given guess center and optional intensity,
-the</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.harmonic_finder">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">harmonic_finder</code><span class="sig-paren">(</span><em>frequencies: numpy.ndarray</em>, <em>search=0.001</em>, <em>low_B=400.0</em>, <em>high_B=9000.0</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#harmonic_finder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.harmonic_finder" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that will generate candidates for progressions.
-Every possible pair combination of frequencies are
-looped over, consider whether or not the B value is either
-too small (like C60 large) or too large (you won’t have
-enough lines to make a progression), and search the
-frequencies to find the nearest candidates based on a
-prediction.</p>
-<dl class="docutils">
-<dt>frequencies - array or tuple-like containing the progressions</dt>
-<dd>we expect to find</dd>
-<dt>search - optional argument threshold for determining if something</dt>
-<dd>is close enough</dd>
-</dl>
-<p>progressions - list of arrays corresponding to candidate progressions</p>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.line_weighting">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">line_weighting</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>catalog_frequency: float</em>, <em>intensity=None</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#line_weighting"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.line_weighting" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function for calculating the line weighting associated with each assignment candidate. The formula is based on
-intensity and frequency offset, such as to favor strong lines that are spot on over weak lines that are further
-away.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>frequency</strong> (<em>float</em>) – Center frequency in MHz; typically the u-line frequency.</li>
-<li><strong>catalog_frequency</strong> (<em>float</em>) – Catalog frequency of the candidate</li>
-<li><strong>intensity</strong> (<em>float</em><em>, </em><em>optional</em>) – log Intensity of the transition; includes the line strength and the temperature factor.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>weighting</strong> – Associated weight value. Requires normalization</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.match_artifacts">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">match_artifacts</code><span class="sig-paren">(</span><em>on_exp</em>, <em>off_exp</em>, <em>thres=0.05</em>, <em>freq_col='Frequency'</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#match_artifacts"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.match_artifacts" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to remove a set of artifacts found in a blank spectrum.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>- AssignmentSession object</strong> (<em>off_exp</em>) – Experiment with the sample on; i.e. contains molecular features</li>
-<li><strong>- AssignmentSession object</strong> – Experiment with no sample; i.e. only artifacts</li>
-<li><strong>- float</strong><strong>, </strong><strong>optional</strong> (<em>thres</em>) – Threshold in absolute frequency units to match</li>
-<li><strong>- str</strong><strong>, </strong><strong>optional</strong> (<em>freq_col</em>) – Column specifying frequency in the pandas dataframes</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Dictionary with keys corresponding to the uline index, and
-values the frequency</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">candidates - dict</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.peak_find">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">peak_find</code><span class="sig-paren">(</span><em>spec_df: pandas.core.frame.DataFrame</em>, <em>freq_col='Frequency'</em>, <em>int_col='Intensity'</em>, <em>thres=0.015</em>, <em>min_dist=10</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#peak_find"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.peak_find" title="Permalink to this definition">¶</a></dt>
-<dd><p>Wrapper for peakutils applied to pandas dataframes. First finds
-the peak indices, which are then used to fit Gaussians to determine
-the center frequency for each peak.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>spec_df</strong> (<em>dataframe</em>) – Pandas dataframe containing the spectrum information, with columns corresponding to frequency and intensity.</li>
-<li><strong>freq_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the frequency column in <cite>spec_df</cite></li>
-<li><strong>int_col</strong> (<em>str</em><em>, </em><em>optional</em>) – Name of the intensity column in <cite>spec_df</cite></li>
-<li><strong>thres</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for peak detection</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing the peaks frequency/intensity</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">peak_df</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.plotly_create_experiment_comparison">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">plotly_create_experiment_comparison</code><span class="sig-paren">(</span><em>experiments</em>, <em>thres_prox=0.2</em>, <em>index=0</em>, <em>filepath=None</em>, <em>**kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#plotly_create_experiment_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.plotly_create_experiment_comparison" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to create a plot comparing multiple experiments. This is a high
-level function that wraps the <cite>correlate_experiments</cite> function,
-and provides a visual and interactive view of the spectra output from
-this function using Plotly.</p>
-<p>This function is effectively equivalent to
-<cite>bokeh_create_experiment_comparison</cite>, however uses Plotly as the front
-end instead.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
-<li><strong>experiments</strong> – </li>
-<li><strong>thres_prox</strong> – </li>
-<li><strong>index</strong> – </li>
-<li><strong>filepath</strong> – </li>
-<li><strong>kwargs</strong> – </li>
-</ul>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.search_center_frequency">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">search_center_frequency</code><span class="sig-paren">(</span><em>frequency: float</em>, <em>width=0.5</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#search_center_frequency"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.search_center_frequency" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function for wrapping the astroquery Splatalogue API for looking up a frequency and finding candidate molecules
-for assignment. The width parameter adjusts the +/- range to include in the search: for high frequency surveys,
-it’s probably preferable to use a percentage to accommodate for the typically larger uncertainties (sub-mm
-experiments).</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>frequency</strong> (<em>float</em>) – Frequency in MHz to search Splatalogue for.</li>
-<li><strong>width</strong> (<em>float</em><em>, </em><em>optional</em>) – Absolute frequency offset in MHz to include in the search.</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing frequency matches, or None if no matches are found.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">dataframe or None</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-<dl class="function">
-<dt id="pyspectools.spectra.analysis.search_molecule">
-<code class="descclassname">pyspectools.spectra.analysis.</code><code class="descname">search_molecule</code><span class="sig-paren">(</span><em>species: str, freq_range=[0.0, 40000.0], **kwargs</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spectra/analysis.html#search_molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spectra.analysis.search_molecule" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function to search Splatalogue for a specific molecule. Technically I’d prefer to
-download entries from CDMS instead, but this is probably the most straight
-forward way.</p>
-<p>The main use for this function is to verify line identifications - if a line is
-tentatively assigned to a U-line, then other transitions for the molecule that
-are stronger or comparatively strong should be visible.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
-<li><strong>species</strong> (<em>str</em>) – Chemical name of the molecule</li>
-<li><strong>freq_range</strong> (<em>list</em>) – The frequency range to perform the lookup</li>
-</ul>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Pandas dataframe containing transitions for the given molecule. If no matches are found, returns None.</p>
-</td>
-</tr>
-<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">DataFrame or None</p>
-</td>
-</tr>
-</tbody>
-</table>
-</dd></dl>
-
-</div>
 <div class="section" id="module-pyspectools.spectra">
 <span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.spectra" title="Permalink to this headline">¶</a></h2>
 </div>
@@ -2984,7 +3069,7 @@ are stronger or comparatively strong should be visible.</p>
     <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul class="current">
 <li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
-<li class="toctree-l1 current"><a class="current reference internal" href="#"><cite>pyspectools.spectra</cite> Module</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">pyspectools.spectra package</a></li>
 </ul>
 
   

@@ -77,8 +77,6 @@
 <span class="kn">import</span> <span class="nn">joblib</span>
 <span class="kn">import</span> <span class="nn">paramiko</span>
 
-<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">pypickett</span> <span class="k">as</span> <span class="n">pp</span>
-
 
 <div class="viewcode-block" id="run_spcat"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.run_spcat">[docs]</a><span class="k">def</span> <span class="nf">run_spcat</span><span class="p">(</span><span class="n">filename</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">temperature</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
     <span class="c1"># Run SPCAT</span>
@@ -159,28 +157,6 @@
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="n">split_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">target</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="n">n</span><span class="p">]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">target</span><span class="p">),</span> <span class="n">n</span><span class="p">)]</span>
     <span class="k">return</span> <span class="n">split_list</span></div>
-
-
-<div class="viewcode-block" id="pickett_molecule"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.pickett_molecule">[docs]</a><span class="k">def</span> <span class="nf">pickett_molecule</span><span class="p">(</span><span class="n">json_filepath</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
-    <span class="c1"># Provide a JSON file with all the Pickett settings, and generate an</span>
-    <span class="c1"># instance of the molecule class</span>
-    <span class="c1"># This method is superceded by serializing using classmethods for each</span>
-    <span class="c1"># file format</span>
-    <span class="n">warn</span><span class="p">(</span>
-        <span class="s2">&quot;pickett_molecule is now outdated. Please use the class </span><span class="se">\</span>
-<span class="s2">                       methods from_yaml or from_json.&quot;</span>
-    <span class="p">)</span>
-    <span class="k">if</span> <span class="n">json_filepath</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;No JSON input file specified.&quot;</span><span class="p">)</span>
-        <span class="nb">print</span><span class="p">(</span>
-            <span class="s2">&quot;A template file will be created in your directory; please rerun</span><span class="se">\</span>
-<span class="s2">               after setting up the parameters.&quot;</span>
-        <span class="p">)</span>
-        <span class="n">copy_template</span><span class="p">()</span>
-        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="s2">&quot;No input file specified.&quot;</span><span class="p">)</span>
-    <span class="n">json_data</span> <span class="o">=</span> <span class="n">read_json</span><span class="p">(</span><span class="n">json_filepath</span><span class="p">)</span>
-    <span class="n">molecule_object</span> <span class="o">=</span> <span class="n">pp</span><span class="o">.</span><span class="n">MoleculeFit</span><span class="p">(</span><span class="n">json_data</span><span class="p">)</span>
-    <span class="k">return</span> <span class="n">molecule_object</span></div>
 
 
 <div class="viewcode-block" id="human2pickett"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.routines.human2pickett">[docs]</a><span class="k">def</span> <span class="nf">human2pickett</span><span class="p">(</span><span class="n">name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;A&quot;</span><span class="p">,</span> <span class="n">linear</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nuclei</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
@@ -618,7 +594,11 @@
     <p class="caption"><span class="caption-text">Contents:</span></p>
 <ul>
 <li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../../pyspectools.spectra.html"><cite>pyspectools.spectra</cite> Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">PySpecTools</a></li>
 </ul>
 
   
