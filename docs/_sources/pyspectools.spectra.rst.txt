@@ -1,21 +1,21 @@
-`pyspectools.spectra` Module
+pyspectools.spectra package
 ===========================
 
 Submodules
 ----------
 
-`assignment` Submodule
--------------------------------------
+pyspectools.spectra.analysis module
+-----------------------------------
 
-.. automodule:: pyspectools.spectra.assignment
+.. automodule:: pyspectools.spectra.analysis
     :members:
     :undoc-members:
     :show-inheritance:
 
-`analysis` Submodule
------------------------------------
+pyspectools.spectra.assignment module
+-------------------------------------
 
-.. automodule:: pyspectools.spectra.analysis
+.. automodule:: pyspectools.spectra.assignment
     :members:
     :undoc-members:
     :show-inheritance:
