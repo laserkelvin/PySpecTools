@@ -1305,7 +1305,7 @@ class AssignmentSession:
             Specifies whether the assignment procedure is automatic.
         """
         self.process_splatalogue(auto=auto)
-    
+
     def process_clock_spurs(self, **kwargs):
         """
         Method that will generate a LineList corresponding to possible
@@ -2063,6 +2063,7 @@ class AssignmentSession:
         shots=25,
         dipole=1.0,
         min_dist=500.0,
+        atten=None,
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2071,40 +2072,45 @@ class AssignmentSession:
         experiment.
 
         The file is then saved to "ftb/XXX-full-dr.ftb".
+        
+        The ``atten`` parameter provides a more direct way to control RF power;
+        if this value is used, it will overwrite the dipole moment setting.
 
         Parameters
         ----------
-        cavity_freqs: iterable of floats
+        cavity_freqs : iterable of floats
             Iterable of frequencies to tune to, in MHz.
-        filepath: str, optional
+        filepath : str, optional
             Path to save the ftb file to. Defaults to ftb/{}-dr.ftb
-        shots: int, optional
+        shots : int, optional
             Number of integration shots
-        dipole: float, optional
+        dipole : float, optional
             Dipole moment used for attenuation setting
-        min_dist: float, optional
+        min_dist : float, optional
             Minimum frequency difference between cavity and DR frequency to actually perform
             the experiment
+        atten : None or int, optional
+            Value to set the rf attenuation. By default, this is None, which will use the
+            dipole moment instead to set the rf power. If a value is provided, it will
+            overwrite whatever the dipole moment setting is.
         """
         dr_freqs = np.array(self.line_lists["Peaks"].get_frequencies())
         lines = ""
+        ftb_settings = {"drpower": -20, "skiptune": False, "dipole": dipole}
+        if atten is not None:
+            assert type(atten) == int
+            del ftb_settings["dipole"]
+            ftb_settings["atten"] = int(atten)
         for cindex, cavity in enumerate(cavity_freqs):
             for dindex, dr in enumerate(dr_freqs):
                 if dindex == 0:
-                    lines += fa.generate_ftb_line(
-                        cavity, shots, **{"dipole": dipole, "drpower": -20}
-                    )
+                    ftb_settings.update(**{"drpower": -20, "skiptune": False})
+                    lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
                 if np.abs(cavity - dr) >= min_dist:
-                    lines += fa.generate_ftb_line(
-                        cavity,
-                        shots,
-                        **{
-                            "dipole": dipole,
-                            "drpower": 13,
-                            "skiptune": True,
-                            "drfreq": dr,
-                        },
+                    ftb_settings.update(
+                        **{"drpower": 13, "skiptune": True, "drfreq": dr}
                     )
+                    lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
         if filepath is None:
             filepath = f"ftb/{self.session.experiment}-full-dr.ftb"
         with open(filepath, "w+") as write_file:
@@ -3635,9 +3641,9 @@ class LineList:
             name="Artifacts", transitions=list(transitions), source="Artifacts"
         )
         return linelist_obj
-    
+
     @classmethod
-    def from_clock(cls, max_multi=64, clock=65000., **kwargs):
+    def from_clock(cls, max_multi=64, clock=65000.0, **kwargs):
         """
         Method of generating a LineList object by calculating all possible
         combinations of the
@@ -3658,9 +3664,7 @@ class LineList:
             LineList object with the full list of possible clock
             spurs, as harmonics, sum, and difference frequencies.
         """
-        frequencies = [
-            clock / i for i in range(1, max_multi + 1)
-        ]
+        frequencies = [clock / i for i in range(1, max_multi + 1)]
         for pair in combinations(frequencies, 2):
             # Round to 4 decimal places
             frequencies.append(np.round(sum(pair), 4))
@@ -3675,7 +3679,7 @@ class LineList:
             catalog_frequency=np.asarray(frequencies),
             uline=False,
             source="Artifact",
-            public=False
+            public=False,
         )
         linelist_obj = cls(
             name="ClockSpurs", transitions=list(transitions), source="Artifacts"
