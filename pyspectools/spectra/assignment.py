@@ -1938,7 +1938,7 @@ class AssignmentSession:
         return self.identifications
 
     def create_uline_ftb_batch(
-        self, filepath=None, shots=500, dipole=1.0, threshold=0.0, sort_int=False
+        self, filepath=None, shots=500, dipole=1.0, threshold=0.0, sort_int=False, atten=None
     ):
         """
         Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
@@ -1965,6 +1965,9 @@ class AssignmentSession:
             value of SNR to consider in the FTB file.
         sort_int : bool, optional
             If True, sorts the FTB entries in descending intensity order.
+        atten : None or int, optional
+            Value to use for the attenuation, overwriting the `dipole` argument. This is
+            useful for forcing cavity power in the high band.
         """
         if filepath is None:
             filepath = f"./ftb/{self.session.experiment}-ulines.ftb"
@@ -1975,13 +1978,18 @@ class AssignmentSession:
             for transition in transitions
             if transition.intensity >= threshold
         ]
+        if atten is not None:
+            assert type(atten) == int
+            ftb_settings = {"atten": atten}
+        else:
+            ftb_settings = {"dipole": dipole}
         # Sort the intensities such that the strongest ones are scanned first.
         if sort_int is True:
             transitions = sorted(transitions, key=lambda line: line.intensity)[::-1]
         for index, uline in enumerate(transitions):
             if uline.intensity >= threshold:
                 lines += fa.generate_ftb_line(
-                    uline.frequency, shots, **{"dipole": dipole}
+                    uline.frequency, shots, **ftb_settings
                 )
         with open(filepath, "w+") as write_file:
             write_file.write(lines)
