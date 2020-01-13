@@ -146,7 +146,7 @@ def peak_find(spec_df: pd.DataFrame, freq_col="Frequency", int_col="Intensity",
         x=spec_df[freq_col].values,
         y=spec_df[int_col].values,
         ind=peak_indices,
-        width=5
+        width=11
         )
     # Get the peaks if we were just using indexes
     direct_df = spec_df.iloc[peak_indices]
