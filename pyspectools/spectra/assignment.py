@@ -1994,6 +1994,7 @@ class AssignmentSession:
         dipole=1.0,
         min_dist=500.0,
         thres=None,
+        atten=None,
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2020,6 +2021,9 @@ class AssignmentSession:
         thres: None or float, optional
             Minimum value in absolute intensity units to consider in the DR
             batch. If None, this is ignored (default).
+        atten: None or int, optional
+            Value to use for the attenuation, overwriting the `dipole` argument. This is
+            useful for forcing cavity power in the high band.
         """
         ulines = self.line_lists["Peaks"].get_ulines()
         if select is None:
@@ -2033,24 +2037,22 @@ class AssignmentSession:
             mask = np.where(intensities >= thres)
             dr_freqs = np.asarray(dr_freqs)[mask]
             cavity_freqs = np.asarray(cavity_freqs)
+        ftb_settings = {"drpower": -20, "skiptune": False, "dipole": dipole}
+        if atten is not None:
+            assert type(atten) == int
+            del ftb_settings["dipole"]
+            ftb_settings["atten"] = int(atten)
         lines = ""
         for cindex, cavity in enumerate(cavity_freqs):
             for dindex, dr in enumerate(dr_freqs):
                 if dindex == 0:
-                    lines += fa.generate_ftb_line(
-                        cavity, shots, **{"dipole": dipole, "drpower": -20}
-                    )
+                    ftb_settings.update(**{"drpower": -20, "skiptune": False})
+                    lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
                 if np.abs(cavity - dr) >= min_dist:
-                    lines += fa.generate_ftb_line(
-                        cavity,
-                        shots,
-                        **{
-                            "dipole": dipole,
-                            "drpower": 13,
-                            "skiptune": True,
-                            "drfreq": dr,
-                        },
+                    ftb_settings.update(
+                        **{"drpower": 13, "skiptune": True, "drfreq": dr}
                     )
+                    lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
         if filepath is None:
             filepath = f"ftb/{self.session.experiment}-dr.ftb"
         with open(filepath, "w+") as write_file:
