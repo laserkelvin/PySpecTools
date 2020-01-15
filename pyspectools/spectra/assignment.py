@@ -2003,6 +2003,7 @@ class AssignmentSession:
         min_dist=500.0,
         thres=None,
         atten=None,
+        drpower=13
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2058,7 +2059,7 @@ class AssignmentSession:
                     lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
                 if np.abs(cavity - dr) >= min_dist:
                     ftb_settings.update(
-                        **{"drpower": 13, "skiptune": True, "drfreq": dr}
+                        **{"drpower": drpower, "skiptune": True, "drfreq": dr}
                     )
                     lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
         if filepath is None:
@@ -2074,6 +2075,7 @@ class AssignmentSession:
         dipole=1.0,
         min_dist=500.0,
         atten=None,
+        drpower=13
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2118,7 +2120,7 @@ class AssignmentSession:
                     lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
                 if np.abs(cavity - dr) >= min_dist:
                     ftb_settings.update(
-                        **{"drpower": 13, "skiptune": True, "drfreq": dr}
+                        **{"drpower": drpower, "skiptune": True, "drfreq": dr}
                     )
                     lines += fa.generate_ftb_line(cavity, shots, **ftb_settings)
         if filepath is None:
