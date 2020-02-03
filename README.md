@@ -2,18 +2,14 @@
 
 ## A Python library for analysis of rotational spectroscopy and beyond
 
-
-## Version History
-
-From version >= 3 of this module, Python 3.7 is required to support the new
-`dataclass` objects which will be the basis for assigning broadband spectra.
+---
 
 ## Introduction
 
 ![pst-logo](docs/source/pst_logo_landscape.png)
 
 `PySpecTools` is a library written to help with analyzing rotational
-spectroscopy data. The main sorts of functionality are:
+spectroscopy data. The main functions of this library are:
 
 1. Wrapper for SPFIT and SPCAT programs of Herb Pickett, with YAML/JSON
    interpretation
@@ -31,8 +27,6 @@ spectroscopy data. The main sorts of functionality are:
    molecules. Eventually, SPFIT will be a backend option.
 
 The documentation for PySpecTools can be found [here](https://laserkelvin.github.io/PySpecTools).
-
----
 
 ## PyPickett
 
@@ -53,13 +47,28 @@ input files in an object-oriented fashion:
    whatever parameter.
 
 There is still much to do for this module, including a way of managing experimental lines.
-For now, development 
+
+## Notes on release
+
+`PySpecTools` is currently being released on a irregular schedule, using a sequence-based version numbering system.
+The numbering works as X.Y.Z, where X denotes huge changes that are backwards incompatible, Y are significant changes
+(typically new features) and Z are minor bug fixes. A freeze and release will typically occur when
+a new version with potentially backwards breaking changes are about to be made.
+
+## Planned features
+
+1. Integration of deep learning tools for molecule identifiction and spectral assignment
+2. Probability-based assignment routines - rather than single assignments.
+3. Revamp of codebase - needs a substantial re-organization that will likely result in backwards compatibility breaking.
+4. Additional Cython routines - many functions within `PySpecTools` are fast enough, but we can always go faster 😀
 
 ---
 
-## To do
+## Questions? Comments?
 
-1. Reorganize the coding, and make it more PEP friendly!
-2. Example Jupyter notebooks
-3. Improve autofit routines
+If you have features you would like to have added, please raise an issue on the repo, or
+feel free to send me an email at kinlee_at_cfa.harvard.edu.
 
+Also, please feel free to fork and contribute! The code is being formatted with `black`,
+and uses NumPy-style docstrings. If you have any questions about contributing, drop me an
+email!
