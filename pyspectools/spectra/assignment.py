@@ -23,7 +23,7 @@
 import os
 from shutil import rmtree
 from dataclasses import dataclass, field
-from typing import List, Dict, Tuple, Union, Type
+from typing import List, Dict, Tuple, Union, Type, Any
 from copy import copy, deepcopy
 from itertools import combinations
 import logging
@@ -755,6 +755,29 @@ class AssignmentSession:
             return experiment
         except AttributeError:
             raise Exception("Peak/Noise detection not yet run!")
+    
+    def __contains__(self, item: Union[LineList, str]) -> bool:
+        """
+        Dunder method to check if a molecule is contained within this experiment.
+        
+        Parameters
+        ----------
+        item : Union[LineList, str]
+            Item to check; can be a `LineList` or a `str`. If the item is
+            a `LineList`, check and see if the `LineList` is present in the
+            current list. If the item is a `str`, check in the assignment
+            table for a name or a formula.
+        
+        Returns
+        -------
+        bool
+            True if present in the experiment.
+        """
+        if isinstance(item, str):
+            check = any(item in self.table["name"], item in self.table["formula"])
+            return check
+        elif isinstance(item, LineList):
+            return item in self.line_lists
 
     def umol_gen(self, silly=True):
         """
