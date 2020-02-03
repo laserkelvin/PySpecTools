@@ -898,12 +898,12 @@ class AssignmentSession:
         # Define file handlers for each type of log
         self.log_handlers = {
             "analysis": logging.FileHandler(
-                f"./logs/{self.session.experiment}-analysis.log"
+                f"./logs/{self.session.experiment}-analysis.log", mode="w"
             ),
             "warning": logging.FileHandler(
-                f"./logs/{self.session.experiment}-warnings.log"
+                f"./logs/{self.session.experiment}-warnings.log", mode="w"
             ),
-            "debug": logging.FileHandler(f"./logs/{self.session.experiment}-debug.log"),
+            "debug": logging.FileHandler(f"./logs/{self.session.experiment}-debug.log", mode="w"),
         }
         # If verbose is specified, the logging info is directly printed as well
         if self.verbose is True:
