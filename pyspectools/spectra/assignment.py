@@ -778,6 +778,35 @@ class AssignmentSession:
             return check
         elif isinstance(item, LineList):
             return item in self.line_lists
+    
+    def __call__(self, frequency: float, **kwargs) -> pd.DataFrame:
+        """
+        Dunder method to look up a frequency contained within the
+        experiment peak line list.
+        
+        Additional kwargs are passed into `LineList.find_candidates`
+        function, which allows one to specify tolerances for the
+        lookup.
+        
+        Parameters
+        ----------
+        frequency : float
+            Frequency to search the experiment for in MHz.
+        
+        Returns
+        -------
+        pd.DataFrame
+            DataFrame of the matched frequencies.
+        
+        Raises
+        -------
+        AttributeError
+            If peak detection has not been run yet
+        """
+        if "Peaks" in self.line_lists:
+            return self.line_lists["Peaks"].find_candidates(frequency, **kwargs)
+        else:
+            raise AttributeError("Experiment has no peaks!")
 
     def umol_gen(self, silly=True):
         """
