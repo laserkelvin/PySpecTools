@@ -53,7 +53,7 @@ There is still much to do for this module, including a way of managing experimen
 `PySpecTools` is currently being released on a irregular schedule, using a sequence-based version numbering system.
 The numbering works as X.Y.Z, where X denotes huge changes that are backwards incompatible, Y are significant changes
 (typically new features) and Z are minor bug fixes. A freeze and release will typically occur when
-a new version with potentially backwards breaking changes are about to be made.
+a new version with potentially backwards breaking changes are about to be made. The large changes typically occur once a year (based on the trend so far).
 
 ## Planned features
 
@@ -61,6 +61,7 @@ a new version with potentially backwards breaking changes are about to be made.
 2. Probability-based assignment routines - rather than single assignments.
 3. Revamp of codebase - needs a substantial re-organization that will likely result in backwards compatibility breaking.
 4. Additional Cython routines - many functions within `PySpecTools` are fast enough, but we can always go faster 😀
+5. Better abstraction in the `spectra.assignment` modules - need to move a lot of the complicated routines into subclasses (especially for transitions and line lists), although there is a case to be made for a simpler user interface (only have to deal with `LineList`, instead of three subclasses of `LineList`)
 
 ---
 
