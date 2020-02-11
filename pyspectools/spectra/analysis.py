@@ -1289,3 +1289,4 @@ def average_spectra(*arrays, **options) -> np.ndarray:
     if time_domain is True:
         averaged_spectra = irfft(averaged_spectra)            
     return averaged_spectra
+    
