@@ -28,6 +28,11 @@ spectroscopy data. The main functions of this library are:
 
 The documentation for PySpecTools can be found [here](https://laserkelvin.github.io/PySpecTools).
 
+If you use PySpecTools for research, please cite use the DOI badge below to cite the version
+of the package; this is not to track adoption, but rather for the sake of reproducibility!
+
+[![DOI](https://zenodo.org/badge/90773952.svg)](https://zenodo.org/badge/latestdoi/90773952)
+
 ## PyPickett
 
 `PySpecTools` includes a set of routines for wrapping SPFIT/SPCAT. The design
