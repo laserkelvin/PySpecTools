@@ -6,6 +6,8 @@
 
 ## Introduction
 
+[![DOI](https://zenodo.org/badge/90773952.svg)](https://zenodo.org/badge/latestdoi/90773952)
+
 ![pst-logo](docs/source/pst_logo_landscape.png)
 
 `PySpecTools` is a library written to help with analyzing rotational
@@ -30,8 +32,6 @@ The documentation for PySpecTools can be found [here](https://laserkelvin.github
 
 If you use PySpecTools for research, please cite use the DOI badge below to cite the version
 of the package; this is not to track adoption, but rather for the sake of reproducibility!
-
-[![DOI](https://zenodo.org/badge/90773952.svg)](https://zenodo.org/badge/latestdoi/90773952)
 
 ## PyPickett
 
@@ -60,6 +60,8 @@ The numbering works as X.Y.Z, where X denotes huge changes that are backwards in
 (typically new features) and Z are minor bug fixes. A freeze and release will typically occur when
 a new version with potentially backwards breaking changes are about to be made. The large changes typically occur once a year (based on the trend so far).
 
+Currently, `PySpecTools` is under the MIT license, which allows anyone to freely use and modify as you wish!
+
 ## Planned features
 
 1. Integration of deep learning tools for molecule identifiction and spectral assignment
@@ -67,6 +69,16 @@ a new version with potentially backwards breaking changes are about to be made. 
 3. Revamp of codebase - needs a substantial re-organization that will likely result in backwards compatibility breaking.
 4. Additional Cython routines - many functions within `PySpecTools` are fast enough, but we can always go faster 😀
 5. Better abstraction in the `spectra.assignment` modules - need to move a lot of the complicated routines into subclasses (especially for transitions and line lists), although there is a case to be made for a simpler user interface (only have to deal with `LineList`, instead of three subclasses of `LineList`)
+
+## Contributing
+
+If you have features you think would benefit other spectroscopists, you can raise an issue in the repo. Alternatively (and even better) would be to fork the repo, and submit a pull request!
+
+The only comments on coding style are: 
+
+1. Documentation is written in NumPy style
+2. Object-oriented Python
+3. Formatted with [`black`](https://black.readthedocs.io/en/stable/)
 
 ---
 
