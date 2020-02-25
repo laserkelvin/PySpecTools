@@ -1921,7 +1921,7 @@ class AssignmentSession:
         n_assign = len(np.where(corr_mat > 0)[0])
         self.logger.info(f"Copied {n_assign} assignments.")
 
-    def blank_spectrum(self, noise=None, noise_std=None, window=1.0):
+    def blank_spectrum(self, noise=0., noise_std=0.05, window=1.0):
         """
         Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
         and standard deviation of the noise, typically estimated by picking a region free of spectral features.

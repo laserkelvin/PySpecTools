@@ -703,7 +703,7 @@ def create_cluster_tests(cluster_dict: Dict[Any, Any], shots=25,
 
 def blank_spectrum(
         spectrum_df: pd.DataFrame, frequencies: np.ndarray, 
-        noise=None, noise_std=None, freq_col="Frequency",
+        noise=0., noise_std=0.05, freq_col="Frequency",
         int_col="Intensity", window=1., df=True):
     """
     Function to blank the peaks from a spectrum. Takes a iterable of frequencies, and generates an array of Gaussian
