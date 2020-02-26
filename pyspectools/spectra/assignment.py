@@ -361,7 +361,7 @@ class Transition:
         empty = Transition()
         self.__dict__.update(**empty.__dict__)
         self.__dict__.update(**remain)
-    
+
     def choose_assignment(self, index: int):
         """
         Function to manually pick an assignment from
@@ -384,13 +384,11 @@ class Transition:
             "experiment": self.experiment,
             "velocity": self.velocity,
             "source": self.source,
-            "multiple": self.multiple
+            "multiple": self.multiple,
         }
         chosen = deepcopy(self.multiple[index])
         chosen.update(**remain)
-        self.__dict__.update(
-            **chosen.__dict__
-        )
+        self.__dict__.update(**chosen.__dict__)
         self.final = True
 
 
@@ -1042,16 +1040,42 @@ class LineList:
         assign_objs = [obj for obj in self.transitions if obj.uline is False]
         return assign_objs
 
-    def get_frequencies(self):
+    def get_frequencies(self, numpy=False):
         """
         Method to extract all the frequencies out of a LineList
         
+        Parameters
+        ----------
+        numpy: bool, optional
+            If True, returns a NumPy `ndarray` with the frequencies.
+        
         Returns
         -------
-        [type]
-            [description]
+        List or np.ndarray
+            List of transition frequencies
         """
-        return [transition.frequency for transition in self.transitions]
+        frequencies = [transition.frequency for transition in self.transitions]
+        if numpy:
+            frequencies = np.array(frequencies)
+        return frequencies
+
+    def get_multiple(self):
+        """
+        
+        Convenience function to extract all the transitions within a LineList
+        that have multiple possible assignments.
+        
+        Returns
+        -------
+        List
+            List of `Transition` objects that have multiple assignments
+            remaining.
+        """
+        assign_objs = list()
+        for transition in self.transitions:
+            if transition.final == False and len(transition.multiple) != 0:
+                assign_objs.append(transition)
+        return assign_objs
 
     def add_uline(self, frequency: float, intensity: float, **kwargs):
         """
@@ -1494,8 +1518,8 @@ class AssignmentSession:
             return experiment
         except AttributeError:
             raise Exception("Peak/Noise detection not yet run!")
-    
-    def __contains__(self, item: Union[LineList, str]) -> bool:
+
+    def __contains__(self, item: Union["LineList", str]) -> bool:
         """
         Dunder method to check if a molecule is contained within this experiment.
         
@@ -1517,7 +1541,7 @@ class AssignmentSession:
             return check
         elif isinstance(item, LineList):
             return item in self.line_lists
-    
+
     def __call__(self, frequency: float, **kwargs) -> pd.DataFrame:
         """
         Dunder method to look up a frequency contained within the
@@ -1694,7 +1718,9 @@ class AssignmentSession:
             "warning": logging.FileHandler(
                 f"./logs/{self.session.experiment}-warnings.log", mode="w"
             ),
-            "debug": logging.FileHandler(f"./logs/{self.session.experiment}-debug.log", mode="w"),
+            "debug": logging.FileHandler(
+                f"./logs/{self.session.experiment}-debug.log", mode="w"
+            ),
         }
         # If verbose is specified, the logging info is directly printed as well
         if self.verbose is True:
@@ -2664,7 +2690,7 @@ class AssignmentSession:
         n_assign = len(np.where(corr_mat > 0)[0])
         self.logger.info(f"Copied {n_assign} assignments.")
 
-    def blank_spectrum(self, noise=0., noise_std=0.05, window=1.0):
+    def blank_spectrum(self, noise=0.0, noise_std=0.05, window=1.0):
         """
         Blanks a spectrum based on the lines already previously assigned. The required arguments are the average
         and standard deviation of the noise, typically estimated by picking a region free of spectral features.
@@ -2733,7 +2759,13 @@ class AssignmentSession:
         return self.identifications
 
     def create_uline_ftb_batch(
-        self, filepath=None, shots=500, dipole=1.0, threshold=0.0, sort_int=False, atten=None
+        self,
+        filepath=None,
+        shots=500,
+        dipole=1.0,
+        threshold=0.0,
+        sort_int=False,
+        atten=None,
     ):
         """
         Create an FTB file for use in QtFTM based on the remaining ulines. This is used to provide cavity
@@ -2783,9 +2815,7 @@ class AssignmentSession:
             transitions = sorted(transitions, key=lambda line: line.intensity)[::-1]
         for index, uline in enumerate(transitions):
             if uline.intensity >= threshold:
-                lines += fa.generate_ftb_line(
-                    uline.frequency, shots, **ftb_settings
-                )
+                lines += fa.generate_ftb_line(uline.frequency, shots, **ftb_settings)
         with open(filepath, "w+") as write_file:
             write_file.write(lines)
 
@@ -2798,7 +2828,7 @@ class AssignmentSession:
         min_dist=500.0,
         thres=None,
         atten=None,
-        drpower=13
+        drpower=13,
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -2870,7 +2900,7 @@ class AssignmentSession:
         dipole=1.0,
         min_dist=500.0,
         atten=None,
-        drpower=13
+        drpower=13,
     ):
         """
         Create an FTB batch file for use in QtFTM to perform a DR experiment.
@@ -3056,10 +3086,8 @@ class AssignmentSession:
                 if len(obj.multiple) != 0 and obj.final is False:
                     warnings.warn(
                         f"Transition at {obj.frequency:4f} has multiple candidates."
-                        )
-                    warnings.warn(
-                        f"Please choose assignment for peak {obj.peak_id}."
                     )
+                    warnings.warn(f"Please choose assignment for peak {obj.peak_id}.")
                 # Dump all the assignments into YAML format
                 obj.to_file(f"assignment_objs/{obj.experiment}-{obj.peak_id}", "yaml")
                 obj.deviation = obj.catalog_frequency - obj.frequency
