@@ -363,6 +363,19 @@ class Transition:
         self.__dict__.update(**remain)
     
     def choose_assignment(self, index: int):
+        """
+        Function to manually pick an assignment from
+        a list of multiple possible assignments found
+        during `process_linelist`. After the new assignment
+        is copied over, the `final` attribute is set to
+        True and will no longer throw a warning duiring
+        finalize_assignments.
+        
+        Parameters
+        ----------
+        index : int
+            Index of the candidate to use for the assignment.
+        """
         assert len(self.multiple != 0)
         assert index < len(self.multiple)
         remain = {
@@ -378,6 +391,7 @@ class Transition:
         self.__dict__.update(
             **chosen.__dict__
         )
+        self.final = True
 
 
 @dataclass
@@ -3039,7 +3053,7 @@ class AssignmentSession:
         ulines = self.line_lists["Peaks"].get_ulines()
         if len(assignments) > 0:
             for obj in assignments:
-                if len(obj.multiple) != 0:
+                if len(obj.multiple) != 0 and obj.final is False:
                     warnings.warn(
                         f"Transition at {obj.frequency:4f} has multiple candidates."
                         )
