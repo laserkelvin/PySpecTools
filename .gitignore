@@ -7,3 +7,6 @@ cython/lineshapes\.html
 
 \.DS_Store
 .vscode
+
+tests/test-spectrum.csv
+tests/spectrum-parameters.yml
