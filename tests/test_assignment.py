@@ -50,6 +50,7 @@ def test_spectrum_load():
             skiprows=1,
             col_names=["Frequency", "Intensity"],
             delimiter=",",
+            verbose=False
         )
         # Check that the frequency and intensity columns are read correctly
         assert len(spec_df) == len(session.data)
@@ -156,6 +157,7 @@ def test_spectrum_linelist():
             session.process_linelist(linelist=linelist)
         assignments = session.line_lists["Peaks"].get_assignments()
         POST = len(assignments)
+        print(POST)
         # Compare the number of assignments made vs. the number of peaks
         # Every peak should be assigned
         assert abs(POST - NFOUND) <= TOLERANCE

@@ -605,9 +605,7 @@ class LineList:
         splatalogue is appropriate and you would like to manually create it
         by handpicked frequencies.
 
-        Parameters
-        ----------
-        name: str
+                    obj.uline == True,
             Name of the species - doesn't have to be its real name, just an identifier.
         frequencies: list
             A list of floats corresponding to the "catalog" frequencies.
@@ -963,8 +961,7 @@ class LineList:
                 [
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
-                    abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
-                    obj.uline == True,
+                    abs(getattr(obj, freq_attr) - frequency) <= freq_tol
                 ]
             )
         ]
@@ -2557,40 +2554,43 @@ class AssignmentSession:
                     candidates, weighting = can_pkg
                     ncandidates = len(candidates)
                     self.logger.info(f"Found {ncandidates} possible matches.")
+                    make_assignment = True
                     # If auto mode or if there's just one candidate, just take the highest weighting
-                    if auto is True and ncandidates >= 1:
+                    if auto is True:
                         chosen = candidates[weighting.argmax()]
-                    else:
+                        if chosen.uline is False:
+                            # If this line has previously been assigned, then we
+                            # fill up the multiple "buffer"
+                            chosen.multiple.append(transition)
+                            make_assignment = False
+                    elif auto is False:
                         for cand_idx, candidate in enumerate(candidates):
                             print(cand_idx, candidate)
                         chosen_idx = int(
                             input("Please specify the candidate index.   ")
                         )
                         chosen = candidates[chosen_idx]
-                    self.logger.info(
-                        f"Assigning {transition.name}"
-                        f" (catalog {transition.catalog_frequency:,.4f})"
-                        f" to peak {index} at {chosen.frequency:,.4f}."
-                    )
-                    # Create a copy of the Transition data from the LineList
-                    assign_dict = copy(transition.__dict__)
-                    # Update with the measured frequency and intensity
-                    assign_dict["frequency"] = chosen.frequency
-                    assign_dict["intensity"] = chosen.intensity
-                    assign_dict["experiment"] = chosen.experiment
-                    assign_dict["velocity"] = self.session.velocity
-                    assign_dict["peak_id"] = chosen.peak_id
-                    assign_dict["uline"] = False
-                    if ncandidates > 1:
-                        assign_dict["multiple"] = candidates
-                    else:
-                        assign_dict["final"] = True
-                    # Add any other additional kwargs
-                    assign_dict.update(**kwargs)
-                    # Copy over the information from the assignment, and update
-                    # the experimental peak information with the assignment
-                    chosen.__dict__.update(**assign_dict)
-                    nassigned += 1
+                    if make_assignment is True:
+                        self.logger.info(
+                            f"Assigning {transition.name}"
+                            f" (catalog {transition.catalog_frequency:,.4f})"
+                            f" to peak {index} at {chosen.frequency:,.4f}."
+                        )
+                        # Create a copy of the Transition data from the LineList
+                        assign_dict = copy(transition.__dict__)
+                        # Update with the measured frequency and intensity
+                        assign_dict["frequency"] = chosen.frequency
+                        assign_dict["intensity"] = chosen.intensity
+                        assign_dict["experiment"] = chosen.experiment
+                        assign_dict["velocity"] = self.session.velocity
+                        assign_dict["peak_id"] = chosen.peak_id
+                        assign_dict["uline"] = False
+                        # Add any other additional kwargs
+                        assign_dict.update(**kwargs)
+                        # Copy over the information from the assignment, and update
+                        # the experimental peak information with the assignment
+                        chosen.__dict__.update(**assign_dict)
+                        nassigned += 1
             self.logger.info(
                 f"Assigned {nassigned} new transitions to {linelist.name}."
             )
@@ -3088,6 +3088,9 @@ class AssignmentSession:
                         f"Transition at {obj.frequency:4f} has multiple candidates."
                     )
                     warnings.warn(f"Please choose assignment for peak {obj.peak_id}.")
+                else:
+                    # Set the transition as finalized
+                    obj.final = True
                 # Dump all the assignments into YAML format
                 obj.to_file(f"assignment_objs/{obj.experiment}-{obj.peak_id}", "yaml")
                 obj.deviation = obj.catalog_frequency - obj.frequency
