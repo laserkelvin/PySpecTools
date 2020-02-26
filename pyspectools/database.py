@@ -9,6 +9,13 @@
 import os
 import warnings
 
+try:
+    import tables
+    from tables import IsDescription, open_file
+    from tables import StringCol, Int64Col, Float64Col
+except ImportError:
+    warnings.warn(f"PyTables is not installed correctly!")
+
 import tinydb
 from tinydb.middlewares import CachingMiddleware
 from tinydb.storages import JSONStorage

@@ -26,6 +26,7 @@ from dataclasses import dataclass, field
 from typing import List, Dict, Tuple, Union, Type, Any
 from copy import copy, deepcopy
 from itertools import combinations
+import warnings
 import logging
 from pathlib import Path
 
@@ -140,6 +141,8 @@ class Transition:
     velocity: float = 0.0
     discharge: bool = False
     magnet: bool = False
+    multiple: List[str] = field(default_factory=list)
+    final: bool = False
 
     def __eq__(self, other: object) -> bool:
         """ Dunder method for comparing molecules.
@@ -358,6 +361,728 @@ class Transition:
         empty = Transition()
         self.__dict__.update(**empty.__dict__)
         self.__dict__.update(**remain)
+    
+    def choose_assignment(self, index: int):
+        assert len(self.multiple != 0)
+        assert index < len(self.multiple)
+        remain = {
+            "frequency": self.frequency,
+            "intensity": self.intensity,
+            "experiment": self.experiment,
+            "velocity": self.velocity,
+            "source": self.source,
+            "multiple": self.multiple
+        }
+        chosen = deepcopy(self.multiple[index])
+        chosen.update(**remain)
+        self.__dict__.update(
+            **chosen.__dict__
+        )
+
+
+@dataclass
+class LineList:
+    """
+        Class for handling and homogenizing all of the possible line lists: from peaks to assignments to catalog files.
+
+        Attributes
+        ----------
+        name: str, optional
+            Name of the line list. Can be used to identify the molecule, or to simply state the purpose of the list.
+        formula: str, optional
+            Chemical formula for the molecule, if applicable.
+        smi: str, optional
+            SMILES representation of the molecule, if applicable.
+        filecontents: str, optional
+            String representation of the file contents used to make the line list.
+        filepath: str, optional
+            Path to the file used to make the list.
+        transitions: list, optional
+            A designated list for holding Transition objects. This is the bulk of the information for a given
+            line list.
+    """
+
+    name: str = ""
+    formula: str = ""
+    smi: str = ""
+    filecontents: str = ""
+    filepath: str = ""
+    transitions: List = field(default_factory=list)
+    frequencies: List[float] = field(default_factory=list)
+    catalog_frequencies: List[float] = field(default_factory=list)
+    source: str = ""
+
+    def __str__(self):
+        nentries = len(self.transitions)
+        return f"Line list for: {self.name} Formula: {self.formula}, Number of entries: {nentries}"
+
+    def __repr__(self):
+        nentries = len(self.transitions)
+        return f"Line list name: {self.name}, Number of entries: {nentries}"
+
+    def __len__(self):
+        return len(self.transitions)
+
+    def __post_init__(self):
+        if len(self.transitions) != 0:
+            self.frequencies = [obj.frequency for obj in self.transitions]
+            self.catalog_frequencies = [
+                obj.catalog_frequency for obj in self.transitions
+            ]
+
+    def __eq__(self, other: object) -> bool:
+        """
+        Dunder method for comparison of LineLists. Since users can accidently
+        use different method/formulas yet use the same catalog/lin file to
+        create the LineList, we only perform the check on the list of transitions.
+        
+        Parameters
+        ----------
+        other : LineList object
+            The other LineList to be used for comparison.
+            
+        Returns
+        -------
+        bool
+            If True, the two LineList objects are equal.
+        """
+        if not isinstance(other, LineList):
+            return NotImplemented
+        # Assert that we're comparing LineList objects
+        return self.transitions == other.transitions
+
+    def __add__(self, transition_obj: Type[Transition]):
+        """
+        Dunder method to add Transitions to the LineList.
+        
+        Parameters
+        ----------
+        transition_obj : [type]
+            [description]
+        """
+        assert type(transition_obj) == Transition
+        self.transitions.append(Transition)
+
+    def __iter__(self):
+        """
+        Sets up syntax for looping over a LineList. This is recommended more
+        for users, but not for programming. When writing new code in the
+        module, iterate over the transitions attribute explicitly.
+        """
+        yield from self.transitions
+
+    @classmethod
+    def from_catalog(
+        cls,
+        name: str,
+        formula: str,
+        filepath: str,
+        min_freq=0.0,
+        max_freq=1e12,
+        max_lstate=9000.0,
+        **kwargs,
+    ):
+        """
+        Create a Line List object from an SPCAT catalog.
+        Parameters
+        ----------
+        name: str
+            Name of the molecule the catalog belongs to
+        formula: str
+            Chemical formula of the molecule
+        filepath: str
+            Path to the catalog file.
+        min_freq: float, optional
+            Minimum frequency in MHz for the frequency cutoff
+        max_freq: float, optional
+            Maximum frequency in MHz for the frequency cutoff
+        max_lstate: float, optional
+            Maximum lower state energy to filter out absurd lines
+        kwargs: optional
+            Additional attributes that are passed into the Transition objects.
+
+        Returns
+        -------
+        linelist_obj
+            Instance of LineList with the digested catalog.
+        """
+        catalog_df = parsers.parse_cat(filepath, low_freq=min_freq, high_freq=max_freq)
+        try:
+            columns = ["N'", "J'", "N''", "J''"]
+            catalog_df["qno"] = catalog_df[columns].apply(
+                lambda x: "N'={}, J'={} - N''={}, J''={}".format(*x), axis=1
+            )
+            # Create a formatted quantum number string
+            # catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
+            #    *catalog_df[["N'", "J'", "N''", "J''"]].values
+            # )
+            # Calculate E upper to have a complete set of data
+            catalog_df["Upper state energy"] = units.calc_E_upper(
+                catalog_df["Frequency"], catalog_df["Lower state energy"]
+            )
+            # Filter out the lower states
+            catalog_df = catalog_df.loc[catalog_df["Lower state energy"] <= max_lstate]
+            vfunc = np.vectorize(Transition)
+            # Vectorized generation of all the Transition objects
+            transitions = vfunc(
+                catalog_frequency=catalog_df["Frequency"],
+                catalog_intensity=catalog_df["Intensity"],
+                lstate_energy=catalog_df["Lower state energy"],
+                ustate_energy=catalog_df["Upper state energy"],
+                r_qnos=catalog_df["qno"],
+                source="Catalog",
+                name=name,
+                formula=formula,
+                uline=False,
+                **kwargs,
+            )
+            linelist_obj = cls(
+                name,
+                formula,
+                filepath=filepath,
+                transitions=list(transitions),
+                source="Catalog",
+            )
+            return linelist_obj
+        except IndexError:
+            return None
+
+    @classmethod
+    def from_dataframe(
+        cls,
+        dataframe: pd.DataFrame,
+        name="Peaks",
+        freq_col="Frequency",
+        int_col="Intensity",
+        **kwargs,
+    ):
+        """
+        Specialized class method for creating a LineList object from a Pandas Dataframe. This method is called by
+        the AssignmentSession.df2ulines function to generate a Peaks LineList during peak detection.
+
+        Parameters
+        ----------
+        dataframe: pandas DataFrame
+            DataFrame containing frequency and intensity information
+        freq_col: str, optional
+            Name of the frequency column
+        int_col: str, optional
+            Name of the intensity column
+        kwargs
+            Optional settings are passed into the creation of Transition objects.
+
+        Returns
+        -------
+        LineList
+        """
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            frequency=dataframe[freq_col],
+            intensity=dataframe[int_col],
+            uline=True,
+            **kwargs,
+        )
+        linelist_obj = cls(name=name, transitions=list(transitions), source="Peaks")
+        return linelist_obj
+
+    @classmethod
+    def from_list(cls, name: str, frequencies: List[float], formula="", **kwargs):
+        """
+        Generic, low level method for creating a LineList object from a list
+        of frequencies. This method can be used when neither lin, catalog, nor
+        splatalogue is appropriate and you would like to manually create it
+        by handpicked frequencies.
+
+        Parameters
+        ----------
+        name: str
+            Name of the species - doesn't have to be its real name, just an identifier.
+        frequencies: list
+            A list of floats corresponding to the "catalog" frequencies.
+        formula: str, optional
+            Formula of the species, if known.
+        kwargs
+            Optional settings are passed into the creation of Transition objects.
+
+        Returns
+        -------
+        LineList
+        """
+        vfunc = np.vectorize(Transition)
+        frequencies = np.asarray(frequencies)
+        transitions = vfunc(
+            catalog_frequency=frequencies,
+            uline=False,
+            name=name,
+            formula=formula,
+            **kwargs,
+        )
+        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
+        return linelist_obj
+
+    @classmethod
+    def from_pgopher(cls, name: str, filepath: str, formula="", **kwargs):
+        """
+        Method to take the output of a PGopher file and create a LineList
+        object. The PGopher output must be in the comma delimited specification.
+        
+        This is actually the ideal way to generate LineList objects: it fills
+        in all of the relevant fields, such as linestrength and state energies.
+        
+        Parameters
+        ----------
+        name : str
+            Name of the molecule
+        filepath : str
+            Path to the PGopher CSV output
+        formula : str, optional
+            Chemical formula of the molecule, defaults to an empty string.
+            
+        Returns
+        -------
+        LineList
+        """
+        pgopher_df = pd.read_csv(filepath, skiprows=1)
+        pgopher_df = pgopher_df.iloc[:-1]
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            catalog_frequency=pgopher_df["Position"].astype(float),
+            catalog_intensity=pgopher_df["Intensity"].astype(float),
+            ustate_energy=pgopher_df["Eupper"].apply(units.MHz2cm),
+            lstate_energy=pgopher_df["Elower"].apply(units.MHz2cm),
+            S=pgopher_df["Spol"],
+            uline=False,
+            name=name,
+            formula=formula,
+        )
+        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
+
+    @classmethod
+    def from_lin(cls, name: str, filepath: str, formula="", **kwargs):
+        """
+        Generate a LineList object from a .lin file. This method should be used for intermediate assignments, when one
+        does not know what the identity of a molecule is but has measured some frequency data.
+
+        Parameters
+        ----------
+        name : str
+            Name of the molecule
+        filepath : str
+            File path to the .lin file.
+        formula : str, optional
+            Chemical formula of the molecule if known.
+        kwargs
+            Additional kwargs are passed into the Transition objects.
+
+        Returns
+        -------
+        LineList
+        """
+        lin_df = parsers.parse_lin(filepath)
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            name=name,
+            formula=formula,
+            catalog_frequency=lin_df["Frequency"],
+            r_qnos=lin_df["Quantum numbers"],
+            uline=False,
+            source="Line file",
+            **kwargs,
+        )
+        linelist_obj = cls(
+            name,
+            formula,
+            filepath=filepath,
+            transitions=list(transitions),
+            source="Line file",
+        )
+        return linelist_obj
+
+    @classmethod
+    def from_splatalogue_query(cls, dataframe: pd.DataFrame, **kwargs):
+        """
+        Method for converting a Splatalogue query dataframe into a LineList
+        object. This is designed with the intention of pre-querying a set
+        of molecules ahead of time, so that the user can have direct control
+        over which molecules are specifically targeted without having to
+        generate specific catalog files.
+        
+        Parameters
+        ----------
+        dataframe : pandas DataFrame
+            DataFrame generated by the function `analysis.search_molecule`
+        
+        Returns
+        -------
+        LineList
+        """
+        vfunc = np.vectorize(Transition)
+        name = dataframe["Chemical Name"].unique()[0]
+        transitions = vfunc(
+            name=dataframe["Chemical Name"].values,
+            catalog_frequency=dataframe["Frequency"].values,
+            catalog_intensity=dataframe["CDMS/JPL Intensity"].values,
+            ustate_energy=dataframe["E_U (K)"].values,
+            formula=dataframe["Species"].values,
+            r_qnos=dataframe["Resolved QNs"].values,
+            uline=False,
+            source="Splatalogue",
+            public=True,
+            **kwargs,
+        )
+        linelist_obj = cls(
+            name=name, transitions=list(transitions), source="Splatalogue"
+        )
+        return linelist_obj
+
+    @classmethod
+    def from_artifacts(cls, frequencies: List[float], **kwargs):
+        """
+        Specialized class method for creating a LineList object specifically for artifacts/RFI. These Transitions are
+        specially flagged as Artifacts.
+
+        Parameters
+        ----------
+        frequencies: iterable of floats
+            List or array of floats corresponding to known artifact frequencies.
+        kwargs
+            Kwargs are passed into the Transition object creation.
+
+        Returns
+        -------
+        LineList
+        """
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            name="Artifact",
+            catalog_frequency=np.asarray(frequencies),
+            uline=False,
+            source="Artifact",
+            public=False,
+            **kwargs,
+        )
+        linelist_obj = cls(
+            name="Artifacts", transitions=list(transitions), source="Artifacts"
+        )
+        return linelist_obj
+
+    @classmethod
+    def from_clock(cls, max_multi=64, clock=65000.0, **kwargs):
+        """
+        Method of generating a LineList object by calculating all possible
+        combinations of the
+        
+        Parameters
+        ----------
+        max_multi : int, optional
+            [description], by default 64
+        
+        clock : float, optional
+            Clock frequency to calculate sub-harmonics of,
+            in units of MHz. Defaults to 65,000 MHz, which corresponds
+            to the Keysight AWG
+        
+        Returns
+        -------
+        LineList object
+            LineList object with the full list of possible clock
+            spurs, as harmonics, sum, and difference frequencies.
+        """
+        frequencies = [clock / i for i in range(1, max_multi + 1)]
+        for pair in combinations(frequencies, 2):
+            # Round to 4 decimal places
+            frequencies.append(np.round(sum(pair), 4))
+            frequencies.append(np.round(pair[0] - pair[1], 4))
+        # Remove duplicates
+        frequencies = list(set(frequencies))
+        frequencies = sorted(frequencies)
+        # Generate Transition objects from this list of frequencies
+        vfunc = np.vectorize(Transition)
+        transitions = vfunc(
+            name="Artifact",
+            catalog_frequency=np.asarray(frequencies),
+            uline=False,
+            source="Artifact",
+            public=False,
+        )
+        linelist_obj = cls(
+            name="ClockSpurs", transitions=list(transitions), source="Artifacts"
+        )
+        return linelist_obj
+
+    def to_dataframe(self):
+        """
+        Convert the transition data into a Pandas DataFrame.
+        Returns
+        -------
+        dataframe
+            Pandas Dataframe with all of the transitions in the line list.
+        """
+        list_rep = [obj.__dict__ for obj in self.transitions]
+        return pd.DataFrame(list_rep)
+
+    def to_ftb(self, filepath=None, thres=-10.0, shots=500, dipole=1.0, **kwargs):
+        """
+        Function to create an FTB file from a LineList object. This will
+        create entries for every transition entry above a certain intensity
+        threshold, in whatever units the intensities are in; i.e. SPCAT will
+        be in log units, while experimental peaks will be in whatever arbitrary
+        voltage scale.
+
+        Parameters
+        ----------
+        filepath: None or str, optional
+            Path to write the ftb file to. If None (default), uses the name of
+            the LineList and writes to the ftb folder.
+        thres: float, optional
+            Threshold to cutoff transitions in the ftb file. Transitions with
+            less intensity than this value not be included. Units are in the
+            same units as whatever the LineList units are.
+        shots: int, optional
+            Number of shots to integrate.
+        dipole: float, optional
+            Target dipole moment for the species
+        kwargs
+            Additional kwargs are passed into the ftb creation, e.g. magnet,
+            discharge, etc.
+        """
+        # If no path is given, use the default naming scheme.
+        if filepath is None:
+            filepath = f"ftb/{self.name}-batch.ftb"
+        # If the source of information are from experimentally measured peaks,
+        # we'll use the correct attributes.
+        if self.source == "Peaks":
+            freq_attr = "frequency"
+            int_attr = "intensity"
+        else:
+            freq_attr = "catalog_frequency"
+            int_attr = "catalog_intensity"
+        # Get all the frequencies that have intensities above a threshold
+        frequencies = [
+            getattr(obj, freq_attr)
+            for obj in self.transitions
+            if getattr(obj, int_attr) >= thres
+        ]
+        ftb_kwargs = {"dipole": dipole}
+        ftb_kwargs.update(**kwargs)
+        ftb_str = ""
+        # Loop over the frequencies
+        for frequency in frequencies:
+            ftb_str += fa.generate_ftb_line(
+                np.round(frequency, 4), shots=shots, **ftb_kwargs
+            )
+        with open(filepath, "w+") as write_file:
+            write_file.write(ftb_str)
+
+    def to_pickle(self, filepath=None):
+        """
+        Function to serialize the LineList to a Pickle file. If no filepath is provided, the function will default
+        to using the name attribute of the LineList to name the file.
+
+        Parameters
+        ----------
+        filepath: str or None, optional
+            If None, uses name attribute for the filename, and saves to the linelists folder.
+        """
+        if filepath is None:
+            filepath = "linelists/{}-linelist.pkl".format(self.name)
+        routines.save_obj(self, filepath)
+
+    def find_nearest(self, frequency: float, tol=1e-3):
+        """
+        Look up transitions to find the nearest in frequency to the query. If the matched frequency is within a
+        tolerance, then the function will return the corresponding Transition. Otherwise, it returns None.
+
+        Parameters
+        ----------
+        frequency: float
+            Frequency in MHz to search for.
+        tol: float, optional
+            Maximum tolerance for the deviation from the LineList frequency and query frequency
+
+        Returns
+        -------
+        Transition object or None
+        """
+        match_freq, index = routines.find_nearest(self.frequencies, frequency)
+        deviation = np.abs(frequency - match_freq)
+        if deviation <= tol:
+            return self.transitions[index]
+        else:
+            return None
+
+    def find_candidates(
+        self, frequency: float, lstate_threshold=4.0, freq_tol=1e-1, int_tol=-10.0
+    ):
+        """
+        Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
+        that meet three criteria: the lower state energy, the catalog intensity, and the frequency distance.
+
+        If no candidates are found, the function will return None. Otherwise, it will return the list of transitions
+        and a list of associated normalized weights.
+
+        Parameters
+        ----------
+        frequency: float
+            Frequency in MHz to try and match.
+        lstate_threshold: float, optional
+            Lower state energy threshold in Kelvin
+        freq_tol: float, optional
+            Frequency tolerance in MHz for matching two frequencies
+        int_tol: float, optional
+            log Intensity threshold
+
+        Returns
+        -------
+        transitions, weighting or None
+            If candidates are found, lists of the transitions and the associated weights are returned.
+            Otherwise, returns None
+        """
+        # Filter out all transition objects quickly with a list comprehension
+        # and if statement
+        if self.source == "Peaks":
+            freq_attr = "frequency"
+        else:
+            freq_attr = "catalog_frequency"
+        transitions = [
+            obj
+            for obj in self.transitions
+            if all(
+                [
+                    obj.lstate_energy <= lstate_threshold,
+                    obj.catalog_intensity >= int_tol,
+                    abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
+                    obj.uline == True,
+                ]
+            )
+        ]
+        # If there are candidates, calculate the weights associated with each transition
+        if len(transitions) != 0:
+            transition_frequencies = np.array(
+                [getattr(obj, "freq_attr", np.nan) for obj in transitions]
+            )
+            transition_intensities = np.array(
+                [getattr(obj, "catalog_intensity", np.nan) for obj in transitions]
+            )
+            # If there are actually no catalog intensities, it should sum up to zero in which case we won't
+            # use the intensities in the weight factors
+            if np.nansum(transition_intensities) == 0.0:
+                transition_intensities = None
+            weighting = analysis.line_weighting(
+                frequency, transition_frequencies, transition_intensities
+            )
+            # Only normalize if there's more than one
+            if len(weighting) > 1:
+                weighting /= weighting.max()
+            return transitions, weighting
+        else:
+            return None
+
+    def update_transition(self, index: int, **kwargs):
+        """
+        Function for updating a specific Transition object within the Line List.
+
+        Parameters
+        ----------
+        index: int
+            Index for the list Transition object
+        kwargs: optional
+            Updates to the Transition object
+        """
+        self.transitions[index].__dict__.update(**kwargs)
+
+    def update_linelist(self, transition_objs: List[Transition]):
+        """
+        Adds transitions to a LineList if they do not exist in the list already.
+
+        Parameters
+        ----------
+        transition_objs: list
+            List of Transition objects
+        """
+        self.transitions.extend(
+            [obj for obj in transition_objs if obj not in self.transitions]
+        )
+
+    def get_ulines(self):
+        """
+        Function for retrieving unidentified lines in a Line List.
+
+        Returns
+        -------
+        uline_objs: list
+            List of all of the transition objects where the uline flag is set to True.
+        """
+        uline_objs = [obj for obj in self.transitions if obj.uline is True]
+        return uline_objs
+
+    def get_assignments(self):
+        """
+        Function for retrieving assigned lines in a Line List.
+
+        Returns
+        -------
+        assign_objs: list
+            List of all of the transition objects where the uline flag is set to False.
+        """
+        assign_objs = [obj for obj in self.transitions if obj.uline is False]
+        return assign_objs
+
+    def get_frequencies(self):
+        """
+        Method to extract all the frequencies out of a LineList
+        
+        Returns
+        -------
+        [type]
+            [description]
+        """
+        return [transition.frequency for transition in self.transitions]
+
+    def add_uline(self, frequency: float, intensity: float, **kwargs):
+        """
+        Function to manually add a U-line to the LineList.
+        The function creates a Transition object with the frequency and
+        intensity values provided by a user, which is then compared with
+        the other transition entries within the LineList. If it doesn't
+        already exist, it will then add the new Transition to the LineList.
+        
+        Kwargs are passed to the creation of the Transition object.
+        
+        Parameters
+        ----------
+        frequency, intensity: float
+            Floats corresponding to the frequency and intensity of the line in
+            a given unit.
+        """
+        transition = Transition(
+            frequency=frequency, intensity=intensity, uline=True, **kwargs
+        )
+        if transition not in self.transitions:
+            self.transitions.append(transition)
+
+    def add_ulines(self, data: List[Tuple[float, float]], **kwargs):
+        """
+        Function to add multiple pairs of frequency/intensity to the current
+        LineList.
+        
+        Kwargs are passed to the creation of the Transition object.
+        
+        Parameters
+        ----------
+        data: iterable of 2-tuple
+            List-like of 2-tuples corresponding to frequency and intensity.
+            Data should look like this example:
+            [
+                (12345.213, 5.),
+                (18623.125, 12.3)
+            ]
+        """
+        for line in data:
+            # This assertion makes sure that every line has a specified
+            # frequency AND intensity value
+            assert len(line) == 2
+            self.add_uline(*line, **kwargs)
 
 
 @dataclass
@@ -1793,7 +2518,7 @@ class AssignmentSession:
                     ncandidates = len(candidates)
                     self.logger.info(f"Found {ncandidates} possible matches.")
                     # If auto mode or if there's just one candidate, just take the highest weighting
-                    if auto is True or ncandidates == 1:
+                    if auto is True and ncandidates >= 1:
                         chosen = candidates[weighting.argmax()]
                     else:
                         for cand_idx, candidate in enumerate(candidates):
@@ -1816,6 +2541,10 @@ class AssignmentSession:
                     assign_dict["velocity"] = self.session.velocity
                     assign_dict["peak_id"] = chosen.peak_id
                     assign_dict["uline"] = False
+                    if ncandidates > 1:
+                        assign_dict["multiple"] = candidates
+                    else:
+                        assign_dict["final"] = True
                     # Add any other additional kwargs
                     assign_dict.update(**kwargs)
                     # Copy over the information from the assignment, and update
@@ -2310,6 +3039,13 @@ class AssignmentSession:
         ulines = self.line_lists["Peaks"].get_ulines()
         if len(assignments) > 0:
             for obj in assignments:
+                if len(obj.multiple) != 0:
+                    warnings.warn(
+                        f"Transition at {obj.frequency:4f} has multiple candidates."
+                        )
+                    warnings.warn(
+                        f"Please choose assignment for peak {obj.peak_id}."
+                    )
                 # Dump all the assignments into YAML format
                 obj.to_file(f"assignment_objs/{obj.experiment}-{obj.peak_id}", "yaml")
                 obj.deviation = obj.catalog_frequency - obj.frequency
@@ -3318,711 +4054,6 @@ class AssignmentSession:
             del self.log_handlers
         # Save to disk
         routines.save_obj(self, filepath)
-
-
-@dataclass
-class LineList:
-    """
-        Class for handling and homogenizing all of the possible line lists: from peaks to assignments to catalog files.
-
-        Attributes
-        ----------
-        name: str, optional
-            Name of the line list. Can be used to identify the molecule, or to simply state the purpose of the list.
-        formula: str, optional
-            Chemical formula for the molecule, if applicable.
-        smi: str, optional
-            SMILES representation of the molecule, if applicable.
-        filecontents: str, optional
-            String representation of the file contents used to make the line list.
-        filepath: str, optional
-            Path to the file used to make the list.
-        transitions: list, optional
-            A designated list for holding Transition objects. This is the bulk of the information for a given
-            line list.
-    """
-
-    name: str = ""
-    formula: str = ""
-    smi: str = ""
-    filecontents: str = ""
-    filepath: str = ""
-    transitions: List = field(default_factory=list)
-    frequencies: List[float] = field(default_factory=list)
-    catalog_frequencies: List[float] = field(default_factory=list)
-    source: str = ""
-
-    def __str__(self):
-        nentries = len(self.transitions)
-        return f"Line list for: {self.name} Formula: {self.formula}, Number of entries: {nentries}"
-
-    def __repr__(self):
-        nentries = len(self.transitions)
-        return f"Line list name: {self.name}, Number of entries: {nentries}"
-
-    def __len__(self):
-        return len(self.transitions)
-
-    def __post_init__(self):
-        if len(self.transitions) != 0:
-            self.frequencies = [obj.frequency for obj in self.transitions]
-            self.catalog_frequencies = [
-                obj.catalog_frequency for obj in self.transitions
-            ]
-
-    def __eq__(self, other: object) -> bool:
-        """
-        Dunder method for comparison of LineLists. Since users can accidently
-        use different method/formulas yet use the same catalog/lin file to
-        create the LineList, we only perform the check on the list of transitions.
-        
-        Parameters
-        ----------
-        other : LineList object
-            The other LineList to be used for comparison.
-            
-        Returns
-        -------
-        bool
-            If True, the two LineList objects are equal.
-        """
-        if not isinstance(other, LineList):
-            return NotImplemented
-        # Assert that we're comparing LineList objects
-        return self.transitions == other.transitions
-
-    def __add__(self, transition_obj: Type[Transition]):
-        """
-        Dunder method to add Transitions to the LineList.
-        
-        Parameters
-        ----------
-        transition_obj : [type]
-            [description]
-        """
-        assert type(transition_obj) == Transition
-        self.transitions.append(Transition)
-
-    def __iter__(self):
-        """
-        Sets up syntax for looping over a LineList. This is recommended more
-        for users, but not for programming. When writing new code in the
-        module, iterate over the transitions attribute explicitly.
-        """
-        yield from self.transitions
-
-    @classmethod
-    def from_catalog(
-        cls,
-        name: str,
-        formula: str,
-        filepath: str,
-        min_freq=0.0,
-        max_freq=1e12,
-        max_lstate=9000.0,
-        **kwargs,
-    ):
-        """
-        Create a Line List object from an SPCAT catalog.
-        Parameters
-        ----------
-        name: str
-            Name of the molecule the catalog belongs to
-        formula: str
-            Chemical formula of the molecule
-        filepath: str
-            Path to the catalog file.
-        min_freq: float, optional
-            Minimum frequency in MHz for the frequency cutoff
-        max_freq: float, optional
-            Maximum frequency in MHz for the frequency cutoff
-        max_lstate: float, optional
-            Maximum lower state energy to filter out absurd lines
-        kwargs: optional
-            Additional attributes that are passed into the Transition objects.
-
-        Returns
-        -------
-        linelist_obj
-            Instance of LineList with the digested catalog.
-        """
-        catalog_df = parsers.parse_cat(filepath, low_freq=min_freq, high_freq=max_freq)
-        try:
-            columns = ["N'", "J'", "N''", "J''"]
-            catalog_df["qno"] = catalog_df[columns].apply(
-                lambda x: "N'={}, J'={} - N''={}, J''={}".format(*x), axis=1
-            )
-            # Create a formatted quantum number string
-            # catalog_df["qno"] = "N'={}, J'={} - N''={}, J''={}".format(
-            #    *catalog_df[["N'", "J'", "N''", "J''"]].values
-            # )
-            # Calculate E upper to have a complete set of data
-            catalog_df["Upper state energy"] = units.calc_E_upper(
-                catalog_df["Frequency"], catalog_df["Lower state energy"]
-            )
-            # Filter out the lower states
-            catalog_df = catalog_df.loc[catalog_df["Lower state energy"] <= max_lstate]
-            vfunc = np.vectorize(Transition)
-            # Vectorized generation of all the Transition objects
-            transitions = vfunc(
-                catalog_frequency=catalog_df["Frequency"],
-                catalog_intensity=catalog_df["Intensity"],
-                lstate_energy=catalog_df["Lower state energy"],
-                ustate_energy=catalog_df["Upper state energy"],
-                r_qnos=catalog_df["qno"],
-                source="Catalog",
-                name=name,
-                formula=formula,
-                uline=False,
-                **kwargs,
-            )
-            linelist_obj = cls(
-                name,
-                formula,
-                filepath=filepath,
-                transitions=list(transitions),
-                source="Catalog",
-            )
-            return linelist_obj
-        except IndexError:
-            return None
-
-    @classmethod
-    def from_dataframe(
-        cls,
-        dataframe: pd.DataFrame,
-        name="Peaks",
-        freq_col="Frequency",
-        int_col="Intensity",
-        **kwargs,
-    ):
-        """
-        Specialized class method for creating a LineList object from a Pandas Dataframe. This method is called by
-        the AssignmentSession.df2ulines function to generate a Peaks LineList during peak detection.
-
-        Parameters
-        ----------
-        dataframe: pandas DataFrame
-            DataFrame containing frequency and intensity information
-        freq_col: str, optional
-            Name of the frequency column
-        int_col: str, optional
-            Name of the intensity column
-        kwargs
-            Optional settings are passed into the creation of Transition objects.
-
-        Returns
-        -------
-        LineList
-        """
-        vfunc = np.vectorize(Transition)
-        transitions = vfunc(
-            frequency=dataframe[freq_col],
-            intensity=dataframe[int_col],
-            uline=True,
-            **kwargs,
-        )
-        linelist_obj = cls(name=name, transitions=list(transitions), source="Peaks")
-        return linelist_obj
-
-    @classmethod
-    def from_list(cls, name: str, frequencies: List[float], formula="", **kwargs):
-        """
-        Generic, low level method for creating a LineList object from a list
-        of frequencies. This method can be used when neither lin, catalog, nor
-        splatalogue is appropriate and you would like to manually create it
-        by handpicked frequencies.
-
-        Parameters
-        ----------
-        name: str
-            Name of the species - doesn't have to be its real name, just an identifier.
-        frequencies: list
-            A list of floats corresponding to the "catalog" frequencies.
-        formula: str, optional
-            Formula of the species, if known.
-        kwargs
-            Optional settings are passed into the creation of Transition objects.
-
-        Returns
-        -------
-        LineList
-        """
-        vfunc = np.vectorize(Transition)
-        frequencies = np.asarray(frequencies)
-        transitions = vfunc(
-            catalog_frequency=frequencies,
-            uline=False,
-            name=name,
-            formula=formula,
-            **kwargs,
-        )
-        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
-        return linelist_obj
-
-    @classmethod
-    def from_pgopher(cls, name: str, filepath: str, formula="", **kwargs):
-        """
-        Method to take the output of a PGopher file and create a LineList
-        object. The PGopher output must be in the comma delimited specification.
-        
-        This is actually the ideal way to generate LineList objects: it fills
-        in all of the relevant fields, such as linestrength and state energies.
-        
-        Parameters
-        ----------
-        name : str
-            Name of the molecule
-        filepath : str
-            Path to the PGopher CSV output
-        formula : str, optional
-            Chemical formula of the molecule, defaults to an empty string.
-            
-        Returns
-        -------
-        LineList
-        """
-        pgopher_df = pd.read_csv(filepath, skiprows=1)
-        pgopher_df = pgopher_df.iloc[:-1]
-        vfunc = np.vectorize(Transition)
-        transitions = vfunc(
-            catalog_frequency=pgopher_df["Position"].astype(float),
-            catalog_intensity=pgopher_df["Intensity"].astype(float),
-            ustate_energy=pgopher_df["Eupper"].apply(units.MHz2cm),
-            lstate_energy=pgopher_df["Elower"].apply(units.MHz2cm),
-            S=pgopher_df["Spol"],
-            uline=False,
-            name=name,
-            formula=formula,
-        )
-        linelist_obj = cls(name=name, transitions=list(transitions), source="Catalog")
-
-    @classmethod
-    def from_lin(cls, name: str, filepath: str, formula="", **kwargs):
-        """
-        Generate a LineList object from a .lin file. This method should be used for intermediate assignments, when one
-        does not know what the identity of a molecule is but has measured some frequency data.
-
-        Parameters
-        ----------
-        name : str
-            Name of the molecule
-        filepath : str
-            File path to the .lin file.
-        formula : str, optional
-            Chemical formula of the molecule if known.
-        kwargs
-            Additional kwargs are passed into the Transition objects.
-
-        Returns
-        -------
-        LineList
-        """
-        lin_df = parsers.parse_lin(filepath)
-        vfunc = np.vectorize(Transition)
-        transitions = vfunc(
-            name=name,
-            formula=formula,
-            catalog_frequency=lin_df["Frequency"],
-            r_qnos=lin_df["Quantum numbers"],
-            uline=False,
-            source="Line file",
-            **kwargs,
-        )
-        linelist_obj = cls(
-            name,
-            formula,
-            filepath=filepath,
-            transitions=list(transitions),
-            source="Line file",
-        )
-        return linelist_obj
-
-    @classmethod
-    def from_splatalogue_query(cls, dataframe: pd.DataFrame, **kwargs):
-        """
-        Method for converting a Splatalogue query dataframe into a LineList
-        object. This is designed with the intention of pre-querying a set
-        of molecules ahead of time, so that the user can have direct control
-        over which molecules are specifically targeted without having to
-        generate specific catalog files.
-        
-        Parameters
-        ----------
-        dataframe : pandas DataFrame
-            DataFrame generated by the function `analysis.search_molecule`
-        
-        Returns
-        -------
-        LineList
-        """
-        vfunc = np.vectorize(Transition)
-        name = dataframe["Chemical Name"].unique()[0]
-        transitions = vfunc(
-            name=dataframe["Chemical Name"].values,
-            catalog_frequency=dataframe["Frequency"].values,
-            catalog_intensity=dataframe["CDMS/JPL Intensity"].values,
-            ustate_energy=dataframe["E_U (K)"].values,
-            formula=dataframe["Species"].values,
-            r_qnos=dataframe["Resolved QNs"].values,
-            uline=False,
-            source="Splatalogue",
-            public=True,
-            **kwargs,
-        )
-        linelist_obj = cls(
-            name=name, transitions=list(transitions), source="Splatalogue"
-        )
-        return linelist_obj
-
-    @classmethod
-    def from_artifacts(cls, frequencies: List[float], **kwargs):
-        """
-        Specialized class method for creating a LineList object specifically for artifacts/RFI. These Transitions are
-        specially flagged as Artifacts.
-
-        Parameters
-        ----------
-        frequencies: iterable of floats
-            List or array of floats corresponding to known artifact frequencies.
-        kwargs
-            Kwargs are passed into the Transition object creation.
-
-        Returns
-        -------
-        LineList
-        """
-        vfunc = np.vectorize(Transition)
-        transitions = vfunc(
-            name="Artifact",
-            catalog_frequency=np.asarray(frequencies),
-            uline=False,
-            source="Artifact",
-            public=False,
-            **kwargs,
-        )
-        linelist_obj = cls(
-            name="Artifacts", transitions=list(transitions), source="Artifacts"
-        )
-        return linelist_obj
-
-    @classmethod
-    def from_clock(cls, max_multi=64, clock=65000.0, **kwargs):
-        """
-        Method of generating a LineList object by calculating all possible
-        combinations of the
-        
-        Parameters
-        ----------
-        max_multi : int, optional
-            [description], by default 64
-        
-        clock : float, optional
-            Clock frequency to calculate sub-harmonics of,
-            in units of MHz. Defaults to 65,000 MHz, which corresponds
-            to the Keysight AWG
-        
-        Returns
-        -------
-        LineList object
-            LineList object with the full list of possible clock
-            spurs, as harmonics, sum, and difference frequencies.
-        """
-        frequencies = [clock / i for i in range(1, max_multi + 1)]
-        for pair in combinations(frequencies, 2):
-            # Round to 4 decimal places
-            frequencies.append(np.round(sum(pair), 4))
-            frequencies.append(np.round(pair[0] - pair[1], 4))
-        # Remove duplicates
-        frequencies = list(set(frequencies))
-        frequencies = sorted(frequencies)
-        # Generate Transition objects from this list of frequencies
-        vfunc = np.vectorize(Transition)
-        transitions = vfunc(
-            name="Artifact",
-            catalog_frequency=np.asarray(frequencies),
-            uline=False,
-            source="Artifact",
-            public=False,
-        )
-        linelist_obj = cls(
-            name="ClockSpurs", transitions=list(transitions), source="Artifacts"
-        )
-        return linelist_obj
-
-    def to_dataframe(self):
-        """
-        Convert the transition data into a Pandas DataFrame.
-        Returns
-        -------
-        dataframe
-            Pandas Dataframe with all of the transitions in the line list.
-        """
-        list_rep = [obj.__dict__ for obj in self.transitions]
-        return pd.DataFrame(list_rep)
-
-    def to_ftb(self, filepath=None, thres=-10.0, shots=500, dipole=1.0, **kwargs):
-        """
-        Function to create an FTB file from a LineList object. This will
-        create entries for every transition entry above a certain intensity
-        threshold, in whatever units the intensities are in; i.e. SPCAT will
-        be in log units, while experimental peaks will be in whatever arbitrary
-        voltage scale.
-
-        Parameters
-        ----------
-        filepath: None or str, optional
-            Path to write the ftb file to. If None (default), uses the name of
-            the LineList and writes to the ftb folder.
-        thres: float, optional
-            Threshold to cutoff transitions in the ftb file. Transitions with
-            less intensity than this value not be included. Units are in the
-            same units as whatever the LineList units are.
-        shots: int, optional
-            Number of shots to integrate.
-        dipole: float, optional
-            Target dipole moment for the species
-        kwargs
-            Additional kwargs are passed into the ftb creation, e.g. magnet,
-            discharge, etc.
-        """
-        # If no path is given, use the default naming scheme.
-        if filepath is None:
-            filepath = f"ftb/{self.name}-batch.ftb"
-        # If the source of information are from experimentally measured peaks,
-        # we'll use the correct attributes.
-        if self.source == "Peaks":
-            freq_attr = "frequency"
-            int_attr = "intensity"
-        else:
-            freq_attr = "catalog_frequency"
-            int_attr = "catalog_intensity"
-        # Get all the frequencies that have intensities above a threshold
-        frequencies = [
-            getattr(obj, freq_attr)
-            for obj in self.transitions
-            if getattr(obj, int_attr) >= thres
-        ]
-        ftb_kwargs = {"dipole": dipole}
-        ftb_kwargs.update(**kwargs)
-        ftb_str = ""
-        # Loop over the frequencies
-        for frequency in frequencies:
-            ftb_str += fa.generate_ftb_line(
-                np.round(frequency, 4), shots=shots, **ftb_kwargs
-            )
-        with open(filepath, "w+") as write_file:
-            write_file.write(ftb_str)
-
-    def to_pickle(self, filepath=None):
-        """
-        Function to serialize the LineList to a Pickle file. If no filepath is provided, the function will default
-        to using the name attribute of the LineList to name the file.
-
-        Parameters
-        ----------
-        filepath: str or None, optional
-            If None, uses name attribute for the filename, and saves to the linelists folder.
-        """
-        if filepath is None:
-            filepath = "linelists/{}-linelist.pkl".format(self.name)
-        routines.save_obj(self, filepath)
-
-    def find_nearest(self, frequency: float, tol=1e-3):
-        """
-        Look up transitions to find the nearest in frequency to the query. If the matched frequency is within a
-        tolerance, then the function will return the corresponding Transition. Otherwise, it returns None.
-
-        Parameters
-        ----------
-        frequency: float
-            Frequency in MHz to search for.
-        tol: float, optional
-            Maximum tolerance for the deviation from the LineList frequency and query frequency
-
-        Returns
-        -------
-        Transition object or None
-        """
-        match_freq, index = routines.find_nearest(self.frequencies, frequency)
-        deviation = np.abs(frequency - match_freq)
-        if deviation <= tol:
-            return self.transitions[index]
-        else:
-            return None
-
-    def find_candidates(
-        self, frequency: float, lstate_threshold=4.0, freq_tol=1e-1, int_tol=-10.0
-    ):
-        """
-        Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
-        that meet three criteria: the lower state energy, the catalog intensity, and the frequency distance.
-
-        If no candidates are found, the function will return None. Otherwise, it will return the list of transitions
-        and a list of associated normalized weights.
-
-        Parameters
-        ----------
-        frequency: float
-            Frequency in MHz to try and match.
-        lstate_threshold: float, optional
-            Lower state energy threshold in Kelvin
-        freq_tol: float, optional
-            Frequency tolerance in MHz for matching two frequencies
-        int_tol: float, optional
-            log Intensity threshold
-
-        Returns
-        -------
-        transitions, weighting or None
-            If candidates are found, lists of the transitions and the associated weights are returned.
-            Otherwise, returns None
-        """
-        # Filter out all transition objects quickly with a list comprehension
-        # and if statement
-        if self.source == "Peaks":
-            freq_attr = "frequency"
-        else:
-            freq_attr = "catalog_frequency"
-        transitions = [
-            obj
-            for obj in self.transitions
-            if all(
-                [
-                    obj.lstate_energy <= lstate_threshold,
-                    obj.catalog_intensity >= int_tol,
-                    abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
-                    obj.uline == True,
-                ]
-            )
-        ]
-        # If there are candidates, calculate the weights associated with each transition
-        if len(transitions) != 0:
-            transition_frequencies = np.array(
-                [getattr(obj, "freq_attr", np.nan) for obj in transitions]
-            )
-            transition_intensities = np.array(
-                [getattr(obj, "catalog_intensity", np.nan) for obj in transitions]
-            )
-            # If there are actually no catalog intensities, it should sum up to zero in which case we won't
-            # use the intensities in the weight factors
-            if np.nansum(transition_intensities) == 0.0:
-                transition_intensities = None
-            weighting = analysis.line_weighting(
-                frequency, transition_frequencies, transition_intensities
-            )
-            # Only normalize if there's more than one
-            if len(weighting) > 1:
-                weighting /= weighting.max()
-            return transitions, weighting
-        else:
-            return None
-
-    def update_transition(self, index: int, **kwargs):
-        """
-        Function for updating a specific Transition object within the Line List.
-
-        Parameters
-        ----------
-        index: int
-            Index for the list Transition object
-        kwargs: optional
-            Updates to the Transition object
-        """
-        self.transitions[index].__dict__.update(**kwargs)
-
-    def update_linelist(self, transition_objs: List[Transition]):
-        """
-        Adds transitions to a LineList if they do not exist in the list already.
-
-        Parameters
-        ----------
-        transition_objs: list
-            List of Transition objects
-        """
-        self.transitions.extend(
-            [obj for obj in transition_objs if obj not in self.transitions]
-        )
-
-    def get_ulines(self):
-        """
-        Function for retrieving unidentified lines in a Line List.
-
-        Returns
-        -------
-        uline_objs: list
-            List of all of the transition objects where the uline flag is set to True.
-        """
-        uline_objs = [obj for obj in self.transitions if obj.uline is True]
-        return uline_objs
-
-    def get_assignments(self):
-        """
-        Function for retrieving assigned lines in a Line List.
-
-        Returns
-        -------
-        assign_objs: list
-            List of all of the transition objects where the uline flag is set to False.
-        """
-        assign_objs = [obj for obj in self.transitions if obj.uline is False]
-        return assign_objs
-
-    def get_frequencies(self):
-        """
-        Method to extract all the frequencies out of a LineList
-        
-        Returns
-        -------
-        [type]
-            [description]
-        """
-        return [transition.frequency for transition in self.transitions]
-
-    def add_uline(self, frequency: float, intensity: float, **kwargs):
-        """
-        Function to manually add a U-line to the LineList.
-        The function creates a Transition object with the frequency and
-        intensity values provided by a user, which is then compared with
-        the other transition entries within the LineList. If it doesn't
-        already exist, it will then add the new Transition to the LineList.
-        
-        Kwargs are passed to the creation of the Transition object.
-        
-        Parameters
-        ----------
-        frequency, intensity: float
-            Floats corresponding to the frequency and intensity of the line in
-            a given unit.
-        """
-        transition = Transition(
-            frequency=frequency, intensity=intensity, uline=True, **kwargs
-        )
-        if transition not in self.transitions:
-            self.transitions.append(transition)
-
-    def add_ulines(self, data: List[Tuple[float, float]], **kwargs):
-        """
-        Function to add multiple pairs of frequency/intensity to the current
-        LineList.
-        
-        Kwargs are passed to the creation of the Transition object.
-        
-        Parameters
-        ----------
-        data: iterable of 2-tuple
-            List-like of 2-tuples corresponding to frequency and intensity.
-            Data should look like this example:
-            [
-                (12345.213, 5.),
-                (18623.125, 12.3)
-            ]
-        """
-        for line in data:
-            # This assertion makes sure that every line has a specified
-            # frequency AND intensity value
-            assert len(line) == 2
-            self.add_uline(*line, **kwargs)
 
 
 @dataclass
