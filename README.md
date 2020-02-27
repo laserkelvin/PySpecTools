@@ -80,6 +80,21 @@ The only comments on coding style are:
 2. Object-oriented Python
 3. Formatted with [`black`](https://black.readthedocs.io/en/stable/)
 
+There are a set of unit tests that can be run to ensure the most complicated routines in the
+library are working as intended. Right now coverage is poor, and so the tests I've written
+focus on the `assignment` module. There is a script contained in the `tests` folder that will
+generate a synthetic spectrum to test functionality on. To run these tests:
+
+``` python
+cd tests
+python generate_test_spectrum.py
+pytest
+```
+
+You will need to have `pytest` installed. These tests are designed to raise errors when there
+are huge errors; some tolerance is included for imperfect peak detection, for example. These
+are defined as constants within the `test_assignment.py` testing script.
+
 ---
 
 ## Questions? Comments?

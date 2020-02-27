@@ -190,6 +190,27 @@ class Transition:
     def __gt__(self, other):
         return self.frequency > other.frequency
 
+    def check_molecule(self, other):
+        """
+        
+        Check equivalency based on a common carrier. Compares the
+        name, formula, and smiles of this `Transition` object with
+        another.
+        
+        Returns
+        -------
+        bool
+            True if the two `Transitions` belong to the same carrier.
+        """
+        assert type(other) == type(self)
+        return all(
+            [
+                self.name == other.name,
+                self.formula == other.formula,
+                self.smiles == other.smiles
+            ]
+        )
+
     def calc_intensity(self, Q: float, T=300.0):
         """
         Convert linestrength into intensity.
@@ -2561,7 +2582,10 @@ class AssignmentSession:
                         if chosen.uline is False:
                             # If this line has previously been assigned, then we
                             # fill up the multiple "buffer"
-                            chosen.multiple.append(transition)
+                            if not chosen.check_molecule(transition):
+                                # Only add more transitions if this is a
+                                # different molecule
+                                chosen.multiple.append(transition)
                             make_assignment = False
                     elif auto is False:
                         for cand_idx, candidate in enumerate(candidates):
@@ -3084,6 +3108,8 @@ class AssignmentSession:
         if len(assignments) > 0:
             for obj in assignments:
                 if len(obj.multiple) != 0 and obj.final is False:
+                    # Remove duplicate entries
+                    obj.multiple = list(set(obj.multiple))
                     warnings.warn(
                         f"Transition at {obj.frequency:4f} has multiple candidates."
                     )
