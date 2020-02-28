@@ -2583,9 +2583,11 @@ class AssignmentSession:
                             # If this line has previously been assigned, then we
                             # fill up the multiple "buffer"
                             if not chosen.check_molecule(transition):
-                                # Only add more transitions if this is a
-                                # different molecule
-                                chosen.multiple.append(transition)
+                                if transition not in chosen.multiple:
+                                    # Only add more transitions if this is a
+                                    # different molecule and it's not already in
+                                    # the list
+                                    chosen.multiple.append(transition)
                             make_assignment = False
                     elif auto is False:
                         for cand_idx, candidate in enumerate(candidates):
@@ -3108,8 +3110,6 @@ class AssignmentSession:
         if len(assignments) > 0:
             for obj in assignments:
                 if len(obj.multiple) != 0 and obj.final is False:
-                    # Remove duplicate entries
-                    obj.multiple = list(set(obj.multiple))
                     warnings.warn(
                         f"Transition at {obj.frequency:4f} has multiple candidates."
                     )
