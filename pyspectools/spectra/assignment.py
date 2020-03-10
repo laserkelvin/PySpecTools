@@ -119,13 +119,13 @@ class Transition:
     name: str = ""
     smiles: str = ""
     formula: str = ""
-    frequency: float = 0.
-    catalog_frequency: float = 0.
-    catalog_intensity: float = 0.
-    deviation: float = 0.
-    intensity: float = 0.
-    uncertainty: float = 0.
-    S: float = 0.
+    frequency: float = 0.0
+    catalog_frequency: float = 0.0
+    catalog_intensity: float = 0.0
+    deviation: float = 0.0
+    intensity: float = 0.0
+    uncertainty: float = 0.0
+    S: float = 0.0
     peak_id: int = 0
     experiment: int = 0
     uline: bool = True
@@ -133,13 +133,13 @@ class Transition:
     v_qnos: List[int] = field(default_factory=list)
     r_qnos: str = ""
     fit: Dict = field(default_factory=dict)
-    ustate_energy: float = 0.
-    lstate_energy: float = 0.
+    ustate_energy: float = 0.0
+    lstate_energy: float = 0.0
     interference: bool = False
-    weighting: float = 0.
+    weighting: float = 0.0
     source: str = "Catalog"
     public: bool = True
-    velocity: float = 0.
+    velocity: float = 0.0
     discharge: bool = False
     magnet: bool = False
     multiple: List[str] = field(default_factory=list)
@@ -208,7 +208,7 @@ class Transition:
             [
                 self.name == other.name,
                 self.formula == other.formula,
-                self.smiles == other.smiles
+                self.smiles == other.smiles,
             ]
         )
 
@@ -946,7 +946,12 @@ class LineList:
             return None
 
     def find_candidates(
-        self, frequency: float, lstate_threshold=4.0, freq_tol=1e-1, int_tol=-10.0, max_uncertainty=0.2
+        self,
+        frequency: float,
+        lstate_threshold=4.0,
+        freq_tol=1e-1,
+        int_tol=-10.0,
+        max_uncertainty=0.2,
     ):
         """
         Function for searching the LineList for candidates. The first step uses pure Python to isolate transitions
@@ -986,7 +991,7 @@ class LineList:
                     obj.lstate_energy <= lstate_threshold,
                     obj.catalog_intensity >= int_tol,
                     abs(getattr(obj, freq_attr) - frequency) <= freq_tol,
-                    obj.uncertainty <= max_uncertainty
+                    obj.uncertainty <= max_uncertainty,
                 ]
             )
         ]
@@ -2021,7 +2026,7 @@ class AssignmentSession:
             "noise_region",
             "composition",
             "name",
-            "max_uncertainty"
+            "max_uncertainty",
         ]
         selected_session = {
             key: self.session.__dict__[key]
@@ -2537,7 +2542,10 @@ class AssignmentSession:
             transitions = [
                 transition
                 for transition in linelist.transitions
-                if min_freq <= transition.catalog_frequency <= max_freq
+                if all([
+                    (min_freq <= transition.catalog_frequency <= max_freq),
+                    (transition.uncertainty <= self.session.max_uncertainty),
+                ])
             ]
             # Filter out the transitions with energies too high
             transitions = [
@@ -2578,7 +2586,6 @@ class AssignmentSession:
                     lstate_threshold=self.t_threshold,
                     freq_tol=tol,
                     int_tol=thres,
-                    max_uncertainty=self.session.max_uncertainty
                 )
                 # If there are actual candidates instead of NoneType, we can process it.
                 if can_pkg is not None:
@@ -3480,7 +3487,7 @@ class AssignmentSession:
 
         return fig
 
-    def _create_html_report(self, filepath=None):        
+    def _create_html_report(self, filepath=None):
         """
         Function for generating an HTML report for sharing. The HTML report is rendered with
         Jinja2, and uses the template "report_template.html" located in the module directory.
