@@ -717,6 +717,7 @@ class LineList:
             name=name,
             formula=formula,
             catalog_frequency=lin_df["Frequency"],
+            uncertainty=lin_df["Uncertainty"],
             r_qnos=lin_df["Quantum numbers"],
             uline=False,
             source="Line file",
