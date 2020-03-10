@@ -2021,6 +2021,7 @@ class AssignmentSession:
             "noise_region",
             "composition",
             "name",
+            "max_uncertainty"
         ]
         selected_session = {
             key: self.session.__dict__[key]
