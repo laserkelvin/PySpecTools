@@ -2576,6 +2576,7 @@ class AssignmentSession:
                     lstate_threshold=self.t_threshold,
                     freq_tol=tol,
                     int_tol=thres,
+                    max_uncertainty=self.session.max_uncertainty
                 )
                 # If there are actual candidates instead of NoneType, we can process it.
                 if can_pkg is not None:
