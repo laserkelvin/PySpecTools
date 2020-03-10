@@ -2538,20 +2538,18 @@ class AssignmentSession:
             # out just in case it's close
             max_freq = max(self.line_lists["Peaks"].get_frequencies()) * 1.001
             min_freq = min(self.line_lists["Peaks"].get_frequencies()) * 0.999
-            # Make sure we're only assigning with in-band
+            # Make sure we're only assigning with in-band, has a suitable uncertainty,
+            # and that the lower state energy is within range
             transitions = [
                 transition
                 for transition in linelist.transitions
-                if all([
-                    (min_freq <= transition.catalog_frequency <= max_freq),
-                    (transition.uncertainty <= self.session.max_uncertainty),
-                ])
-            ]
-            # Filter out the transitions with energies too high
-            transitions = [
-                transition
-                for transition in linelist.transitions
-                if transition.lstate_energy <= self.t_threshold
+                if all(
+                    [
+                        min_freq <= transition.catalog_frequency <= max_freq,
+                        transition.uncertainty <= self.session.max_uncertainty,
+                        transition.lstate_energy <= self.t_threshold,
+                    ]
+                )
             ]
             # Loop over the LineList lines
             if progressbar is True:
