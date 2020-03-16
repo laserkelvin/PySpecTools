@@ -137,14 +137,14 @@ def peak_find(spec_df: pd.DataFrame, freq_col="Frequency", int_col="Intensity",
             Pandas dataframe containing the peaks frequency/intensity
     """
     peak_indices = peakutils.indexes(
-        spec_df[int_col],
+        spec_df[int_col].to_numpy(),
         thres=thres,
         thres_abs=True,
         min_dist=min_dist
         )
     frequencies = peakutils.interpolate(
-        x=spec_df[freq_col].values,
-        y=spec_df[int_col].values,
+        x=spec_df[freq_col].to_numpy(),
+        y=spec_df[int_col].to_numpy(),
         ind=peak_indices,
         width=11
         )
