@@ -7,7 +7,7 @@ from scipy import signal as spsig
     Fourier filter
 """
 
-def fft_filter(ydata, window_function=None, cutoff=None, sample_rate=None):
+def fft_filter(ydata, window_function=None, cutoff=[50, 690], sample_rate=None):
     """
         Fourier filter implementation.
         
@@ -49,18 +49,20 @@ def fft_filter(ydata, window_function=None, cutoff=None, sample_rate=None):
                 ydata *= spsig.chebwin(ydata.size, 200.)
     # FFT the frequency spectrum to time domain
     time_domain = fft(ydata)
-    # If no range is specified, take a prespecified chunk
     
+    # If no range is specified, take a prespecified chunk
     if cutoff is None:
         cutoff = [50, 690]
-    time_domain[:cutoff[0]] = 0
-    time_domain[cutoff[1]:] = 0
+    # Make sure values are sorted
+    cutoff = sorted(cutoff)
     
     # Apply the house filter before performing the inverse
     # FT back to frequency domain.
     if window_function == "house":
-        house_window = house_filter(ydata.size, *cutoff)
+        house_window = house_filter(time_domain.size, *cutoff)
         time_domain *= house_window
+        time_domain[:min(cutoff)] = 0.
+        time_domain[max(cutoff):] = 0.
     
     # Return the real part of the inverse FT
     filtered = np.real(ifft(time_domain))
@@ -70,14 +72,30 @@ def fft_filter(ydata, window_function=None, cutoff=None, sample_rate=None):
     Custom coded filters
 """
 
-def gen_butter_filter(cutoff, fs, filter_type, order=5):
+def gen_butter_filter(cutoff: np.ndarray, filter_type, order=5):
     """
-        Returns a specified Butterworth filter.
+    [summary]
+
+    Parameters
+    ----------
+    cutoff : [type]
+        [description]
+    fs : [type]
+        [description]
+    filter_type : [type]
+        [description]
+    order : int, optional
+        [description], by default 5
+
+    Returns
+    -------
+    [type]
+        [description]
     """
-    nyq = 0.5 * fs
-    normal_cutoff = [freq / nyq for freq in cutoff]
+    # nyq = 0.5 * fs
+    # normal_cutoff = [freq / nyq for freq in cutoff]
     b, a = spsig.butter(
-        order, normal_cutoff, btype=filter_type, analog=False
+        order, cutoff, btype=filter_type, analog=False
     )
     return b, a
 
@@ -118,7 +136,7 @@ def house_filter(size, low, high):
     
     denom = (high - low + 1.0) / 2.
     if denom < 0.:
-        raise DivideByZeroError
+        raise ZeroDivisionError
     
     for i in range(int(low), int(high)):
         rf = (i + 1) / denom

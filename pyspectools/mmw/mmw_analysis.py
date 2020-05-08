@@ -1,12 +1,17 @@
 
+from typing import List
+from pathlib import Path
+
 import numpy as np
 import lmfit
 import pandas as pd
 import os
+import peakutils
+from matplotlib import pyplot as plt
 
-from .fft_routines import *
-from .interpolation import *
-from .plotting_func import *
+from . import fft_routines
+from . import interpolation
+from ..lineshapes import sec_deriv_lorentzian
 
 """
     Miscellanous routines for parsing and batch processing
@@ -39,7 +44,7 @@ def parse_data(filepath):
                     read_zeeman = True
                 scan_details = line.split()
                 settings["ID"] = int(scan_details[1])
-                settings["Date"] = str(scan_details[4])
+                # settings["Date"] = str(scan_details[4])
                 read_params = True
                 read_int = False
                 continue
@@ -74,14 +79,16 @@ def parse_data(filepath):
 
     # Generate the frequency grid
     settings["Frequency step"] = settings["Frequency step"] * settings["Multiplier"]
-    start_freq = settings["Frequency"] - (settings["Frequency step"] * settings["Points"] / 2)
-    end_freq = settings["Frequency"] + (settings["Frequency step"] * settings["Points"] / 2)
-    frequency = np.arange(start_freq, end_freq, settings["Frequency step"])
+    # This calculates the length of either side
+    side_length = settings["Frequency step"] * (settings["Points"] // 2)
+    start_freq = settings["Frequency"] - side_length
+    end_freq = settings["Frequency"] + side_length
+    frequency = np.linspace(start_freq, end_freq, settings["Points"])
 
     return frequency, fieldoff_intensities, fieldon_intensities, settings
 
 
-def open_mmw(filepath, window_function=None, pass_filter=None):
+def open_mmw(filepath, **kwargs):
     """
         Function for opening and processing a single millimeter
         wave data file.
@@ -90,25 +97,167 @@ def open_mmw(filepath, window_function=None, pass_filter=None):
         Intensity information.
     """
     frequency, fieldoff_intensities, fieldon_intensities, settings = parse_data(filepath)
+    # Sometimes there are spurious zeros at the end of intensity data;
+    # this will trim the padding
+    npoints = settings.get("Points")
+    fieldoff_intensities = fieldoff_intensities[:npoints]
+    if fieldon_intensities.size > 1:
+        fieldon_intensities = fieldon_intensities[:npoints]
+    # Calculate sample rate in Hz for FFT step
     sample_rate = 1. / settings["Frequency step"] * 1e6
-    
-    
-    try:
-        fieldoff_intensities = fft_filter(fieldoff_intensities, window_function, pass_filter, sample_rate=sample_rate)
-        fieldon_intensities = fft_filter(fieldon_intensities, window_function, pass_filter, sample_rate=sample_rate)
-    except IndexError:
-        print(filepath)
-    
-    try:
+    param_dict = {
+        "window_function": None,
+        "cutoff": [50, 690],
+        "sample_rate": sample_rate
+    }
+    param_dict.update(**kwargs)
+
+    fieldoff_intensities = fft_routines.fft_filter(fieldoff_intensities, **param_dict)
+    # field on is not always there, but if it we use it to calculate Off - On
+    if fieldon_intensities.size > 1:
+        fieldon_intensities = fft_routines.fft_filter(fieldon_intensities, **param_dict)
         intensity = fieldoff_intensities - fieldon_intensities
-    except ValueError:
-        print(filepath + " had error loading.")
+    else:
+    # if field on is missing, just use zeros instead
+        fieldon_intensities = np.zeros(fieldoff_intensities.size)
+        intensity = fieldoff_intensities
+    # Format the data as a Pandas dataframe
     mmw_df = pd.DataFrame(
-        data=list(zip(frequency, fieldoff_intensities, fieldon_intensities, intensity)),
-        columns=["Frequency", "Zeeman OFF", "Zeeman ON", "OFF - ON"]
+        data={"Frequency": frequency, 
+              "Field OFF": fieldoff_intensities, 
+              "Field ON": fieldon_intensities, 
+              "OFF - ON": intensity
+              },
     )
     return mmw_df
 
+
+def test_filtering(path: str, **kwargs):
+    """
+    Convenience function to open a legacy data file and
+    process it; kwargs are passed to the `fft_filter`
+    function call. The function then returns a Matplotlib
+    figure and axis object, showing the FFT filtered
+    spectrum and the time-domain signal chunk that it
+    corresponds to.
+
+    Parameters
+    ----------
+    path : str
+        Filepath to the data file.
+
+    Returns
+    -------
+    fig, ax
+        Matplotlib figure/axis objects.
+    """
+    frequency, off, on, settings = parse_data(path)
+    filtered = fft_routines.fft_filter(off, **kwargs)
+    
+    fig, axarray = plt.subplots(2, 1, figsize=(10, 5))
+    
+    ax = axarray[0]
+    ax.set_title("Frequency domain")
+    ax.plot(frequency, filtered)
+    ax.set_xlabel("Frequency (MHz)")
+    
+    ax = axarray[1]
+    ax.set_title("Time domain")
+    cutoff = kwargs.get("cutoff", np.arange(30, 500))
+    ax.plot(np.fft.fft(filtered)[np.arange(*cutoff)])
+    
+    return fig, ax
+
+
+def sec_deriv_peak_detection(df_group, threshold=5, window_size=25, magnet_thres=0.5, **kwargs):
+    """
+    Function designed to take advantage of split-combine-apply techniques to analyze
+    concatenated spectra, or a single spectrum. The spectrum is cross-correlated with
+    a window corresponding to a second-derivative Lorentzian line shape, with the parameters
+    corresponding to the actual downward facing peak such that the cross-correlation
+    is upwards facing for a match.
+    
+    This X-correlation analysis is only done for the Field OFF data; every peak
+    should appear in the Field OFF, and should disappear under the presence of
+    a magnetic field. If the Field ON spectrum is non-zero, the peak finding is
+    followed up by calculating the ratio of the intensity at the same position
+    for ON/OFF; if the ratio is below a threshold, we consider it a magnetic line.
+
+    Parameters
+    ----------
+    df_group : pandas DataFrame
+        Dataframe containing the millimeter-wave spectra.
+    threshold : int, optional
+        Absolute intensity units threshold for peak detection.
+        This value corresponds to the value used in the X-correlation
+        spectrum, by default 5
+    window_size : int, optional
+        Size of the second derivative Lorentizan window function, 
+        by default 25
+    magnet_thres : float, optional
+        Threshold for determining if a peak is magnetic, given
+        as the ratio of ON/OFF. A value of 1 means the line is
+        nominally unaffected by a magnetic field, and less than
+        1 corresponds to larger responses to magnetic fields. 
+        By default 0.5
+
+    Returns
+    -------
+    pandas DataFrame
+        DataFrame holding the detected peaks and their associated
+        magnet tests, if applicable.
+    """
+    # Get the frequencies and whatnot as numpy arrays; peakutils does not play
+    # nicely with Series objects.
+    signal = df_group["Field OFF"].to_numpy()
+    frequency = df_group["Frequency"].to_numpy()
+    # Improve SNR with cross-correlation
+    corr_signal = cross_correlate_lorentzian(signal, window_size)
+    # Find the peaks that match the specified threshold
+    indices = peakutils.indexes(corr_signal, thres=threshold, **kwargs, thres_abs=True)
+    peak_subset = df_group.iloc[indices]
+    # Only evaluate magnetic if spectrum has a Field ON component
+    if peak_subset["Field ON"].sum() != 0.:
+        peak_subset.loc[:, "Ratio"] = peak_subset.loc[:,"Field ON"] / peak_subset.loc[:,"Field OFF"]
+        peak_subset.loc[:, "Magnetic"] = peak_subset.loc[:,"Ratio"] < magnet_thres
+    return peak_subset
+
+
+def cross_correlate_lorentzian(signal: np.ndarray, window_size=25, **kwargs):
+    """
+    Calculate the cross-correlation spectrum between an input signal and the
+    second derivative lineshape of a Lorentzian function. This is a matched
+    filter analysis to extract optimal signal to noise for millimeter-wave
+    data.
+
+    Parameters
+    ----------
+    signal : np.ndarray
+        NumPy 1D array containing the raw signal.
+    window_size : int
+        Size of the window function.
+
+    Returns
+    -------
+    corr_signal
+        NumPy 1D array containing the cross-correlation spectrum.
+    """
+    params = {
+        "x0": 0,
+        "gamma": 0.25,
+        "I": 1
+    }
+    if kwargs:
+        params.update(**kwargs)
+    # Create a template of the second derivative Lorentzian profile for
+    # x-correlating with the spectrum
+    temp_x = np.linspace(-5, 5, window_size)
+    temp_y = sec_deriv_lorentzian(temp_x, **params)
+    # Cross-correlate with the Lorentzian profile; "same" mode ensures
+    # it is the same length as the original signal for easy indexing
+    corr_signal = np.correlate(signal, temp_y, mode="same")
+    return corr_signal
+    
 
 def interp_mmw(files, nelements=10000, window_function=None, cutoff=None):
     """
@@ -130,7 +279,7 @@ def interp_mmw(files, nelements=10000, window_function=None, cutoff=None):
     print("Parsing files.")
     for index, file in enumerate(files):
         frequency, intensity, settings = parse_data(file)
-        intensity = fft_filter(intensity, window_function, cutoff)
+        intensity = fft_routines.fft_filter(intensity, window_function, cutoff)
         if index == 0:
             minx = np.min(frequency)
             maxx = np.max(frequency)
@@ -158,7 +307,7 @@ def interp_mmw(files, nelements=10000, window_function=None, cutoff=None):
         if (index / len(frequency)) > 0.5:
             print("50% done.")
         # Calculate the Shepard interpolation at the given frequency point
-        interp_y[index] = eval_shep_interp(full_freq, full_int, interp_freq, p=16.)
+        interp_y[index] = interpolation.eval_shep_interp(full_freq, full_int, interp_freq, p=16.)
     
     df = pd.DataFrame(data=list(zip(frequency, interp_y)), columns=["Frequency", "Intensity"])
     return df
@@ -221,7 +370,7 @@ def batch_shepard(files, stepsize=0.1, xrange=10., p=4., threshold=0.1, npoints=
     print("Performing interpolation")
     for column in ["Zeeman OFF", "Zeeman ON"]:
         print(column)
-        new_df[column] = calc_shep_interp(
+        new_df[column] = interpolation.calc_shep_interp(
             datalist,
             xnew,
             column,
@@ -249,59 +398,61 @@ def batch_plot(files, window_function=None, pass_filter=None):
     return full_df, fig
 
 
-def fit_chunk(dataframe, min_freq, max_freq, frequencies, ycol="Field off"):
+def fit_spectrum_chunk(dataframe: pd.DataFrame, freq_range: List[float], frequencies: np.ndarray, **kwargs):
     """
-        Function that will fit second-derivative lineprofiles to chunks
-        of a spectrum.
-        
-        The full spectrum is provided as a dataframe, and uses pandas
-        to slice the minimum and maximum frequencies. The frequencies
-        are provided as a list of center frequencies to fit.
-        
-        An optional argument, ycol, is used to specify which dataframe
-        column to use.
+    Automates the fitting of multiple frequencies to a single spectrum.
+
+    Parameters
+    ----------
+    dataframe : pd.DataFrame
+        Pandas DataFrame containing the millimeter-wave spectrum.
+    freq_range : 2-tuple
+        Iterable with two floats, corresponding to the limits of the spectrum
+        (in frequency) we want to consider for the fit.
+    frequencies : np.ndarray
+        NumPy 1D array containing center frequencies to fit.
+
+    Returns
+    -------
+    [type]
+        [description]
     """
-    sliced_df = dataframe.loc[(dataframe["Frequency"] > min_freq) & (dataframe["Frequency"] < max_freq)]
-    exp_string = "(-2. * A{index} * width{index}**3.) / (pi * (width{index}**2. + (x - center{index})**2.)**2.) \
-             + (8. * A{index} * width{index}**3. * (x - center{index})**2.) / (pi * (width{index}**2. + (x - center{index})**2.)**3.)"
-    
+    freq_range = sorted(freq_range)
+    sliced_df = dataframe.loc[dataframe["Frequency"].between(*freq_range)]
+    sliced_df["XCorrelation"] = cross_correlate_lorentzian(
+        sliced_df["Field OFF"], **kwargs
+        )
+    param_dict = dict()
     # Build fitting objective function from sum of second derivative
     # profiles
     for index, frequency in enumerate(frequencies):
-        curr_model = lmfit.models.ExpressionModel(
-            exp_string.format_map({"index": str(index)})
+        curr_model = lmfit.models.Model(
+            sec_deriv_lorentzian, prefix=f"Line{index}_"
         )
-        # Set up a dictionary with parameters
-        string_params = {
-            "width" + str(index): 1.,
-            "A" + str(index): 1.,
-            "center" + str(index): frequency
-        }
-        # Build parameters
-        curr_parameters = curr_model.make_params(**string_params)
-        # Constrain amplitude to be positive - no absorption!
-        curr_parameters["A" + str(index)].set(1., min=0.)
+        curr_params = curr_model.make_params()
+        curr_params[f"Line{index}_x0"].set(value=frequency - 0.3, min=frequency - 15., max=frequency + 15.)
+        curr_params[f"Line{index}_I"].set(value=-1., min=-20., max=-0.05)
+        curr_params[f"Line{index}_gamma"].set(value=0.25, min=0.1, max=0.4)
         if index == 0:
             model = curr_model
-            parameters = curr_parameters
+            parameters = curr_params
         else:
-            model+=curr_model
-            parameters+=curr_parameters
-    # Fit the peaks
+            model += curr_model
+            parameters += curr_params
+            
+    # Fit the cumulative spectrum 
     fit_results = model.fit(
-        sliced_df[ycol],
+        sliced_df["XCorrelation"],
         parameters,
         x=sliced_df["Frequency"]
     )
     sliced_df["Fit"] = fit_results.eval()
+
+    # print("Results of the fit:")
+    # for param, covar in zip(fit_results.best_values, np.sqrt(np.diag(fit_results.covar))):
+    #     print(param + ": " + str(fit_results.best_values[param]) + "  +/-  " + str(covar))
     
-    fig = plot_spectrum(sliced_df)
-    
-    print("Results of the fit:")
-    for param, covar in zip(fit_results.best_values, np.sqrt(np.diag(fit_results.covar))):
-        print(param + ": " + str(fit_results.best_values[param]) + "  +/-  " + str(covar))
-    
-    return fit_results, fig
+    return fit_results, sliced_df
 
 
 def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off", off_dataframe=None):
@@ -315,8 +466,8 @@ def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off",
         
         The function will iterate through each center frequency
         and try to fit it.
-    """ 
-    foldername = "../data/mmw_fits/" + name + "_" + ycol.replace(" ", "")
+    """
+    foldername = Path(f"../data/clean/mmw_fits/{name}")
     try:
         os.mkdir(foldername)
     except FileExistsError:
@@ -335,12 +486,11 @@ def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off",
         min_freq = frequency - window_length
         max_freq = frequency + window_length
         # Attempt to fit the window
-        fit, fig = fit_chunk(
+        fit, spec_df = fit_spectrum_chunk(
             dataframe,
             min_freq,
             max_freq,
             [frequency],
-            ycol
         )
         fit_freq.append(
             np.round(fit.best_values["center0"], decimals=4)
@@ -352,12 +502,6 @@ def fit_lines(dataframe, frequencies, name, window_length=10., ycol="Field off",
             np.round(np.sqrt(np.diag(fit.covar))[-1], decimals=4)
         )
         successes.append(True)
-        save_plot(fig, foldername + "/peak" + str(index) + ".html")
-        #except:
-        #    successes.append(False)
-        #    fit_freq.append(None)
-        #    amplitudes.append(0.)
-        #    uncertainties.append(None)
     package = list(zip(frequencies, successes, fit_freq, uncertainties, amplitudes))
     fit_df = pd.DataFrame(
         data=package, 
