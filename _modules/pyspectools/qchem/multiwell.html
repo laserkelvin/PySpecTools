@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pyspectools.qchem.multiwell &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../../_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="../../../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../../../_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../../../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../../index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm"></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pyspectools.qchem.multiwell</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Scripts to perform rate calculations using Multiwell.</span>
+<span class="sd">The focus here is to take output from a pseudo-variational</span>
+<span class="sd">calculation performed using CFOUR, format the results (e.g.</span>
+<span class="sd">constants, frequencies, etc.) into ktools format</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">subprocess</span> <span class="kn">import</span> <span class="n">Popen</span><span class="p">,</span> <span class="n">PIPE</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="kn">import</span> <span class="n">glob</span>
+
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">scipy.optimize</span> <span class="kn">import</span> <span class="n">curve_fit</span> <span class="k">as</span> <span class="n">cf</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+
+<span class="kn">from</span> <span class="nn">pyspectools.qchem</span> <span class="kn">import</span> <span class="n">parsers</span>
+<span class="kn">from</span> <span class="nn">pyspectools.routines</span> <span class="kn">import</span> <span class="n">read_yaml</span>
+
+
+<div class="viewcode-block" id="Vtst"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst">[docs]</a><span class="k">class</span> <span class="nc">Vtst</span><span class="p">:</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Class that handles a VTST calculation. This class is mainly</span>
+<span class="sd">    designed for filepath handling, since the multiwell programs</span>
+<span class="sd">    are extremely annoying about relative paths...</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+<div class="viewcode-block" id="Vtst.vtst_calc"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.vtst_calc">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">vtst_calc</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">calc_root</span><span class="p">,</span> <span class="n">reaction</span><span class="p">,</span> <span class="n">ktools_yml_path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Serialization method specifically for VTST calculations</span>
+<span class="sd">        using ktools.</span>
+
+<span class="sd">        The required inputs are:</span>
+<span class="sd">        calc_root - path to root of the calculation directory</span>
+<span class="sd">        reaction - str specification to name the reaction</span>
+<span class="sd">        ktools_yml_path - path to ktools YAML input</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">vtst_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="n">calc_root</span><span class="p">,</span> <span class="n">reaction</span><span class="p">,</span> <span class="n">ktools_yml_path</span><span class="p">)</span>
+        <span class="c1"># Get all the filepaths to calculations</span>
+        <span class="n">vtst_obj</span><span class="o">.</span><span class="n">logs</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="n">vtst_obj</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;calc_root&quot;</span><span class="p">],</span>
+                <span class="s2">&quot;*/freq*.log&quot;</span>
+                <span class="p">)</span>
+            <span class="p">)</span>
+        <span class="c1"># Initialize ktools settings</span>
+        <span class="n">vtst_obj</span><span class="o">.</span><span class="n">init_ktools</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">vtst_obj</span></div>
+
+<div class="viewcode-block" id="Vtst.tst_calc"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.tst_calc">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">tst_calc</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">data_dict</span><span class="p">,</span> <span class="n">reaction</span><span class="p">,</span> <span class="n">ktools_yml_path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Serialization method for conventional TST calculations</span>
+<span class="sd">        using ktools.</span>
+
+<span class="sd">        The required inputs are:</span>
+<span class="sd">        data_dict - dictionary holding paths to output files, with</span>
+<span class="sd">        the keys corresponding to reactant, ts, product as well as</span>
+<span class="sd">        reaction enthalpies</span>
+<span class="sd">        reaction - str specification to name the reaction</span>
+<span class="sd">        ktools_yml_path - path to ktools YAML input</span>
+
+<span class="sd">        format of data_dict should be like this:</span>
+<span class="sd">        data_dict = {&quot;reactant&quot;: {&quot;path&quot;: , &quot;E&quot;}}</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">tst_obj</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="kc">None</span><span class="p">,</span> <span class="n">reaction</span><span class="p">,</span> <span class="n">ktools_yml_path</span><span class="p">)</span>
+        <span class="c1"># Convert all paths to absolute ones</span>
+        <span class="n">tst_obj</span><span class="o">.</span><span class="n">logs</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data_dict</span><span class="p">:</span>
+            <span class="n">tst_obj</span><span class="o">.</span><span class="n">logs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span>
+                <span class="n">data_dict</span><span class="p">[</span><span class="n">key</span><span class="p">][</span><span class="s2">&quot;path&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+        <span class="n">tst_obj</span><span class="o">.</span><span class="n">data</span> <span class="o">=</span> <span class="n">data_dict</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="c1"># Initialize ktools settings</span>
+        <span class="n">tst_obj</span><span class="o">.</span><span class="n">init_ktools</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">tst_obj</span></div>
+
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">calc_root</span><span class="p">,</span> <span class="n">reaction</span><span class="p">,</span> <span class="n">ktools_yml_path</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Init method for Ktools calculation</span>
+<span class="sd">        Depending on the type of calculation - either TST or VTST -</span>
+<span class="sd">        serialize the Ktools instance with those specific methods.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Dictionary for holding all of the paths</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">paths</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="c1"># Dictionary for holding all of the template strings</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">temps</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set up paths management</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Path to notebook directory</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;nb&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+        <span class="c1"># Path to multiwell templates</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;mw_temp&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;nb&quot;</span><span class="p">],</span>
+            <span class="s2">&quot;multiwell&quot;</span>
+            <span class="p">)</span>
+        <span class="c1"># Path to the calculation root. Only used for VTST</span>
+        <span class="k">if</span> <span class="n">calc_root</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;calc_root&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">calc_root</span><span class="p">)</span>
+        <span class="c1"># If output folder is not present, make it</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="s2">&quot;ktools-vtst&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s2">&quot;ktools-vtst&quot;</span><span class="p">)</span>
+        <span class="c1"># output_path is where the ktools logs will be stored</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="s2">&quot;ktools-vtst&quot;</span><span class="p">,</span> <span class="n">reaction</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">])</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">])</span>
+        <span class="c1"># Convert all paths into absolute paths</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">value</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="n">key</span><span class="p">])</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Read in ktools settings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span> <span class="o">=</span> <span class="n">read_yaml</span><span class="p">(</span><span class="n">ktools_yml_path</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">key</span> <span class="o">+</span> <span class="s2">&quot;:</span><span class="se">\t\t</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Reading in the string templates</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Found the following templates:&quot;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">temp_path</span> <span class="ow">in</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;mw_temp&quot;</span><span class="p">],</span> <span class="s2">&quot;*.temp&quot;</span><span class="p">)):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">temp_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">temps</span><span class="p">[</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">temp_path</span><span class="p">)]</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">()</span>
+                <span class="nb">print</span><span class="p">(</span><span class="n">temp_path</span><span class="p">)</span>
+
+<div class="viewcode-block" id="Vtst.init_ktools"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.init_ktools">[docs]</a>    <span class="k">def</span> <span class="nf">init_ktools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># sort the list of calculations</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;NT&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Tlist&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Tlist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">T</span><span class="p">)</span> <span class="k">for</span> <span class="n">T</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Tlist&quot;</span><span class="p">]]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Tlist&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Tlist&quot;</span><span class="p">])</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Nreact&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;Nprod&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot;1&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;NTS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">2</span></div>
+
+<div class="viewcode-block" id="Vtst.analyze_tst"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.analyze_tst">[docs]</a>    <span class="k">def</span> <span class="nf">analyze_tst</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Analysis function for transition state RRKM</span>
+<span class="sd">        More or less the same as the VTST version, but simpler</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">])</span>
+        <span class="n">mol_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">species</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">:</span>
+            <span class="n">sym_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logs</span><span class="p">[</span><span class="n">species</span><span class="p">])</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">symlink</span><span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">logs</span><span class="p">[</span><span class="n">species</span><span class="p">],</span>
+                    <span class="n">sym_path</span>
+                    <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="c1"># Parse log file</span>
+            <span class="n">parsed_data</span> <span class="o">=</span> <span class="n">parsers</span><span class="o">.</span><span class="n">parse_cfour</span><span class="p">(</span><span class="n">sym_path</span><span class="p">)</span>
+            <span class="c1"># Series of if cases to determine what the formatting</span>
+            <span class="c1"># should be</span>
+            <span class="k">if</span> <span class="n">species</span> <span class="o">==</span> <span class="s2">&quot;reactant&quot;</span><span class="p">:</span>
+                <span class="n">species_type</span> <span class="o">=</span> <span class="s2">&quot;reac&quot;</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Reactant&quot;</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="k">elif</span> <span class="n">species</span> <span class="o">==</span> <span class="s2">&quot;product&quot;</span><span class="p">:</span>
+                <span class="n">species_type</span> <span class="o">=</span> <span class="s2">&quot;prod&quot;</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Product&quot;</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="mf">2.</span>
+            <span class="k">elif</span> <span class="n">species</span> <span class="o">==</span> <span class="s2">&quot;ts&quot;</span><span class="p">:</span>
+                <span class="n">species_type</span> <span class="o">=</span> <span class="s2">&quot;ctst&quot;</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;TS&quot;</span>
+                <span class="n">dist</span> <span class="o">=</span> <span class="mf">1.</span>
+            <span class="c1"># Create a species object with all its associated</span>
+            <span class="c1"># parameters</span>
+            <span class="n">current_species</span> <span class="o">=</span> <span class="n">Species</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">temps</span><span class="p">[</span><span class="s2">&quot;mominert.temp&quot;</span><span class="p">],</span>
+                <span class="n">name</span><span class="p">,</span>
+                <span class="n">parsed_data</span><span class="p">,</span>
+                <span class="n">species_type</span><span class="p">,</span>
+                <span class="n">dist</span><span class="p">,</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">data</span><span class="p">[</span><span class="n">species</span><span class="p">][</span><span class="s2">&quot;E&quot;</span><span class="p">]</span>
+                <span class="p">)</span>
+            <span class="n">mol_str</span> <span class="o">+=</span> <span class="n">current_species</span><span class="o">.</span><span class="n">format_species</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;molecules&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mol_str</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dump_ktools</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Dumped ktools input file to disk&quot;</span><span class="p">)</span>
+        <span class="n">output</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_ktools</span><span class="p">(</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">],</span> <span class="s2">&quot;ktools.inp&quot;</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;nb&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">output</span><span class="p">,</span> <span class="n">error</span></div>
+
+<div class="viewcode-block" id="Vtst.analyze_vtst"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.analyze_vtst">[docs]</a>    <span class="k">def</span> <span class="nf">analyze_vtst</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot; Main analysis function</span>
+<span class="sd">        Loops over all of the log files detected in __init__ and</span>
+<span class="sd">        produces ktools input file format strings</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">])</span>
+        <span class="n">mol_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">end_step</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;stepsize&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;steps&quot;</span><span class="p">]</span>
+        <span class="n">irc_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">end_step</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;stepsize&quot;</span><span class="p">])</span>
+        <span class="n">steps</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="n">energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="c1"># Loop over the log files and generate Species objects</span>
+        <span class="k">for</span> <span class="n">index</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logs</span><span class="p">)):</span>
+            <span class="c1"># Create symlinks to the logfile</span>
+            <span class="n">log_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;calc_root&quot;</span><span class="p">],</span>
+                <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;/freq&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;.log&quot;</span>
+                <span class="p">)</span>
+            <span class="n">sym_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">log_path</span><span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">os</span><span class="o">.</span><span class="n">symlink</span><span class="p">(</span>
+                    <span class="n">log_path</span><span class="p">,</span>
+                    <span class="n">sym_path</span>
+                    <span class="p">)</span>
+            <span class="k">except</span> <span class="ne">FileExistsError</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="c1"># Parse the log file</span>
+            <span class="n">parsed_data</span> <span class="o">=</span> <span class="n">parsers</span><span class="o">.</span><span class="n">parse_cfour</span><span class="p">(</span><span class="n">sym_path</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Step &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span><span class="p">))</span>
+            <span class="c1"># First step is always global minimum</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">species_type</span> <span class="o">=</span> <span class="s2">&quot;reac&quot;</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Reactant&quot;</span>
+                <span class="n">E0</span> <span class="o">=</span> <span class="n">parsed_data</span><span class="p">[</span><span class="s2">&quot;total energy&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">parsed_data</span><span class="p">[</span><span class="s2">&quot;zpe&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mf">2625.50</span>
+                <span class="n">E</span> <span class="o">=</span> <span class="mf">0.</span>
+            <span class="c1"># If it&#39;s the last species, treat as products</span>
+            <span class="k">elif</span> <span class="n">index</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logs</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">species_type</span> <span class="o">=</span> <span class="s2">&quot;prod&quot;</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;Product&quot;</span>
+                <span class="n">current_E</span> <span class="o">=</span> <span class="n">parsed_data</span><span class="p">[</span><span class="s2">&quot;total energy&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">parsed_data</span><span class="p">[</span><span class="s2">&quot;zpe&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mf">2625.5</span>
+                <span class="n">E</span> <span class="o">=</span> <span class="p">(</span><span class="n">current_E</span> <span class="o">-</span> <span class="n">E0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2625.50</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="c1"># Everything else is trial TS</span>
+                <span class="n">species_type</span> <span class="o">=</span> <span class="s2">&quot;ctst&quot;</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;TS-&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span>
+                <span class="n">current_E</span> <span class="o">=</span> <span class="n">parsed_data</span><span class="p">[</span><span class="s2">&quot;total energy&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">parsed_data</span><span class="p">[</span><span class="s2">&quot;zpe&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="mf">2625.5</span>
+                <span class="n">E</span> <span class="o">=</span> <span class="p">(</span><span class="n">current_E</span> <span class="o">-</span> <span class="n">E0</span><span class="p">)</span> <span class="o">*</span> <span class="mf">2625.50</span>
+            <span class="n">dist</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">irc_values</span><span class="p">[</span><span class="n">index</span><span class="p">],</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">2</span><span class="p">)</span>
+            <span class="n">E</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">E</span><span class="p">,</span> <span class="n">decimals</span><span class="o">=</span><span class="mi">3</span><span class="p">)</span>
+            <span class="n">current_species</span> <span class="o">=</span> <span class="n">Species</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">temps</span><span class="p">[</span><span class="s2">&quot;mominert.temp&quot;</span><span class="p">],</span>
+                <span class="n">name</span><span class="p">,</span>
+                <span class="n">parsed_data</span><span class="p">,</span>
+                <span class="n">species_type</span><span class="p">,</span>
+                <span class="n">dist</span><span class="p">,</span>
+                <span class="n">E</span>
+                <span class="p">)</span>
+            <span class="n">mol_str</span> <span class="o">+=</span> <span class="n">current_species</span><span class="o">.</span><span class="n">format_species</span><span class="p">()</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="n">steps</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">dist</span><span class="p">)</span>
+            <span class="n">energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">E</span><span class="p">)</span>
+        <span class="c1"># Add the complete molecule specification</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">[</span><span class="s2">&quot;molecules&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">mol_str</span>
+        <span class="c1"># Write the ktools file to disk</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dump_ktools</span><span class="p">()</span>
+        <span class="c1">#print(&quot;Calling ktools executable&quot;)</span>
+        <span class="c1">#output, error =self.call_ktools(</span>
+        <span class="c1">#    os.path.join(self.paths[&quot;output&quot;], &quot;ktools.inp&quot;)</span>
+        <span class="c1">#    )</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">chdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;nb&quot;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">steps</span><span class="p">,</span> <span class="n">energies</span></div>
+
+<div class="viewcode-block" id="Vtst.dump_ktools"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.dump_ktools">[docs]</a>    <span class="k">def</span> <span class="nf">dump_ktools</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Method for writing the ktools input file to disk</span>
+        <span class="c1"># Open file and write ktools input</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">paths</span><span class="p">[</span><span class="s2">&quot;output&quot;</span><span class="p">],</span> <span class="s2">&quot;ktools.inp&quot;</span><span class="p">),</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
+            <span class="n">write_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">temps</span><span class="p">[</span><span class="s2">&quot;ktools.temp&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">ktools</span><span class="p">)</span>
+                <span class="p">)</span></div>
+
+<div class="viewcode-block" id="Vtst.call_ktools"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Vtst.call_ktools">[docs]</a>    <span class="k">def</span> <span class="nf">call_ktools</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">inp_path</span><span class="p">):</span>
+        <span class="c1"># wrapper for ktools executable</span>
+        <span class="k">with</span> <span class="n">Popen</span><span class="p">([</span><span class="s2">&quot;ktools&quot;</span><span class="p">,</span> <span class="n">inp_path</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">PIPE</span><span class="p">)</span> <span class="k">as</span> <span class="n">ktools_exe</span><span class="p">:</span>
+            <span class="n">output</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">ktools_exe</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">output</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span><span class="p">,</span> <span class="n">error</span></div></div>
+
+
+<div class="viewcode-block" id="Species"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species">[docs]</a><span class="k">class</span> <span class="nc">Species</span><span class="p">:</span>
+    <span class="c1"># Class that handles an individual species in a ktools calculation</span>
+    <span class="c1"># The required input are:</span>
+    <span class="c1"># name: string representing name of molecule</span>
+    <span class="c1"># log_path: string path to CFOUR calculation output</span>
+    <span class="c1"># species_type: string designation to denote reactant, TS, product</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mominert_str</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">parsed_data</span><span class="p">,</span> <span class="n">species_type</span><span class="p">,</span> <span class="n">dist</span><span class="p">,</span> <span class="n">delh</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mom_temp_str</span> <span class="o">=</span> <span class="n">mominert_str</span>
+        <span class="c1">#self.logger = init_logger(ktools_path + &quot;/&quot; + name + &quot;-ktools.log&quot;)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">cfour_calc</span> <span class="o">=</span> <span class="n">parsed_data</span>
+        <span class="c1"># Format parameters for mominert calculation</span>
+        <span class="n">geom_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="c1"># atom_counter required because dummy atoms exist</span>
+        <span class="n">atom_counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">atom</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfour_calc</span><span class="p">[</span><span class="s2">&quot;coordinates&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">atom</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;X&quot;</span><span class="p">:</span>
+                <span class="n">atom_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="c1"># Insert atom index into list</span>
+                <span class="n">atom</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">atom_counter</span><span class="p">)</span>
+                <span class="c1"># Convert float values for coordinates to string</span>
+                <span class="n">atom</span> <span class="o">=</span> <span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">atom</span><span class="p">]</span>
+                <span class="c1"># Flatten list to string</span>
+                <span class="n">atom_coords</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">atom</span><span class="p">)</span>
+                <span class="c1"># Only take real atoms</span>
+                <span class="n">geom_str</span> <span class="o">+=</span> <span class="n">atom_coords</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span>
+            <span class="c1"># Convert float values for coordinates to string</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">=</span> <span class="n">name</span> <span class="o">+</span> <span class="s2">&quot;-coords&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mom_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;title&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;natoms&quot;</span><span class="p">:</span> <span class="n">atom_counter</span><span class="p">,</span>
+            <span class="s2">&quot;geometry&quot;</span><span class="p">:</span> <span class="n">geom_str</span>
+        <span class="p">}</span>
+        <span class="c1"># Calculate moments of inertia</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">inertia</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">rotcon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calc_mominert</span><span class="p">()</span>
+        <span class="c1"># Determine number of rotational degrees of freedom</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inertia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">nrot</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="c1"># For all non-linear molecules, we&#39;ll have j and krotors</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">nrot</span> <span class="o">=</span> <span class="mi">2</span>
+        <span class="c1"># Set up dictionary for formatting ktools input</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">species_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;type&quot;</span><span class="p">:</span> <span class="n">species_type</span><span class="p">,</span>
+            <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+            <span class="s2">&quot;delh&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">delh</span><span class="p">),</span>
+            <span class="s2">&quot;dist&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">dist</span><span class="p">),</span>
+            <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_formula</span><span class="p">(),</span>
+            <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="s2">&quot;-&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">([</span><span class="n">name</span><span class="p">,</span> <span class="n">species_type</span><span class="p">,</span> <span class="s2">&quot;r&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">dist</span><span class="p">)]),</span>
+            <span class="s2">&quot;dof&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfour_calc</span><span class="p">[</span><span class="s2">&quot;frequencies&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="n">nrot</span><span class="p">),</span>
+            <span class="s2">&quot;Eelev&quot;</span><span class="p">:</span> <span class="s2">&quot;0.0&quot;</span><span class="p">,</span>
+            <span class="s2">&quot;gele&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfour_calc</span><span class="p">[</span><span class="s2">&quot;multiplicity&quot;</span><span class="p">]),</span>
+            <span class="s2">&quot;modes&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">format_dof</span><span class="p">()</span>
+            <span class="p">}</span>
+
+<div class="viewcode-block" id="Species.calc_mominert"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species.calc_mominert">[docs]</a>    <span class="k">def</span> <span class="nf">calc_mominert</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Write the mominert input to disk and run mominert</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;.dat&quot;</span><span class="p">,</span> <span class="s2">&quot;w+&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">write_file</span><span class="p">:</span>
+            <span class="n">write_file</span><span class="o">.</span><span class="n">write</span><span class="p">(</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">mom_temp_str</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">mom_dict</span><span class="p">)</span>
+                <span class="p">)</span>
+        <span class="n">inertia</span><span class="p">,</span> <span class="n">rotcon</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">call_mominert</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">inertia</span><span class="p">,</span> <span class="n">rotcon</span></div>
+
+<div class="viewcode-block" id="Species.call_mominert"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species.call_mominert">[docs]</a>    <span class="k">def</span> <span class="nf">call_mominert</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Function that will call mominert to calculate moments of</span>
+        <span class="c1"># inertia and parse the output</span>
+        <span class="k">with</span> <span class="n">Popen</span><span class="p">([</span><span class="s2">&quot;mominert&quot;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;.dat&quot;</span><span class="p">],</span> <span class="n">stdout</span><span class="o">=</span><span class="n">PIPE</span><span class="p">)</span> <span class="k">as</span> <span class="n">mominert</span><span class="p">:</span>
+            <span class="n">output</span><span class="p">,</span> <span class="n">error</span> <span class="o">=</span> <span class="n">mominert</span><span class="o">.</span><span class="n">communicate</span><span class="p">()</span>
+        <span class="n">log_file</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">path</span> <span class="o">+</span> <span class="s2">&quot;.out&quot;</span>
+        <span class="c1"># Parse the output of mominert</span>
+        <span class="n">inertia</span><span class="p">,</span> <span class="n">rotcon</span> <span class="o">=</span> <span class="n">parse_mominert</span><span class="p">(</span><span class="n">log_file</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">inertia</span><span class="p">,</span> <span class="n">rotcon</span></div>
+
+<div class="viewcode-block" id="Species.determine_rot"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species.determine_rot">[docs]</a>    <span class="k">def</span> <span class="nf">determine_rot</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mode_num</span><span class="p">):</span>
+        <span class="c1"># Function to determine what kind of model to treat rotation based</span>
+        <span class="c1"># on the output of mominert</span>
+        <span class="c1"># Only input is the mode number; make it the last mode</span>
+        <span class="c1"># Format string for ktools</span>
+        <span class="n">rot_str</span> <span class="o">=</span> <span class="s2">&quot;</span><span class="si">{mode}</span><span class="s2"> </span><span class="si">{flag}</span><span class="s2"> </span><span class="si">{AAA}</span><span class="s2"> </span><span class="si">{BBB}</span><span class="s2"> </span><span class="si">{CCC}</span><span class="s2">&quot;</span>
+        <span class="n">full_rot</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="c1"># Linear molecule case</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">inertia</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+            <span class="n">jrotor</span> <span class="o">=</span> <span class="n">rot_str</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span>
+                    <span class="p">{</span>
+                    <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode_num</span><span class="p">),</span>
+                    <span class="s2">&quot;flag&quot;</span><span class="p">:</span> <span class="s2">&quot;jro&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;AAA&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inertia</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]),</span>
+                    <span class="s2">&quot;BBB&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                    <span class="s2">&quot;CCC&quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>                <span class="c1"># 2-fold degenerate</span>
+                    <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="n">full_rot</span> <span class="o">=</span> <span class="n">jrotor</span>
+        <span class="c1"># Asymmetric rotor</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">krotor</span> <span class="o">=</span> <span class="n">rot_str</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span>
+                <span class="p">{</span>
+                <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode_num</span><span class="p">),</span>
+                <span class="s2">&quot;flag&quot;</span><span class="p">:</span> <span class="s2">&quot;kro&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;AAA&quot;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">inertia</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>    <span class="c1"># Depends on A</span>
+                <span class="s2">&quot;BBB&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;CCC&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>                <span class="c1"># 1-fold degenerate</span>
+                <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="n">jrotor</span> <span class="o">=</span> <span class="n">rot_str</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span>
+                <span class="p">{</span>
+                <span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">mode_num</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span>
+                <span class="s2">&quot;flag&quot;</span><span class="p">:</span> <span class="s2">&quot;jro&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;AAA&quot;</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">average</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">inertia</span><span class="p">[</span><span class="mi">1</span><span class="p">:]),</span>
+                <span class="s2">&quot;BBB&quot;</span><span class="p">:</span> <span class="s2">&quot;1&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;CCC&quot;</span><span class="p">:</span> <span class="s2">&quot;2&quot;</span><span class="p">,</span>                <span class="c1"># 2-fold degenerate</span>
+                <span class="p">}</span>
+                <span class="p">)</span>
+            <span class="n">full_rot</span> <span class="o">=</span> <span class="n">krotor</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span> <span class="o">+</span> <span class="n">jrotor</span>
+        <span class="k">return</span> <span class="n">full_rot</span></div>
+
+<div class="viewcode-block" id="Species.get_formula"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species.get_formula">[docs]</a>    <span class="k">def</span> <span class="nf">get_formula</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Function for determining chemical formula very roughly</span>
+        <span class="n">formula_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">cfour_calc</span><span class="p">[</span><span class="s2">&quot;coordinates&quot;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;X&quot;</span><span class="p">:</span>
+                <span class="n">formula_str</span> <span class="o">+=</span> <span class="n">line</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">formula_str</span></div>
+
+<div class="viewcode-block" id="Species.format_dof"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species.format_dof">[docs]</a>    <span class="k">def</span> <span class="nf">format_dof</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Function for formatting the internal degrees of freedom for this</span>
+        <span class="c1"># species</span>
+        <span class="n">template_str</span> <span class="o">=</span> <span class="s1">&#39;&#39;&#39;</span><span class="si">{mode}</span><span class="s1"> vib </span><span class="si">{frequency}</span><span class="s1"> 0 1</span><span class="se">\n</span><span class="s1">&#39;&#39;&#39;</span>
+        <span class="n">freq_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+        <span class="n">counter</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">frequency</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">cfour_calc</span><span class="p">[</span><span class="s2">&quot;frequencies&quot;</span><span class="p">]):</span>
+            <span class="n">freq_str</span> <span class="o">+=</span> <span class="n">template_str</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span>
+                <span class="p">{</span><span class="s2">&quot;mode&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">),</span> <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="nb">str</span><span class="p">(</span><span class="n">frequency</span><span class="p">)}</span>
+                <span class="p">)</span>
+            <span class="n">counter</span> <span class="o">=</span> <span class="n">index</span>
+        <span class="c1"># Tack on the rotational term</span>
+        <span class="n">freq_str</span> <span class="o">+=</span> <span class="bp">self</span><span class="o">.</span><span class="n">determine_rot</span><span class="p">(</span><span class="n">counter</span> <span class="o">+</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">freq_str</span></div>
+
+<div class="viewcode-block" id="Species.format_species"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.Species.format_species">[docs]</a>    <span class="k">def</span> <span class="nf">format_species</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="c1"># Master function for yielding a complete specification for ktools</span>
+        <span class="c1"># input</span>
+        <span class="n">temp_string</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="si">{type}</span><span class="s2"> </span><span class="si">{name}</span><span class="s2"> </span><span class="si">{delh}</span><span class="s2"> </span><span class="si">{dist}</span><span class="s2"></span>
+<span class="si">{formula}</span><span class="s2"></span>
+<span class="s2">1. </span><span class="si">{comment}</span><span class="s2"></span>
+<span class="s2">2.</span>
+<span class="s2">3.</span>
+<span class="s2">1 1 1</span>
+<span class="si">{Eelev}</span><span class="s2"> </span><span class="si">{gele}</span><span class="s2"></span>
+<span class="si">{dof}</span><span class="s2"> har amua</span>
+<span class="si">{modes}</span><span class="s2"></span>
+<span class="s2">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">temp_string</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">species_dict</span><span class="p">)</span></div></div>
+
+
+
+<div class="viewcode-block" id="init_logger"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.init_logger">[docs]</a><span class="k">def</span> <span class="nf">init_logger</span><span class="p">(</span><span class="n">log_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Use `logging` module to provide debug data for HEAT analysis.</span>
+<span class="sd">    All of the extraneous data (e.g. extraplation coefficients, etc)</span>
+<span class="sd">    will be output with the logger.</span>
+
+<span class="sd">    Required input is the name of the log file including file extension.</span>
+<span class="sd">    Returns a logger object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">log_name</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="n">fh</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">&quot;logs/&quot;</span> <span class="o">+</span> <span class="n">log_name</span><span class="p">)</span>
+    <span class="n">fh</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="c1"># Set up the formatter</span>
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+        <span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span>
+        <span class="p">)</span>
+    <span class="n">fh</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">logger</span></div>
+
+<span class="sd">&quot;&quot;&quot; </span>
+<span class="sd">    Data parsing from the Multiwell programs</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="parse_mominert"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.parse_mominert">[docs]</a><span class="k">def</span> <span class="nf">parse_mominert</span><span class="p">(</span><span class="n">momout_path</span><span class="p">):</span>
+    <span class="c1"># Function to parse the output of a mominert calculation</span>
+    <span class="c1"># Ordering of the values are A, B, C</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">momout_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">lines</span><span class="p">:</span>
+        <span class="c1"># Read in the moments of inertia in units of amu ang**2</span>
+        <span class="k">if</span> <span class="s2">&quot;amu&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">split_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">inertia</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+                <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+                <span class="p">]</span>
+        <span class="c1"># Read in rotational constants in MHz</span>
+        <span class="k">if</span> <span class="s2">&quot;GHz&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">split_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="k">if</span> <span class="s2">&quot;Infinity&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="c1"># If molecule is linear, Ia is 0 and we will not</span>
+                <span class="c1"># parse infinity!</span>
+                <span class="n">rotcon</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="mf">0.</span><span class="p">,</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">8</span><span class="p">]),</span>
+                    <span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">rotcon</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">2</span><span class="p">]),</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">5</span><span class="p">]),</span>
+                    <span class="nb">float</span><span class="p">(</span><span class="n">split_line</span><span class="p">[</span><span class="mi">8</span><span class="p">])</span>
+                    <span class="p">]</span>
+    <span class="c1"># Make sure ordering of values are descending</span>
+    <span class="c1"># Rotational constants are sorted in descending order, while</span>
+    <span class="c1"># the moments of inertia are reversed!</span>
+    <span class="n">inertia</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">inertia</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+    <span class="n">rotcon</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">rotcon</span><span class="p">,</span> <span class="n">reverse</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">inertia</span><span class="p">,</span> <span class="n">rotcon</span></div>
+
+
+<div class="viewcode-block" id="parse_ktools"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.parse_ktools">[docs]</a><span class="k">def</span> <span class="nf">parse_ktools</span><span class="p">(</span><span class="n">ktoolslog_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; ktools_path corresponds to the logfile for the ktools</span>
+<span class="sd">    calculation.</span>
+
+<span class="sd">    The routine will parse canonical rate constants from the</span>
+<span class="sd">    file with extension .canonical, and J-resolved microcanonical</span>
+<span class="sd">    constants from .kej</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get the directory where the log files exist</span>
+    <span class="n">basedir</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">dirname</span><span class="p">(</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">abspath</span><span class="p">(</span><span class="n">ktoolslog_path</span><span class="p">)</span>
+        <span class="p">)</span>
+    <span class="n">filedict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">extension</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;*.canonical&quot;</span><span class="p">,</span> <span class="s2">&quot;*.kej&quot;</span><span class="p">]:</span>
+        <span class="n">target</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">basedir</span><span class="p">,</span> <span class="n">extension</span><span class="p">)</span>
+        <span class="n">filedict</span><span class="p">[</span><span class="n">extension</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]]</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">target</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">analysis_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="c1"># loop over the list of files now</span>
+    <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">path</span> <span class="ow">in</span> <span class="n">filedict</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+            <span class="c1"># Determine which parser to use</span>
+            <span class="k">if</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;canonical&quot;</span><span class="p">:</span>
+                <span class="n">func</span> <span class="o">=</span> <span class="n">parse_canonical</span>
+            <span class="k">elif</span> <span class="n">name</span> <span class="o">==</span> <span class="s2">&quot;kej&quot;</span><span class="p">:</span>
+                <span class="n">func</span> <span class="o">=</span> <span class="n">parse_kej</span>
+            <span class="n">analysis_dict</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">func</span><span class="p">(</span><span class="n">read_file</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="parse_canonical"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.parse_canonical">[docs]</a><span class="k">def</span> <span class="nf">parse_canonical</span><span class="p">(</span><span class="n">filecontents</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to parse data out of a .canonical file from ktools</span>
+<span class="sd">    Returns a dataframe containing the recommended thermal rate constants</span>
+<span class="sd">    along with the temperature and inverse temperature.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">read_flag</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">read</span> <span class="o">=</span> <span class="kc">False</span>
+    <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">filecontents</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">read_flag</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="k">if</span> <span class="s2">&quot;------&quot;</span> <span class="ow">in</span> <span class="n">line</span> <span class="ow">and</span> <span class="n">read</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">read</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">if</span> <span class="n">read</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="n">read_out</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">1</span><span class="p">:]:</span>
+                    <span class="c1"># Try and convert values to flots</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">read_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float</span><span class="p">(</span><span class="n">value</span><span class="p">))</span>
+                    <span class="c1"># This will fail for extremely small numbers</span>
+                    <span class="c1"># where the ktools output screws up the formatting</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="n">read_out</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.</span><span class="p">)</span>
+                <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">read_out</span><span class="p">))</span>
+            <span class="k">if</span> <span class="s2">&quot;------&quot;</span> <span class="ow">in</span> <span class="n">line</span> <span class="ow">and</span> <span class="n">read</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">read</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="s2">&quot;FINAL RECOMMENDED REACTION RATE&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">read_flag</span> <span class="o">=</span> <span class="kc">True</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">,</span> <span class="s2">&quot;k(forward)&quot;</span><span class="p">,</span> <span class="s2">&quot;k(reverse)&quot;</span><span class="p">,</span> <span class="s2">&quot;Keq&quot;</span><span class="p">])</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;1000 / T&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1000.</span> <span class="o">/</span> <span class="n">df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Rate analysis routines</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="mod_arrhenius"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.mod_arrhenius">[docs]</a><span class="k">def</span> <span class="nf">mod_arrhenius</span><span class="p">(</span><span class="n">T</span><span class="p">,</span> <span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">,</span> <span class="n">g</span><span class="p">):</span>
+    <span class="c1"># Modified Arrhenius equation from Wakelam 2010</span>
+    <span class="k">return</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span class="n">T</span> <span class="o">/</span> <span class="mf">300.</span><span class="p">)</span><span class="o">**</span><span class="n">b</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">g</span> <span class="o">/</span> <span class="n">T</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fit_arrhenius"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.fit_arrhenius">[docs]</a><span class="k">def</span> <span class="nf">fit_arrhenius</span><span class="p">(</span><span class="n">canonical_df</span><span class="p">,</span> <span class="n">guess</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to fit a modified Arrhenius rate model to</span>
+<span class="sd">    a dataframe containing canonical rates extracted from</span>
+<span class="sd">    the parse_canonical routine</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Some random initial parameters</span>
+    <span class="n">canonical_df</span> <span class="o">=</span> <span class="n">canonical_df</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">guess</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="p">[</span><span class="mf">1e-5</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">1e4</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">p0</span> <span class="o">=</span> <span class="n">guess</span>
+    <span class="n">popt</span><span class="p">,</span> <span class="n">pcov</span> <span class="o">=</span> <span class="n">cf</span><span class="p">(</span>
+            <span class="n">mod_arrhenius</span><span class="p">,</span>
+            <span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span>
+            <span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;k(forward)&quot;</span><span class="p">],</span>
+            <span class="n">p0</span><span class="o">=</span><span class="n">p0</span>
+            <span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;a&quot;</span><span class="p">:</span> <span class="n">popt</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+            <span class="s2">&quot;b&quot;</span><span class="p">:</span> <span class="n">popt</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span>
+            <span class="s2">&quot;g&quot;</span><span class="p">:</span> <span class="n">popt</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+            <span class="p">}</span>
+
+    <span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span>
+            <span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;k(forward)&quot;</span><span class="p">],</span>
+            <span class="n">lw</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Data&quot;</span>
+            <span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span>
+            <span class="n">mod_arrhenius</span><span class="p">(</span><span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span> <span class="o">*</span><span class="n">p0</span><span class="p">),</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+            <span class="n">alpha</span><span class="o">=</span><span class="mf">0.7</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Initial&quot;</span>
+            <span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span>
+            <span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span>
+            <span class="n">mod_arrhenius</span><span class="p">(</span><span class="n">canonical_df</span><span class="p">[</span><span class="s2">&quot;T&quot;</span><span class="p">],</span> <span class="o">**</span><span class="n">results</span><span class="p">),</span>
+            <span class="n">linestyle</span><span class="o">=</span><span class="s2">&quot;--&quot;</span><span class="p">,</span>
+            <span class="n">label</span><span class="o">=</span><span class="s2">&quot;Fit&quot;</span>
+            <span class="p">)</span>
+
+    <span class="n">ax</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_yscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">)</span>
+    <span class="n">ax</span><span class="o">.</span><span class="n">set_xscale</span><span class="p">(</span><span class="s2">&quot;log&quot;</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="format_multiwell"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.multiwell.format_multiwell">[docs]</a><span class="k">def</span> <span class="nf">format_multiwell</span><span class="p">(</span><span class="n">molecule</span><span class="p">,</span> <span class="n">state</span><span class="o">=</span><span class="s2">&quot;reac&quot;</span><span class="p">,</span> <span class="n">comment</span><span class="o">=</span><span class="s2">&quot;&quot;</span><span class="p">,</span> <span class="n">delh</span><span class="o">=</span><span class="mf">0.</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert the output of an electronic structure program into the form</span>
+<span class="sd">    used for a lot of the Multiwell programs; specifically for `thermo`.</span>
+
+<span class="sd">    Takes the parsed output as a dictionary, and the user can specify</span>
+<span class="sd">    what state the structure is (e.g. reac, ctst, or prod).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    molecule: dict</span>
+<span class="sd">        Dictionary containing parsed output from electronic structure programs.</span>
+<span class="sd">        The format is that generated by the CalculationResult class.</span>
+<span class="sd">    state: str, optional</span>
+<span class="sd">        Specify which part of the reaction this structure is.</span>
+<span class="sd">    comment: str, optional</span>
+<span class="sd">        Comment line for the structure</span>
+<span class="sd">    delh: float, optional</span>
+<span class="sd">        The 0 K heat of formation, or relative energy of this point in the units</span>
+<span class="sd">        specified in the multiwell input file (usually kJ/mol)</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    mw_str: str</span>
+<span class="sd">        String containing the formatted output</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">mw_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span><span class="si">{state}</span><span class="s2"> </span><span class="si">{name}</span><span class="s2"> </span><span class="si">{delh}</span><span class="s2"></span>
+<span class="si">{formula}</span><span class="s2"></span>
+<span class="s2">! </span><span class="si">{comment}</span><span class="s2"></span>
+<span class="s2">!</span>
+<span class="s2">!</span>
+<span class="s2">1 1 1</span>
+<span class="s2">0. </span><span class="si">{multi}</span><span class="s2"></span>
+<span class="si">{ndof}</span><span class="s2"> &#39;HAR&#39; &#39;MHZ&#39;</span>
+<span class="si">{vibrot}</span><span class="s2"></span>
+<span class="s2">    &quot;&quot;&quot;</span>
+    <span class="n">vibrot</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1"># Round the frequencies to the nearest wavenumber</span>
+    <span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;harm_freq&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;harm_freq&quot;</span><span class="p">],</span> <span class="mi">0</span><span class="p">))[::</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">ndof</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;harm_freq&quot;</span><span class="p">])</span> <span class="o">+</span> <span class="mi">2</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">freq</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;harm_freq&quot;</span><span class="p">]):</span>
+        <span class="n">vibrot</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{:d}</span><span class="s2"> vib </span><span class="si">{:.0f}</span><span class="s2"> 0. 1</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">1</span><span class="p">,</span> <span class="n">freq</span><span class="p">)</span>
+    <span class="n">vibrot</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{:d}</span><span class="s2"> qro </span><span class="si">{:.3f}</span><span class="s2"> 1</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">2</span><span class="p">,</span> <span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;A&quot;</span><span class="p">])</span>
+    <span class="n">vibrot</span> <span class="o">+=</span> <span class="s2">&quot;</span><span class="si">{:d}</span><span class="s2"> qro </span><span class="si">{:.3f}</span><span class="s2"> 2</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">index</span> <span class="o">+</span> <span class="mi">3</span><span class="p">,</span> <span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;B&quot;</span><span class="p">])</span>
+    <span class="n">form_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;vibrot&quot;</span><span class="p">:</span> <span class="n">vibrot</span><span class="p">,</span>
+        <span class="s2">&quot;ndof&quot;</span><span class="p">:</span> <span class="n">ndof</span><span class="p">,</span>
+        <span class="s2">&quot;multi&quot;</span><span class="p">:</span> <span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;multi&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;comment&quot;</span><span class="p">:</span> <span class="n">comment</span><span class="p">,</span>
+        <span class="s2">&quot;formula&quot;</span><span class="p">:</span> <span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;formula&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;state&quot;</span><span class="p">:</span> <span class="n">state</span><span class="p">,</span>
+        <span class="s2">&quot;name&quot;</span><span class="p">:</span> <span class="n">molecule</span><span class="p">[</span><span class="s2">&quot;filename&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;delh&quot;</span><span class="p">:</span> <span class="n">delh</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">mw_str</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="o">**</span><span class="n">form_dict</span><span class="p">)</span></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2019, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

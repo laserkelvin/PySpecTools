@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pyspectools.fast package &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyspectools.mmw package" href="pyspectools.mmw.html" />
+    <link rel="prev" title="pyspectools.astro package" href="pyspectools.astro.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">pyspectools.fast package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pyspectools.fast.filters">pyspectools.fast.filters module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.fast.lineshapes">pyspectools.fast.lineshapes module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.fast.routines">pyspectools.fast.routines module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.fast">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+  <li>
+    <a href="pyspectools.astro.html" title="Previous Chapter: pyspectools.astro package"><span class="glyphicon glyphicon-chevron-left visible-sm"></span><span class="hidden-sm hidden-tablet">&laquo; pyspectools.a...</span>
+    </a>
+  </li>
+  <li>
+    <a href="pyspectools.mmw.html" title="Next Chapter: pyspectools.mmw package"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">pyspectools.m... &raquo;</span>
+    </a>
+  </li>
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="_sources/pyspectools.fast.rst.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="section" id="pyspectools-fast-package">
+<h1>pyspectools.fast package<a class="headerlink" href="#pyspectools-fast-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyspectools.fast.filters">
+<span id="pyspectools-fast-filters-module"></span><h2>pyspectools.fast.filters module<a class="headerlink" href="#module-pyspectools.fast.filters" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.fast.filters.gaussian_filter">
+<code class="sig-prename descclassname">pyspectools.fast.filters.</code><code class="sig-name descname">gaussian_filter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.filters.gaussian_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.fast.lineshapes">
+<span id="pyspectools-fast-lineshapes-module"></span><h2>pyspectools.fast.lineshapes module<a class="headerlink" href="#module-pyspectools.fast.lineshapes" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.fast.lineshapes.first_deriv_lorentzian">
+<code class="sig-prename descclassname">pyspectools.fast.lineshapes.</code><code class="sig-name descname">first_deriv_lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.first_deriv_lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of the first derivative lineshape of a Lorenz-
+tian function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Numpy 1D array containing x values to evaluate</p></li>
+<li><p><strong>gamma</strong><strong>, </strong><strong>A</strong> (<em>x0</em><em>,</em>) – Parameters of the first-derivative Lorentzian function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>y</strong> – Numpy 1D array containing y values for the first-derivative</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.fast.lineshapes.gaussian">
+<code class="sig-prename descclassname">pyspectools.fast.lineshapes.</code><code class="sig-name descname">gaussian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of a Gaussian line shape. This function is
+designed to minimize Python interpreter interaction; everything
+except for the x values are C types, which should hopefully make
+it run fast.</p>
+<p>This function holds the advantage of static typing over the NumPy
+implementation in the <cite>pyspectools.lineshapes</cite> module. From rudimentary
+timing tests, the best improvement is seen for arrays &lt;1000 elements,
+from which the NumPy version is faster.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – 1D array containing x values to evaluate</p></li>
+<li><p><strong>A</strong> (<em>float</em>) – Amplitude of the Gaussian function</p></li>
+<li><p><strong>x0</strong> (<em>float</em>) – Center value for the Gaussian function</p></li>
+<li><p><strong>w</strong> (<em>float</em>) – Sigma of the Gaussian function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>y</strong> – Numpy 1D array containing the x values.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.fast.lineshapes.lorentzian">
+<code class="sig-prename descclassname">pyspectools.fast.lineshapes.</code><code class="sig-name descname">lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython function for a Lorenztian distribution. Same as the corres-
+ponding Gaussian implementation, this function is written to minimize
+Python interpreter interaction if possible to optimize for speed.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Numpy 1D array of x values to evaluate on</p></li>
+<li><p><strong>gamma</strong><strong>, </strong><strong>A</strong> (<em>x0</em><em>,</em>) – Parameters for the lorenztian function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>y</strong> – Numpy 1D array with y(x|x0, gamma, A)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.fast.lineshapes.multi_gaussian">
+<code class="sig-prename descclassname">pyspectools.fast.lineshapes.</code><code class="sig-name descname">multi_gaussian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.multi_gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sum of multiple Gaussian distributions written in Cython. This version of the code is written so that
+there should be no overhead associated with NumPy within the loop. The array access is completely within
+a single function, rather than repeatedly calling the <cite>gaussian</cite> function. In theory this should be a
+faster implementation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>array_like</em>) – 1D Numpy array of floats corresponding to the x values to evaluate</p></li>
+<li><p><strong>x0</strong><strong>, </strong><strong>w</strong> (<em>A</em><em>,</em>) – 1D Numpy array of floats corresponding to the amplitudes, centers, and widths of the Gaussians</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>y</strong> – Numpy 1D array of Y(X|A,X0,W)</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>array_like</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.fast.lineshapes.pair_gaussian">
+<code class="sig-prename descclassname">pyspectools.fast.lineshapes.</code><code class="sig-name descname">pair_gaussian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.pair_gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pair Gaussian function.
+:param x: Numpy 1D array of X values to evaluate the pair of Gaussians on
+:type x: array_like
+:param A1, A2: Amplitudes of the two Gaussians
+:type A1, A2: float
+:param x0: Center-of-mass for the two Gaussians
+:type x0: float
+:param w: Width of the two gaussians
+:type w: float
+:param xsep: Separation in units of x that pushes the two Gaussians from the center-of-mass
+:type xsep: float</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns</dt>
+<dd class="field-odd"><p><strong>y</strong> – Numpy 1D array of Y values</p>
+</dd>
+<dt class="field-even">Return type</dt>
+<dd class="field-even"><p>array_like</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.fast.lineshapes.sec_deriv_lorentzian">
+<code class="sig-prename descclassname">pyspectools.fast.lineshapes.</code><code class="sig-name descname">sec_deriv_lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.sec_deriv_lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of the second derivative lineshape of a Lorenz-
+tian function.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>x</strong> (<em>np.ndarray</em>) – Numpy 1D array containing x values to evaluate</p></li>
+<li><p><strong>gamma</strong><strong>, </strong><strong>A</strong> (<em>x0</em><em>,</em>) – Parameters of the first-derivative Lorentzian function</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>y</strong> – Numpy 1D array containing y values for the second-derivative</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.fast.routines">
+<span id="pyspectools-fast-routines-module"></span><h2>pyspectools.fast.routines module<a class="headerlink" href="#module-pyspectools.fast.routines" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.fast.routines.isin_array">
+<code class="sig-prename descclassname">pyspectools.fast.routines.</code><code class="sig-name descname">isin_array</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.routines.isin_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will make piece-by-piece comparisons between two
+arrays, <cite>a</cite> and <cite>b</cite>. Every element in <cite>a</cite> will be checked for in <cite>b</cite>,
+and if there is an entry sufficiently close, it will return a True
+value for that element.</p>
+<p>Conceptually, this function is similar to
+<cite>np.isin()</cite>, although it allows for two different sized arrays. The
+resulting array will be length equal to <cite>a</cite>, while <cite>b</cite> can be
+larger or smaller than <cite>a</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>a</strong> (<em>1D array</em>) – Numpy 1D array to check</p></li>
+<li><p><strong>b</strong> (<em>1D array</em>) – Numpy 1D array to check for</p></li>
+<li><p><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Tolerance for proximity to check.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>check_array</strong> – Numpy 1D array of length equal to <cite>a</cite>, with boolean values corresponding
+to whether element of <cite>a</cite> is in <cite>b</cite>.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>1D array</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.fast">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.fast" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2019, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pyspectools.mmw package &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="pyspectools.models package" href="pyspectools.models.html" />
+    <link rel="prev" title="pyspectools.fast package" href="pyspectools.fast.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">pyspectools.mmw package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pyspectools.mmw.fft_routines">pyspectools.mmw.fft_routines module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.mmw.interpolation">pyspectools.mmw.interpolation module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.mmw.mmw_analysis">pyspectools.mmw.mmw_analysis module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.mmw.plotting_func">pyspectools.mmw.plotting_func module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.mmw">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+  <li>
+    <a href="pyspectools.fast.html" title="Previous Chapter: pyspectools.fast package"><span class="glyphicon glyphicon-chevron-left visible-sm"></span><span class="hidden-sm hidden-tablet">&laquo; pyspectools.f...</span>
+    </a>
+  </li>
+  <li>
+    <a href="pyspectools.models.html" title="Next Chapter: pyspectools.models package"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">pyspectools.m... &raquo;</span>
+    </a>
+  </li>
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="_sources/pyspectools.mmw.rst.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="section" id="pyspectools-mmw-package">
+<h1>pyspectools.mmw package<a class="headerlink" href="#pyspectools-mmw-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyspectools.mmw.fft_routines">
+<span id="pyspectools-mmw-fft-routines-module"></span><h2>pyspectools.mmw.fft_routines module<a class="headerlink" href="#module-pyspectools.mmw.fft_routines" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.mmw.fft_routines.butter_filter">
+<code class="sig-prename descclassname">pyspectools.mmw.fft_routines.</code><code class="sig-name descname">butter_filter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data</span></em>, <em class="sig-param"><span class="n">cutoff</span></em>, <em class="sig-param"><span class="n">fs</span></em>, <em class="sig-param"><span class="n">filter_type</span></em>, <em class="sig-param"><span class="n">order</span><span class="o">=</span><span class="default_value">5</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/fft_routines.html#butter_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.fft_routines.butter_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.fft_routines.fft_filter">
+<code class="sig-prename descclassname">pyspectools.mmw.fft_routines.</code><code class="sig-name descname">fft_filter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ydata</span></em>, <em class="sig-param"><span class="n">window_function</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cutoff</span><span class="o">=</span><span class="default_value">[50, 690]</span></em>, <em class="sig-param"><span class="n">sample_rate</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/fft_routines.html#fft_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.fft_routines.fft_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Fourier filter implementation.</p>
+<p>Takes signal data in the frequency domain, and transforms into the
+time domain where slices are taken off.</p>
+<p>Various window functions can be applied, including stock and custom
+filters that I have implemented. One in particular is the house
+filter, which is considered the “gold standard”.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.fft_routines.gen_butter_filter">
+<code class="sig-prename descclassname">pyspectools.mmw.fft_routines.</code><code class="sig-name descname">gen_butter_filter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cutoff</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em>, <em class="sig-param"><span class="n">filter_type</span></em>, <em class="sig-param"><span class="n">order</span><span class="o">=</span><span class="default_value">5</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/fft_routines.html#gen_butter_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.fft_routines.gen_butter_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>[summary]</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>cutoff</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</p></li>
+<li><p><strong>fs</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</p></li>
+<li><p><strong>filter_type</strong> (<em>[</em><em>type</em><em>]</em>) – [description]</p></li>
+<li><p><strong>order</strong> (<em>int</em><em>, </em><em>optional</em>) – [description], by default 5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[type]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.fft_routines.house_filter">
+<code class="sig-prename descclassname">pyspectools.mmw.fft_routines.</code><code class="sig-name descname">house_filter</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">size</span></em>, <em class="sig-param"><span class="n">low</span></em>, <em class="sig-param"><span class="n">high</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/fft_routines.html#house_filter"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.fft_routines.house_filter" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that returns the “gold standard” filter.</p>
+<p>This window is designed to produce low sidelobes
+for Fourier filters.</p>
+<p>In essence it resembles a sigmoid function that
+smoothly goes between zero and one, from short
+to long time.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.mmw.interpolation">
+<span id="pyspectools-mmw-interpolation-module"></span><h2>pyspectools.mmw.interpolation module<a class="headerlink" href="#module-pyspectools.mmw.interpolation" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.mmw.interpolation.calc_shep_interp">
+<code class="sig-prename descclassname">pyspectools.mmw.interpolation.</code><code class="sig-name descname">calc_shep_interp</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframes</span></em>, <em class="sig-param"><span class="n">xnew</span></em>, <em class="sig-param"><span class="n">col</span><span class="o">=</span><span class="default_value">'Intensity'</span></em>, <em class="sig-param"><span class="n">xrange</span><span class="o">=</span><span class="default_value">10.0</span></em>, <em class="sig-param"><span class="n">p</span><span class="o">=</span><span class="default_value">4.0</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">1.0</span></em>, <em class="sig-param"><span class="n">npoints</span><span class="o">=</span><span class="default_value">15</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/interpolation.html#calc_shep_interp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.interpolation.calc_shep_interp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main function for calculating the Shepard interpolation for
+a given set of existing data, and an array corresponding
+to the new set of x data.</p>
+<p>dataframes - a list comprising pandas DataFrames, containing x/y data with
+column names [“Frequency”, “Intensity”]
+xnew - the new x values to interpolate into. Use np.arange/np.linspace to
+generate.
+xrange - the frequency radius (in units of whatever frequency units are in data)
+to search for neighbours. Also defines the rate at which the neighbourlist is updated.
+p - the decay rate of the inverse distance weighting; should be even values.
+threshold - minimum weight value to be considered in the interpolation
+npoints - the maximum number of data points to use in the interpolation; smaller
+numbers mean crappy interpolation, larger means expensive.</p>
+<p>Returns the new y values</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.interpolation.find_nearest">
+<code class="sig-prename descclassname">pyspectools.mmw.interpolation.</code><code class="sig-name descname">find_nearest</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframes</span></em>, <em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">npoints</span><span class="o">=</span><span class="default_value">5</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/interpolation.html#find_nearest"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.interpolation.find_nearest" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will take a list of dataframes, and
+return slices of the dataframes containing a specified
+number of closest points.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.interpolation.find_nearest_nieu">
+<code class="sig-prename descclassname">pyspectools.mmw.interpolation.</code><code class="sig-name descname">find_nearest_nieu</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframes</span></em>, <em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">xrange</span><span class="o">=</span><span class="default_value">3.0</span></em>, <em class="sig-param"><span class="n">npoints</span><span class="o">=</span><span class="default_value">5</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/interpolation.html#find_nearest_nieu"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.interpolation.find_nearest_nieu" title="Permalink to this definition">¶</a></dt>
+<dd><p>New function that will return only data that is within a
+specified range, and within that the closest values.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.interpolation.idw">
+<code class="sig-prename descclassname">pyspectools.mmw.interpolation.</code><code class="sig-name descname">idw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">xn</span></em>, <em class="sig-param"><span class="n">p</span><span class="o">=</span><span class="default_value">6</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/interpolation.html#idw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.interpolation.idw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Inverse-distance weighting function
+For a given value of x with known data, and the interpolating
+x (xn), return the weighting value.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.interpolation.shep_interp">
+<code class="sig-prename descclassname">pyspectools.mmw.interpolation.</code><code class="sig-name descname">shep_interp</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframes</span></em>, <em class="sig-param"><span class="n">xn</span></em>, <em class="sig-param"><span class="n">col</span><span class="o">=</span><span class="default_value">'Intensity'</span></em>, <em class="sig-param"><span class="n">p</span><span class="o">=</span><span class="default_value">6</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/interpolation.html#shep_interp"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.interpolation.shep_interp" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the Shepard interpolation of a point</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.interpolation.vidw">
+<code class="sig-prename descclassname">pyspectools.mmw.interpolation.</code><code class="sig-name descname">vidw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">xn</span></em>, <em class="sig-param"><span class="n">p</span><span class="o">=</span><span class="default_value">6</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">1.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/interpolation.html#vidw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.interpolation.vidw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Vectorized form of the inverse-distance weighting function</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.mmw.mmw_analysis">
+<span id="pyspectools-mmw-mmw-analysis-module"></span><h2>pyspectools.mmw.mmw_analysis module<a class="headerlink" href="#module-pyspectools.mmw.mmw_analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.batch_interpolate">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">batch_interpolate</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">files</span></em>, <em class="sig-param"><span class="n">datapoints</span><span class="o">=</span><span class="default_value">50000</span></em>, <em class="sig-param"><span class="n">zeeman_on</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">window_function</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pass_filter</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#batch_interpolate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.batch_interpolate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for batch processing multiple scan files, and concetanates them
+together to generate a single, interactive spectrum.</p>
+<p>Takes input argument files as a list of filepaths corresponding to scans
+that are (generally) without Zeeman. The optional argument, zeeman_on,
+is a list of filepaths corresponding to scans with Zeeman on.</p>
+<p>All of the scans will be processed with the same window functions and
+cut offs, so be sure to optimize them before batch processing.</p>
+<p>Returns a dataframe with up to three columns: Zeeman off/on, and off - on.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.batch_plot">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">batch_plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">files</span></em>, <em class="sig-param"><span class="n">window_function</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pass_filter</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#batch_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.batch_plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.batch_shepard">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">batch_shepard</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">files</span></em>, <em class="sig-param"><span class="n">stepsize</span><span class="o">=</span><span class="default_value">0.1</span></em>, <em class="sig-param"><span class="n">xrange</span><span class="o">=</span><span class="default_value">10.0</span></em>, <em class="sig-param"><span class="n">p</span><span class="o">=</span><span class="default_value">4.0</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">0.1</span></em>, <em class="sig-param"><span class="n">npoints</span><span class="o">=</span><span class="default_value">15</span></em>, <em class="sig-param"><span class="n">window_function</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">pass_filter</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#batch_shepard"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.batch_shepard" title="Permalink to this definition">¶</a></dt>
+<dd><p>Routine for performing mass interpolation using Shepard’s interpolation method
+on mmw data. Input is a list of files, and parameters used to interpolate and
+to filter the data.</p>
+<p>Stepsize is given in units of MHz.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.cross_correlate_lorentzian">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">cross_correlate_lorentzian</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">signal</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">25</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#cross_correlate_lorentzian"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.cross_correlate_lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculate the cross-correlation spectrum between an input signal and the
+second derivative lineshape of a Lorentzian function. This is a matched
+filter analysis to extract optimal signal to noise for millimeter-wave
+data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>signal</strong> (<em>np.ndarray</em>) – NumPy 1D array containing the raw signal.</p></li>
+<li><p><strong>window_size</strong> (<em>int</em>) – Size of the window function.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>NumPy 1D array containing the cross-correlation spectrum.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>corr_signal</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.fit_lines">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">fit_lines</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em>, <em class="sig-param"><span class="n">frequencies</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">window_length</span><span class="o">=</span><span class="default_value">10.0</span></em>, <em class="sig-param"><span class="n">ycol</span><span class="o">=</span><span class="default_value">'Field off'</span></em>, <em class="sig-param"><span class="n">off_dataframe</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#fit_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.fit_lines" title="Permalink to this definition">¶</a></dt>
+<dd><p>Wrapper for the fit_chunk function, for when you want to
+try and fit many lines in a catalog.</p>
+<p>The input arguments are the survey dataframe, a list of
+center frequencies you want to try and fit, the name of
+the species. Optional argument is the name of column you
+want to use for the intensities.</p>
+<p>The function will iterate through each center frequency
+and try to fit it.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.fit_spectrum_chunk">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">fit_spectrum_chunk</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span><span class="p">:</span> <span class="n">pandas.core.frame.DataFrame</span></em>, <em class="sig-param"><span class="n">freq_range</span><span class="p">:</span> <span class="n">List<span class="p">[</span>float<span class="p">]</span></span></em>, <em class="sig-param"><span class="n">frequencies</span><span class="p">:</span> <span class="n">numpy.ndarray</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#fit_spectrum_chunk"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.fit_spectrum_chunk" title="Permalink to this definition">¶</a></dt>
+<dd><p>Automates the fitting of multiple frequencies to a single spectrum.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>dataframe</strong> (<em>pd.DataFrame</em>) – Pandas DataFrame containing the millimeter-wave spectrum.</p></li>
+<li><p><strong>freq_range</strong> (<em>2-tuple</em>) – Iterable with two floats, corresponding to the limits of the spectrum
+(in frequency) we want to consider for the fit.</p></li>
+<li><p><strong>frequencies</strong> (<em>np.ndarray</em>) – NumPy 1D array containing center frequencies to fit.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>[description]</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>[type]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.interp_mmw">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">interp_mmw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">files</span></em>, <em class="sig-param"><span class="n">nelements</span><span class="o">=</span><span class="default_value">10000</span></em>, <em class="sig-param"><span class="n">window_function</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">cutoff</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#interp_mmw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.interp_mmw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will process archival millimeter-wave data
+by providing a list of filepaths.</p>
+<p>The function will parse the data out of each file, and
+produce a plot that is stitched together.</p>
+<p>The first step is to read in all the data, and append
+the parsed data into full_freq and full_int, corresponding
+to the experimental frequency and intensities. This is
+used to then determine the limits to the x axis for plotting.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.open_mmw">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">open_mmw</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#open_mmw"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.open_mmw" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for opening and processing a single millimeter
+wave data file.</p>
+<p>Returns a pandas dataframe containing Frequency and
+Intensity information.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.parse_data">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">parse_data</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#parse_data"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.parse_data" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for parsing data from a millimeter-wave
+data file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.sec_deriv_peak_detection">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">sec_deriv_peak_detection</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df_group</span></em>, <em class="sig-param"><span class="n">threshold</span><span class="o">=</span><span class="default_value">5</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">25</span></em>, <em class="sig-param"><span class="n">magnet_thres</span><span class="o">=</span><span class="default_value">0.5</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#sec_deriv_peak_detection"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.sec_deriv_peak_detection" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function designed to take advantage of split-combine-apply techniques to analyze
+concatenated spectra, or a single spectrum. The spectrum is cross-correlated with
+a window corresponding to a second-derivative Lorentzian line shape, with the parameters
+corresponding to the actual downward facing peak such that the cross-correlation
+is upwards facing for a match.</p>
+<p>This X-correlation analysis is only done for the Field OFF data; every peak
+should appear in the Field OFF, and should disappear under the presence of
+a magnetic field. If the Field ON spectrum is non-zero, the peak finding is
+followed up by calculating the ratio of the intensity at the same position
+for ON/OFF; if the ratio is below a threshold, we consider it a magnetic line.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_group</strong> (<em>pandas DataFrame</em>) – Dataframe containing the millimeter-wave spectra.</p></li>
+<li><p><strong>threshold</strong> (<em>int</em><em>, </em><em>optional</em>) – Absolute intensity units threshold for peak detection.
+This value corresponds to the value used in the X-correlation
+spectrum, by default 5</p></li>
+<li><p><strong>window_size</strong> (<em>int</em><em>, </em><em>optional</em>) – Size of the second derivative Lorentizan window function,
+by default 25</p></li>
+<li><p><strong>magnet_thres</strong> (<em>float</em><em>, </em><em>optional</em>) – Threshold for determining if a peak is magnetic, given
+as the ratio of ON/OFF. A value of 1 means the line is
+nominally unaffected by a magnetic field, and less than
+1 corresponds to larger responses to magnetic fields.
+By default 0.5</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>DataFrame holding the detected peaks and their associated
+magnet tests, if applicable.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>pandas DataFrame</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.mmw_analysis.test_filtering">
+<code class="sig-prename descclassname">pyspectools.mmw.mmw_analysis.</code><code class="sig-name descname">test_filtering</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span><span class="p">:</span> <span class="n">str</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/mmw_analysis.html#test_filtering"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.mmw_analysis.test_filtering" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience function to open a legacy data file and
+process it; kwargs are passed to the <cite>fft_filter</cite>
+function call. The function then returns a Matplotlib
+figure and axis object, showing the FFT filtered
+spectrum and the time-domain signal chunk that it
+corresponds to.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>path</strong> (<em>str</em>) – Filepath to the data file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Matplotlib figure/axis objects.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>fig, ax</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.mmw.plotting_func">
+<span id="pyspectools-mmw-plotting-func-module"></span><h2>pyspectools.mmw.plotting_func module<a class="headerlink" href="#module-pyspectools.mmw.plotting_func" title="Permalink to this headline">¶</a></h2>
+<dl class="py function">
+<dt id="pyspectools.mmw.plotting_func.id_survey">
+<code class="sig-prename descclassname">pyspectools.mmw.plotting_func.</code><code class="sig-name descname">id_survey</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frequency</span></em>, <em class="sig-param"><span class="n">intensity</span></em>, <em class="sig-param"><span class="n">catdict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/plotting_func.html#id_survey"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.plotting_func.id_survey" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for plotting predicted lines as stick spectra
+on top of a broadband survey spectrum.</p>
+<p>Frequency and intensity are 1D arrays of the spectrum
+frequency and intensity.</p>
+<p>catdict is a dictionary with keys corresponding to
+the name of the molecule, and values corresponding
+to dataframes of the parsed .cat file.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.plotting_func.plot_spectrum">
+<code class="sig-prename descclassname">pyspectools.mmw.plotting_func.</code><code class="sig-name descname">plot_spectrum</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/plotting_func.html#plot_spectrum"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.plotting_func.plot_spectrum" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function used to plot a dataframe using Plotly.</p>
+<p>Uses colorlover to generate palettes.</p>
+<p>Args: dataframe - pandas dataframe containing a frequency
+column. Every other column is treated as an intensity column</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.plotting_func.save_plot">
+<code class="sig-prename descclassname">pyspectools.mmw.plotting_func.</code><code class="sig-name descname">save_plot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">fig</span></em>, <em class="sig-param"><span class="n">filename</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/plotting_func.html#save_plot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.plotting_func.save_plot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.mmw.plotting_func.static_comparison">
+<code class="sig-prename descclassname">pyspectools.mmw.plotting_func.</code><code class="sig-name descname">static_comparison</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">frequencies</span></em>, <em class="sig-param"><span class="n">sample_on_df</span></em>, <em class="sig-param"><span class="n">sample_off_df</span></em>, <em class="sig-param"><span class="n">window_size</span><span class="o">=</span><span class="default_value">0.0001</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/mmw/plotting_func.html#static_comparison"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.mmw.plotting_func.static_comparison" title="Permalink to this definition">¶</a></dt>
+<dd><p>Method for plotting the sample on-off spectra side-by-side.
+Takes a list of frequencies, which will be</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.mmw">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.mmw" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2019, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pyspectools.astro.analysis &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../../_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="../../../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../../../_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../../../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../../index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm"></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pyspectools.astro.analysis</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">lmfit.models</span> <span class="kn">import</span> <span class="n">LinearModel</span>
+
+<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="kn">import</span> <span class="n">units</span>
+<span class="kn">from</span> <span class="nn">pyspectools.parsers</span> <span class="kn">import</span> <span class="n">parse_cat</span>
+<span class="kn">from</span> <span class="nn">pyspectools.units</span> <span class="kn">import</span> <span class="n">gaussian_fwhm</span><span class="p">,</span> <span class="n">gaussian_height</span><span class="p">,</span> <span class="n">gaussian_integral</span>
+<span class="kn">from</span> <span class="nn">pyspectools.astro</span> <span class="kn">import</span> <span class="n">conversions</span>
+<span class="kn">from</span> <span class="nn">pyspectools.astro</span> <span class="kn">import</span> <span class="n">radiative</span>
+
+
+<div class="viewcode-block" id="lineprofile_analysis"><a class="viewcode-back" href="../../../pyspectools.astro.html#pyspectools.astro.analysis.lineprofile_analysis">[docs]</a><span class="k">def</span> <span class="nf">lineprofile_analysis</span><span class="p">(</span><span class="n">fit</span><span class="p">,</span> <span class="n">I</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">E_lower</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Low-level function to provide some analysis</span>
+<span class="sd">        based on a fitted line profile and some theoretical</span>
+<span class="sd">        parameters.</span>
+
+<span class="sd">        Basically a collection of various parameters</span>
+<span class="sd">        that are of interest to astronomy.</span>
+
+<span class="sd">        parameters:</span>
+<span class="sd">        ----------------</span>
+<span class="sd">        fit - lmfit ModelResult object</span>
+<span class="sd">        I - log10(theoretical intensity)</span>
+<span class="sd">        Q - rotational partition function</span>
+<span class="sd">        T - temperature in K</span>
+<span class="sd">        E - lower state energy in K</span>
+
+<span class="sd">        returns:</span>
+<span class="sd">        -----------------</span>
+<span class="sd">        data_dict - dict results of lineprofile analysis</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Calculate intrinsic line strength</span>
+    <span class="n">S</span> <span class="o">=</span> <span class="n">radiative</span><span class="o">.</span><span class="n">I2S</span><span class="p">(</span><span class="n">I</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">],</span> <span class="n">E_lower</span><span class="p">,</span> <span class="n">T</span><span class="p">)</span>
+    <span class="n">E_upper</span> <span class="o">=</span> <span class="n">radiative</span><span class="o">.</span><span class="n">calc_E_upper</span><span class="p">(</span>
+        <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">],</span>
+        <span class="n">E_lower</span>
+    <span class="p">)</span>
+    <span class="c1"># FWHM</span>
+    <span class="n">fwhm</span> <span class="o">=</span> <span class="n">gaussian_fwhm</span><span class="p">(</span><span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">])</span>
+    <span class="c1"># Analytic integration of a Gaussian</span>
+    <span class="n">integral</span> <span class="o">=</span> <span class="n">gaussian_integral</span><span class="p">(</span>
+        <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;amplitude&quot;</span><span class="p">],</span>
+        <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="c1"># Peak height of the Gaussian</span>
+    <span class="n">height</span> <span class="o">=</span> <span class="n">gaussian_height</span><span class="p">(</span>
+        <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;amplitude&quot;</span><span class="p">],</span>
+        <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="c1"># Column density</span>
+    <span class="n">N</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">flux2N</span><span class="p">(</span>
+        <span class="n">integral</span><span class="p">,</span>
+        <span class="n">Q</span><span class="p">,</span>
+        <span class="n">E</span><span class="p">,</span>
+        <span class="n">T</span><span class="p">,</span>
+        <span class="n">S</span><span class="p">,</span>
+        <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">]</span>
+        <span class="p">)</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="n">calculate_L</span><span class="p">(</span><span class="n">integral</span><span class="p">,</span> <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">],</span> <span class="n">S</span><span class="p">)</span>
+    <span class="n">data_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;center&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;peak height&quot;</span><span class="p">:</span> <span class="n">height</span><span class="p">,</span>
+        <span class="s2">&quot;amplitude&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;amplitude&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;width&quot;</span><span class="p">:</span> <span class="n">fit</span><span class="o">.</span><span class="n">best_values</span><span class="p">[</span><span class="s2">&quot;sigma&quot;</span><span class="p">],</span>
+        <span class="s2">&quot;fwhm&quot;</span><span class="p">:</span> <span class="n">fwhm</span><span class="p">,</span>
+        <span class="s2">&quot;integral&quot;</span><span class="p">:</span> <span class="n">integral</span><span class="p">,</span>
+        <span class="s2">&quot;E upper&quot;</span><span class="p">:</span> <span class="n">E_upper</span><span class="p">,</span>
+        <span class="s2">&quot;S $\mu^2$&quot;</span><span class="p">:</span> <span class="n">S</span><span class="p">,</span>
+        <span class="s2">&quot;N cm$^{-2}$&quot;</span><span class="p">:</span> <span class="n">N</span><span class="p">,</span>
+        <span class="s2">&quot;L&quot;</span><span class="p">:</span> <span class="n">L</span>
+        <span class="p">}</span>
+    <span class="k">return</span> <span class="n">data_dict</span></div>
+
+
+<div class="viewcode-block" id="simulate_catalog"><a class="viewcode-back" href="../../../pyspectools.astro.html#pyspectools.astro.analysis.simulate_catalog">[docs]</a><span class="k">def</span> <span class="nf">simulate_catalog</span><span class="p">(</span><span class="n">catalogpath</span><span class="p">,</span> <span class="n">N</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">doppler</span><span class="o">=</span><span class="mf">10.</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">     Function for simulating what the expected flux would be for</span>
+<span class="sd">     a given molecule and its catalog file from SPCAT. Returns a</span>
+<span class="sd">     spectrum of Gaussian line shapes, predicted by either a supplied</span>
+<span class="sd">     Doppler width or session-wide value (self.doppler), and</span>
+<span class="sd">     the parameters required to calculate the flux in Jy.</span>
+
+<span class="sd">     :param catalogpath: path to the SPCAT catalog file</span>
+<span class="sd">     :param N: column density in cm^-2</span>
+<span class="sd">     :param Q: rotational partition function</span>
+<span class="sd">     :param T: temperature in Kelvin</span>
+<span class="sd">     :param doppler: Doppler width in km/s</span>
+<span class="sd">     :return: simulated_df; pandas dataframe with frequency/intensity</span>
+<span class="sd">     &quot;&quot;&quot;</span>
+    <span class="n">catalog_df</span> <span class="o">=</span> <span class="n">parse_cat</span><span class="p">(</span><span class="n">catalogpath</span><span class="p">)</span>
+    <span class="c1"># Calculate the line strength</span>
+    <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Su^2&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">radiative</span><span class="o">.</span><span class="n">I2S</span><span class="p">(</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">Q</span><span class="p">,</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Lower state energy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">T</span>
+    <span class="p">)</span>
+    <span class="c1"># Calculate the expected integrated flux in Jy</span>
+    <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Integrated Flux (Jy)&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">conversions</span><span class="o">.</span><span class="n">N2flux</span><span class="p">(</span>
+        <span class="n">N</span><span class="p">,</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Su^2&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">Q</span><span class="p">,</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Lower state energy&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+        <span class="n">T</span>
+    <span class="p">)</span>
+    <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Doppler Shifts&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">dop2freq</span><span class="p">(</span><span class="n">velocity</span><span class="o">=</span><span class="n">doppler</span><span class="p">,</span> <span class="n">frequency</span><span class="o">=</span><span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Doppler Frequency&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Doppler Shifts&quot;</span><span class="p">]</span>
+    <span class="n">amplitudes</span> <span class="o">=</span> <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Integrated Flux (Jy)&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="o">**</span><span class="mf">2.</span> <span class="o">*</span> <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Doppler Shifts&quot;</span><span class="p">])</span>
+    <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Flux (Jy)&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">units</span><span class="o">.</span><span class="n">gaussian_height</span><span class="p">(</span>
+        <span class="n">amplitudes</span><span class="p">,</span>
+        <span class="n">catalog_df</span><span class="p">[</span><span class="s2">&quot;Doppler Shifts&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">catalog_df</span></div>
+
+
+<div class="viewcode-block" id="calculate_L"><a class="viewcode-back" href="../../../pyspectools.astro.html#pyspectools.astro.analysis.calculate_L">[docs]</a><span class="k">def</span> <span class="nf">calculate_L</span><span class="p">(</span><span class="n">W</span><span class="p">,</span> <span class="n">frequency</span><span class="p">,</span> <span class="n">S</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Calculate L, which is subsequently used to perform rotational temperature analysis.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    W - float</span>
+<span class="sd">        Integrated flux of a line</span>
+<span class="sd">    frequency - float</span>
+<span class="sd">        Frequency of a transition in MHz</span>
+<span class="sd">    S - float</span>
+<span class="sd">        Intrinsic linestrength of the transition</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    L - float</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">L</span> <span class="o">=</span> <span class="p">(</span><span class="mf">2.04e20</span> <span class="o">*</span> <span class="n">W</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">S</span> <span class="o">*</span> <span class="n">frequency</span><span class="o">**</span><span class="mi">3</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">L</span></div>
+
+
+<div class="viewcode-block" id="rotational_temperature_analysis"><a class="viewcode-back" href="../../../pyspectools.astro.html#pyspectools.astro.analysis.rotational_temperature_analysis">[docs]</a><span class="k">def</span> <span class="nf">rotational_temperature_analysis</span><span class="p">(</span><span class="n">L</span><span class="p">,</span> <span class="n">E_upper</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function that will perform a rotational temperature analysis. This will perform a least-squares fit of log(L),</span>
+<span class="sd">    which is related to the theoretical line strength and integrated flux, and the upper state energy for the same</span>
+<span class="sd">    transition.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    L - 1D array</span>
+<span class="sd">        Value L related to the line and theoretical line strength</span>
+<span class="sd">    E_upper - 1D array</span>
+<span class="sd">        The upper state energy in wavenumbers.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ModelResult - object</span>
+<span class="sd">        Result of the least-squares fit</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert the upper state energy</span>
+    <span class="n">E_upper</span> <span class="o">*=</span> <span class="n">units</span><span class="o">.</span><span class="n">kbcm</span>
+    <span class="n">logL</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">L</span><span class="p">)</span>
+    <span class="n">model</span> <span class="o">=</span> <span class="n">LinearModel</span><span class="p">()</span>
+    <span class="n">params</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">make_params</span><span class="p">()</span>
+    <span class="n">result</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
+        <span class="n">x</span><span class="o">=</span><span class="n">E_upper</span><span class="p">,</span>
+        <span class="n">y</span><span class="o">=</span><span class="n">logL</span><span class="p">,</span>
+        <span class="n">params</span><span class="o">=</span><span class="n">params</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">result</span></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2019, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

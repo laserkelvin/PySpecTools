@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pyspectools.models.torch_models &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="../../../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../../../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../../../" src="../../../_static/documentation_options.js"></script>
+    <script src="../../../_static/jquery.js"></script>
+    <script src="../../../_static/underscore.js"></script>
+    <script src="../../../_static/doctools.js"></script>
+    <script src="../../../_static/language_data.js"></script>
+    <link rel="index" title="Index" href="../../../genindex.html" />
+    <link rel="search" title="Search" href="../../../search.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../../../_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="../../../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../../../_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../../../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../../../index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../../../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"></ul>
+</li>
+              
+            
+            
+              
+                
+              
+            
+            
+            
+            
+              <li class="hidden-sm"></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../../../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <h1>Source code for pyspectools.models.torch_models</h1><div class="highlight"><pre>
+<span></span>
+<span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span> <span class="nn">abc</span> <span class="kn">import</span> <span class="n">abstractmethod</span>
+
+<span class="kn">import</span> <span class="nn">torch</span>
+<span class="kn">from</span> <span class="nn">torch</span> <span class="kn">import</span> <span class="n">nn</span>
+<span class="kn">from</span> <span class="nn">torch.nn</span> <span class="kn">import</span> <span class="n">functional</span> <span class="k">as</span> <span class="n">F</span>
+
+
+<div class="viewcode-block" id="GenericModel"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.GenericModel">[docs]</a><span class="k">class</span> <span class="nc">GenericModel</span><span class="p">(</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+
+<div class="viewcode-block" id="GenericModel.load_weights"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.GenericModel.load_weights">[docs]</a>    <span class="nd">@classmethod</span>
+    <span class="k">def</span> <span class="nf">load_weights</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">weights_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">device</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Convenience method for loading in the weights of a model.</span>
+<span class="sd">        Basically initializes the model, and wraps a `torch.load`</span>
+<span class="sd">        with automatic cuda/cpu detection.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weights_path : str</span>
+<span class="sd">            String path to the trained weights of a model; typically</span>
+<span class="sd">            with extension .pt</span>
+<span class="sd">        </span>
+<span class="sd">        device : str</span>
+<span class="sd">            String reference to the target device, either &quot;cpu&quot;, &quot;cuda&quot;,</span>
+<span class="sd">            or a specific CUDA device (e.g. &quot;cuda:0&quot;). If None (default)</span>
+<span class="sd">            the model will be loaded onto a GPU if available, otherwise</span>
+<span class="sd">            a CPU.</span>
+<span class="sd">            </span>
+<span class="sd">        kwargs are passed into the creation of the model, allowing you</span>
+<span class="sd">        to set different parameters.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        model</span>
+<span class="sd">            Instance of the PyTorch model with loaded weights</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># default location for weights is the package directory,</span>
+        <span class="c1"># along with the model name</span>
+        <span class="k">if</span> <span class="n">weights_path</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">pkg_dir</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">parent</span>
+            <span class="n">weights_path</span> <span class="o">=</span> <span class="n">pkg_dir</span><span class="o">.</span><span class="n">joinpath</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="bp">cls</span><span class="o">.</span><span class="vm">__name__</span><span class="si">}</span><span class="s2">.pt&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">device</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">torch</span><span class="o">.</span><span class="n">cuda</span><span class="o">.</span><span class="n">is_available</span><span class="p">():</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cuda&quot;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">device</span> <span class="o">=</span> <span class="s2">&quot;cpu&quot;</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="bp">cls</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">device</span> <span class="o">=</span> <span class="n">device</span>
+        <span class="n">model</span><span class="o">.</span><span class="n">load_state_dict</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">weights_path</span><span class="p">,</span> <span class="n">map_location</span><span class="o">=</span><span class="n">device</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">model</span></div>
+
+<div class="viewcode-block" id="GenericModel.init_layers"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.GenericModel.init_layers">[docs]</a>    <span class="k">def</span> <span class="nf">init_layers</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">weight_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">bias_func</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function that will initialize all the weights and biases of</span>
+<span class="sd">        the model layers. This function uses the `apply` method of</span>
+<span class="sd">        `Module`, and so will only work on layers that are contained</span>
+<span class="sd">        as children.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        weight_func : `nn.init` function, optional</span>
+<span class="sd">            Function to use to initialize weights, by default None</span>
+<span class="sd">            which will default to `nn.init.xavier_normal`</span>
+<span class="sd">        bias_func : `nn.init` function, optional</span>
+<span class="sd">            Function to use to initialize biases, by default None</span>
+<span class="sd">            which will default to `nn.init.xavier_uniform`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Apply initializers to all of the Module&#39;s children with `apply`</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_initialize_wb</span><span class="p">)</span></div>
+
+    <span class="k">def</span> <span class="nf">_initialize_wb</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">layer</span><span class="p">:</span> <span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Static method for applying an initializer to weights</span>
+<span class="sd">        and biases. If a layer is passed without weight and</span>
+<span class="sd">        bias attributes, this function will effectively ignore it.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        layer : `nn.Module`</span>
+<span class="sd">            Layer that is a subclass of `nn.Module`</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">):</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">kaiming_normal_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">uniform_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">data</span><span class="p">,</span> <span class="n">a</span><span class="o">=-</span><span class="mf">1.</span><span class="p">,</span> <span class="n">b</span><span class="o">=</span><span class="mf">1.</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">LSTM</span><span class="p">):</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">xavier_uniform_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">weight_hh_l0</span><span class="p">)</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">xavier_uniform_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">weight_ih_l0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias_ih_l0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">bias_ih_l0</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias_hh_l0</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">weight_hh_l0</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">layer</span><span class="p">,</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">):</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">ones_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">weight</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">layer</span><span class="o">.</span><span class="n">bias</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="n">layer</span><span class="o">.</span><span class="n">bias</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+
+    <span class="k">def</span> <span class="fm">__len__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_num_parameters</span><span class="p">()</span>
+
+<div class="viewcode-block" id="GenericModel.get_num_parameters"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.GenericModel.get_num_parameters">[docs]</a>    <span class="k">def</span> <span class="nf">get_num_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">int</span><span class="p">:</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the number of parameters contained within the model.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        int</span>
+<span class="sd">            Number of trainable parameters</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">sum</span><span class="p">([</span><span class="n">p</span><span class="o">.</span><span class="n">numel</span><span class="p">()</span> <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">parameters</span><span class="p">()</span> <span class="k">if</span> <span class="n">p</span><span class="o">.</span><span class="n">requires_grad</span><span class="p">])</span></div>
+
+<div class="viewcode-block" id="GenericModel.compute_loss"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.GenericModel.compute_loss">[docs]</a>    <span class="nd">@abstractmethod</span>
+    <span class="k">def</span> <span class="nf">compute_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="k">pass</span></div>
+
+    <span class="k">def</span> <span class="nf">_reparametrize</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">mu</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">logvar</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Private method for scale/shift operation on a unit Gaussian</span>
+<span class="sd">        (N~[0,1]) using the parameterized mu and logvar in a variational</span>
+<span class="sd">        model. Returns the latent encoding based on these values.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        mu : torch.Tensor</span>
+<span class="sd">            Tensor of Gaussian centers.</span>
+<span class="sd">        logvar : torch.Tensor</span>
+<span class="sd">            Tensor of log variance</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        z</span>
+<span class="sd">            Torch Tensor corresponding to the latent embedding</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">std</span> <span class="o">=</span> <span class="n">logvar</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span><span class="o">.</span><span class="n">sqrt</span><span class="p">()</span>
+        <span class="n">eps</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">randn_like</span><span class="p">(</span><span class="n">std</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">eps</span><span class="o">.</span><span class="n">mul</span><span class="p">(</span><span class="n">std</span><span class="p">)</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">mu</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="VariationalSpecDecoder"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VariationalSpecDecoder">[docs]</a><span class="k">class</span> <span class="nc">VariationalSpecDecoder</span><span class="p">(</span><span class="n">GenericModel</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Uses variational inference to capture the uncertainty</span>
+<span class="sd">    with respect to Coulomb matrix eigenvalues. Instead of</span>
+<span class="sd">    using dropout, this model represents uncertainty via a</span>
+<span class="sd">    probabilistic latent layer.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__name__</span> <span class="o">=</span> <span class="s2">&quot;VariationalSpecDecoder&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">output_dim</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">optimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">loss_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">opt_settings</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">param_transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tracker</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_dense</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logvar_dense</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="c1"># output should all be positive</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spec_decoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="n">output_dim</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_drop</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">)</span>
+
+<div class="viewcode-block" id="VariationalSpecDecoder.forward"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VariationalSpecDecoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Inputs for this model is a single Tensor, where each row</span>
+<span class="sd">        is 12 elements long (8 constants, one-hot encoding for</span>
+<span class="sd">        composition). The idea behind this is to predict the</span>
+<span class="sd">        eigenspectrum conditional on the molecular composition.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : torch.Tensor</span>
+<span class="sd">            Tensor containing spectroscopic constants, and</span>
+<span class="sd">            one-hot encoding of the composition.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        output, mu, logvar</span>
+<span class="sd">            The predicted eigenspectrum, and the latent parameters</span>
+<span class="sd">            mu and logvar</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_dense</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="o">-</span><span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logvar_dense</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reparametrize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">)</span>
+        <span class="n">output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spec_decoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">output</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span></div>
+
+<div class="viewcode-block" id="VariationalSpecDecoder.compute_loss"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VariationalSpecDecoder.compute_loss">[docs]</a>    <span class="k">def</span> <span class="nf">compute_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">Y</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the loss of this model as the combined prediction error</span>
+<span class="sd">        and KL-divergence from the approximate posterior.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : torch.Tensor</span>
+<span class="sd">            Combined tensor of the spectroscopic constants and the one-hot</span>
+<span class="sd">            encoded composition.</span>
+<span class="sd">            </span>
+<span class="sd">        Y : torch.Tensor</span>
+<span class="sd">            Target eigenspectrum</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        torch.Tensor</span>
+<span class="sd">            Joint loss of MSE and KL divergence</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred_Y</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="n">accuracy</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">pred_Y</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">)</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">logvar</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="c1"># The summation is performed over the encoding length, as according to Kingma</span>
+        <span class="n">KL</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">logvar</span> <span class="o">-</span> <span class="n">mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">-</span> <span class="n">var</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">accuracy</span> <span class="o">+</span> <span class="n">KL</span></div></div>
+
+
+<div class="viewcode-block" id="VariationalDecoder"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VariationalDecoder">[docs]</a><span class="k">class</span> <span class="nc">VariationalDecoder</span><span class="p">(</span><span class="n">GenericModel</span><span class="p">):</span>
+    
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    This model uses the intermediate eigenspectrum to calculate a</span>
+<span class="sd">    latent embedding that is then used to predict the molecular</span>
+<span class="sd">    formula and functional groups. You can think of the first action</span>
+<span class="sd">    as &quot;re-encoding&quot;, but the driving principle is that an eigenspectrum</span>
+<span class="sd">    could map onto various structures, even when conditional on the</span>
+<span class="sd">    composition.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    
+    <span class="vm">__name__</span> <span class="o">=</span> <span class="s2">&quot;VariationalDecoder&quot;</span>
+    
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">eigen_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">nclasses</span><span class="o">=</span><span class="mi">23</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">loss_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">param_transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">tracker</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">mu_dense</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">eigen_length</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">logvar_dense</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">eigen_length</span> <span class="o">+</span> <span class="mi">4</span><span class="p">,</span> <span class="n">latent_dim</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">formula_decoder</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="mi">4</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">ReLU</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">),</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">functional_classifier</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Sequential</span><span class="p">(</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="mi">128</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">128</span><span class="p">,</span> <span class="mi">256</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">256</span><span class="p">,</span> <span class="mi">64</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LeakyReLU</span><span class="p">(</span><span class="n">alpha</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">Linear</span><span class="p">(</span><span class="mi">64</span><span class="p">,</span> <span class="n">nclasses</span><span class="p">),</span>
+            <span class="n">nn</span><span class="o">.</span><span class="n">LogSigmoid</span><span class="p">(),</span>
+        <span class="p">)</span>
+
+<div class="viewcode-block" id="VariationalDecoder.forward"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VariationalDecoder.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Perform a forward pass of the VariationalDecoder model.</span>
+<span class="sd">        This takes the concatenated input of the eigenspectrum and</span>
+<span class="sd">        the one-hot composition, produces a latent embedding that</span>
+<span class="sd">        is then used to predict the formula and functional group</span>
+<span class="sd">        classification.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : torch.Tensor</span>
+<span class="sd">            [description]</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        formula_output</span>
+<span class="sd">            Nx4 tensor corresponding to the number of atoms</span>
+<span class="sd">            in the [H,C,O,N] positions.</span>
+<span class="sd">        </span>
+<span class="sd">        functional_output</span>
+<span class="sd">            Nx23 tensor corresponding to multilabel classification,</span>
+<span class="sd">            provided as log sigmoid.</span>
+<span class="sd">        </span>
+<span class="sd">        mu, logvar</span>
+<span class="sd">            Latent variables of the variational layer</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mu_dense</span><span class="p">(</span><span class="n">X</span><span class="p">),</span> <span class="o">-</span><span class="n">F</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">logvar_dense</span><span class="p">(</span><span class="n">X</span><span class="p">))</span>
+        <span class="c1"># generate latent representation</span>
+        <span class="n">z</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reparametrize</span><span class="p">(</span><span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span><span class="p">)</span>
+        <span class="n">formula_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">formula_decoder</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="n">functional_output</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">functional_classifier</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">formula_output</span><span class="p">,</span> <span class="n">functional_output</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span></div>
+
+<div class="viewcode-block" id="VariationalDecoder.compute_loss"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VariationalDecoder.compute_loss">[docs]</a>    <span class="k">def</span> <span class="nf">compute_loss</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span> <span class="n">X</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">formula</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">groups</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span>
+    <span class="p">):</span>
+        <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Calculate the joint loss of this model. This corresponds to the sum</span>
+<span class="sd">        of three components: a KL-divergence loss for the variational layer,</span>
+<span class="sd">        a formula prediction accuracy as the MSE loss, and the BCE loss for the</span>
+<span class="sd">        multilabel classification for the functional group prediction.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        X : torch.Tensor</span>
+<span class="sd">            [description]</span>
+<span class="sd">        formula : torch.Tensor</span>
+<span class="sd">            Length of the formula encoding, typically 4 [H,C,O,N]</span>
+<span class="sd">        groups : torch.Tensor</span>
+<span class="sd">            Length of the functional groups encoding.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">pred_formula</span><span class="p">,</span> <span class="n">pred_func</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span> <span class="n">logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1"># Predict atom number</span>
+        <span class="n">accuracy</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">pred_formula</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">)</span>
+        <span class="c1"># Multilabel classification</span>
+        <span class="n">classification</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy_with_logits</span><span class="p">(</span><span class="n">pred_func</span><span class="p">,</span> <span class="n">groups</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;sum&quot;</span><span class="p">)</span>
+        <span class="c1"># calculate the divergence term</span>
+        <span class="n">var</span> <span class="o">=</span> <span class="n">logvar</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="c1"># The summation is performed over the encoding length, as according to Kingma</span>
+        <span class="n">KL</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">logvar</span> <span class="o">-</span> <span class="n">mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">-</span> <span class="n">var</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">accuracy</span> <span class="o">+</span> <span class="n">KL</span> <span class="o">+</span> <span class="n">classification</span></div></div>
+
+
+<div class="viewcode-block" id="VarMolDetect"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VarMolDetect">[docs]</a><span class="k">class</span> <span class="nc">VarMolDetect</span><span class="p">(</span><span class="n">GenericModel</span><span class="p">):</span>
+
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Umbrella model that encapsulates the full set of variational</span>
+<span class="sd">    models. The premise is to more or less try to do end-to-end</span>
+<span class="sd">    learning, and should meet the user half-way in terms of</span>
+<span class="sd">    usability. The `forward` method takes the spectroscopic constants</span>
+<span class="sd">    and the molecular composition as separate inputs, and performs</span>
+<span class="sd">    the concatenation prior to any calculation. The composition</span>
+<span class="sd">    is reused by the `VariationalDecoder` model.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+
+    <span class="vm">__name__</span> <span class="o">=</span> <span class="s2">&quot;VariationalMoleculeDetective&quot;</span>
+
+    <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">eigen_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
+        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">nclasses</span><span class="o">=</span><span class="mi">23</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0005</span><span class="p">,</span>
+        <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
+        <span class="n">tracker</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+    <span class="p">):</span>
+        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">norm</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">BatchNorm1d</span><span class="p">(</span><span class="mi">8</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">spectrum_decoder</span> <span class="o">=</span> <span class="n">VariationalSpecDecoder</span><span class="p">(</span><span class="n">latent_dim</span><span class="p">,</span> <span class="n">eigen_length</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">joint_decoder</span> <span class="o">=</span> <span class="n">VariationalDecoder</span><span class="p">(</span>
+            <span class="n">latent_dim</span><span class="p">,</span> <span class="n">eigen_length</span><span class="p">,</span> <span class="n">nclasses</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">dropout</span><span class="o">=</span><span class="n">dropout</span>
+        <span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">input_dropout</span> <span class="o">=</span> <span class="n">nn</span><span class="o">.</span><span class="n">Dropout</span><span class="p">(</span><span class="n">dropout</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">name</span><span class="p">,</span> <span class="n">parameter</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">named_parameters</span><span class="p">():</span>
+            <span class="k">if</span> <span class="s2">&quot;logvar&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">and</span> <span class="s2">&quot;weight&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                <span class="c1"># nn.init.uniform_(parameter, a=-10., b=-8.)</span>
+                <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">kaiming_normal_</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;bias&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">zeros_</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;weight&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">and</span> <span class="s2">&quot;norm&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">kaiming_normal_</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span>
+            <span class="k">elif</span> <span class="s2">&quot;weight&quot;</span> <span class="ow">in</span> <span class="n">name</span> <span class="ow">and</span> <span class="s2">&quot;norm&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">:</span>
+                <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">ones_</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span>
+
+<div class="viewcode-block" id="VarMolDetect.forward"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VarMolDetect.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constants</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">composition</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="c1"># Run batch norm on A,B,C</span>
+        <span class="n">constants</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">constants</span><span class="p">))</span>
+        <span class="c1"># concatenate the inputs</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">constants</span><span class="p">,</span> <span class="n">composition</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="c1"># compute the eigenspectrum conditional on composition</span>
+        <span class="n">eigen</span><span class="p">,</span> <span class="n">eigen_mu</span><span class="p">,</span> <span class="n">eigen_logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">spectrum_decoder</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+        <span class="c1"># run the decoders to predict properties, conditional on the composition</span>
+        <span class="n">eigen_composition</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">cat</span><span class="p">((</span><span class="n">eigen</span><span class="p">,</span> <span class="n">composition</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">formula</span><span class="p">,</span> <span class="n">functionals</span><span class="p">,</span> <span class="n">decode_mu</span><span class="p">,</span> <span class="n">decode_logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">joint_decoder</span><span class="p">(</span>
+            <span class="n">eigen_composition</span>
+        <span class="p">)</span>
+        <span class="k">return</span> <span class="p">(</span>
+            <span class="p">(</span><span class="n">eigen</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">functionals</span><span class="p">),</span>
+            <span class="p">(</span><span class="n">eigen_mu</span><span class="p">,</span> <span class="n">eigen_logvar</span><span class="p">,</span> <span class="n">decode_mu</span><span class="p">,</span> <span class="n">decode_logvar</span><span class="p">),</span>
+        <span class="p">)</span></div>
+
+<div class="viewcode-block" id="VarMolDetect.compute_loss"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VarMolDetect.compute_loss">[docs]</a>    <span class="k">def</span> <span class="nf">compute_loss</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constants</span><span class="p">,</span> <span class="n">composition</span><span class="p">,</span> <span class="n">eigenspectrum</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">functionals</span><span class="p">):</span>
+        <span class="c1"># run through the models</span>
+        <span class="n">predictions</span><span class="p">,</span> <span class="n">latents</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">forward</span><span class="p">(</span><span class="n">constants</span><span class="p">,</span> <span class="n">composition</span><span class="p">)</span>
+        <span class="c1"># unpack the predictions, and compute their losses</span>
+        <span class="n">pred_eigen</span><span class="p">,</span> <span class="n">pred_formula</span><span class="p">,</span> <span class="n">pred_func</span> <span class="o">=</span> <span class="n">predictions</span>
+        <span class="c1"># for regression, we take the log10 for stability; everything done in place</span>
+        <span class="n">prediction_loss</span> <span class="o">=</span> <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">pred_eigen</span><span class="p">,</span> <span class="n">eigenspectrum</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+        <span class="n">prediction_loss</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span>
+            <span class="n">F</span><span class="o">.</span><span class="n">mse_loss</span><span class="p">(</span><span class="n">pred_formula</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">prediction_loss</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span>
+            <span class="n">F</span><span class="o">.</span><span class="n">binary_cross_entropy_with_logits</span><span class="p">(</span><span class="n">pred_func</span><span class="p">,</span> <span class="n">functionals</span><span class="p">,</span> <span class="n">reduction</span><span class="o">=</span><span class="s2">&quot;mean&quot;</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="c1"># now for the variational losses</span>
+        <span class="n">eigen_mu</span><span class="p">,</span> <span class="n">eigen_logvar</span><span class="p">,</span> <span class="n">decode_mu</span><span class="p">,</span> <span class="n">decode_logvar</span> <span class="o">=</span> <span class="n">latents</span>
+        <span class="n">eigen_var</span> <span class="o">=</span> <span class="n">eigen_logvar</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="n">decode_var</span> <span class="o">=</span> <span class="n">decode_logvar</span><span class="o">.</span><span class="n">exp</span><span class="p">()</span>
+        <span class="c1"># The summation is performed over the encoding length, as according to Kingma</span>
+        <span class="n">kl_loss</span> <span class="o">=</span> <span class="o">-</span><span class="mf">0.5</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+            <span class="mi">1</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">eigen_logvar</span> <span class="o">-</span> <span class="n">eigen_mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">-</span> <span class="n">eigen_var</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">kl_loss</span> <span class="o">/=</span> <span class="n">constants</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">eigen_logvar</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="n">kl_loss</span><span class="o">.</span><span class="n">add_</span><span class="p">(</span>
+            <span class="o">-</span><span class="mf">0.5</span>
+            <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span>
+                <span class="mi">1</span> <span class="o">+</span> <span class="mf">2.0</span> <span class="o">*</span> <span class="n">decode_logvar</span> <span class="o">-</span> <span class="n">decode_mu</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span> <span class="o">-</span> <span class="n">decode_var</span><span class="o">.</span><span class="n">pow</span><span class="p">(</span><span class="mf">2.0</span><span class="p">)</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
+        <span class="n">kl_loss</span> <span class="o">/=</span> <span class="n">constants</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="o">*</span> <span class="n">decode_logvar</span><span class="o">.</span><span class="n">size</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">prediction_loss</span> <span class="o">+</span> <span class="n">kl_loss</span></div></div>
+</pre></div>
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2019, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

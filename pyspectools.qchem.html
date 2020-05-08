@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>pyspectools.qchem package &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
+    <script src="_static/jquery.js"></script>
+    <script src="_static/underscore.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/language_data.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="setup module" href="setup.html" />
+    <link rel="prev" title="pyspectools.models package" href="pyspectools.models.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul class="current">
+<li class="toctree-l1 current"><a class="reference internal" href="modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">pyspectools.qchem package</a><ul>
+<li><a class="reference internal" href="#submodules">Submodules</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem.analysis">pyspectools.qchem.analysis module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem.extrapolation">pyspectools.qchem.extrapolation module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem.heat_analysis">pyspectools.qchem.heat_analysis module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem.multiwell">pyspectools.qchem.multiwell module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem.parsers">pyspectools.qchem.parsers module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem.utils">pyspectools.qchem.utils module</a></li>
+<li><a class="reference internal" href="#module-pyspectools.qchem">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+  <li>
+    <a href="pyspectools.models.html" title="Previous Chapter: pyspectools.models package"><span class="glyphicon glyphicon-chevron-left visible-sm"></span><span class="hidden-sm hidden-tablet">&laquo; pyspectools.m...</span>
+    </a>
+  </li>
+  <li>
+    <a href="setup.html" title="Next Chapter: setup module"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">setup module &raquo;</span>
+    </a>
+  </li>
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="_sources/pyspectools.qchem.rst.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  <div class="section" id="pyspectools-qchem-package">
+<h1>pyspectools.qchem package<a class="headerlink" href="#pyspectools-qchem-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyspectools.qchem.analysis">
+<span id="pyspectools-qchem-analysis-module"></span><h2>pyspectools.qchem.analysis module<a class="headerlink" href="#module-pyspectools.qchem.analysis" title="Permalink to this headline">¶</a></h2>
+<dl class="py class">
+<dt id="pyspectools.qchem.analysis.CalculationResult">
+<em class="property">class </em><code class="sig-prename descclassname">pyspectools.qchem.analysis.</code><code class="sig-name descname">CalculationResult</code><span class="sig-paren">(</span><em class="sig-param">A: float = 0.0</em>, <em class="sig-param">B: float = 0.0</em>, <em class="sig-param">C: float = 0.0</em>, <em class="sig-param">success: bool = False</em>, <em class="sig-param">u_A: float = 0.0</em>, <em class="sig-param">u_B: float = 0.0</em>, <em class="sig-param">u_C: float = 0.0</em>, <em class="sig-param">id: int = 0</em>, <em class="sig-param">formula: str = ''</em>, <em class="sig-param">smi: str = ''</em>, <em class="sig-param">program: str = ''</em>, <em class="sig-param">point_group: str = 'C1'</em>, <em class="sig-param">method: str = ''</em>, <em class="sig-param">basis: str = ''</em>, <em class="sig-param">charge: int = 0</em>, <em class="sig-param">multi: int = 1</em>, <em class="sig-param">kappa: float = 0.0</em>, <em class="sig-param">DJ: float = 0.0</em>, <em class="sig-param">DJK: float = 0.0</em>, <em class="sig-param">DK: float = 0.0</em>, <em class="sig-param">delJ: float = 0.0</em>, <em class="sig-param">delK: float = 0.0</em>, <em class="sig-param">Iaa: float = 0.0</em>, <em class="sig-param">Ibb: float = 0.0</em>, <em class="sig-param">Icc: float = 0.0</em>, <em class="sig-param">defect: float = 0.0</em>, <em class="sig-param">scf: float = 0.0</em>, <em class="sig-param">cc: float = 0.0</em>, <em class="sig-param">correlation: float = 0.0</em>, <em class="sig-param">dboc: float = 0.0</em>, <em class="sig-param">rel: float = 0.0</em>, <em class="sig-param">coords: str = ''</em>, <em class="sig-param">zpe: float = 0.0</em>, <em class="sig-param">anharm_zpe: float = 0.0</em>, <em class="sig-param">elec_zpe: float = 0.0</em>, <em class="sig-param">composite: float = 0.0</em>, <em class="sig-param">ts: bool = False</em>, <em class="sig-param">harm_freq: List[float] = &lt;factory&gt;</em>, <em class="sig-param">harm_int: List[float] = &lt;factory&gt;</em>, <em class="sig-param">harm_sym: List[str] = &lt;factory&gt;</em>, <em class="sig-param">anharm_freq: List[float] = &lt;factory&gt;</em>, <em class="sig-param">anharm_int: List[float] = &lt;factory&gt;</em>, <em class="sig-param">anharm_dipole: List[float] = &lt;factory&gt;</em>, <em class="sig-param">thermo_corrections: Dict = &lt;factory&gt;</em>, <em class="sig-param">alphas: List[float] = &lt;factory&gt;</em>, <em class="sig-param">G3: Dict = &lt;factory&gt;</em>, <em class="sig-param">opt_delta: float = 0.0</em>, <em class="sig-param">type: str = 'scf'</em>, <em class="sig-param">filename: str = ''</em>, <em class="sig-param">image_path: str = ''</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class for handling individual calculations. The idea behind this class is to be as general as possible,
+handling the data that get parsed out by specific program parsers defined in qchem.parsers.</p>
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.A">
+<code class="sig-name descname">A</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.A" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.B">
+<code class="sig-name descname">B</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.B" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.C">
+<code class="sig-name descname">C</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.C" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.DJ">
+<code class="sig-name descname">DJ</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.DJ" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.DJK">
+<code class="sig-name descname">DJK</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.DJK" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.DK">
+<code class="sig-name descname">DK</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.DK" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.G3">
+<code class="sig-name descname">G3</code><em class="property">: Dict</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.G3" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.Iaa">
+<code class="sig-name descname">Iaa</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.Iaa" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.Ibb">
+<code class="sig-name descname">Ibb</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.Ibb" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.Icc">
+<code class="sig-name descname">Icc</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.Icc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.alphas">
+<code class="sig-name descname">alphas</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.alphas" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.anharm_dipole">
+<code class="sig-name descname">anharm_dipole</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_dipole" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.anharm_freq">
+<code class="sig-name descname">anharm_freq</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_freq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.anharm_int">
+<code class="sig-name descname">anharm_int</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_int" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.anharm_zpe">
+<code class="sig-name descname">anharm_zpe</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_zpe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.basis">
+<code class="sig-name descname">basis</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.basis" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.cc">
+<code class="sig-name descname">cc</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.cc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.charge">
+<code class="sig-name descname">charge</code><em class="property">: int</em><em class="property"> = 0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.charge" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.composite">
+<code class="sig-name descname">composite</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.composite" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.coords">
+<code class="sig-name descname">coords</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.coords" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.correlation">
+<code class="sig-name descname">correlation</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.correlation" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.dboc">
+<code class="sig-name descname">dboc</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.dboc" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.defect">
+<code class="sig-name descname">defect</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.defect" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.delJ">
+<code class="sig-name descname">delJ</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.delJ" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.delK">
+<code class="sig-name descname">delK</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.delK" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.elec_zpe">
+<code class="sig-name descname">elec_zpe</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.elec_zpe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.filename">
+<code class="sig-name descname">filename</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.filename" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.formula">
+<code class="sig-name descname">formula</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.formula" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationResult.from_g16">
+<em class="property">classmethod </em><code class="sig-name descname">from_g16</code><span class="sig-paren">(</span><em class="sig-param">filepath</em>, <em class="sig-param">parser=&lt;function parse_g16&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult.from_g16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.from_g16" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class method for parsing a Gaussian logfile, and converting the dictionary into a Calculation class.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- str</strong> (<em>filepath</em>) – Filepath to the Gaussian output file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Calculation object with the parsed Gaussian output.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Calculation - object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationResult.from_yml">
+<em class="property">classmethod </em><code class="sig-name descname">from_yml</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult.from_yml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.from_yml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Class method for reading in a YAML calculation dump created with the to_yml method.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- str</strong> (<em>filepath</em>) – Filepath to the YAML file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Instance of the Calculation object from parsing the YAML file.</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>Calculation - object</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.harm_freq">
+<code class="sig-name descname">harm_freq</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_freq" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.harm_int">
+<code class="sig-name descname">harm_int</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_int" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.harm_sym">
+<code class="sig-name descname">harm_sym</code><em class="property">: List[str]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_sym" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.id">
+<code class="sig-name descname">id</code><em class="property">: int</em><em class="property"> = 0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.id" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.image_path">
+<code class="sig-name descname">image_path</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.image_path" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.kappa">
+<code class="sig-name descname">kappa</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.kappa" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.method">
+<code class="sig-name descname">method</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.method" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.multi">
+<code class="sig-name descname">multi</code><em class="property">: int</em><em class="property"> = 1</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.multi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.opt_delta">
+<code class="sig-name descname">opt_delta</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.opt_delta" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.point_group">
+<code class="sig-name descname">point_group</code><em class="property">: str</em><em class="property"> = 'C1'</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.point_group" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.program">
+<code class="sig-name descname">program</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.program" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.rel">
+<code class="sig-name descname">rel</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.rel" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.scf">
+<code class="sig-name descname">scf</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.scf" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.smi">
+<code class="sig-name descname">smi</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.smi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.success">
+<code class="sig-name descname">success</code><em class="property">: bool</em><em class="property"> = False</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.success" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.thermo_corrections">
+<code class="sig-name descname">thermo_corrections</code><em class="property">: Dict</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.thermo_corrections" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationResult.to_multiwell">
+<code class="sig-name descname">to_multiwell</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">state</span><span class="o">=</span><span class="default_value">'reac'</span></em>, <em class="sig-param"><span class="n">comment</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">delh</span><span class="o">=</span><span class="default_value">0.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult.to_multiwell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.to_multiwell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the parsed results into Multiwell format. Wraps the function
+from the <cite>multiwell</cite> module, <cite>format_multiwell</cite>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>state</strong> (<em>str</em><em>, </em><em>optional</em>) – Specify which part of the reaction this structure is.</p></li>
+<li><p><strong>comment</strong> (<em>str</em><em>, </em><em>optional</em>) – Comment line for the structure</p></li>
+<li><p><strong>delh</strong> (<em>float</em><em>, </em><em>optional</em>) – The 0 K heat of formation, or relative energy of this point in the units
+specified in the multiwell input file (usually kJ/mol)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>mw_str</strong> – String containing the formatted output</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationResult.to_png">
+<code class="sig-name descname">to_png</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult.to_png"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.to_png" title="Permalink to this definition">¶</a></dt>
+<dd><p>Generate a PNG file by dumping the SMI to a temporary folder, converting, and copying back to the current
+working directory using obabel.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationResult.to_xyz">
+<code class="sig-name descname">to_xyz</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult.to_xyz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.to_xyz" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationResult.to_yml">
+<code class="sig-name descname">to_yml</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationResult.to_yml"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.to_yml" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to dump the Calculation to disk in YAML syntax.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- str</strong> (<em>filepath</em>) – Filepath to the YAML file target.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.ts">
+<code class="sig-name descname">ts</code><em class="property">: bool</em><em class="property"> = False</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.ts" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.type">
+<code class="sig-name descname">type</code><em class="property">: str</em><em class="property"> = 'scf'</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.type" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.u_A">
+<code class="sig-name descname">u_A</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.u_A" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.u_B">
+<code class="sig-name descname">u_B</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.u_B" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.u_C">
+<code class="sig-name descname">u_C</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.u_C" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationResult.zpe">
+<code class="sig-name descname">zpe</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.zpe" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="pyspectools.qchem.analysis.CalculationSet">
+<em class="property">class </em><code class="sig-prename descclassname">pyspectools.qchem.analysis.</code><code class="sig-name descname">CalculationSet</code><span class="sig-paren">(</span><em class="sig-param">paths: List[str] = &lt;factory&gt;</em>, <em class="sig-param">species: List = &lt;factory&gt;</em>, <em class="sig-param">total_energy: float = 0.0</em>, <em class="sig-param">atoms: str = ''</em>, <em class="sig-param">energies: numpy.array = array([]</em>, <em class="sig-param">dtype=float64)</em>, <em class="sig-param">converted_energies: numpy.array = array([]</em>, <em class="sig-param">dtype=float64)</em>, <em class="sig-param">relative_energies: numpy.array = array([]</em>, <em class="sig-param">dtype=float64)</em>, <em class="sig-param">calculations: Dict = &lt;factory&gt;</em>, <em class="sig-param">products: List = &lt;factory&gt;</em>, <em class="sig-param">reactants: List = &lt;factory&gt;</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>A master handler of a set of calculations. This class works in two ways: to manage a bunch of calculations
+that together yield a closed set of thermochemistry, or a set of calculations that sum up to a single
+composite value.</p>
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.atoms">
+<code class="sig-name descname">atoms</code><em class="property">: str</em><em class="property"> = ''</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.atoms" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.calculations">
+<code class="sig-name descname">calculations</code><em class="property">: Dict</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.calculations" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.compare_energies">
+<code class="sig-name descname">compare_energies</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">index</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">level</span><span class="o">=</span><span class="default_value">'composite'</span></em>, <em class="sig-param"><span class="n">conversion</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.compare_energies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.compare_energies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.converted_energies">
+<code class="sig-name descname">converted_energies</code><em class="property">: numpy.array</em><em class="property"> = array([], dtype=float64)</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.converted_energies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.copy_species">
+<code class="sig-name descname">copy_species</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">indexes</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.copy_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.copy_species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Spawn a copy of the CalculationSet, only with the specified species in the set.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>indexes</strong> (<em>list of int</em>) – A list of indexes, corresponding to the species to be kept in the new copy</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>A deepcopy of this CalculationSet with only the specified species</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>new_instance</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.create_pes">
+<code class="sig-name descname">create_pes</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">width</span><span class="o">=</span><span class="default_value">5.0</span></em>, <em class="sig-param"><span class="n">x</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.create_pes"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.create_pes" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a
+:param width:
+:param x:
+:param kwargs:</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.create_portrait">
+<code class="sig-name descname">create_portrait</code><span class="sig-paren">(</span><em class="sig-param"><span class="o">**</span><span class="n">kwargs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.create_portrait"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.create_portrait" title="Permalink to this definition">¶</a></dt>
+<dd><p>Create a collage of 2D depictions of each of the species within this set of data. Uses matplotlib imshow
+to show the images inline in a Jupyter notebook.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>kwargs</strong> – Additional keywords are passed to the subplots generation</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Matplotlib figure and axis arrays</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>fig, axarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.energies">
+<code class="sig-name descname">energies</code><em class="property">: numpy.array</em><em class="property"> = array([], dtype=float64)</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.energies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.eval_formula">
+<code class="sig-name descname">eval_formula</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.eval_formula"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.eval_formula" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.from_folder">
+<em class="property">classmethod </em><code class="sig-name descname">from_folder</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">path</span></em>, <em class="sig-param"><span class="n">extension</span><span class="o">=</span><span class="default_value">'log'</span></em>, <em class="sig-param"><span class="n">program</span><span class="o">=</span><span class="default_value">'g16'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.from_folder"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.from_folder" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.from_pkl">
+<em class="property">classmethod </em><code class="sig-name descname">from_pkl</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.from_pkl"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.from_pkl" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.paths">
+<code class="sig-name descname">paths</code><em class="property">: List[str]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.paths" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.products">
+<code class="sig-name descname">products</code><em class="property">: List</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.products" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.reactants">
+<code class="sig-name descname">reactants</code><em class="property">: List</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.reactants" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.relative_energies">
+<code class="sig-name descname">relative_energies</code><em class="property">: numpy.array</em><em class="property"> = array([], dtype=float64)</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.relative_energies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.save">
+<code class="sig-name descname">save</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.save"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.save" title="Permalink to this definition">¶</a></dt>
+<dd><p>Dump the current CalculationSet to disk as a pickle file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em>) – Path to the file you wish to save to.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.species">
+<code class="sig-name descname">species</code><em class="property">: List</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.species" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.analysis.CalculationSet.sum_energies">
+<code class="sig-name descname">sum_energies</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">level</span><span class="o">=</span><span class="default_value">'composite'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/analysis.html#CalculationSet.sum_energies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.sum_energies" title="Permalink to this definition">¶</a></dt>
+<dd><p>Calculates the total energy of all the species in this CalculationSet.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>level</strong> (<em>str</em>) – Specifies the level of theory to make the comparison.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>total_energy</strong> – The total energy in Hartrees</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>float</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.analysis.CalculationSet.total_energy">
+<code class="sig-name descname">total_energy</code><em class="property">: float</em><em class="property"> = 0.0</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.total_energy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.qchem.extrapolation">
+<span id="pyspectools-qchem-extrapolation-module"></span><h2>pyspectools.qchem.extrapolation module<a class="headerlink" href="#module-pyspectools.qchem.extrapolation" title="Permalink to this headline">¶</a></h2>
+<p>extrapolation.py</p>
+<p>Routines for performing SCF and correlation extrapolation.</p>
+<dl class="py function">
+<dt id="pyspectools.qchem.extrapolation.exponential">
+<code class="sig-prename descclassname">pyspectools.qchem.extrapolation.</code><code class="sig-name descname">exponential</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="n">b</span></em>, <em class="sig-param"><span class="n">cbs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/extrapolation.html#exponential"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.extrapolation.exponential" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.extrapolation.extrapolate_SCF">
+<code class="sig-prename descclassname">pyspectools.qchem.extrapolation.</code><code class="sig-name descname">extrapolate_SCF</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">energies</span></em>, <em class="sig-param"><span class="n">basis</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/extrapolation.html#extrapolate_SCF"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.extrapolation.extrapolate_SCF" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.extrapolation.extrapolate_correlation">
+<code class="sig-prename descclassname">pyspectools.qchem.extrapolation.</code><code class="sig-name descname">extrapolate_correlation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">energies</span></em>, <em class="sig-param"><span class="n">basis</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/extrapolation.html#extrapolate_correlation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.extrapolation.extrapolate_correlation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Extrapolate the correlation energy to the CBS limit.
+Args: energies and basis are same length tuple-like, with the former
+corresponding to the correlation (post-SCF) energy and basis the cardinal
+values
+Returns: the extrapolated energy, and the results of the fit.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.extrapolation.linear">
+<code class="sig-prename descclassname">pyspectools.qchem.extrapolation.</code><code class="sig-name descname">linear</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em>, <em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="n">cbs</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/extrapolation.html#linear"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.extrapolation.linear" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.qchem.heat_analysis">
+<span id="pyspectools-qchem-heat-analysis-module"></span><h2>pyspectools.qchem.heat_analysis module<a class="headerlink" href="#module-pyspectools.qchem.heat_analysis" title="Permalink to this headline">¶</a></h2>
+<p>heat_analysis.py</p>
+<p>Routines for performing batch analysis on HEAT345(Q) calculations.
+The scripts are hardcoded to follow the filestructure produced by
+the heat345.py scripts, i.e.</p>
+<p>top/
+<a href="#id1"><span class="problematic" id="id2">|</span></a>—heat345.py
+<a href="#id3"><span class="problematic" id="id4">|</span></a>—heat345.yaml
+<a href="#id5"><span class="problematic" id="id6">|</span></a>—zmat.yaml
+<a href="#id7"><span class="problematic" id="id8">|</span></a>—correlation/</p>
+<blockquote>
+<div><dl class="simple">
+<dt><a href="#id9"><span class="problematic" id="id10">|</span></a>—AUG-PCVXZ/</dt><dd><p><a href="#id11"><span class="problematic" id="id12">|</span></a>—calcY-correlation-AUG-PCVXZ.log</p>
+</dd>
+</dl>
+</div></blockquote>
+<p>and so on.</p>
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.anal_correlation">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">anal_correlation</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#anal_correlation"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.anal_correlation" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for extrapolating the correlation and SCF energies to
+the CBS limit using their respective schemes.
+Takes the full dictionary as input, and returns the SCF/CBS and
+CCSD(T)/CBS energies as floats</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.anal_dboc">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">anal_dboc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#anal_dboc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.anal_dboc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the DBOC value</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.anal_hlc">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">anal_hlc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#anal_hlc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.anal_hlc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for analyzing the non-perturbative corrections to
+the triple excitations.</p>
+<p>Takes the frozen-core CCSDT and CCSD(T) values at two basis
+and extrapolates them to the CBS limit.</p>
+<p>The end result is the difference between CCSDT/CBS and CCSD(T)/CBS</p>
+<p>This function returns the correction, as well as the dataframes
+holding the answers</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.anal_mvd">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">anal_mvd</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#anal_mvd"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.anal_mvd" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for parsing the MVD1 + MVD2 out of the raw data dictionary.
+Takes the full dictionary as input, and returns the relativistic
+contributions to the energy.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.anal_q">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">anal_q</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#anal_q"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.anal_q" title="Permalink to this definition">¶</a></dt>
+<dd><p>Try and get the CCSDT(Q) energy</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.anal_zpe">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">anal_zpe</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#anal_zpe"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.anal_zpe" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for parsing the ZPE out of the raw data dictionary.
+Takes the full dictionary as input, and returns the ZPE.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.analysis_lookup">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">analysis_lookup</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">method</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#analysis_lookup"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.analysis_lookup" title="Permalink to this definition">¶</a></dt>
+<dd><p>Returns the function associated with the string
+based name of a function.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.analyze_molecule">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">analyze_molecule</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mol_name</span></em>, <em class="sig-param"><span class="n">directory</span></em>, <em class="sig-param"><span class="n">methods</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#analyze_molecule"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.analyze_molecule" title="Permalink to this definition">¶</a></dt>
+<dd><p>Automate analysis of a molecule by pointing to a directory
+containing all of the relevant calculations, as well as providing
+an identifier.</p>
+<p>Optional argument is to specify what contributions to include
+in the calculation</p>
+<p>Returns a dataframe containing the energy breakdown.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.calc_enthalpy">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">calc_enthalpy</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em>, <em class="sig-param"><span class="n">reactants</span></em>, <em class="sig-param"><span class="n">products</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#calc_enthalpy"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.calc_enthalpy" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.calc_reaction">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">calc_reaction</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em>, <em class="sig-param"><span class="n">reactants</span></em>, <em class="sig-param"><span class="n">products</span></em>, <em class="sig-param"><span class="n">reactions</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#calc_reaction"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.calc_reaction" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.check_analysis">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">check_analysis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">analysis_dict</span></em>, <em class="sig-param"><span class="n">logger</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#check_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.check_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for performing small sanity checks on the analysis results.
+Basic idea is to do some value comparisons to make sure the extrapolations
+have been performed sensibily.
+Args: dictionary containing the analysis values and a reference to the
+logger object used for debugging.
+The function will only print bad flags.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.get_hot">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">get_hot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em>, <em class="sig-param"><span class="n">species</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#get_hot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.get_hot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.heat_analysis">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">heat_analysis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mol_name</span></em>, <em class="sig-param"><span class="n">data_dict</span></em>, <em class="sig-param"><span class="n">methods</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">logger</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#heat_analysis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.heat_analysis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main driver function for analyzing HEAT contributions.</p>
+<p>This version has been written to be completely modular with
+respect to the contributions that it can take.</p>
+<p>Loops through a list of analysis functions and spits out
+a dataframe containing all of the resulting analysis.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.init_logger">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">init_logger</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">log_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#init_logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.init_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use <cite>logging</cite> module to provide debug data for HEAT analysis.
+All of the extraneous data (e.g. extraplation coefficients, etc)
+will be output with the logger.</p>
+<p>Required input is the name of the log file including file extension.
+Returns a logger object.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.match_basis">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">match_basis</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">basis</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#match_basis"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.match_basis" title="Permalink to this definition">¶</a></dt>
+<dd><p>Converts a string representations of basis angular momenta
+to the cardinal number</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.read_heat">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">read_heat</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dir_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#read_heat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.read_heat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to parse in all of the calculations that consist of
+the HEAT scheme.
+Args: dir_path, path to top directory of the HEAT calculation
+which would end with the calcID</p>
+<p>Returns a dictionary containing all of the parsed logfiles</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.heat_analysis.relative_energies">
+<code class="sig-prename descclassname">pyspectools.qchem.heat_analysis.</code><code class="sig-name descname">relative_energies</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">df</span></em>, <em class="sig-param"><span class="n">base</span></em>, <em class="sig-param"><span class="n">molecules</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/heat_analysis.html#relative_energies"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.heat_analysis.relative_energies" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.qchem.multiwell">
+<span id="pyspectools-qchem-multiwell-module"></span><h2>pyspectools.qchem.multiwell module<a class="headerlink" href="#module-pyspectools.qchem.multiwell" title="Permalink to this headline">¶</a></h2>
+<p>Scripts to perform rate calculations using Multiwell.
+The focus here is to take output from a pseudo-variational
+calculation performed using CFOUR, format the results (e.g.
+constants, frequencies, etc.) into ktools format</p>
+<dl class="py class">
+<dt id="pyspectools.qchem.multiwell.Species">
+<em class="property">class </em><code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">Species</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mominert_str</span></em>, <em class="sig-param"><span class="n">name</span></em>, <em class="sig-param"><span class="n">parsed_data</span></em>, <em class="sig-param"><span class="n">species_type</span></em>, <em class="sig-param"><span class="n">dist</span></em>, <em class="sig-param"><span class="n">delh</span><span class="o">=</span><span class="default_value">0.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Species.calc_mominert">
+<code class="sig-name descname">calc_mominert</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species.calc_mominert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species.calc_mominert" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Species.call_mominert">
+<code class="sig-name descname">call_mominert</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species.call_mominert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species.call_mominert" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Species.determine_rot">
+<code class="sig-name descname">determine_rot</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">mode_num</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species.determine_rot"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species.determine_rot" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Species.format_dof">
+<code class="sig-name descname">format_dof</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species.format_dof"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species.format_dof" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Species.format_species">
+<code class="sig-name descname">format_species</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species.format_species"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species.format_species" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Species.get_formula">
+<code class="sig-name descname">get_formula</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Species.get_formula"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Species.get_formula" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt id="pyspectools.qchem.multiwell.Vtst">
+<em class="property">class </em><code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">Vtst</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">calc_root</span></em>, <em class="sig-param"><span class="n">reaction</span></em>, <em class="sig-param"><span class="n">ktools_yml_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Class that handles a VTST calculation. This class is mainly
+designed for filepath handling, since the multiwell programs
+are extremely annoying about relative paths…</p>
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.analyze_tst">
+<code class="sig-name descname">analyze_tst</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.analyze_tst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.analyze_tst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Analysis function for transition state RRKM
+More or less the same as the VTST version, but simpler</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.analyze_vtst">
+<code class="sig-name descname">analyze_vtst</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.analyze_vtst"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.analyze_vtst" title="Permalink to this definition">¶</a></dt>
+<dd><p>Main analysis function
+Loops over all of the log files detected in __init__ and
+produces ktools input file format strings</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.call_ktools">
+<code class="sig-name descname">call_ktools</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">inp_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.call_ktools"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.call_ktools" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.dump_ktools">
+<code class="sig-name descname">dump_ktools</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.dump_ktools"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.dump_ktools" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.init_ktools">
+<code class="sig-name descname">init_ktools</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.init_ktools"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.init_ktools" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt id="pyspectools.qchem.multiwell.Vtst.temps">
+<code class="sig-name descname">temps</code><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.temps" title="Permalink to this definition">¶</a></dt>
+<dd><p>Set up paths management</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.tst_calc">
+<em class="property">classmethod </em><code class="sig-name descname">tst_calc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">data_dict</span></em>, <em class="sig-param"><span class="n">reaction</span></em>, <em class="sig-param"><span class="n">ktools_yml_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.tst_calc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.tst_calc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialization method for conventional TST calculations
+using ktools.</p>
+<p>The required inputs are:
+data_dict - dictionary holding paths to output files, with
+the keys corresponding to reactant, ts, product as well as
+reaction enthalpies
+reaction - str specification to name the reaction
+ktools_yml_path - path to ktools YAML input</p>
+<p>format of data_dict should be like this:
+data_dict = {“reactant”: {“path”: , “E”}}</p>
+</dd></dl>
+
+<dl class="py method">
+<dt id="pyspectools.qchem.multiwell.Vtst.vtst_calc">
+<em class="property">classmethod </em><code class="sig-name descname">vtst_calc</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">calc_root</span></em>, <em class="sig-param"><span class="n">reaction</span></em>, <em class="sig-param"><span class="n">ktools_yml_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#Vtst.vtst_calc"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.vtst_calc" title="Permalink to this definition">¶</a></dt>
+<dd><p>Serialization method specifically for VTST calculations
+using ktools.</p>
+<p>The required inputs are:
+calc_root - path to root of the calculation directory
+reaction - str specification to name the reaction
+ktools_yml_path - path to ktools YAML input</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.fit_arrhenius">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">fit_arrhenius</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">canonical_df</span></em>, <em class="sig-param"><span class="n">guess</span><span class="o">=</span><span class="default_value">None</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#fit_arrhenius"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.fit_arrhenius" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to fit a modified Arrhenius rate model to
+a dataframe containing canonical rates extracted from
+the parse_canonical routine</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.format_multiwell">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">format_multiwell</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">molecule</span></em>, <em class="sig-param"><span class="n">state</span><span class="o">=</span><span class="default_value">'reac'</span></em>, <em class="sig-param"><span class="n">comment</span><span class="o">=</span><span class="default_value">''</span></em>, <em class="sig-param"><span class="n">delh</span><span class="o">=</span><span class="default_value">0.0</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#format_multiwell"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.format_multiwell" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert the output of an electronic structure program into the form
+used for a lot of the Multiwell programs; specifically for <cite>thermo</cite>.</p>
+<p>Takes the parsed output as a dictionary, and the user can specify
+what state the structure is (e.g. reac, ctst, or prod).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>molecule</strong> (<em>dict</em>) – Dictionary containing parsed output from electronic structure programs.
+The format is that generated by the CalculationResult class.</p></li>
+<li><p><strong>state</strong> (<em>str</em><em>, </em><em>optional</em>) – Specify which part of the reaction this structure is.</p></li>
+<li><p><strong>comment</strong> (<em>str</em><em>, </em><em>optional</em>) – Comment line for the structure</p></li>
+<li><p><strong>delh</strong> (<em>float</em><em>, </em><em>optional</em>) – The 0 K heat of formation, or relative energy of this point in the units
+specified in the multiwell input file (usually kJ/mol)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p><strong>mw_str</strong> – String containing the formatted output</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.init_logger">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">init_logger</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">log_name</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#init_logger"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.init_logger" title="Permalink to this definition">¶</a></dt>
+<dd><p>Use <cite>logging</cite> module to provide debug data for HEAT analysis.
+All of the extraneous data (e.g. extraplation coefficients, etc)
+will be output with the logger.</p>
+<p>Required input is the name of the log file including file extension.
+Returns a logger object.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.mod_arrhenius">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">mod_arrhenius</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">T</span></em>, <em class="sig-param"><span class="n">a</span></em>, <em class="sig-param"><span class="n">b</span></em>, <em class="sig-param"><span class="n">g</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#mod_arrhenius"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.mod_arrhenius" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.parse_canonical">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">parse_canonical</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filecontents</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#parse_canonical"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.parse_canonical" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function to parse data out of a .canonical file from ktools
+Returns a dataframe containing the recommended thermal rate constants
+along with the temperature and inverse temperature.</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.parse_ktools">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">parse_ktools</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">ktoolslog_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#parse_ktools"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.parse_ktools" title="Permalink to this definition">¶</a></dt>
+<dd><p>ktools_path corresponds to the logfile for the ktools
+calculation.</p>
+<p>The routine will parse canonical rate constants from the
+file with extension .canonical, and J-resolved microcanonical
+constants from .kej</p>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.multiwell.parse_mominert">
+<code class="sig-prename descclassname">pyspectools.qchem.multiwell.</code><code class="sig-name descname">parse_mominert</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">momout_path</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/multiwell.html#parse_mominert"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.multiwell.parse_mominert" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.qchem.parsers">
+<span id="pyspectools-qchem-parsers-module"></span><h2>pyspectools.qchem.parsers module<a class="headerlink" href="#module-pyspectools.qchem.parsers" title="Permalink to this headline">¶</a></h2>
+<p>parsers.py</p>
+<p>This module contains routines for parsing data out of electronic structure outputs. Everything will be centered around
+a Calculation dataclass, with specific parsing methods written for each program. The result should be a homogenized
+Pythonization of calculations, regardless of program used.</p>
+<dl class="py function">
+<dt id="pyspectools.qchem.parsers.parseG3">
+<code class="sig-prename descclassname">pyspectools.qchem.parsers.</code><code class="sig-name descname">parseG3</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/parsers.html#parseG3"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.parsers.parseG3" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function for parsing a G3 calculation from a Gaussian output file. This function does not generate an object,
+and instead returns all of the data as a dictionary.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- str</strong> (<em>filepath</em>) – Filepath to the G3 Gaussian output file.</p>
+</dd>
+<dt class="field-even">Returns</dt>
+<dd class="field-even"><p>Dictionary containing the G3 output</p>
+</dd>
+<dt class="field-odd">Return type</dt>
+<dd class="field-odd"><p>results - dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.parsers.parseW1">
+<code class="sig-prename descclassname">pyspectools.qchem.parsers.</code><code class="sig-name descname">parseW1</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/parsers.html#parseW1"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.parsers.parseW1" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.parsers.parse_cfour">
+<code class="sig-prename descclassname">pyspectools.qchem.parsers.</code><code class="sig-name descname">parse_cfour</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/parsers.html#parse_cfour"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.parsers.parse_cfour" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.parsers.parse_g16">
+<code class="sig-prename descclassname">pyspectools.qchem.parsers.</code><code class="sig-name descname">parse_g16</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/parsers.html#parse_g16"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.parsers.parse_g16" title="Permalink to this definition">¶</a></dt>
+<dd><p>Parse in the output of a Gaussian 16 calculation. To optimize the output format, make sure the calculation
+route includes the Output=Pickett keyword, which ensures the coordinates are actually in the principal axis
+orientation.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>- str</strong> (<em>filepath</em>) – Filepath to Gaussian logfile</p>
+</dd>
+</dl>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.qchem.utils">
+<span id="pyspectools-qchem-utils-module"></span><h2>pyspectools.qchem.utils module<a class="headerlink" href="#module-pyspectools.qchem.utils" title="Permalink to this headline">¶</a></h2>
+<p>Contains all of the auxillary functions for CFOURviewer; i.e. file I/O,
+storage to HDF5, copying and pasting, etc.</p>
+<p>The scope of HDF5 will be to store the parsed data, as well as the full
+output file as a string.</p>
+<p>Settings will be stored in a dot folder in the user’s home directory;
+this includes templates for the PBS script as well as CFOURviewer settings.</p>
+<dl class="py function">
+<dt id="pyspectools.qchem.utils.clean_string">
+<code class="sig-prename descclassname">pyspectools.qchem.utils.</code><code class="sig-name descname">clean_string</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">string</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/utils.html#clean_string"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.utils.clean_string" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.utils.obabel_png">
+<code class="sig-prename descclassname">pyspectools.qchem.utils.</code><code class="sig-name descname">obabel_png</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">'xyz'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/utils.html#obabel_png"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.utils.obabel_png" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call open-babel to convert a obabel readable format file into a PNG. The conversion requires
+that obabel linked to libcairo, and will dump the image in the current working directory.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><p><strong>filepath</strong> (<em>str</em>) – Filepath to the target file</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.utils.obabel_smi">
+<code class="sig-prename descclassname">pyspectools.qchem.utils.</code><code class="sig-name descname">obabel_smi</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">'xyz'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/utils.html#obabel_smi"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.utils.obabel_smi" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.utils.obabel_xyz">
+<code class="sig-prename descclassname">pyspectools.qchem.utils.</code><code class="sig-name descname">obabel_xyz</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">format</span><span class="o">=</span><span class="default_value">'g09'</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/utils.html#obabel_xyz"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.utils.obabel_xyz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Call open-babel to convert a specified file into an XYZ.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters</dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>filepath</strong> (<em>str</em>) – Filepath to save the XYZ file to. Extension is not mandated, but can be included.</p></li>
+<li><p><strong>format</strong> (<em>str</em>) – File format to convert from. Must be supported by open-babel</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt id="pyspectools.qchem.utils.split_zmat">
+<code class="sig-prename descclassname">pyspectools.qchem.utils.</code><code class="sig-name descname">split_zmat</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">zmat_list</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/qchem/utils.html#split_zmat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.qchem.utils.split_zmat" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will convert a ZMAT into a dictionary.</p>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.qchem">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.qchem" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2019, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>
