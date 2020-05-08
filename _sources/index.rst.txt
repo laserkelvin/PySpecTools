@@ -12,6 +12,7 @@ Reproducible, automated, and interactive analysis for rotational spectroscopy
 
    install
    faq
+   examples
    pyspectools.spectra
 
 .. image:: _static/pst_logo_landscape.png

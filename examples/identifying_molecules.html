@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Identifying Molecules using Probabilistic Deep Learning &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Spectra Module" href="../pyspectools.spectra.html" />
+    <link rel="prev" title="Example Notebooks" href="../examples.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Example Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../modules.html">PySpecTools</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Identifying Molecules using Probabilistic Deep Learning</a><ul>
+<li><a class="reference internal" href="#SpecConstants"><code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code></a></li>
+<li><a class="reference internal" href="#MoleculeDetective"><code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code></a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+  <li>
+    <a href="../examples.html" title="Previous Chapter: Example Notebooks"><span class="glyphicon glyphicon-chevron-left visible-sm"></span><span class="hidden-sm hidden-tablet">&laquo; Example Notebooks</span>
+    </a>
+  </li>
+  <li>
+    <a href="../pyspectools.spectra.html" title="Next Chapter: Spectra Module"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">Spectra Module &raquo;</span>
+    </a>
+  </li>
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="../_sources/examples/identifying_molecules.ipynb.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    background: #f5f5f5;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[1]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="o">%</span><span class="k">matplotlib</span> inline
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span>
+
+<span class="kn">from</span> <span class="nn">pyspectools.models.classes</span> <span class="kn">import</span> <span class="n">SpecConstants</span><span class="p">,</span> <span class="n">MoleculeDetective</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area stderr docutils container">
+<div class="highlight"><pre>
+/home/kelvin/anaconda3/lib/python3.7/site-packages/pyspectools/fitting.py:13: TqdmExperimentalWarning: Using `tqdm.autonotebook.tqdm` in notebook mode. Use `tqdm.tqdm` instead to force console mode (e.g. in jupyter console)
+  from tqdm.autonotebook import tqdm
+</pre></div></div>
+</div>
+<div class="section" id="Identifying-Molecules-using-Probabilistic-Deep-Learning">
+<h1>Identifying Molecules using Probabilistic Deep Learning<a class="headerlink" href="#Identifying-Molecules-using-Probabilistic-Deep-Learning" title="Permalink to this headline">¶</a></h1>
+<p>One of the difficulties with rotational spectroscopy is figuring out what the identity of a molecule is after we’ve obtained a set of spectroscopic parameters. For example, you’ve gone off to the lab and measured a bunch of lines, and now you’ve determined <span class="math notranslate nohighlight">\(A, B, C\)</span> as well as measured <span class="math notranslate nohighlight">\(a-\)</span> and <span class="math notranslate nohighlight">\(b-\)</span>type transitions, but now you don’t know what that molecule is! Unfortunately, it’s not such a trivial task to go from Hamiltonian to molecular structure: while the rotational
+constants are related to the moments of inertia, and therefore the distribution of mass in space, the transformation from structure to constants is non-invertible; we lose information/dimensonality with each subsequent transformation. The task that we’re dealing with is to try and re-map these constants back into some information that can help identify the unknown molecule. Because this mapping is increasing in dimensionality with each step, we have to somehow be able to account for all possible
+parameters that originate from a single set of constants: in other words, <em>what kind of molecules can result from a given set of</em> <span class="math notranslate nohighlight">\(A, B, C\)</span>.</p>
+<p>This question in itself can be framed in terms of <a class="reference external" href="https://en.wikipedia.org/wiki/Bayes'_theorem">Bayes’ theorem</a>:</p>
+<div class="math notranslate nohighlight">
+\[p(M \vert A, B, C) = \frac{p(A, B, C \vert M) p(A, B, C)}{p(M)}\]</div>
+<p>Starting with the left hand side, we have the <em>posterior</em> distribution, <span class="math notranslate nohighlight">\(p(M \vert A, B, C)\)</span>, which represents the likelihood of any molecule <span class="math notranslate nohighlight">\(M\)</span>, <em>given a set of rotational constants</em>. This is precisely what we’re interested in. <span class="math notranslate nohighlight">\(p(A, B, C \vert M)\)</span>, describes the distribution of possible <span class="math notranslate nohighlight">\(A, B, C\)</span>, given a molecule, while <span class="math notranslate nohighlight">\(p(A, B, C)\)</span> represents the <em>prior</em> distribution, which encapsulates any experimental uncertainty we may have. The final term, <span class="math notranslate nohighlight">\(p(M)\)</span>,
+describes all possible molecule space: this is somewhat of an abstract concept, but the idea is that this term represents the identity of every possible molecule ever. In fact, you could rephrase the equation above to this:</p>
+<div class="math notranslate nohighlight">
+\[p(M \vert A, B, C) = \frac{p(A, B, C \vert M) p(A, B, C)}{\int_m^M p(A_m, B_m, C_m \vert m)p(A_m, B_m, C_m)\,dM}\]</div>
+<p>where the denominator is now an integral of <span class="math notranslate nohighlight">\(A, B, C\)</span> for molecule <span class="math notranslate nohighlight">\(m\)</span> that is a subset of all possible molecules <span class="math notranslate nohighlight">\(M\)</span>. This is not so tractable. Enter probabilistic deep learning! The idea is to parametrize the equation, such that a neural network—when trained properly—encapsulates structure space in a highly compressed manner.</p>
+<p>The routines now implemented in <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> provide the user a high-level interface for performing inference. There are currently two main classes that we’re concerned with, <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code>, and <code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code>. This notebook will explore usage and provide insight into how these classes could be used in your own case.</p>
+<hr class="docutils" />
+<div class="section" id="SpecConstants">
+<h2><code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code><a class="headerlink" href="#SpecConstants" title="Permalink to this headline">¶</a></h2>
+<p>The <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code> class is your gateway into inference. The design behind this class is to facilitate the proper propagation of uncertainty, and to generate samples for inference. The backend machinery for this class is the <code class="docutils literal notranslate"><span class="pre">uncertainties</span></code> package. Every parameter that you determine in a spectroscopic fit has some nominal uncertainty: when values are poorly constrained, the uncertainties are large and this <em>must</em> be accounted for by having correspondingly uninformative priors.</p>
+<p>To illustrate the basic mechanics, the construction of a <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code> object requires at a minimum three rotational constants, <span class="math notranslate nohighlight">\(A, B, C\)</span>, provided as strings. Here’s an example:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">unknown_molecule</span> <span class="o">=</span> <span class="n">SpecConstants</span><span class="p">(</span><span class="n">A</span><span class="o">=</span><span class="s2">&quot;5702.472251(10)&quot;</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="s2">&quot;5702.472251(52)&quot;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="s2">&quot;2721.312512(602)&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># calling print(unknown_molecule) or just by itself will summarize the molecule</span>
+<span class="n">unknown_molecule</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{   &#39;A&#39;: 5702.472251+/-1e-05,
+    &#39;B&#39;: 5702.472251+/-5.2e-05,
+    &#39;C&#39;: 2721.312512+/-0.000602,
+    &#39;__name__&#39;: &#39;UnevenEssentialShamblingMound&#39;,
+    &#39;delta&#39;: 8.462402523799186+/-4.109074024806016e-05,
+    &#39;kappa&#39;: 1.0+/-3.552497270559369e-08,
+    &#39;u_a&#39;: 0.0+/-3.0,
+    &#39;u_b&#39;: 0.0+/-3.0,
+    &#39;u_c&#39;: 0.0+/-3.0}
+</pre></div></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code> class keeps track of the experimentally relevant parameters: the rotational constants, derived parameters <span class="math notranslate nohighlight">\(\Delta\)</span> (the inertial defect) and <span class="math notranslate nohighlight">\(\kappa\)</span> (the asymmetry parameter), and the dipole moments along each principle axis. The derived parameters are calculated automatically once you initialize the object, and you can see how every parameter has a <code class="docutils literal notranslate"><span class="pre">+/-</span></code> corresponding to its nominal uncertainty. One important thing to note is that the dipole moments are by
+default all centered around zero with large uncertainties: we assume that you haven’t actually measured the dipole moment (not such an easy thing to do well). If you want to provide dipole moments, you will need to provide a <code class="docutils literal notranslate"><span class="pre">uncertainties.ufloat</span></code> value like so:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[73]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">uncertainties</span> <span class="kn">import</span> <span class="n">ufloat</span>
+
+<span class="n">unknown_molecule</span> <span class="o">=</span> <span class="n">SpecConstants</span><span class="p">(</span><span class="n">A</span><span class="o">=</span><span class="s2">&quot;5702.472251(10)&quot;</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="s2">&quot;5702.472251(52)&quot;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="s2">&quot;2721.312512(602)&quot;</span><span class="p">,</span> <span class="n">u_a</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">u_b</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">u_c</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">))</span>
+</pre></div>
+</div>
+</div>
+<p>In this case, I’m confident that there is an <span class="math notranslate nohighlight">\(a-\)</span>type spectrum, but I don’t know what the magntiude of the dipole moment is and so I set a nominal value and a large uncertainty to it. I did not observe any transitions along <span class="math notranslate nohighlight">\(b\)</span> and <span class="math notranslate nohighlight">\(c-\)</span>axes, and so I’m turning them off by setting them to zero with no uncertainty. This kind of mindset is global for all of this analysis, and may not come intuitively for some: <em>everything has uncertainty, and this framework will take it all
+into account!</em>. The uncertainties are used by the class to generate samples, which you can call by running <code class="docutils literal notranslate"><span class="pre">SpecConstants.generate_samples(N)</span></code>, or simply <code class="docutils literal notranslate"><span class="pre">SpecConstants(N)</span></code>:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[74]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Generate 50 samples based on the experimental data</span>
+<span class="n">samples</span> <span class="o">=</span> <span class="n">unknown_molecule</span><span class="p">(</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[75]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">samples</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[75]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+array([[5.70247227e+03, 5.70247226e+03, 2.72131303e+03, 9.99999993e-01,
+        8.46236792e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
+       [5.70247226e+03, 5.70247221e+03, 2.72131313e+03, 9.99999967e-01,
+        8.46235988e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
+       [5.70247225e+03, 5.70247219e+03, 2.72131194e+03, 9.99999959e-01,
+        8.46244067e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
+       [5.70247226e+03, 5.70247224e+03, 2.72131219e+03, 9.99999991e-01,
+        8.46242453e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00]])
+</pre></div></div>
+</div>
+<p>This function returns an array where each row corresponds to “an observation”, generated by sampling independent Gaussians with centers/widths based on the parameter value and uncertainty. The last three columns of each row are the dipole moments, and contrasted with our “well-determined” rotational constants, are actually all over the shop, and correspond with the fact that we have no clue what the dipole moments are, but we measured our experimental constants precisely. The same thing could be
+done for the rotational constants: if a parameter is poorly determined, just ascribe a large uncertainty to it.</p>
+</div>
+<hr class="docutils" />
+<div class="section" id="MoleculeDetective">
+<h2><code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code><a class="headerlink" href="#MoleculeDetective" title="Permalink to this headline">¶</a></h2>
+<p>Now comes the cool bit: doing the actual inference using our pre-trained deep learning model. This is handled by the <code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code> class, which can be instantiated just like so:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[76]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">model</span> <span class="o">=</span> <span class="n">MoleculeDetective</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>The main purpose of this class is to handle running the model in the background without requiring you, the user, to know how to write/read code in PyTorch. The only inputs that you need are a <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code> object, and the expected composition of the molecule. The latter needs a bit more clarification: because molecule space is so deeply entangled, the model was developed to perform <em>conditional inference</em>: i.e. what are the identifying features, given this set of rotational constants and if
+it contains oxygen, for example. The <code class="docutils literal notranslate"><span class="pre">composition</span></code> argument lets you choose a specific composition by providing an integer:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 26%" />
+<col style="width: 74%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Integer</p></th>
+<th class="head"><p>Composition</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>0</p></td>
+<td><p>Pure hydrocarbon</p></td>
+</tr>
+<tr class="row-odd"><td><p>1</p></td>
+<td><p>Oxygen-bearing</p></td>
+</tr>
+<tr class="row-even"><td><p>2</p></td>
+<td><p>Nitrogen-bearing</p></td>
+</tr>
+<tr class="row-odd"><td><p>3</p></td>
+<td><p>Oxygen/Nitrogen-bearing</p></td>
+</tr>
+</tbody>
+</table>
+<p>Alternatively, if you have no idea what the composition is, then the default will be random compositions. This is helpful if you just want to see what the range of possible formulae are. You can perform inference by calling <code class="docutils literal notranslate"><span class="pre">run_inference</span></code>, or by using the object like a function:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[86]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Run our unknown, using a pure hydrocarbon composition</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">unknown_molecule</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[87]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">results</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[87]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+&lt;pyspectools.models.classes.MoleculeResult at 0x7f93208e2990&gt;
+</pre></div></div>
+</div>
+<p>This returns a <code class="docutils literal notranslate"><span class="pre">MoleculeResult</span></code> object, which holds the prediction results and implements some convenience functions for analysis, namely <code class="docutils literal notranslate"><span class="pre">analyze()</span></code>. More will be implemented soon!</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[88]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">results_dict</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">analyze</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[89]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">violinplot</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">formulas</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Predicted formulas&quot;</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,],</span> <span class="n">xticklabels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;H&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">,</span> <span class="s2">&quot;N&quot;</span><span class="p">],</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Number of atoms&quot;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Atom&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_identifying_molecules_16_0.png" src="../_images/examples_identifying_molecules_16_0.png" />
+</div>
+</div>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span>
+</pre></div>
+</div>
+</div>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017—2020, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

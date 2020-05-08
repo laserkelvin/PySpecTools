@@ -1,0 +1,296 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 1,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "/home/kelvin/anaconda3/lib/python3.7/site-packages/pyspectools/fitting.py:13: TqdmExperimentalWarning: Using `tqdm.autonotebook.tqdm` in notebook mode. Use `tqdm.tqdm` instead to force console mode (e.g. in jupyter console)\n",
+      "  from tqdm.autonotebook import tqdm\n"
+     ]
+    }
+   ],
+   "source": [
+    "%matplotlib inline\n",
+    "import numpy as np\n",
+    "from matplotlib import pyplot as plt\n",
+    "\n",
+    "from pyspectools.models.classes import SpecConstants, MoleculeDetective"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "# Identifying Molecules using Probabilistic Deep Learning\n",
+    "\n",
+    "One of the difficulties with rotational spectroscopy is figuring out what the identity of a molecule is after we've obtained a set of spectroscopic parameters. For example, you've gone off to the lab and measured a bunch of lines, and now you've determined $A, B, C$ as well as measured $a-$ and $b-$type transitions, but now you don't know what that molecule is! Unfortunately, it's not such a trivial task to go from Hamiltonian to molecular structure: while the rotational constants are related to the moments of inertia, and therefore the distribution of mass in space, the transformation from structure to constants is non-invertible; we lose information/dimensonality with each subsequent transformation. The task that we're dealing with is to try and re-map these constants back into some information that can help identify the unknown molecule. Because this mapping is increasing in dimensionality with each step, we have to somehow be able to account for all possible parameters that originate from a single set of constants: in other words, _what kind of molecules can result from a given set of_ $A, B, C$.\n",
+    "\n",
+    "This question in itself can be framed in terms of [Bayes' theorem](https://en.wikipedia.org/wiki/Bayes'_theorem):\n",
+    "\n",
+    "$$ p(M \\vert A, B, C) = \\frac{p(A, B, C \\vert M) p(A, B, C)}{p(M)} $$\n",
+    "\n",
+    "Starting with the left hand side, we have the _posterior_ distribution, $p(M \\vert A, B, C)$, which represents the likelihood of any molecule $M$, _given a set of rotational constants_. This is precisely what we're interested in. $p(A, B, C \\vert M)$, describes the distribution of possible $A, B, C$, given a molecule, while $p(A, B, C)$ represents the _prior_ distribution, which encapsulates any experimental uncertainty we may have. The final term, $p(M)$, describes all possible molecule space: this is somewhat of an abstract concept, but the idea is that this term represents the identity of every possible molecule ever. In fact, you could rephrase the equation above to this:\n",
+    "\n",
+    "$$ p(M \\vert A, B, C) = \\frac{p(A, B, C \\vert M) p(A, B, C)}{\\int_m^M p(A_m, B_m, C_m \\vert m)p(A_m, B_m, C_m)\\,dM} $$\n",
+    "\n",
+    "where the denominator is now an integral of $A, B, C$ for molecule $m$ that is a subset of all possible molecules $M$. This is not so tractable. Enter probabilistic deep learning! The idea is to parametrize the equation, such that a neural network—when trained properly—encapsulates structure space in a highly compressed manner.\n",
+    "\n",
+    "The routines now implemented in `PySpecTools` provide the user a high-level interface for performing inference. There are currently two main classes that we're concerned with, `SpecConstants`, and `MoleculeDetective`. This notebook will explore usage and provide insight into how these classes could be used in your own case.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "## `SpecConstants`\n",
+    "\n",
+    "The `SpecConstants` class is your gateway into inference. The design behind this class is to facilitate the proper propagation of uncertainty, and to generate samples for inference. The backend machinery for this class is the `uncertainties` package. Every parameter that you determine in a spectroscopic fit has some nominal uncertainty: when values are poorly constrained, the uncertainties are large and this _must_ be accounted for by having correspondingly uninformative priors.\n",
+    "\n",
+    "To illustrate the basic mechanics, the construction of a `SpecConstants` object requires at a minimum three rotational constants, $A, B, C$, provided as strings. Here's an example:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "unknown_molecule = SpecConstants(A=\"5702.472251(10)\", B=\"5702.472251(52)\", C=\"2721.312512(602)\")"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "{   'A': 5702.472251+/-1e-05,\n",
+       "    'B': 5702.472251+/-5.2e-05,\n",
+       "    'C': 2721.312512+/-0.000602,\n",
+       "    '__name__': 'UnevenEssentialShamblingMound',\n",
+       "    'delta': 8.462402523799186+/-4.109074024806016e-05,\n",
+       "    'kappa': 1.0+/-3.552497270559369e-08,\n",
+       "    'u_a': 0.0+/-3.0,\n",
+       "    'u_b': 0.0+/-3.0,\n",
+       "    'u_c': 0.0+/-3.0}"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "# calling print(unknown_molecule) or just by itself will summarize the molecule\n",
+    "unknown_molecule"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The `SpecConstants` class keeps track of the experimentally relevant parameters: the rotational constants, derived parameters $\\Delta$ (the inertial defect) and $\\kappa$ (the asymmetry parameter), and the dipole moments along each principle axis. The derived parameters are calculated automatically once you initialize the object, and you can see how every parameter has a `+/-` corresponding to its nominal uncertainty. One important thing to note is that the dipole moments are by default all centered around zero with large uncertainties: we assume that you haven't actually measured the dipole moment (not such an easy thing to do well). If you want to provide dipole moments, you will need to provide a `uncertainties.ufloat` value like so:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 73,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "from uncertainties import ufloat\n",
+    "\n",
+    "unknown_molecule = SpecConstants(A=\"5702.472251(10)\", B=\"5702.472251(52)\", C=\"2721.312512(602)\", u_a=ufloat(0., 0.), u_b=ufloat(0., 0.), u_c=ufloat(0., 0.))"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "In this case, I'm confident that there is an $a-$type spectrum, but I don't know what the magntiude of the dipole moment is and so I set a nominal value and a large uncertainty to it. I did not observe any transitions along $b$ and $c-$axes, and so I'm turning them off by setting them to zero with no uncertainty. This kind of mindset is global for all of this analysis, and may not come intuitively for some: _everything has uncertainty, and this framework will take it all into account!_. The uncertainties are used by the class to generate samples, which you can call by running `SpecConstants.generate_samples(N)`, or simply `SpecConstants(N)`:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 74,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Generate 50 samples based on the experimental data\n",
+    "samples = unknown_molecule(10)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 75,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "array([[5.70247227e+03, 5.70247226e+03, 2.72131303e+03, 9.99999993e-01,\n",
+       "        8.46236792e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+       "       [5.70247226e+03, 5.70247221e+03, 2.72131313e+03, 9.99999967e-01,\n",
+       "        8.46235988e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+       "       [5.70247225e+03, 5.70247219e+03, 2.72131194e+03, 9.99999959e-01,\n",
+       "        8.46244067e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],\n",
+       "       [5.70247226e+03, 5.70247224e+03, 2.72131219e+03, 9.99999991e-01,\n",
+       "        8.46242453e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00]])"
+      ]
+     },
+     "execution_count": 75,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "samples"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This function returns an array where each row corresponds to \"an observation\", generated by sampling independent Gaussians with centers/widths based on the parameter value and uncertainty. The last three columns of each row are the dipole moments, and contrasted with our \"well-determined\" rotational constants, are actually all over the shop, and correspond with the fact that we have no clue what the dipole moments are, but we measured our experimental constants precisely. The same thing could be done for the rotational constants: if a parameter is poorly determined, just ascribe a large uncertainty to it.\n",
+    "\n",
+    "---\n",
+    "\n",
+    "## `MoleculeDetective`\n",
+    "\n",
+    "Now comes the cool bit: doing the actual inference using our pre-trained deep learning model. This is handled by the `MoleculeDetective` class, which can be instantiated just like so:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 76,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model = MoleculeDetective()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "The main purpose of this class is to handle running the model in the background without requiring you, the user, to know how to write/read code in PyTorch. The only inputs that you need are a `SpecConstants` object, and the expected composition of the molecule. The latter needs a bit more clarification: because molecule space is so deeply entangled, the model was developed to perform _conditional inference_: i.e. what are the identifying features, given this set of rotational constants and if it contains oxygen, for example. The `composition` argument lets you choose a specific composition by providing an integer:\n",
+    "\n",
+    "| Integer | Composition |\n",
+    "|---|---|\n",
+    "| 0 | Pure hydrocarbon |\n",
+    "| 1 | Oxygen-bearing |\n",
+    "|2 | Nitrogen-bearing |\n",
+    "| 3 | Oxygen/Nitrogen-bearing |\n",
+    "\n",
+    "Alternatively, if you have no idea what the composition is, then the default will be random compositions. This is helpful if you just want to see what the range of possible formulae are. You can perform inference by calling `run_inference`, or by using the object like a function:"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 86,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "# Run our unknown, using a pure hydrocarbon composition\n",
+    "results = model(unknown_molecule, composition=0, N=5000)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 87,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<pyspectools.models.classes.MoleculeResult at 0x7f93208e2990>"
+      ]
+     },
+     "execution_count": 87,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "results"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "This returns a `MoleculeResult` object, which holds the prediction results and implements some convenience functions for analysis, namely `analyze()`. More will be implemented soon!"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 88,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "fig, results_dict = results.analyze()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 89,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "image/png": "iVBORw0KGgoAAAANSUhEUgAAAecAAAFnCAYAAACcvYGMAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAALEgAACxIB0t1+/AAAADh0RVh0U29mdHdhcmUAbWF0cGxvdGxpYiB2ZXJzaW9uMy4xLjMsIGh0dHA6Ly9tYXRwbG90bGliLm9yZy+AADFEAAAgAElEQVR4nO3deXhU9b3H8c+ZLfsyhIQEVAS8LuC1AqICWsSCuFSvAavUClalLriUp4prvYj0cl1KF7ng1t5bxVs3CAq1iloVRfBS0Idq3YpITVhCQkK2mWS2c/8IBCIkE5I5Mycz79fz+DBzcub8vpOfmc/8zvmdcwzTNE0BAADbcCS6AAAA0B7hDACAzRDOAADYDOEMAIDNEM4AANgM4QwAgM0QzkAPHHfccZo4caLOPfdcTZo0SVOmTNG6det6vN3FixfrzjvvlCRdeeWV+vvf/97p+i+88MJht7FhwwadffbZh/zZbbfdpnHjxum999477O32xMKFC3XPPffEtU3AjlyJLgDo7ZYsWaLi4mJJ0saNG3XDDTfotddeU58+fWKy/aeeeqrTn4fDYT300EO69NJLY9KeJL3yyitatWqVjjrqqJhtE0DXMXIGYmjkyJE66qij9NFHH6miokJnnHGG5s+fryuuuEJSa3hPmTJFEydO1KWXXqry8nJJUnNzs2bNmqXx48friiuu0M6dO9u2efbZZ2vDhg2SpOXLl2vSpEmaNGmSZs+erUAgoKuuukoNDQ0699xzVV5ersrKSl1//fVt661evbptW4sXL9a4ceNUWlqqtWvXHvI9TJs2TZFIRNdcc41Wr16t7du365prrtGkSZP0/e9/Xy+99JIkHfL9HXfccXrhhRd04YUXaty4cVq3bp1+9rOfafz48ZoxY4ZCoZAqKio0dOjQtva+/XyfLVu26Ic//KHOO+88TZw4UX/605/afvbrX/+67f1Nnz5dlZWV3eovwLZMAN127LHHmjt27Gi37N/+7d/Md9991ywvLzeHDRtmlpWVmaZpmo2NjebYsWPNNWvWmKZpmitXrjRLS0tN0zTNZ555xvzRj35kBoNBs6amxhw/frx5xx13mKZpmuPHjzf/+te/muXl5ebpp59u7ty504xEIuaNN95oPvnkk2Z5ebl5wgkntLV/7bXXmr/+9a9N0zTNrVu3mqeeeqpZU1Nj/uMf/zBHjRplVlVVmaFQyJw5c6Y5fvz4qO/r6quvNh977DHTNE2zoqLCHDlypFleXn7Q+9v3un3rPvDAA+bIkSPNLVu2mC0tLeaZZ55prl279qB6D3z+yCOPmHfffbdpmqZ53XXXmY8//rhpmqa5fv1686STTjIDgYD55Zdfmuecc44ZCARM0zTNp59+2ly+fPlh9Bpgf4ycgRhavXq1qqurNWLECElSMBjUxIkTJbUe483KytLYsWMlSd///vf1zTffaPv27dqwYYMmTpwol8slr9er8ePHH7Tt999/X8OHD1e/fv1kGIYWLFigH//4x+3W8fl8Wr16tS6//HJJ0sCBAzVy5EitXr1af/3rXzVq1Cj17dtXTqdTF110UdT3EwwGtXbt2rbtDRgwQKeddpo++OCDg97fPhMmTJAkHXvssTrqqKM0aNAgeTweDRw48LBGuIsXL9Y111wjqXWPREtLi6qqqpSbm6uamhqtXLlSdXV1mjZtmi6++OIubxfoDTjmDPTQtGnT5HQ6ZZqmBgwYoCeffFJZWVmqra2V0+lUdna2JKm+vl6VlZU699xz217r8XhUU1Ojuro65eTktC3Pzc1VU1NTu3Zqa2uVm5vb9jwtLe2gWhoaGmSapqZPn962zOfz6fTTT5fP5zuojWj27Nkj0zQPel1NTY0ktXt/+2RlZUmSHA5H2+N960Yikaht7vPee+/p0UcfVW1trQzDkGmaikQi6t+/vx555BH9z//8j+bNm6dRo0Zp7ty5Kikp6fK2AbsjnIEeOnBCWGeKioo0ePBglZWVHfSz3NxcNTQ0tD3fF34H8nq9+uijj9qeNzY2qrm5ud06BQUFcjqdWrZsWbtglKQ//vGP7dqora2NWrPX65XD4VBdXZ3y8vIktQZ2QUFB1Nd2ZF9Im6YpwzBUV1d30DrBYFCzZs3Sb37zG40bN06BQEAnnXRS289Hjx6t0aNHy+fz6cEHH9Qvf/lLLViwoNs1AXbDbm0gTr7zne+oqqpKmzZtkiSVl5dr9uzZMk1TJ598st566y2Fw2HV1NTo3XffPej148aN04cffqiKigqZpqk5c+Zo6dKlcrvdikQiamxslMvl0ne/+10999xzkiS/36+77rpLO3bs0IgRI7Rx40bV1NQoHA5rxYoVUWt2uVwaO3asnn/+eUnSN998ow0bNmjMmDHd/j14vV45nU598cUXkqSXX375oHX8fr98Pl/bRLGnnnpKbrdbTU1NWrNmjebOnatIJKLMzEwdf/zxMgyj2/UAdsTIGYiT9PR0PfLII5o3b56amprkdrv105/+VIZh6NJLL9WGDRs0YcIE9e/fXxMmTGg3ypWk4uJi3X///bryyivldDr1r//6r7rqqqvkdrs1cuRIjR8/Xo8//rjmzp2rOXPm6MUXX5QkXXTRRSopKVFJSYmmTp2q0tJS5efn64ILLtCXX34Zte77779fP//5z1VWVia3261f/OIXKikpUUVFRbd/DzfffLNmzJihoqIiTZs27aB1cnNzNWPGDF144YUqLi7WDTfcoAkTJmjGjBlatWqVXnnlFU2aNEkej0d9+vTR/Pnzu1ULYFeGaXI/ZwAA7ITd2gAA2AzhDACAzRDOAADYDOEMAIDNEM4AANiMbU6lqqpqiL6SzXm9maqt9SW6DMQI/Zlc6M/kkgz9WViY0+HPGDnHkMvlTHQJiCH6M7nQn8kl2fuTcAYAwGYIZwAAbIZwBgDAZiybENbU1KQ77rhDdXV1CgaDuvHGG3XmmWda1RwAAEnDsnBevny5Bg0apFtvvVWVlZW68sor9dprr1nVHAAAScOy3dper1d79uyR1HqTea/Xa1VTAAAkFctGzhdccIHKyso0ceJE1dfX6/HHH7eqKQAAkoplt4x8+eWXtWHDBs2bN0+ff/657rnnHi1btqzD9UOhcNKftwYAQFdYNnL+8MMPdcYZZ0iSjj/+eFVWVioUCsnlOnSTvf1KL1Lr1V6S4UpnaEV/Jhf6M7kkQ38m5AphAwcO1KZNmyRJ27ZtU1ZWVofBDAAA9rMsLS+77DLdfffduuKKKxQKhXTfffdZ1RTQqdmL13brdU6noXC4e0d9Hp45pluvAwDJwnDOysrSb3/7W6s2D1iqtqFZkiFvTlqiSwGQgtjPjKTXnVHsrYvel8Nh6OEbGAEDiD8u3wkcgmmasuY8BgCIjnAGOmDRWYYAEBW7tYFDIJcBJBIjZ+AQTNOUKVORCCkNIP4IZ+BbAsGw9kWyPxBKaC0AUhPhDHxLoz+4/7Ev2MmaAGANwhn4lrqmwCEfA0C8EM7AAYKhiOoPCGRfc0j+FnZtA4gvwhk4QHWd/6CZ2lV7/IkpBkDKIpyBvULhiKrrmg9aXtvQopZgOAEVAUhVhDOwV9Ue/yFvdGGaUmVN77+lKYDeg3AG1Hr6VGe7r2vqWzj2DCBuCGdAUkVVkyKRztcp39XIJT0BxAXhjJS3q9bXboZ2R3zNIW2vbopDRQBSHeGMlFa1x6/t1V0/nly1p1k7dhPQAKzFjS+QksKRiLZVNammvuWwX1tZ41dzIKwji7LlcvL9FkDsEc5IOXWNLaqoblIwGOUgc6fbCKjJX6v+fbPkzUmTYRgxrBBAqiOckTIafAHtrPGpyR+bWdehsKlvKhtVtcev4j6Zys3yENIAYoJwRlIzTVN1TQHtqvXL12zNqVD+lrC+3tGgdI9TRd4M5eekyUFIA+gBwhlJKRSOqKahRdV7/Ar0YPf14WgOhPVNZaO2725SYV6GCvLSOSYNoFsIZySV5kBI1XuaVdPQHPW8ZauEQqZ27PZpZ41P3pw0FeZnKCONPzUAXccnBpJCgy+gXXv8amiyz/2XTbP1ymI19S3KznCr0Juh3Ew3x6UBREU4o9cyTVP1Ta2TvPwt9r4xRaM/qEZ/UGkep/p5M5jhDaBThDN6pXpfQDuqm2wfyt/Wsve4dGWNTyV9s5SfnZbokgDYEOF8CLMXr+3W65xO45B3NeqKh2eO6dbrUk0wFFZFVZPqGqNfbtPOWoIRbd3RoOyMZh1ZlK00jzPRJQGwEcvC+cUXX9SKFSvann/yySf66KOPrGou4WobmiXDkJeRkGUa/UFt3VGvUDe/ANlRoz+oL8prNbBfjvL4fwfAXpaF8w9+8AP94Ac/kCStX79er776qlVNxVx3RrGzF6+Vw2nowetGW1ARfM0hfbWtTsl4U6hIRPp6R4MGDzCUm+lJdDkAbCAuJ2EuWrRIM2fOjEdTCcX0Hutsq25MymA+0LZdjYkuAYBNWH7M+W9/+5tKSkpUWFjY6Xpeb6Zcrt573M3pbI3mwsKcBFeSnMpr/HJ53HFrz+Fo7c+8vIy4tSlJfftmM4vbQvx9Jpdk7k/Lw3np0qUqLS2Nul5tbddv22dH4bApp9NQVVVDoktJSmYwpLpu3EGquyIRUw6Hobo6f9zazMlyq7qa0bNVCgtz+PtMIsnQn519ubB8t/b//d//afjw4VY3gyTXv2+W0pN4RrPb7dBRRdmJLgOATVgazpWVlcrKypLHwyQX9IzL6dAxR+QpLzv5/l/KznDr2CPy5e7Fh3UAxJalu7WrqqrUp08fK5tACnE5HRpUkqvahhZtq25UKNS7Z4g5nYZKCjJVkJvOcWYA7VgazieeeKJ+97vfWdkEUpA3J025WW7tqvWrao8/YTe46C7DkPrmpatfn0zuWgXgkLhCGHolp8OhkoIs9c3LUGWNT9X1zVIvGEh7c9JUXJCpNDe7sAF0jHBGr+Z2OXREUbYK8zO0fbd9L+uZneFW/75ZykznTw5AdHxSICmkeZwaVJKrusYWlVfZ53i0w2HoiMIs9clNT3QpAHoRwhlJJS87TZnpbm3dWa8mfyihtaTv/cLATS0AHC5moyDpuF0ODemfp+yM+F1R7Nsy0pw65og8ghlAtxDOSEoOh6GjS3Lkdsf/f3Gn09CgklxmYgPoNj49kLRczsRcdWtA3yx5mI0NoAcI5xiyxxQkHCgn06P8nPhdVSwrw8XkLwA9RjjHEulsS/0LshSvC3AN6Mv1sQH0HOEcM6ZM0tmWPG6n+vXJtLydgrx0zmMGEBOEc4yYkkyy2baKvBmW3tXK7XKopMD6LwAAUgPhHEPcusC+HIahgcU5lu3ePqpfNrOzAcQMnyYxQjDbX0aaS/37ZsV8u/36ZCgnM/luZQkgcQjnGDHFfLDeoDA/I6b3hM5Md8XleDaA1EI4xwrJ3GscWZQtl7Pn+zocDmlgvxw5uBczgBgjnGOECWG9h8vpiMnu7X7eTC7PCcAShHOsmOJUql7Em5PWo9nbLpehwvyMGFYEAPsRzjFitqYzegnDMFTk7X64FuZnyOFgdzYAaxDOMcKEsN4nPyetW8eeDUMq4BKdACxEOMcK6dzrOAyjW9fBzs9O45xmAJbiEyZGWrPZVIRZYb1Kd0bABXmMmgFYi3COgWAoInNvKDf6gwmuBocjzeNUdqa7y+une5zKzuj6+gDQHYRzDOza49//uMbfyZqwo76HMRJm1AwgHgjnHvI1B1V1QDg3+oPaXdecwIpwuHKzPHK7ov8pOBytp2ABgNUI5x6ImKb+Wdl40ESwbdVNCgTDiSkKh611Ylj00GUiGIB4sfSTZsWKFbrooos0efJkrV692sqmEqJ6j18tgYNDOBIxtX13UwIqQnd1ZdZ2d2Z2A0B3WBbOtbW1WrRokf74xz/qscce05tvvmlVUwkRCkdUWdvx8eU9DQEmh/UiaW6nMtNdHf7c7XIwEQxA3FgWzuvWrdPo0aOVnZ2toqIizZs3z6qm4s40TX1T2ahwuPPTpsorGxQKR+JUFXoqp5NZ2539DABizbJwrqiokGmamjVrli6//HKtW7fOqqbiKhSOaMuOetU3BaKu2xKM6B8VdfK3hOJQGXoqq5ORMaNmAPHU8X68GKisrNR//dd/afv27Zo+fbrefvttGR3cXs/rzZTLZe87/FTv8WvH7gY5XC7l5bX/1e27znJe3sHXa66sb1H/QrdKCrK4HrON9QlHtLspKJkH9+fAI71K91j654I4KCzMSXQJiKFk7k/LPm0KCgo0fPhwuVwuHXXUUcrKylJNTY0KCgoOuX5trc+qUnrM3xLStqqmTo8hRyKmHA5DdXWHPg69Z49fX23drQFF2crN9FhVKnoo4A/I3xJu159ul0MNdX41JLo49EhhYY6qqujFZJEM/dnZlwvLdmufccYZ+uCDDxSJRFRTUyOfzyev12tVc5ZoCYb1TWWDvijfE5PJXS3BiLZsq9dX2+vka2aymB1lH+KLE7u0AcSbZSPnfv36adKkSbryyivl9/v185//XA6H/c8RNU1TDXsvJFLXFLDkZhYNTUE1NNUpK8OlvnkZysv2yNHB7n7EV3aGW1XfmoVPOAOIN0sPok2dOlVTp061somYCYbC2l3fopr6ZgWC8Zlh3eQPqcnfIKfTkDcnTQW56cpI47hmImWlu6RvfU8inAHEW8onQaM/qOo6v/Y0WjNK7opw2FT1nmZV72lWdoZbhfnpys3ydDh5DtZxOR1KdzsPeG4ozWPviYoAkk9KhnMkYmpPY4uq65rla7bXaU6N/qAa/UF53A71zUtXn9x0LhkZZwfuvUhnTwaABEipT55Gf1C1DS3a09gS9QIiiRYIRrS92qcdu33KzfKoT06acrI4Nh0P6QeMlNMZNQNIgKQP51A4ot31zaqpa1ZLnI4lx5JpSnWNAdU1BuTae2y6MD9DHjehYZUDd2On8XsGkABJHc71TQH9s7LB9qPkrgqFTVXtaVZ1XbNK+mapKP/gC56g5zwHXAyHL0EAEiFpD2YGQ2Ft3VmfNMF8INOUtlc1qd4X/RKiOHwe9/4/C08X7vMMALGWtJ88lbV+RXrfXuzDsnO3fa+q1psdOAHPTTgDSICk/eRp6MKNKXo7X3OIu15ZZN+0O2bKA0iEpP3kObJfjjLSkvd4odvl0MDiHMLDKoYh49tXIwGAOEnaCWHZGW4dd5RXjf6g6poCqm9s6ZWztQ/kchnKzfQoLztNOZluTquyEL9ZAImUtOG8T3aGW9kZbg3om6VAMKwGX7DtQh/BkL3D2uk0lJXuVnamWzkZbi7tGW8kNIAESalPe4/bqYI8pwry0iVJzYGQGn1BNfiDavAFFYkkdma3YUhZGW7lHBDGXMIzcfjNA0iUlArnb0v3uJTucalvfoYipqkmf1D1TQHVNwXitgvc5TSUm+VRXpZH2ZluOXvBnbtSAd+JACRSSofzgRyGoZxMj3IyPRpQKPlbQtrT2KK6xoCaA+GYtuV2OZSX7VF+dpqy0hkd2xXdAiBRCOcOZKS5lJHmUklBlvwtIdU2tKimoVmhUPd2fTscUn52mvrkphPIvUBr/9BHABKDcO6CfUFdXJCpusaAdu5u6vJub5fTUJE3g7tL9UJ8fwKQKITzYXAYrTeeyMv2aFetP+oVurw5aRpQmEUo90LkMoBEIpy7wWEYKu6TqQyPU1t3Nsg8xJ7u4oJMFffJjH9xiA2DkTOAxGFI1wN52WkaWJxz0PJ+fTII5qRAOgNIDEbOPZSfnaaSgv2zufOyPSopyEpgRYgFpoMBSCRGzjFQ5M1om319ZFF2gqsBAPR2jJxjwDAMOR2GDMNg8hcAoMdIkhgxmEAEAIgRwjlGOEYJAIgVwzQPdSJQ/FVVNSS6hDazF6897NfUNjRLkrw56d1q8+GZY7r1OkTX/f5sPa+9O+hP+ykszLHV5wx6Jhn6s7Dw4LN99jmsY86BQEC7d+9WSUlJj4tKNt6cdDmdhsJhW3zXQQ/RnwASKerI+fHHH1dmZqYuueQSTZkyRdnZ2RozZoxmzZrV6YY/+eQTzZw5UwMHDpQkHXvssbr33ns7XL+3fwOSkuObHPajP5ML/ZlckqE/ezRyfvvtt/Xss8/qpZde0vjx4zV79mxNnz49aqM+n0+TJk3SPffcc3jVAgCQ4qJOCHO5Wu+g9O6772rChAmSpEgk+k0fmpqael4dAAApKOrIOScnR9dee6127typ4cOH6+233+7S7Q59Pp82btyoGTNmyO/36+abb9bpp5/e4fpeb6ZcLufhVW9Dne2mQO9DfyYX+jO5JHN/Rj3m7PP5tHbtWo0YMUJ9+vTR+++/r0GDBql///6dbvirr77S1q1b9b3vfU9ff/21rrrqKr3++uvyeDyHXL+3HzuQkuMYCPajP5ML/ZlckqE/e3TM2eFwyOFw6N13321bVlVVpYsvvrjT1w0ZMkRDhgyRJA0aNEh9+/ZVZWWljjzyyK7WDQBASooazj/+8Y/ldrtVXFzctswwjKjhvHTpUvl8Pk2fPl1VVVXavXu3+vXr1/OKAQBIcl06z3nJkiWHveGJEyfqtttu06pVqxQIBHTfffd1uEsbAADsFzWcTzvtNG3YsEEjRoyQw9H1q33m5eXpySef7FFxAACkoqjh7Ha7NX36dO2bN2aapgzD0GeffWZ5cQAApKKo4bxy5Uq98cYb7Y45AwAA60QN56FDh6pfv35yOnv/OcgAAPQGUcPZMAxdcMEFOvHEE9sF9EMPPWRpYQAApKqo4XzmmWfqzDPPjEctAABAXQjn0tJSVVRU6NNPP5VhGBo2bFjUq4MBAIDui3pu1LPPPqvp06frlVde0cqVKzVt2jQtX748HrUBAJCSoo6cX375Zb366qtKS0uT1Hqt7auuukqlpaWWFwcAQCrq0i0j9wWzJGVmZsrtdltaFAAAqSzqyLm4uFjz5s3TmDFjJElr1qxRSUmJ5YUBAJCqoobzvHnztGTJEpWVlUmSTj75ZE2fPt3ywgAASFVRw/n555/Xtdde227ZI488oltuucWyogAASGUdhvMHH3ygDz74QCtWrFBdXV3b8ubmZq1YsYJwBgDAIh2G8+DBg1VVVSVJ7a4Mlp2drV/96lfWVwYAQIrqMJyLiop04YUXavjw4TriiCPa/ezpp5/WaaedZnlxAACkoqjHnBsaGvTTn/5UtbW1kqRAIKCdO3cyKQwAAItEPc957ty5Ouecc1RXV6err75aRx99NDe9AADAQlHDOT09XRdccIFyc3N11llnaf78+fr9738fj9oAAEhJUcO5paVFX375pTwej9avX6/Kykpt27YtHrUBAJCSoh5zvu2221ReXq5bbrlFt99+u3bv3q2f/OQn8agNAICUFDWcR44c2fZ41apVlhYDAAC6sFsbAADEF+EMAIDNdBjOy5YtkyS9+OKLcSsGAAB0csz50UcfVTAY1FNPPSXDMA76+SWXXGJpYQAApKoOR8633367Pv74YzU0NGjjxo0H/dcVzc3N+t73vtd2u0kAABBdhyPnc845R+ecc45WrVqlSZMmdWvjjz76qPLz87tdHAAAqSjqqVQnn3yy7r77bn388ccyDEMnn3yyZs2apT59+nT6uq+++kqbN2/WWWedFataAQBICVFna8+ZM0fDhg3Tr371K/3yl7/U4MGDdffdd0fd8IMPPqg777wzJkUCAJBKoo6c/X6/fvSjH7U9P/bYY/XWW291+pqXXnpJJ598so488sguF+L1ZsrlckZf0eYKC3MSXQJiiP5MLvRncknm/uxSOO/atUtFRUWSpJ07dyoQCHT6mnfeeUfl5eV65513tHPnTnk8HhUXF2vMmDEdvqa21neYpdtPYWGOqqoaEl0GYoT+TC70Z3JJhv7s7MtF1HCeOXOmJk+erMLCQpmmqZqaGv3Hf/xHp6/5zW9+0/Z44cKFGjBgQKfBDAAA9osazmeddZbefPNNbd26VZI0aNAgpaWlWV0XAAApK2o4S633dD7++OO71cDNN9/crdcBAJCquLY2AAA2EzWcTdOMRx0AAGCvqOE8ffr0eNQBAAD2inrM+YQTTtBvf/tbDR8+XG63u2356NGjLS0MAIBUFTWcP/vsM0nShg0b2pYZhkE4AwBgkajhvGTJEkmtx54PdetIAAAQW1GPOX/++eeaPHmyzjvvPEnSokWLtGnTJssLAwAgVUUN5wceeEDz589XYWGhJOn888/Xf/7nf1peGAAAqSpqODscjnYXIBk0aJBcri5duwQAAHRDly5CUl5e3na8efXq1Zz7DACAhaIOge+44w7NnDlTX3/9tUaMGKEjjjhCDz74YDxqAwAgJUUN5+OOO04rV65UTU2NPB6PsrOz41EXAAApK2o4b968WQsXLtTmzZtlGIaOPfZY3XTTTRo8eHA86gMAIOVEDefbb79dl19+uW655RZJ0saNGzV79mwtW7bM8uIAAEhFUcO5T58+uuSSS9qeDxkyRKtWrbK0KAAAUlmHs7UjkYgikYhOOeUUvf7662psbFRTU5PefPNNjRo1Kp41AgCQUjocOQ8dOlSGYRzytCmXy6Xrr7/e0sIAAEhVHYbz559/Hs86AADAXlGPOVdWVur1119XfX19u1H0TTfdZGlhAACkqqhXCLv22mv16aefKhgMKhQKtf0HAACsEXXknJeXx40uAACIo6jhPHHiRK1YsULDhw+X0+lsW96/f39LCwMAIFVFDecvvvhCK1euVH5+ftsywzD0zjvvWFkXAAApK2o4b9q0SevXr1daWlo86gEAIOVF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3n+dTqM14J2GXE5DTgdHCw8UMVv7zTT37cFofRwxTc35/fpD9mFr95oHPN77zDRlan9//vSR91r7yjDa+szY33kHPN5v7tWnymFIhtHan8a+x479y+zAsnCurq7WsGHD2p4XFBSoqqqqw3D2ejPlcjmtKiduCgtzEl0CYoj+tEY4YioUjigcjhz27maP+7PDbi/N0/2PupOOLz6s9R2GWsPb2ToiTwWt4dt66CBimjL3fqGK1rcOZ/e+yPSkP7vyN+0wJIfRuhelNbDV9jheLAtn0zQPet7ZG6ut9VlVStwUFuaoqqoh0WUgRuhPe3ro+tHdel13+9Pf2Nyt9hBdd/tSSo7+7OyLgmX7X/r166fq6uq257t27VLfvn2tag4AgKRhWTiPHTtWq1atkiR9+umnKioq4ngzAABdYNlu7REjRmjYsGGaOnWqDMPQnDlzrGoKAICkYul5zrfddpuVmwcAICkx5x8AAJshnAEAsBnCGQAAmyGcAQCwGcIZAACbIZwBALAZwhkAAJshnAEAsBnD/PYdKgAAQEIxcgYAwGYIZwAAbIZwBgDAZghnAABshnAGAMBmCGcAAGyGcO6hiooKTZ48ud2yhQsX6plnnklQReiprVu36tprr9Ull1yiyZMna968eQoEAokuC930zTff6Prrr9eUKVNUWlqqefPmqbm5OdFloRsqKip0wgkn6PPPP29bVlZWprKysgRWZQ3CGThAOBzWzTffrBkzZmjp0qVatmyZJGnRokUJrgzdEYlEdPPNN+vKK6/UsmXLtHz5cg0YMED33ntvoktDNx1zzDFasGBBosuwnCvRBQB28v7772vw4ME69dRTJUmGYWj27NlyOPge2xutWbNGRx99tEaPHt227KqrrtK5556r3bt3q6CgIIHVoTuGDRsmv9+vdevWtevXZEM4x8DXX3+tadOmtT3ftm2brr766gRWhO7asmWLTjjhhHbL0tPTE1QNemrLli0aOnRou2WGYehf/uVftHXrVsK5l/rZz36m22+/XaeffnqiS7EM4RwDgwYN0pIlS9qeL1y4MIHVoKfC4XCiS0AMHao/TdOU0+lMQDWIhYEDB2ro0KH685//nOhSLMO+OuAAQ4YM0ccff9xuWSAQ0JdffpmgitATQ4YM0SeffNJumWma2rx5s44++ujEFIWYuPHGG/XEE08oFAoluhRLEM7AAcaOHatt27bprbfektQ6oejhhx9O6m/oyWzs2LGqqKjQ6tWr25b94Q9/0CmnnKL8/PwEVoae6tu3ryZMmKDnnnsu0aVYgnAGDuBwOPT73/9eL7zwgiZPnqzLL79cOTk5uuWWWxJdGrphX38+//zzmjx5skpLS7V9+3bNmTMn0aUhBq6++mrt3Lkz0WVYgltGAgBgM4ycAQCwGcIZAACbIZwBALAZwhkAAJshnAEAsBnCGUhCu3bt0tChQ/XEE0+0Lfvwww9VXl6ewKoAdBXhDCSh5cuXa8iQIe1upVdWVkY4A70E19YGklBZWZnuu+8+3Xnnnfroo49UXV2t1157TX/729901113qbi4WHPmzJFpmgqFQrr11lt1yimn6M4775TX69VXX32lzZs369Zbb9Xbb7+tL774QiNGjNDcuXMT/daAlEA4A0lm/fr1CoVCOv3003XxxRerrKxM8+bN09NPP60bbrhBo0eP1jXXXKMf/vCHOu+88/TFF19o5syZ+stf/iJJqq6u1hNPPKGysjLdf//9euONN+TxeHTqqafq1ltvVW5uboLfIZD82K0NJJmlS5eqtLRUhmFoypQpevXVV+X3+9uts2nTJo0dO1aSdNxxx6mxsVE1NTWSpBEjRkiSiouLNXjwYOXm5io9PV35+flqaGiI75sBUhQjZyCJNDY26o033lBJSYneeOMNSa23THz99dfbrWcYxkGv3bfM5dr/sXDgY6n1jk4ArEc4A0lk5cqVGjVqVLtZ2itXrtTSpUtlGIaam5slSd/5zne0Zs0anX/++fr000+Vn58vr9ebqLIBfAvhDCSRpUuX6qabbmq3bNKkSXrggQc0ffp0zZ07V6FQSPfee6/mzJmjZ599VqFQSA899FCCKgZwKNyVCgAAm2FCGAAANkM4AwBgM4QzAAA2QzgDAGAzhDMAADZDOAMAYDOEMwAANkM4AwBgM/8PjrLxbZEMCh0AAAAASUVORK5CYII=\n",
+      "text/plain": [
+       "<Figure size 576x396 with 1 Axes>"
+      ]
+     },
+     "metadata": {},
+     "output_type": "display_data"
+    }
+   ],
+   "source": [
+    "fig, ax = plt.subplots()\n",
+    "\n",
+    "ax.violinplot(results.formulas.T)\n",
+    "\n",
+    "ax.set(title=\"Predicted formulas\", xticks=[1, 2, 3, 4,], xticklabels=[\"H\", \"C\", \"O\", \"N\"], ylabel=\"Number of atoms\", xlabel=\"Atom\");"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.4"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
