@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: PySpecTools FAQ</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>PySpecTools FAQ</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pyspectools-faq">
+<h1>PySpecTools FAQ<a class="headerlink" href="#pyspectools-faq" title="Permalink to this headline">¶</a></h1>
+<p>This lists some of the most commonly used functionality, and most easily
+forgotten functions accessible to PySpecTools.</p>
+<div class="section" id="creating-an-experiment">
+<h2>Creating an experiment<a class="headerlink" href="#creating-an-experiment" title="Permalink to this headline">¶</a></h2>
+<p>There are two main ways to create an <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code> object, by creating
+the class directly, or by using the <code class="docutils literal notranslate"><span class="pre">AssignmentSession.from_ascii()</span></code>
+function.</p>
+<p>The latter method is a higher-level option, and allows spectra to be read in
+directly from a variety of file formats. The former requires you to pass the
+spectrum as a pandas <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> as a positional argument.</p>
+</div>
+<div class="section" id="creating-an-ftb-file">
+<h2>Creating an FTB file<a class="headerlink" href="#creating-an-ftb-file" title="Permalink to this headline">¶</a></h2>
+<p>You can create FTB files (batch files used by QtFTM) from two sources,
+depending on the type (either u-lines, or an existing catalog file) both of
+which wrap around the <code class="docutils literal notranslate"><span class="pre">LineList.to_ftb</span></code> method.</p>
+<p>For u-lines, I recommend using the
+<code class="docutils literal notranslate"><span class="pre">AssignmentSession.create_uline_ftb_batch</span></code>, or if you want to run a DR batch,
+<code class="docutils literal notranslate"><span class="pre">AssignmentSession.create_uline_dr_batch</span></code>. In both cases, there are a few
+keyword arguments that allow you to specify the conditions to carry out the
+batch, for example, the number of shots (<code class="docutils literal notranslate"><span class="pre">shots</span></code>), the dipole moment used for
+the RF attenuation (<code class="docutils literal notranslate"><span class="pre">dipole</span></code>), and the minimum distance between lines
+(<code class="docutils literal notranslate"><span class="pre">gap</span></code>).</p>
+<p>For other FTB files, say from a <code class="docutils literal notranslate"><span class="pre">.cat</span></code> or <code class="docutils literal notranslate"><span class="pre">.lin</span></code> file, you will want to
+create <code class="docutils literal notranslate"><span class="pre">LineList</span></code> objects first and then use the <code class="docutils literal notranslate"><span class="pre">LineList.to_ftb()</span></code>.</p>
+</div>
+<div class="section" id="instrumental-rfi-removal">
+<h2>Instrumental RFI removal<a class="headerlink" href="#instrumental-rfi-removal" title="Permalink to this headline">¶</a></h2>
+<p>Strong RFI are common in broadband spectra, which arise from instrument clocks
+and other electronic components. The ones that are most prevalent for us in the
+McCarthy group are typically identified by two characteristics: often razor
+sharp, and many of them occurring at near-integer frequencies that are unlikely
+molecular in origin (e.g. 16500.0000 MHz). <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> has three approaches
+to managing these instrumental artifacts, the simplest being an automatic
+removal that looks for near integer frequencies
+(<code class="docutils literal notranslate"><span class="pre">pyspectools.spectra.analysis.detect_artifacts</span></code> function).</p>
+<p>The next level of complexity is based on calculating sub-harmonics, and
+sum/difference-frequency combinations of sub-harmonics, based on some clock
+frequency. For our Keysight arbitrary waveform generator, we’ve found the most
+prominent artifacts are derived from the 65 GHz clock. The
+<code class="docutils literal notranslate"><span class="pre">LineList.from_clock</span></code> method was created for this purpose, which generates
+multiples of this clock frequency, and calculates every possible sum/difference
+combination of pairs based on this list.
+<code class="docutils literal notranslate"><span class="pre">AssignmentSession.process_clock_spurs</span></code> provides an interface to this
+function, which will automatically assign features found this way - it is
+recommended to run this function at the end of analysis once molecular features
+are exhausted, as these clock frequencies can be incredibly dense.</p>
+<p>Finally, the most manual method is to create a artifact <code class="docutils literal notranslate"><span class="pre">LineList</span></code> object via
+the <code class="docutils literal notranslate"><span class="pre">LineList.from_artifacts</span></code> method. This takes a list of frequencies that
+the user specifies, and uses these to assign features as artifacts.</p>
+</div>
+<div class="section" id="report-generation">
+<h2>Report generation<a class="headerlink" href="#report-generation" title="Permalink to this headline">¶</a></h2>
+<p>Once you’ve done all the analysis, the fun part begins: writing the damn paper.
+The <code class="docutils literal notranslate"><span class="pre">AssignmentSession.finalize_assignments</span></code> function is not as final as it
+sounds, and the current behavior is to generate an HTML report for sharing, as
+well as an overview. This function will also generate a LaTeX table in the
+<code class="docutils literal notranslate"><span class="pre">reports</span></code> folder, which summarizes the findings of your experiment.</p>
+<p>Currently, <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> does not automatically write the paper for you.</p>
+</div>
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/faq.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

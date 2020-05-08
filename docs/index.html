@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: Reproducible, automated, and interactive analysis for rotational spectroscopy</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="#"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>Reproducible, automated, and interactive analysis for rotational spectroscopy</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="reproducible-automated-and-interactive-analysis-for-rotational-spectroscopy">
+<h1>Reproducible, automated, and interactive analysis for rotational spectroscopy<a class="headerlink" href="#reproducible-automated-and-interactive-analysis-for-rotational-spectroscopy" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+<p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">PySpecTools FAQ</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#creating-an-experiment">Creating an experiment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#creating-an-ftb-file">Creating an FTB file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#instrumental-rfi-removal">Instrumental RFI removal</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#report-generation">Report generation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html">pyspectools.spectra package</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyspectools.spectra.html#submodules">Submodules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyspectools.spectra.html#module-pyspectools.spectra.analysis">pyspectools.spectra.analysis module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyspectools.spectra.html#module-pyspectools.spectra.assignment">pyspectools.spectra.assignment module</a></li>
+<li class="toctree-l2"><a class="reference internal" href="pyspectools.spectra.html#module-pyspectools.spectra">Module contents</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<img alt="_images/pst_logo_landscape.png" src="_images/pst_logo_landscape.png" />
+<div class="section" id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h2>
+<p><cite>PySpecTools</cite> is a library written in Python 3.7 (and above) to help with
+analyzing spectroscopy and quantum chemistry data.  The motivation behind this
+is to provide an object-oriented way to analyze this kind of data, with
+reproducibility, collaboration, and automation heavily in mind throughout the
+development process - this makes the library flexible for both beginner users
+(i.e. with little knowledge in Python) and for power users (those who are
+proficient in Python).</p>
+<p>As such, there are no explicitly programmed user interfaces for <cite>PySpecTools</cite> -
+the tools were built with analysis using notebook environments such as
+<a class="reference external" href="https://jupyter.org">Jupyter</a> notebook/lab, and removes most of the need for any custom
+interfacing.</p>
+<div class="section" id="key-features">
+<h3>Key Features<a class="headerlink" href="#key-features" title="Permalink to this headline">¶</a></h3>
+<p>A list of common functionality can be found in the <a class="reference external" href="faq">FAQ</a> section, which details
+some of the tasks you may wish to carry out but not sure how.</p>
+<p>If there is a feature/analysis you would like to do but don’t know how, please
+raise an issue on Github!</p>
+</div>
+<div class="section" id="api-reference">
+<h3>API Reference<a class="headerlink" href="#api-reference" title="Permalink to this headline">¶</a></h3>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">PySpecTools</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="pyspectools.html">pyspectools package</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#subpackages">Subpackages</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="pyspectools.astro.html">pyspectools.astro package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyspectools.fast.html">pyspectools.fast package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyspectools.mmw.html">pyspectools.mmw package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyspectools.qchem.html">pyspectools.qchem package</a></li>
+<li class="toctree-l4"><a class="reference internal" href="pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#submodules">Submodules</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.autofit">pyspectools.autofit module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.database">pyspectools.database module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.doubleresonance">pyspectools.doubleresonance module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.figurefactory">pyspectools.figurefactory module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.fitting">pyspectools.fitting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.formatting">pyspectools.formatting module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.ftmw_analysis">pyspectools.ftmw_analysis module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.lineshapes">pyspectools.lineshapes module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.parsers">pyspectools.parsers module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.pypickett">pyspectools.pypickett module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.routines">pyspectools.routines module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.spcat">pyspectools.spcat module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools.units">pyspectools.units module</a></li>
+<li class="toctree-l3"><a class="reference internal" href="pyspectools.html#module-pyspectools">Module contents</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="setup.html">setup module</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+</div>
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">PySpecTools</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/index.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

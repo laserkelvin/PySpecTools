@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.formatting</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../index.html"><img src="../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.formatting</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.formatting</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    formatting.py</span>
+
+<span class="sd">    Routines for formatting output/data into publication</span>
+<span class="sd">    ready tables and whatnot.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="read_lin"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.formatting.read_lin">[docs]</a><span class="k">def</span> <span class="nf">read_lin</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">labels</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function that will read in a .lin file and quantum number</span>
+<span class="sd">        labeling, and return a formatted LaTeX table.</span>
+<span class="sd">        </span>
+<span class="sd">        The labels should be supplied without indication of</span>
+<span class="sd">        upper or lower state, i.e. J and not J&#39;&#39;.</span>
+<span class="sd">        </span>
+<span class="sd">        Requires:</span>
+<span class="sd">        ------------</span>
+<span class="sd">        filepath - path to the .lin file</span>
+<span class="sd">        labels - tuple-like, lists the quantum number labels</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filepath</span><span class="p">,</span> <span class="n">delim_whitespace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+    <span class="n">grouped_labels</span><span class="p">,</span> <span class="n">upper_labels</span><span class="p">,</span> <span class="n">lower_labels</span> <span class="o">=</span> <span class="n">generate_labels</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+    <span class="c1"># Tack on the remaining three columns after the quantum numbers</span>
+    <span class="n">col_headings</span> <span class="o">=</span> <span class="n">upper_labels</span> <span class="o">+</span> <span class="n">lower_labels</span>
+    <span class="n">col_headings</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Uncertainty&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">])</span>
+    <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="n">col_headings</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">grouped_labels</span> <span class="o">+</span> <span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Uncertainty&quot;</span><span class="p">,</span> <span class="s2">&quot;_&quot;</span><span class="p">]]</span>
+    <span class="n">hyperfine_labels</span> <span class="o">=</span> <span class="p">[</span><span class="n">value</span> <span class="k">for</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;F&quot;</span> <span class="ow">in</span> <span class="n">value</span><span class="p">]</span>
+    <span class="c1"># Get rid of frequency</span>
+    <span class="n">hyperfine_labels</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="s2">&quot;Frequency&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">hyperfine_labels</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+        <span class="n">df</span><span class="p">[</span><span class="n">hyperfine_labels</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">0.5</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="generate_labels"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.formatting.generate_labels">[docs]</a><span class="k">def</span> <span class="nf">generate_labels</span><span class="p">(</span><span class="n">labels</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function that will generate the quantum number</span>
+<span class="sd">        labelling for upper and lower states.</span>
+<span class="sd">        </span>
+<span class="sd">        Requires:</span>
+<span class="sd">        ------------</span>
+<span class="sd">        labels - tuple-like containing quantum number labels</span>
+<span class="sd">        without indication of upper or lower state</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">        ------------</span>
+<span class="sd">        grouped, upper, lower - lists corresponding to the</span>
+<span class="sd">        labels groups by quantum number (rather than upper/lower),</span>
+<span class="sd">        and the upper and lower state quantum numbers respectively.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">grouped_labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">lower_labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">upper_labels</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">label</span> <span class="ow">in</span> <span class="n">labels</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">symbol</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">([</span><span class="s2">&quot;&quot;&quot;&#39;&quot;&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;&quot;&#39;&#39;&quot;&quot;&quot;</span><span class="p">]):</span>
+            <span class="n">header</span> <span class="o">=</span> <span class="n">label</span> <span class="o">+</span> <span class="n">symbol</span>
+            <span class="n">grouped_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">upper_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">lower_labels</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">header</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">grouped_labels</span><span class="p">,</span> <span class="n">upper_labels</span><span class="p">,</span> <span class="n">lower_labels</span></div>
+
+
+<div class="viewcode-block" id="lin2latex"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.formatting.lin2latex">[docs]</a><span class="k">def</span> <span class="nf">lin2latex</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">labels</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">deluxe</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function that will convert a dataframe into a LaTeX</span>
+<span class="sd">        formatted table. Optionally, you can select specific</span>
+<span class="sd">        quantum numbers to include in the table.</span>
+<span class="sd">        </span>
+<span class="sd">        The formatting follows the &quot;house style&quot;,</span>
+<span class="sd">        which groups rows by J, followed by N and F.</span>
+<span class="sd">        </span>
+<span class="sd">        The labels should be supplied without indication of</span>
+<span class="sd">        upper or lower state, i.e. J and not J&#39;&#39;. Also, labels</span>
+<span class="sd">        should be in the order you want them!!!</span>
+<span class="sd">        </span>
+<span class="sd">        Requires:</span>
+<span class="sd">        ------------</span>
+<span class="sd">        dataframe - dataframe read in the format from `read_lin`</span>
+<span class="sd">        labels - optional tuple-like which lists out which quantum</span>
+<span class="sd">        numbers to include. Defaults to printing all the quantum</span>
+<span class="sd">        numbers.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">labels</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># Take all the keys except the weird column</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="n">key</span> <span class="o">!=</span> <span class="s2">&quot;_&quot;</span><span class="p">]</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="c1"># Generate the labeling</span>
+        <span class="n">group</span><span class="p">,</span> <span class="n">upper</span><span class="p">,</span> <span class="n">lower</span> <span class="o">=</span> <span class="n">generate_labels</span><span class="p">(</span><span class="n">labels</span><span class="p">)</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="n">group</span>
+        <span class="n">columns</span><span class="o">.</span><span class="n">extend</span><span class="p">([</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Uncertainty&quot;</span><span class="p">])</span>
+    <span class="c1"># Template for a deluxe table used by ApJ and others</span>
+    <span class="k">if</span> <span class="n">deluxe</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        </span><span class="se">\\</span><span class="s2">begin{{deluxetable}}</span><span class="si">{colformat}</span><span class="s2"></span>
+<span class="s2">            </span><span class="se">\\</span><span class="s2">tablecaption{{Something intelligent}}</span>
+<span class="s2">            </span><span class="se">\\</span><span class="s2">tablehead{{header}}</span>
+<span class="s2">            </span>
+<span class="s2">            </span><span class="se">\\</span><span class="s2">startdata</span>
+<span class="s2">                </span><span class="si">{data}</span><span class="s2"></span>
+<span class="s2">            </span><span class="se">\\</span><span class="s2">enddata</span>
+<span class="s2">        </span><span class="se">\\</span><span class="s2">end{{deluxetable}}</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+    <span class="c1"># Template for a normal LaTeX table</span>
+    <span class="k">elif</span> <span class="n">deluxe</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">template</span> <span class="o">=</span> <span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        </span><span class="se">\\</span><span class="s2">begin{{table}}</span>
+<span class="s2">            </span><span class="se">\\</span><span class="s2">begin{{center}}</span>
+<span class="s2">                </span><span class="se">\\</span><span class="s2">caption{{Something intelligent}}</span>
+<span class="s2">                </span><span class="se">\\</span><span class="s2">begin{{tabular}}</span><span class="si">{colformat}</span><span class="s2"></span>
+<span class="s2">                </span><span class="si">{header}</span><span class="s2"></span>
+<span class="s2">                </span><span class="se">\\</span><span class="s2">toprule</span>
+<span class="s2">                </span>
+<span class="s2">                </span><span class="si">{data}</span><span class="s2"></span>
+<span class="s2">                </span><span class="se">\\</span><span class="s2">bottomrule</span>
+<span class="s2">                </span><span class="se">\\</span><span class="s2">end{{tabular}}</span>
+<span class="s2">            </span><span class="se">\\</span><span class="s2">end{{center}}</span>
+<span class="s2">        </span><span class="se">\\</span><span class="s2">end{{table}}</span>
+<span class="s2">        &quot;&quot;&quot;</span>
+    <span class="n">data_str</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+    <span class="c1"># Take only what we want</span>
+    <span class="n">filtered_df</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">columns</span><span class="p">]</span>
+    <span class="c1"># Sort the dataframe by J</span>
+    <span class="n">filtered_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;J&#39;&quot;</span><span class="p">,</span> <span class="s2">&quot;J&#39;&#39;&quot;</span><span class="p">])</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">row</span> <span class="ow">in</span> <span class="n">filtered_df</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="n">values</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">row</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">))</span>
+        <span class="c1"># We want to skip printing J transitions if they&#39;re the same</span>
+        <span class="k">if</span> <span class="n">index</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">Jlast</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">Jcurr</span> <span class="o">=</span> <span class="n">values</span><span class="p">[:</span><span class="mi">2</span><span class="p">]</span>
+            <span class="c1"># If the current values of J match the previous, then</span>
+            <span class="c1"># set them to blank so we don&#39;t print them</span>
+            <span class="k">if</span> <span class="n">Jcurr</span> <span class="o">==</span> <span class="n">Jlast</span><span class="p">:</span>
+                <span class="n">values</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span>
+                <span class="n">values</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s2">&quot; &quot;</span>
+            <span class="n">Jlast</span> <span class="o">=</span> <span class="n">Jcurr</span>
+        <span class="n">data_str</span> <span class="o">+=</span> <span class="s2">&quot; &amp; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">values</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\\\\\n</span><span class="s2">&quot;</span>
+    <span class="c1"># swap this out if you want columns to not be centered</span>
+    <span class="n">column_format</span> <span class="o">=</span> <span class="p">[</span><span class="s2">&quot;c&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span>
+    <span class="n">column_format</span> <span class="o">=</span> <span class="s2">&quot;{&quot;</span> <span class="o">+</span> <span class="s2">&quot; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">column_format</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;}&quot;</span>
+    <span class="n">data_dict</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;colformat&quot;</span><span class="p">:</span> <span class="n">column_format</span><span class="p">,</span>  <span class="c1"># centered</span>
+        <span class="s2">&quot;data&quot;</span><span class="p">:</span> <span class="n">data_str</span><span class="p">,</span>
+        <span class="s2">&quot;header&quot;</span><span class="p">:</span> <span class="s2">&quot; &amp; &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">columns</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;</span><span class="se">\\\\</span><span class="s2">&quot;</span><span class="p">,</span>
+    <span class="p">}</span>
+    <span class="k">return</span> <span class="n">template</span><span class="o">.</span><span class="n">format_map</span><span class="p">(</span><span class="n">data_dict</span><span class="p">)</span></div>
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">PySpecTools</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

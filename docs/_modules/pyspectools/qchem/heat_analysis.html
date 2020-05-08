@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.qchem.heat_analysis</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../../index.html"><img src="../../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.qchem.heat_analysis</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.qchem.heat_analysis</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">heat_analysis.py</span>
+
+<span class="sd">Routines for performing batch analysis on HEAT345(Q) calculations.</span>
+<span class="sd">The scripts are hardcoded to follow the filestructure produced by</span>
+<span class="sd">the heat345.py scripts, i.e.</span>
+
+<span class="sd">top/</span>
+<span class="sd">|---heat345.py</span>
+<span class="sd">|---heat345.yaml</span>
+<span class="sd">|---zmat.yaml</span>
+<span class="sd">|---correlation/</span>
+<span class="sd">    |---AUG-PCVXZ/</span>
+<span class="sd">        |---calcY-correlation-AUG-PCVXZ.log</span>
+
+<span class="sd">and so on.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="k">import</span> <span class="n">glob</span>
+<span class="kn">import</span> <span class="nn">logging</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">from</span> <span class="nn">scipy.constants</span> <span class="k">import</span> <span class="n">Avogadro</span>
+
+<span class="c1"># Additional modules written by yours truly</span>
+<span class="kn">from</span> <span class="nn">pyspectools.qchem</span> <span class="k">import</span> <span class="n">parsers</span>
+<span class="kn">from</span> <span class="nn">pyspectools.qchem</span> <span class="k">import</span> <span class="n">extrapolation</span> <span class="k">as</span> <span class="n">ep</span>
+<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">routines</span>
+
+<span class="sd">&quot;&quot;&quot;Analysis functions</span>
+
+<span class="sd">These functions were designed for use with the HEAT pandas dataframes</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="calc_enthalpy"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.calc_enthalpy">[docs]</a><span class="k">def</span> <span class="nf">calc_enthalpy</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">reactants</span><span class="p">,</span> <span class="n">products</span><span class="p">):</span>
+    <span class="c1"># Calculate the enthalpy of reaction between lists of reactants and</span>
+    <span class="c1"># products. The value is returned in kJ/mole, which is calculated</span>
+    <span class="c1"># based on the explicit value of hartree to joule from NIST</span>
+    <span class="n">E_prod</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ID</span><span class="p">][</span><span class="s2">&quot;Total&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">ID</span> <span class="ow">in</span> <span class="n">products</span><span class="p">])</span>
+    <span class="n">E_reac</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">([</span><span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">ID</span><span class="p">][</span><span class="s2">&quot;Total&quot;</span><span class="p">]</span> <span class="k">for</span> <span class="n">ID</span> <span class="ow">in</span> <span class="n">reactants</span><span class="p">])</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">E_prod</span> <span class="o">-</span> <span class="n">E_reac</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">Avogadro</span> <span class="o">*</span> <span class="mf">4.359744650e-21</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="calc_reaction"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.calc_reaction">[docs]</a><span class="k">def</span> <span class="nf">calc_reaction</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">reactants</span><span class="p">,</span> <span class="n">products</span><span class="p">,</span> <span class="n">reactions</span><span class="p">):</span>
+    <span class="c1"># A basic function for building sequential reactions</span>
+    <span class="c1"># Could be useful for PES building</span>
+    <span class="n">energy</span> <span class="o">=</span> <span class="n">calc_enthalpy</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">reactants</span><span class="p">,</span> <span class="n">products</span><span class="p">)</span>
+    <span class="n">react_name</span> <span class="o">=</span> <span class="s2">&quot; + &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">reactants</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;--&gt;&quot;</span> <span class="o">+</span> <span class="s2">&quot; + &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">products</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="n">react_name</span> <span class="o">+</span> <span class="s2">&quot;: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">energy</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot; kJ/mol&quot;</span><span class="p">)</span>
+    <span class="n">reactions</span><span class="o">.</span><span class="n">append</span><span class="p">([</span><span class="n">react_name</span><span class="p">,</span> <span class="n">energy</span><span class="p">])</span></div>
+    
+
+<div class="viewcode-block" id="get_hot"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.get_hot">[docs]</a><span class="k">def</span> <span class="nf">get_hot</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">species</span><span class="p">):</span>
+    <span class="c1"># Return the HEAT345(Q) energy for one molecule</span>
+    <span class="k">return</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">species</span><span class="p">][</span><span class="s2">&quot;Total&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="relative_energies"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.relative_energies">[docs]</a><span class="k">def</span> <span class="nf">relative_energies</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">molecules</span><span class="p">):</span>
+    <span class="c1"># Returns a dataframe with all the energetics relative to</span>
+    <span class="c1"># a single molecule</span>
+    <span class="c1"># bases is a list of reactants, while molecules are a nested</span>
+    <span class="c1"># list</span>
+    <span class="n">energetics</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">names</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">base</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">molecules</span><span class="p">:</span>
+        <span class="n">molecules</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">base</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">pair</span> <span class="ow">in</span> <span class="n">molecules</span><span class="p">:</span>
+        <span class="c1"># Loop over all the pairs and calculate the relative energy</span>
+        <span class="n">energetics</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">calc_enthalpy</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">base</span><span class="p">,</span> <span class="n">pair</span><span class="p">))</span>
+        <span class="n">names</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot; + &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">pair</span><span class="p">))</span>
+    <span class="n">new_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">energetics</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">names</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Relative energy (kJ/mol)&quot;</span><span class="p">])</span>
+    <span class="n">new_df</span><span class="p">[</span><span class="s2">&quot;Coordinate&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">molecules</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">new_df</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Low-level functions</span>
+
+<span class="sd">    These functions are called by the higher level wrappers</span>
+<span class="sd">    for performing the analysis.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+
+<div class="viewcode-block" id="analysis_lookup"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.analysis_lookup">[docs]</a><span class="k">def</span> <span class="nf">analysis_lookup</span><span class="p">(</span><span class="n">method</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Returns the function associated with the string</span>
+<span class="sd">        based name of a function.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;ZPE&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">anal_zpe</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;MVD&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">anal_mvd</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;DBOC&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">anal_dboc</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;CCSD(T)&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">anal_correlation</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;HLC&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">anal_hlc</span>
+    <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;(Q)&quot;</span><span class="p">:</span>
+        <span class="n">func</span> <span class="o">=</span> <span class="n">anal_q</span>
+    <span class="k">return</span> <span class="n">func</span></div>
+
+
+<div class="viewcode-block" id="anal_zpe"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.anal_zpe">[docs]</a><span class="k">def</span> <span class="nf">anal_zpe</span><span class="p">(</span><span class="n">data_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for parsing the ZPE out of the raw data dictionary.</span>
+<span class="sd">        Takes the full dictionary as input, and returns the ZPE.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">zpe</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="c1"># Different syntax for different CFOUR function calls</span>
+    <span class="k">for</span> <span class="n">word</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;freq&quot;</span><span class="p">]:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">zpe</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">word</span><span class="p">][</span><span class="s2">&quot;zpe&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="p">(</span><span class="mf">4.12</span> <span class="o">*</span> <span class="mf">627.509</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+            <span class="k">pass</span>
+    <span class="k">return</span> <span class="n">zpe</span></div>
+
+
+<div class="viewcode-block" id="anal_mvd"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.anal_mvd">[docs]</a><span class="k">def</span> <span class="nf">anal_mvd</span><span class="p">(</span><span class="n">data_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for parsing the MVD1 + MVD2 out of the raw data dictionary.</span>
+<span class="sd">        Takes the full dictionary as input, and returns the relativistic</span>
+<span class="sd">        contributions to the energy.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">data_dict</span><span class="p">[</span><span class="s2">&quot;rel&quot;</span><span class="p">][</span><span class="s2">&quot;relativistic&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="anal_dboc"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.anal_dboc">[docs]</a><span class="k">def</span> <span class="nf">anal_dboc</span><span class="p">(</span><span class="n">data_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Returns the DBOC value &quot;&quot;&quot;</span>
+    <span class="k">return</span> <span class="n">data_dict</span><span class="p">[</span><span class="s2">&quot;dboc&quot;</span><span class="p">][</span><span class="s2">&quot;dboc&quot;</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="anal_q"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.anal_q">[docs]</a><span class="k">def</span> <span class="nf">anal_q</span><span class="p">(</span><span class="n">data_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Try and get the CCSDT(Q) energy &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">q_dict</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="s2">&quot;ccsdtq&quot;</span><span class="p">]</span>
+        <span class="n">q_energy</span> <span class="o">=</span> <span class="n">q_dict</span><span class="p">[</span><span class="s2">&quot;ccsdt(q) energy&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">q_dict</span><span class="p">[</span><span class="s2">&quot;ccsdt energy&quot;</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">KeyError</span><span class="p">:</span>
+        <span class="n">q_energy</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="k">return</span> <span class="n">q_energy</span></div>
+
+
+<div class="viewcode-block" id="anal_correlation"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.anal_correlation">[docs]</a><span class="k">def</span> <span class="nf">anal_correlation</span><span class="p">(</span><span class="n">data_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for extrapolating the correlation and SCF energies to</span>
+<span class="sd">        the CBS limit using their respective schemes.</span>
+<span class="sd">        Takes the full dictionary as input, and returns the SCF/CBS and</span>
+<span class="sd">        CCSD(T)/CBS energies as floats</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get the basis names from dictionary keys</span>
+    <span class="n">corr_basis</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">data_dict</span><span class="o">.</span><span class="n">keys</span><span class="p">()</span> <span class="k">if</span> <span class="s2">&quot;correlation&quot;</span> <span class="ow">in</span> <span class="n">name</span><span class="p">]</span>
+    <span class="n">cardinals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">bases</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">corr_energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">scf_energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="c1"># This loop is deliberately written this way so that the ordering</span>
+    <span class="c1"># is preserved</span>
+    <span class="k">for</span> <span class="n">basis</span> <span class="ow">in</span> <span class="n">corr_basis</span><span class="p">:</span>
+        <span class="n">basis_str</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">basis_X</span> <span class="o">=</span> <span class="n">match_basis</span><span class="p">(</span><span class="n">basis_str</span><span class="p">)</span>
+        <span class="n">corr_energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">basis</span><span class="p">][</span><span class="s2">&quot;ccsd(t) energy&quot;</span><span class="p">])</span>
+        <span class="n">scf_energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data_dict</span><span class="p">[</span><span class="n">basis</span><span class="p">][</span><span class="s2">&quot;scf energy&quot;</span><span class="p">])</span>
+        <span class="n">cardinals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">basis_X</span><span class="p">)</span>
+        <span class="n">bases</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">basis_str</span><span class="p">)</span>
+    <span class="c1"># Package into pandas df</span>
+    <span class="n">extrap_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">bases</span><span class="p">,</span> <span class="n">cardinals</span><span class="p">,</span> <span class="n">scf_energies</span><span class="p">,</span> <span class="n">corr_energies</span><span class="p">)),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Basis&quot;</span><span class="p">,</span> <span class="s2">&quot;Cardinal&quot;</span><span class="p">,</span> <span class="s2">&quot;SCF energy&quot;</span><span class="p">,</span> <span class="s2">&quot;CCSD(T) energy&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="c1"># Not necessary, but makes things nicer</span>
+    <span class="n">extrap_df</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="c1"># Extrapolate SCF to CBS limit</span>
+    <span class="n">scf_cbs</span><span class="p">,</span> <span class="n">scf_popt</span> <span class="o">=</span> <span class="n">ep</span><span class="o">.</span><span class="n">extrapolate_SCF</span><span class="p">(</span>
+            <span class="n">extrap_df</span><span class="p">[</span><span class="s2">&quot;SCF energy&quot;</span><span class="p">],</span>
+            <span class="n">extrap_df</span><span class="p">[</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="c1"># Extrapolate CCSD(T) correlation to CBS limit</span>
+    <span class="n">cc_cbs</span><span class="p">,</span> <span class="n">cc_popt</span> <span class="o">=</span> <span class="n">ep</span><span class="o">.</span><span class="n">extrapolate_correlation</span><span class="p">(</span>
+            <span class="n">extrap_df</span><span class="p">[</span><span class="s2">&quot;CCSD(T) energy&quot;</span><span class="p">],</span>
+            <span class="n">extrap_df</span><span class="p">[</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="k">return</span> <span class="n">scf_cbs</span><span class="p">,</span> <span class="n">cc_cbs</span><span class="p">,</span> <span class="n">extrap_df</span></div>
+
+
+<div class="viewcode-block" id="anal_hlc"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.anal_hlc">[docs]</a><span class="k">def</span> <span class="nf">anal_hlc</span><span class="p">(</span><span class="n">data_dict</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function for analyzing the non-perturbative corrections to</span>
+<span class="sd">        the triple excitations.</span>
+
+<span class="sd">        Takes the frozen-core CCSDT and CCSD(T) values at two basis</span>
+<span class="sd">        and extrapolates them to the CBS limit.</span>
+
+<span class="sd">        The end result is the difference between CCSDT/CBS and CCSD(T)/CBS</span>
+<span class="sd">        </span>
+<span class="sd">        This function returns the correction, as well as the dataframes</span>
+<span class="sd">        holding the answers</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Get HLC perturbative terms</span>
+    <span class="n">pert_basis</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data_dict</span> <span class="k">if</span> <span class="s2">&quot;hlc-pert&quot;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">]</span>
+    <span class="n">cardinals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">pert_energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">full_energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">basis</span> <span class="ow">in</span> <span class="n">pert_basis</span><span class="p">:</span>
+        <span class="n">basis_str</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">basis_X</span> <span class="o">=</span> <span class="n">match_basis</span><span class="p">(</span><span class="n">basis_str</span><span class="p">)</span>
+        <span class="n">cardinals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">basis_X</span><span class="p">)</span>
+        <span class="n">scf</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">basis</span><span class="p">][</span><span class="s2">&quot;scf energy&quot;</span><span class="p">]</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">basis</span><span class="p">][</span><span class="s2">&quot;ccsd(t) energy&quot;</span><span class="p">]</span>
+        <span class="n">pert_energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">corr</span> <span class="o">-</span> <span class="n">scf</span><span class="p">)</span>
+    <span class="c1"># Package the perturbative terms and extrapolate</span>
+    <span class="n">pert_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">cardinals</span><span class="p">,</span> <span class="n">pert_energies</span><span class="p">)),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">,</span> <span class="s2">&quot;CCSD(T) energy&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="n">pert_cbs</span><span class="p">,</span> <span class="n">pert_popt</span> <span class="o">=</span> <span class="n">ep</span><span class="o">.</span><span class="n">extrapolate_correlation</span><span class="p">(</span>
+            <span class="n">pert_df</span><span class="p">[</span><span class="s2">&quot;CCSD(T) energy&quot;</span><span class="p">],</span>
+            <span class="n">pert_df</span><span class="p">[</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="c1"># Get HLC non-perturbative terms</span>
+    <span class="n">pert_basis</span> <span class="o">=</span> <span class="p">[</span><span class="n">key</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">data_dict</span> <span class="k">if</span> <span class="s2">&quot;hlc-full&quot;</span> <span class="ow">in</span> <span class="n">key</span><span class="p">]</span>
+    <span class="n">cardinals</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">pert_energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="n">full_energies</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">basis</span> <span class="ow">in</span> <span class="n">pert_basis</span><span class="p">:</span>
+        <span class="n">basis_str</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;-&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">basis_X</span> <span class="o">=</span> <span class="n">match_basis</span><span class="p">(</span><span class="n">basis_str</span><span class="p">)</span>
+        <span class="n">cardinals</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">basis_X</span><span class="p">)</span>
+        <span class="n">corr</span> <span class="o">=</span> <span class="n">data_dict</span><span class="p">[</span><span class="n">basis</span><span class="p">][</span><span class="s2">&quot;ccsd(t) energy&quot;</span><span class="p">]</span>
+        <span class="n">pert_energies</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">corr</span><span class="p">)</span>
+    <span class="c1"># Package the non-perturbative terms and extrapolate</span>
+    <span class="n">nonpert_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+            <span class="n">data</span><span class="o">=</span><span class="nb">list</span><span class="p">(</span><span class="nb">zip</span><span class="p">(</span><span class="n">cardinals</span><span class="p">,</span> <span class="n">pert_energies</span><span class="p">)),</span>
+            <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">,</span> <span class="s2">&quot;CCSDT energy&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="n">nonpert_cbs</span><span class="p">,</span> <span class="n">nonpert_popt</span> <span class="o">=</span> <span class="n">ep</span><span class="o">.</span><span class="n">extrapolate_correlation</span><span class="p">(</span>
+            <span class="n">nonpert_df</span><span class="p">[</span><span class="s2">&quot;CCSDT energy&quot;</span><span class="p">],</span>
+            <span class="n">nonpert_df</span><span class="p">[</span><span class="s2">&quot;Cardinal&quot;</span><span class="p">]</span>
+            <span class="p">)</span>
+    <span class="n">correction</span> <span class="o">=</span> <span class="n">nonpert_cbs</span> <span class="o">-</span> <span class="n">pert_cbs</span>
+    <span class="k">return</span> <span class="n">correction</span><span class="p">,</span> <span class="n">pert_df</span><span class="p">,</span> <span class="n">nonpert_df</span></div>
+
+
+<div class="viewcode-block" id="heat_analysis"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.heat_analysis">[docs]</a><span class="k">def</span> <span class="nf">heat_analysis</span><span class="p">(</span><span class="n">mol_name</span><span class="p">,</span> <span class="n">data_dict</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">logger</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Main driver function for analyzing HEAT contributions.</span>
+
+<span class="sd">        This version has been written to be completely modular with</span>
+<span class="sd">        respect to the contributions that it can take.</span>
+
+<span class="sd">        Loops through a list of analysis functions and spits out</span>
+<span class="sd">        a dataframe containing all of the resulting analysis.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="s2">&quot;outputs&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">methods</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="c1"># If not specified, just default to the bare minimum </span>
+        <span class="n">methods</span> <span class="o">=</span> <span class="p">[</span>
+                <span class="s2">&quot;ZPE&quot;</span><span class="p">,</span>
+                <span class="s2">&quot;CCSD(T)&quot;</span><span class="p">,</span>
+                <span class="p">]</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">heat_energy</span> <span class="o">=</span> <span class="mf">0.</span>
+    <span class="k">for</span> <span class="n">method</span> <span class="ow">in</span> <span class="n">methods</span><span class="p">:</span>
+        <span class="c1"># Get the function from string</span>
+        <span class="n">anal_func</span> <span class="o">=</span> <span class="n">analysis_lookup</span><span class="p">(</span><span class="n">method</span><span class="p">)</span>
+        <span class="c1"># If the contribution is just a single value, add</span>
+        <span class="c1"># straight to the dictionary</span>
+        <span class="k">if</span> <span class="n">method</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;(Q)&quot;</span><span class="p">,</span> <span class="s2">&quot;DBOC&quot;</span><span class="p">,</span> <span class="s2">&quot;ZPE&quot;</span><span class="p">,</span> <span class="s2">&quot;MVD&quot;</span><span class="p">]:</span>
+            <span class="n">results</span><span class="p">[</span><span class="n">method</span><span class="p">]</span> <span class="o">=</span> <span class="n">anal_func</span><span class="p">(</span><span class="n">data_dict</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">method</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="n">method</span><span class="p">]))</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;CCSD(T)&quot;</span><span class="p">:</span>
+            <span class="c1"># Deal with the correlation</span>
+            <span class="n">scf_cbs</span><span class="p">,</span> <span class="n">cc_cbs</span><span class="p">,</span> <span class="n">extrap_df</span> <span class="o">=</span> <span class="n">anal_func</span><span class="p">(</span><span class="n">data_dict</span><span class="p">)</span>
+            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;SCF/CBS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">scf_cbs</span>
+            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;CCSD(T)/CBS&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">cc_cbs</span>
+            <span class="n">extrap_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;outputs/&quot;</span> <span class="o">+</span> <span class="n">mol_name</span> <span class="o">+</span> <span class="s2">&quot;-SCF-CC.csv&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;SCF/CC data&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">extrap_df</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">method</span> <span class="o">==</span> <span class="s2">&quot;HLC&quot;</span><span class="p">:</span>
+            <span class="n">hlc</span><span class="p">,</span> <span class="n">pert_df</span><span class="p">,</span> <span class="n">nonpert_df</span> <span class="o">=</span> <span class="n">anal_func</span><span class="p">(</span><span class="n">data_dict</span><span class="p">)</span>
+            <span class="n">results</span><span class="p">[</span><span class="s2">&quot;HLC&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">hlc</span>
+            <span class="n">pert_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;outputs/&quot;</span> <span class="o">+</span> <span class="n">mol_name</span> <span class="o">+</span> <span class="s2">&quot;-(T).csv&quot;</span><span class="p">)</span>
+            <span class="n">nonpert_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;outputs/&quot;</span> <span class="o">+</span> <span class="n">mol_name</span> <span class="o">+</span> <span class="s2">&quot;-T.csv&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Perturbative triple excitations&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">pert_df</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Non-perturbative triple excitations&quot;</span><span class="p">)</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">nonpert_df</span><span class="p">)</span>
+    <span class="c1"># Sum up all of the contributions</span>
+    <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="n">results</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+        <span class="n">heat_energy</span><span class="o">+=</span><span class="n">value</span>
+    <span class="n">results</span><span class="p">[</span><span class="s2">&quot;Total&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">heat_energy</span>
+    <span class="k">if</span> <span class="n">logger</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Final energy: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">heat_energy</span><span class="p">))</span>
+    <span class="n">heat_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="o">.</span><span class="n">from_dict</span><span class="p">([</span><span class="n">results</span><span class="p">],</span> <span class="n">orient</span><span class="o">=</span><span class="s2">&quot;columns&quot;</span><span class="p">)</span>
+    <span class="n">heat_df</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="p">[</span><span class="n">mol_name</span><span class="p">]</span>
+    <span class="n">heat_df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s2">&quot;heat_analysis/&quot;</span> <span class="o">+</span> <span class="n">mol_name</span> <span class="o">+</span> <span class="s2">&quot;-HEAT.csv&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">heat_df</span></div>
+
+
+<div class="viewcode-block" id="read_heat"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.read_heat">[docs]</a><span class="k">def</span> <span class="nf">read_heat</span><span class="p">(</span><span class="n">dir_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to parse in all of the calculations that consist of</span>
+<span class="sd">    the HEAT scheme.</span>
+<span class="sd">    Args: dir_path, path to top directory of the HEAT calculation</span>
+<span class="sd">    which would end with the calcID</span>
+
+<span class="sd">    Returns a dictionary containing all of the parsed logfiles</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Folder for keeping all the analysis logging outputs</span>
+    <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;logs&quot;</span><span class="p">,</span> <span class="s2">&quot;heat_analysis&quot;</span><span class="p">,</span> <span class="s2">&quot;yml&quot;</span><span class="p">]:</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">mkdir</span><span class="p">(</span><span class="n">folder</span><span class="p">)</span>
+    <span class="n">calcID</span> <span class="o">=</span> <span class="n">dir_path</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">init_logger</span><span class="p">(</span><span class="n">calcID</span> <span class="o">+</span> <span class="s2">&quot;-HEAT.log&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;HEAT345(Q) analysis of &quot;</span> <span class="o">+</span> <span class="n">calcID</span><span class="p">)</span>
+    <span class="c1"># Get the calculation folders</span>
+    <span class="n">dir_contents</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">dir_path</span> <span class="o">+</span> <span class="s2">&quot;/*&quot;</span><span class="p">)</span>
+    <span class="n">dir_contents</span> <span class="o">=</span> <span class="p">[</span><span class="n">name</span> <span class="k">for</span> <span class="n">name</span> <span class="ow">in</span> <span class="n">dir_contents</span>
+                    <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isdir</span><span class="p">(</span><span class="n">name</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">]</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Present folders: &quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">dir_contents</span><span class="p">)</span>
+    <span class="n">results</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="c1"># Main loop over the calculation types</span>
+    <span class="c1"># Perhaps there is a better way to code this up without explicit</span>
+    <span class="c1"># hardcoding of if-cases, but for now this is how it&#39;ll be done.</span>
+    <span class="k">for</span> <span class="n">calctype</span> <span class="ow">in</span> <span class="n">dir_contents</span><span class="p">:</span>
+        <span class="n">calc_name</span> <span class="o">=</span> <span class="n">calctype</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Working on &quot;</span> <span class="o">+</span> <span class="n">calctype</span><span class="p">)</span>
+        <span class="c1"># For all cases other than the correlation, we have only one</span>
+        <span class="c1"># calculation log file</span>
+        <span class="k">if</span> <span class="s2">&quot;correlation&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">calctype</span> <span class="ow">and</span> <span class="s2">&quot;hlc&quot;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">calctype</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">logname</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">calctype</span> <span class="o">+</span> <span class="s2">&quot;/*.log&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Parsing &quot;</span> <span class="o">+</span> <span class="n">logname</span><span class="p">)</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">calc_name</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsers</span><span class="o">.</span><span class="n">parse_cfour</span><span class="p">(</span><span class="n">logname</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+                <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Trouble parsing &quot;</span> <span class="o">+</span> <span class="n">calctype</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="c1"># There are multiple bases being used for correlation</span>
+            <span class="c1"># and the HLC terms</span>
+            <span class="n">calc_list</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">calctype</span> <span class="o">+</span> <span class="s2">&quot;/*/*.log&quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Basis found: &quot;</span><span class="p">)</span>
+            <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">calc_list</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">basis</span> <span class="ow">in</span> <span class="n">calc_list</span><span class="p">:</span>
+                <span class="c1"># Get basis name from folder</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span>
+                <span class="n">results</span><span class="p">[</span><span class="n">calc_name</span> <span class="o">+</span> <span class="s2">&quot;-&quot;</span> <span class="o">+</span> <span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="n">parsers</span><span class="o">.</span><span class="n">parse_cfour</span><span class="p">(</span><span class="n">basis</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Done reading!&quot;</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Dumping results to &quot;</span> <span class="o">+</span> <span class="n">calcID</span> <span class="o">+</span> <span class="s2">&quot;-parsed.yml&quot;</span><span class="p">)</span>
+    <span class="n">routines</span><span class="o">.</span><span class="n">dump_yaml</span><span class="p">(</span><span class="s2">&quot;yml/&quot;</span> <span class="o">+</span> <span class="n">calcID</span> <span class="o">+</span> <span class="s2">&quot;-parsed.yml&quot;</span><span class="p">,</span> <span class="n">results</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">results</span><span class="p">,</span> <span class="n">logger</span></div>
+
+
+<div class="viewcode-block" id="analyze_molecule"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.analyze_molecule">[docs]</a><span class="k">def</span> <span class="nf">analyze_molecule</span><span class="p">(</span><span class="n">mol_name</span><span class="p">,</span> <span class="n">directory</span><span class="p">,</span> <span class="n">methods</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Automate analysis of a molecule by pointing to a directory</span>
+<span class="sd">        containing all of the relevant calculations, as well as providing</span>
+<span class="sd">        an identifier.</span>
+<span class="sd">        </span>
+<span class="sd">        Optional argument is to specify what contributions to include</span>
+<span class="sd">        in the calculation</span>
+
+<span class="sd">        Returns a dataframe containing the energy breakdown.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data_dict</span><span class="p">,</span> <span class="n">logger</span> <span class="o">=</span> <span class="n">read_heat</span><span class="p">(</span><span class="n">directory</span><span class="p">)</span>
+    <span class="n">mol_df</span> <span class="o">=</span> <span class="n">heat_analysis</span><span class="p">(</span><span class="n">mol_name</span><span class="p">,</span> <span class="n">data_dict</span><span class="p">,</span> <span class="n">methods</span><span class="p">,</span> <span class="n">logger</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">mol_df</span></div>
+
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Miscellaneous functions</span>
+
+<span class="sd">    Logging and basis matching</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="init_logger"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.init_logger">[docs]</a><span class="k">def</span> <span class="nf">init_logger</span><span class="p">(</span><span class="n">log_name</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Use `logging` module to provide debug data for HEAT analysis.</span>
+<span class="sd">    All of the extraneous data (e.g. extraplation coefficients, etc)</span>
+<span class="sd">    will be output with the logger.</span>
+
+<span class="sd">    Required input is the name of the log file including file extension.</span>
+<span class="sd">    Returns a logger object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">logger</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">getLogger</span><span class="p">(</span><span class="n">log_name</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="n">fh</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">FileHandler</span><span class="p">(</span><span class="s2">&quot;logs/&quot;</span> <span class="o">+</span> <span class="n">log_name</span><span class="p">)</span>
+    <span class="n">fh</span><span class="o">.</span><span class="n">setLevel</span><span class="p">(</span><span class="n">logging</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">)</span>
+
+    <span class="c1"># Set up the formatter</span>
+    <span class="n">formatter</span> <span class="o">=</span> <span class="n">logging</span><span class="o">.</span><span class="n">Formatter</span><span class="p">(</span>
+            <span class="s1">&#39;</span><span class="si">%(asctime)s</span><span class="s1"> - </span><span class="si">%(name)s</span><span class="s1"> - </span><span class="si">%(levelname)s</span><span class="s1"> - </span><span class="si">%(message)s</span><span class="s1">&#39;</span>
+            <span class="p">)</span>
+    <span class="n">fh</span><span class="o">.</span><span class="n">setFormatter</span><span class="p">(</span><span class="n">formatter</span><span class="p">)</span>
+    <span class="n">logger</span><span class="o">.</span><span class="n">addHandler</span><span class="p">(</span><span class="n">fh</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">logger</span></div>
+
+
+<div class="viewcode-block" id="match_basis"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.match_basis">[docs]</a><span class="k">def</span> <span class="nf">match_basis</span><span class="p">(</span><span class="n">basis</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Converts a string representations of basis angular momenta</span>
+<span class="sd">    to the cardinal number</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Remove the supplemental functions from the string as they don&#39;t</span>
+    <span class="c1"># refer to the cardinal number</span>
+    <span class="n">basis</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;AUG-PC&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">basis</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;P&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">basis</span> <span class="o">=</span> <span class="n">basis</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;</span><span class="p">)</span>
+    <span class="n">basis_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;VDZ&quot;</span><span class="p">:</span> <span class="mf">2.</span><span class="p">,</span>
+            <span class="s2">&quot;VTZ&quot;</span><span class="p">:</span> <span class="mf">3.</span><span class="p">,</span>
+            <span class="s2">&quot;VQZ&quot;</span><span class="p">:</span> <span class="mf">4.</span><span class="p">,</span>
+            <span class="s2">&quot;V5Z&quot;</span><span class="p">:</span> <span class="mf">5.</span><span class="p">,</span>
+            <span class="s2">&quot;V6Z&quot;</span><span class="p">:</span> <span class="mf">6.</span>
+            <span class="p">}</span>
+    <span class="k">return</span> <span class="n">basis_dict</span><span class="p">[</span><span class="n">basis</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="check_analysis"><a class="viewcode-back" href="../../../pyspectools.qchem.html#pyspectools.qchem.heat_analysis.check_analysis">[docs]</a><span class="k">def</span> <span class="nf">check_analysis</span><span class="p">(</span><span class="n">analysis_dict</span><span class="p">,</span> <span class="n">logger</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for performing small sanity checks on the analysis results.</span>
+<span class="sd">    Basic idea is to do some value comparisons to make sure the extrapolations</span>
+<span class="sd">    have been performed sensibily.</span>
+<span class="sd">    Args: dictionary containing the analysis values and a reference to the</span>
+<span class="sd">    logger object used for debugging.</span>
+<span class="sd">    The function will only print bad flags.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;CCSD(T)/CBS&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;HLC-(T)&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mf">0.4</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;CCSD(T)/CBS and HLC-(T) difference &gt; 0.4 Ha&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;(Q)&quot;</span><span class="p">]</span> <span class="o">-</span> <span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;T - (T)&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mf">0.01</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Large difference in CCSDT(Q) and T - (T)&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="p">(</span><span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;SCF/CBS&quot;</span><span class="p">]</span> <span class="o">/</span> <span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;HEAT345(Q)&quot;</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mf">0.99</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;Large contribution of HEAT345(Q) to SCF/CBS&quot;</span><span class="p">)</span>
+    <span class="c1">#if np.abs(analysis_dict[&quot;HLC-T&quot;] - analysis_dict[&quot;HLC-(T)&quot;]) &gt; 0.01:</span>
+    <span class="c1">#    logger.warning(&quot;Large difference between HLC terms&quot;)</span>
+    <span class="k">if</span> <span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;ZPE&quot;</span><span class="p">]</span> <span class="o">==</span> <span class="mf">0.</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;No ZPE - better be an atom!&quot;</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;(Q)&quot;</span><span class="p">])</span> <span class="o">&gt;</span> <span class="mf">1.</span><span class="p">:</span>
+        <span class="n">logger</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s2">&quot;CCSD(T) contribution is too large to be true, setting to 0.&quot;</span><span class="p">)</span>
+        <span class="n">analysis_dict</span><span class="p">[</span><span class="s2">&quot;(Q)&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.</span></div>
+
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

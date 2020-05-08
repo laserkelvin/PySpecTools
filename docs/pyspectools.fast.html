@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.fast package</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="genindex.html"/>
+
+  <link rel="stylesheet" href="_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="index.html"><img src="_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.fast package</h1>
+        </div>
+        <div id="main-content">
+          
+  <div class="section" id="pyspectools-fast-package">
+<h1>pyspectools.fast package<a class="headerlink" href="#pyspectools-fast-package" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="submodules">
+<h2>Submodules<a class="headerlink" href="#submodules" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="module-pyspectools.fast.filters">
+<span id="pyspectools-fast-filters-module"></span><h2>pyspectools.fast.filters module<a class="headerlink" href="#module-pyspectools.fast.filters" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.fast.filters.gaussian_filter">
+<code class="descclassname">pyspectools.fast.filters.</code><code class="descname">gaussian_filter</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.filters.gaussian_filter" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.filters.matched_lorentzian">
+<code class="descclassname">pyspectools.fast.filters.</code><code class="descname">matched_lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.filters.matched_lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of a Gaussian line shape. This function is
+designed to minimize Python interpreter interaction; everything
+except for the x values are C types, which should hopefully make
+it run fast.</p>
+<p>This function holds the advantage of static typing over the NumPy
+implementation in the <cite>pyspectools.lineshapes</cite> module. From rudimentary
+timing tests, the best improvement is seen for arrays &lt;1000 elements,
+from which the NumPy version is faster.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>np.ndarray</em>) – 1D array containing x values to evaluate</li>
+<li><strong>A</strong> (<em>float</em>) – Amplitude of the Gaussian function</li>
+<li><strong>x0</strong> (<em>float</em>) – Center value for the Gaussian function</li>
+<li><strong>w</strong> (<em>float</em>) – Sigma of the Gaussian function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>xcorr</strong> – Numpy 1D array containing the x values.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.fast.lineshapes">
+<span id="pyspectools-fast-lineshapes-module"></span><h2>pyspectools.fast.lineshapes module<a class="headerlink" href="#module-pyspectools.fast.lineshapes" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.fast.lineshapes.first_deriv_lorentzian">
+<code class="descclassname">pyspectools.fast.lineshapes.</code><code class="descname">first_deriv_lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.first_deriv_lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of the first derivative lineshape of a Lorenz-
+tian function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>np.ndarray</em>) – Numpy 1D array containing x values to evaluate</li>
+<li><strong>gamma</strong><strong>, </strong><strong>A</strong> (<em>x0</em><em>,</em>) – Parameters of the first-derivative Lorentzian function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> – Numpy 1D array containing y values for the first-derivative</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.lineshapes.gaussian">
+<code class="descclassname">pyspectools.fast.lineshapes.</code><code class="descname">gaussian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of a Gaussian line shape. This function is
+designed to minimize Python interpreter interaction; everything
+except for the x values are C types, which should hopefully make
+it run fast.</p>
+<p>This function holds the advantage of static typing over the NumPy
+implementation in the <cite>pyspectools.lineshapes</cite> module. From rudimentary
+timing tests, the best improvement is seen for arrays &lt;1000 elements,
+from which the NumPy version is faster.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>np.ndarray</em>) – 1D array containing x values to evaluate</li>
+<li><strong>A</strong> (<em>float</em>) – Amplitude of the Gaussian function</li>
+<li><strong>x0</strong> (<em>float</em>) – Center value for the Gaussian function</li>
+<li><strong>w</strong> (<em>float</em>) – Sigma of the Gaussian function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> – Numpy 1D array containing the x values.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.lineshapes.lorentzian">
+<code class="descclassname">pyspectools.fast.lineshapes.</code><code class="descname">lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython function for a Lorenztian distribution. Same as the corres-
+ponding Gaussian implementation, this function is written to minimize
+Python interpreter interaction if possible to optimize for speed.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>np.ndarray</em>) – Numpy 1D array of x values to evaluate on</li>
+<li><strong>gamma</strong><strong>, </strong><strong>A</strong> (<em>x0</em><em>,</em>) – Parameters for the lorenztian function.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> – Numpy 1D array with y(x|x0, gamma, A)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.lineshapes.multi_gaussian">
+<code class="descclassname">pyspectools.fast.lineshapes.</code><code class="descname">multi_gaussian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.multi_gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Sum of multiple Gaussian distributions written in Cython. This version of the code is written so that
+there should be no overhead associated with NumPy within the loop. The array access is completely within
+a single function, rather than repeatedly calling the <cite>gaussian</cite> function. In theory this should be a
+faster implementation.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>array_like</em>) – 1D Numpy array of floats corresponding to the x values to evaluate</li>
+<li><strong>x0</strong><strong>, </strong><strong>w</strong> (<em>A</em><em>,</em>) – 1D Numpy array of floats corresponding to the amplitudes, centers, and widths of the Gaussians</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> – Numpy 1D array of Y(X|A,X0,W)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">array_like</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.lineshapes.pair_gaussian">
+<code class="descclassname">pyspectools.fast.lineshapes.</code><code class="descname">pair_gaussian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.pair_gaussian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Pair Gaussian function.
+:param x: Numpy 1D array of X values to evaluate the pair of Gaussians on
+:type x: array_like
+:param A1, A2: Amplitudes of the two Gaussians
+:type A1, A2: float
+:param x0: Center-of-mass for the two Gaussians
+:type x0: float
+:param w: Width of the two gaussians
+:type w: float
+:param xsep: Separation in units of x that pushes the two Gaussians from the center-of-mass
+:type xsep: float</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body"><strong>y</strong> – Numpy 1D array of Y values</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">array_like</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.lineshapes.sec_deriv_lorentzian">
+<code class="descclassname">pyspectools.fast.lineshapes.</code><code class="descname">sec_deriv_lorentzian</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.lineshapes.sec_deriv_lorentzian" title="Permalink to this definition">¶</a></dt>
+<dd><p>Cython implementation of the second derivative lineshape of a Lorenz-
+tian function.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>np.ndarray</em>) – Numpy 1D array containing x values to evaluate</li>
+<li><strong>gamma</strong><strong>, </strong><strong>A</strong> (<em>x0</em><em>,</em>) – Parameters of the first-derivative Lorentzian function</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>y</strong> – Numpy 1D array containing y values for the second-derivative</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">np.ndarray</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.fast.routines">
+<span id="pyspectools-fast-routines-module"></span><h2>pyspectools.fast.routines module<a class="headerlink" href="#module-pyspectools.fast.routines" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="pyspectools.fast.routines.hot_match_arrays">
+<code class="descclassname">pyspectools.fast.routines.</code><code class="descname">hot_match_arrays</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.routines.hot_match_arrays" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will make piece-by-piece comparisons between two
+arrays, <cite>a</cite> and <cite>b</cite>. Every element in <cite>a</cite> will be checked for in <cite>b</cite>,
+and if there is an entry sufficiently close, it will make the
+corresponding element 1.</p>
+<p>The result is a 2D array with the shape equal to <cite>len(a)</cite> x <cite>len(b)</cite></p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>b</strong> (<em>a</em><em>,</em>) – Numpy 1D arrays to match</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Tolerance for proximity to check.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>check_array</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">2D array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="pyspectools.fast.routines.isin_array">
+<code class="descclassname">pyspectools.fast.routines.</code><code class="descname">isin_array</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#pyspectools.fast.routines.isin_array" title="Permalink to this definition">¶</a></dt>
+<dd><p>Function that will make piece-by-piece comparisons between two
+arrays, <cite>a</cite> and <cite>b</cite>. Every element in <cite>a</cite> will be checked for in <cite>b</cite>,
+and if there is an entry sufficiently close, it will return a True
+value for that element.</p>
+<p>Conceptually, this function is similar to
+<cite>np.isin()</cite>, although it allows for two different sized arrays. The
+resulting array will be length equal to <cite>a</cite>, while <cite>b</cite> can be
+larger or smaller than <cite>a</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>a</strong> (<em>1D array</em>) – Numpy 1D array to check</li>
+<li><strong>b</strong> (<em>1D array</em>) – Numpy 1D array to check for</li>
+<li><strong>tol</strong> (<em>float</em><em>, </em><em>optional</em>) – Tolerance for proximity to check.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>check_array</strong> – Numpy 1D array of length equal to <cite>a</cite>, with boolean values corresponding
+to whether element of <cite>a</cite> is in <cite>b</cite>.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">1D array</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+<div class="section" id="module-pyspectools.fast">
+<span id="module-contents"></span><h2>Module contents<a class="headerlink" href="#module-pyspectools.fast" title="Permalink to this headline">¶</a></h2>
+</div>
+</div>
+
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+                <li class="footer-element">
+                    
+                        <a href="_sources/pyspectools.fast.rst.txt" rel="nofollow"> source</a>
+                    
+                </li>
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

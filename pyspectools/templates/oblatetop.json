@@ -1,0 +1,46 @@
+{
+	"name": "oblatetop",
+	"tag": "123456",
+	"parameters": {
+        "A": {
+			"value": 52314.5390946180,
+			"uncertainty": 1E-35,
+			"fit": false
+		},
+		"B": {
+			"value": 7535.7931838638,
+			"uncertainty": 1E-35
+		},
+		"C": {
+			"value": 6586.9566987841
+		},
+        "D_J": {
+			"value": 0.00487742
+		},
+		"D_K": {
+			"value": 0.0776084
+		},
+		"D_JK": {
+			"value": 0.118338
+		}
+	},
+	"linear": false,
+	"symmetric": true,
+	"prolate": false,
+	"dipole": {
+		"A": 5.0
+	},
+	"reduction": "A",
+	"spin": 1,
+	"spin degeneracy": 1,
+	"units": "MHz",
+	"temperature": 5.0,
+	"intensity threshold": [-8.0, -3.0],
+	"vibration limit": 10,
+    "K range": [0, 10],
+    "odd state weight": 1,
+	"even state weight": 1,
+	"partition function": 1E3,
+	"frequency limit": 300.0,
+	"maximum error": 1E+13
+}

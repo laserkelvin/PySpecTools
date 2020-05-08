@@ -1,0 +1,52 @@
+font.family: Roboto
+font.weight: 300
+legend.frameon : False
+
+axes.titlesize : 12
+axes.labelsize : 12
+
+lines.linewidth : 1
+lines.markersize : 5
+
+xtick.labelsize : 12
+ytick.labelsize : 12
+
+figure.figsize : 6, 3.5
+figure.dpi : 300
+figure.facecolor: white
+figure.edgecolor: white
+figure.autolayout: True
+
+lines.color: black
+patch.edgecolor: black
+
+text.color: black
+
+axes.facecolor: white
+axes.edgecolor: black
+axes.labelcolor: black
+axes.linewidth: 1.0
+axes.spines.left: True
+axes.spines.bottom: True
+
+xtick.color: black
+ytick.color: black
+xtick.bottom: True
+ytick.left: True
+xtick.major.size: 4.
+xtick.major.width: 1.
+xtick.minor.size: 3.
+xtick.minor.width: 1.
+ytick.major.size: 4.
+ytick.major.width: 1.
+ytick.minor.size: 3.
+ytick.minor.width: 1.
+
+grid.color: black
+grid.alpha: 0.0
+
+savefig.facecolor: white
+savefig.edgecolor: white
+
+# Colors
+axes.prop_cycle: cycler('color', ['8D0034', '790A3E', '651448', '501E52', '3C285C', '283266'])

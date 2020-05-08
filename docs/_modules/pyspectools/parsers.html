@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2D2D2D" />
+  
+  <title>PySpecTools :: pyspectools.parsers</title>
+  
+
+  <link rel="icon" type="image/png" sizes="32x32" href="../../_static/img/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="../../_static/img/favicon-16x16.png">
+        <link rel="index" title="Index"
+              href="../../genindex.html"/>
+
+  <link rel="stylesheet" href="../../_static/css/insegel.css"/>
+
+  <script type="text/javascript">
+    var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:'',
+        VERSION:'4.1.5',
+        LANGUAGE:'None',
+        COLLAPSE_INDEX:false,
+        FILE_SUFFIX:'.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+    };
+  </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="../../_static/language_data.js"></script>
+
+  <script src="https://email.tl.fortawesome.com/c/eJxNjUEOgyAQAF8jR7Kw6wIHDh7sP1Cw2mgxgmn6-3JsMqc5zEQfE8dkxOY1KKMUOI3ACFKRJpSW2AAp7ontYIaxI6i7XPJVwyeVfCQ550Os3jLrGSNOLgbdAy6s0PBk2TFNjEbsfq31LB0OnX407pJa5v2faRadwSW63mn5KuLyR9j2tgx3zecanl-55R_-jjPs"></script>
+
+</head>
+
+<body>
+  <div id="insegel-container">
+    <header>
+      <div id="logo-container">
+          
+          <a href="../../index.html"><img src="../../_static/img/logo.svg"></a>
+          
+
+      </div>
+      <div id="project-container">
+        <h1>PySpecTools Documentation</h1>
+      </div>
+    </header>
+
+    <div id="content-container">
+
+      <div id="main-content-container">
+        <div id="main-content-header">
+          <h1>pyspectools.parsers</h1>
+        </div>
+        <div id="main-content">
+          
+  <h1>Source code for pyspectools.parsers</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">struct</span>
+<span class="kn">from</span> <span class="nn">glob</span> <span class="k">import</span> <span class="n">glob</span>
+
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="nn">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="kn">from</span> <span class="nn">pyspectools</span> <span class="k">import</span> <span class="n">ftmw_analysis</span> <span class="k">as</span> <span class="n">fa</span>
+
+
+<div class="viewcode-block" id="parse_spectrum"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.parse_spectrum">[docs]</a><span class="k">def</span> <span class="nf">parse_spectrum</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=</span><span class="mf">20.0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot; Function to read in a blackchirp or QtFTM spectrum from file &quot;&quot;&quot;</span>
+    <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">filename</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">],</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span>
+    <span class="p">)</span>
+    <span class="n">dataframe</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataframe</span><span class="p">[</span><span class="n">dataframe</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="n">threshold</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="parse_ascii"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.parse_ascii">[docs]</a><span class="k">def</span> <span class="nf">parse_ascii</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="mi">0</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Generic ASCII parser wrapping the pandas read_csv function.</span>
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filename</span>
+<span class="sd">    delimiter</span>
+<span class="sd">    names</span>
+<span class="sd">    header</span>
+<span class="sd">    skiprows</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span>
+        <span class="n">filename</span><span class="p">,</span> <span class="n">delimiter</span><span class="o">=</span><span class="n">delimiter</span><span class="p">,</span> <span class="n">names</span><span class="o">=</span><span class="n">names</span><span class="p">,</span> <span class="n">header</span><span class="o">=</span><span class="n">header</span><span class="p">,</span> <span class="n">skiprows</span><span class="o">=</span><span class="n">skiprows</span>
+    <span class="p">)</span>
+    <span class="n">dataframe</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataframe</span></div>
+
+
+<div class="viewcode-block" id="parse_lin"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.parse_lin">[docs]</a><span class="k">def</span> <span class="nf">parse_lin</span><span class="p">(</span><span class="n">filename</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Function to read in a line file, formatted in the SPFIT</span>
+<span class="sd">        convention.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">read_file</span><span class="p">:</span>
+            <span class="n">line_data</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+            <span class="c1"># Get all the delimiting out</span>
+            <span class="n">split_line</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+            <span class="n">split_cols</span> <span class="o">=</span> <span class="n">split_line</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">:]</span>
+            <span class="c1"># Convert frequency, uncertainty, and weight</span>
+            <span class="c1"># into floats</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">split_cols</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">line_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">col</span><span class="p">))</span>
+                <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                    <span class="n">line_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="mf">0.0</span><span class="p">)</span>
+            <span class="c1"># Split up the quantum numbers</span>
+            <span class="c1"># qnos = qnos.split()</span>
+            <span class="c1"># qnos = [int(num) for num in qnos]</span>
+            <span class="n">line_data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="s2">&quot;,&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">split_line</span><span class="p">[:</span><span class="o">-</span><span class="mi">3</span><span class="p">]))</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">line_data</span><span class="p">)</span>
+    <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Uncertainty&quot;</span><span class="p">,</span> <span class="s2">&quot;Weight&quot;</span><span class="p">,</span> <span class="s2">&quot;Quantum numbers&quot;</span><span class="p">]</span>
+    <span class="p">)</span>
+    <span class="k">return</span> <span class="n">dataframe</span></div>
+
+
+<div class="viewcode-block" id="parse_cat"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.parse_cat">[docs]</a><span class="k">def</span> <span class="nf">parse_cat</span><span class="p">(</span><span class="n">simulation_path</span><span class="p">,</span> <span class="n">low_freq</span><span class="o">=</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">high_freq</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="n">threshold</span><span class="o">=-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Parses a simulation output, and filters the frequency and intensity to give</span>
+<span class="sd">    a specific set of lines.</span>
+
+<span class="sd">    The only argument that is required is the path to the simulation output. Others</span>
+<span class="sd">    are optional, and will default to effectively not filter.</span>
+
+<span class="sd">    The quantum numbers are read in assuming hyperfine structure, and thus</span>
+<span class="sd">    might not be accurate descriptions of what they actually are.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">cat_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_fwf</span><span class="p">(</span>
+        <span class="n">simulation_path</span><span class="p">,</span>
+        <span class="n">widths</span><span class="o">=</span><span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">7</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">],</span>
+        <span class="n">header</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">cat_df</span><span class="o">.</span><span class="n">columns</span> <span class="o">=</span> <span class="p">[</span>
+        <span class="s2">&quot;Frequency&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Uncertainty&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Intensity&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;DoF&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Lower state energy&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Degeneracy&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;ID&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;Coding&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;N&#39;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;F&#39;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;J&#39;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;N&#39;&#39;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;F&#39;&#39;&quot;</span><span class="p">,</span>
+        <span class="s2">&quot;J&#39;&#39;&quot;</span><span class="p">,</span>
+    <span class="p">]</span>
+    <span class="n">cat_df</span> <span class="o">=</span> <span class="n">cat_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span>
+        <span class="p">(</span><span class="n">cat_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">low_freq</span><span class="p">)</span>
+        <span class="o">&amp;</span> <span class="p">(</span>  <span class="c1"># threshold the simulation output</span>
+            <span class="n">cat_df</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">high_freq</span>
+        <span class="p">)</span>
+        <span class="o">&amp;</span> <span class="p">(</span>  <span class="c1"># based on user specified values</span>
+            <span class="n">cat_df</span><span class="p">[</span><span class="s2">&quot;Intensity&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">float</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="n">threshold</span>
+        <span class="p">)</span>  <span class="c1"># or lack thereof</span>
+    <span class="p">]</span>
+    <span class="k">return</span> <span class="n">cat_df</span></div>
+
+
+<div class="viewcode-block" id="parse_blackchirp"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.parse_blackchirp">[docs]</a><span class="k">def</span> <span class="nf">parse_blackchirp</span><span class="p">(</span><span class="n">dir_path</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function for reading in a Blackchirp experiment. The required input should point to the directory</span>
+<span class="sd">    containing the Blackchirp files with the correct extensions: .hdr, .tdt, and .fid</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    dir_path - str</span>
+<span class="sd">        Filepath pointing to the directory containing the Blackchirp experiment files.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Read in header information</span>
+    <span class="n">hdr_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="s2">&quot;*.hdr&quot;</span><span class="p">))</span>
+    <span class="n">header</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">hdr_file</span> <span class="o">=</span> <span class="n">hdr_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">exp_id</span> <span class="o">=</span> <span class="n">hdr_file</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;/&quot;</span><span class="p">)[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;.&quot;</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Header file is missing!&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">hdr_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdr</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">hdr</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">line</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">l</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">l</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="n">key</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">value</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="n">unit</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+
+            <span class="n">header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;value&quot;</span><span class="p">:</span> <span class="n">value</span><span class="p">,</span> <span class="s2">&quot;unit&quot;</span><span class="p">:</span> <span class="n">unit</span><span class="p">}</span>
+
+    <span class="c1"># Locate all the FIDs</span>
+    <span class="n">fid_files</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="s2">&quot;*.fid&quot;</span><span class="p">))</span>
+    <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">fid_files</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;No FID files present!&quot;</span><span class="p">)</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">fid_list</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+        <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">fid_files</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">fidfile</span><span class="p">:</span>
+                <span class="n">buffer</span> <span class="o">=</span> <span class="n">fidfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+                <span class="n">ms_len</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&gt;I&quot;</span><span class="p">,</span> <span class="n">buffer</span><span class="p">)</span>
+                <span class="n">buffer</span> <span class="o">=</span> <span class="n">fidfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">ms_len</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+                <span class="n">magic_string</span> <span class="o">=</span> <span class="n">buffer</span><span class="o">.</span><span class="n">decode</span><span class="p">(</span><span class="s2">&quot;ascii&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">magic_string</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;BCFID&quot;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;Could not read magic string from </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">fidfile</span><span class="o">.</span><span class="n">name</span><span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="n">l</span> <span class="o">=</span> <span class="n">magic_string</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;v&quot;</span><span class="p">)</span>
+                <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">2</span><span class="p">:</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span>
+                        <span class="s2">&quot;Could not determine version number from magic string </span><span class="si">{}</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span>
+                            <span class="n">magic_string</span>
+                        <span class="p">)</span>
+                    <span class="p">)</span>
+
+                <span class="n">version</span> <span class="o">=</span> <span class="n">l</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+                <span class="n">buffer</span> <span class="o">=</span> <span class="n">fidfile</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">4</span><span class="p">)</span>
+                <span class="n">fidlist_size</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="s2">&quot;&gt;I&quot;</span><span class="p">,</span> <span class="n">buffer</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">fidlist_size</span><span class="p">):</span>
+                    <span class="c1"># Create a BlackChirpFid object</span>
+                    <span class="n">fid_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fa</span><span class="o">.</span><span class="n">BlackChirpFid</span><span class="o">.</span><span class="n">from_binary</span><span class="p">(</span><span class="n">fidfile</span><span class="p">))</span>
+
+    <span class="n">time_data</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+    <span class="n">tdt_file</span> <span class="o">=</span> <span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">dir_path</span><span class="p">,</span> <span class="s2">&quot;*.tdt&quot;</span><span class="p">))</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">tdt_file</span> <span class="o">=</span> <span class="n">tdt_file</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">except</span> <span class="ne">IndexError</span><span class="p">:</span>
+        <span class="k">raise</span> <span class="ne">Exception</span><span class="p">(</span><span class="s2">&quot;Time stamp data is missing!&quot;</span><span class="p">)</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">tdt_file</span><span class="p">)</span> <span class="k">as</span> <span class="n">tdt</span><span class="p">:</span>
+        <span class="n">look_for_header</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="n">header_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">line</span> <span class="ow">in</span> <span class="n">tdt</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">line</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span> <span class="o">==</span> <span class="s2">&quot;&quot;</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="s2">&quot;PlotData&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+                <span class="n">look_for_header</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="n">header_list</span> <span class="o">=</span> <span class="p">[]</span>
+                <span class="k">continue</span>
+            <span class="k">if</span> <span class="n">line</span><span class="o">.</span><span class="n">startswith</span><span class="p">(</span><span class="s2">&quot;#&quot;</span><span class="p">):</span>
+                <span class="k">continue</span>
+
+            <span class="n">l</span> <span class="o">=</span> <span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\t</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="k">if</span> <span class="n">look_for_header</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)):</span>
+                    <span class="n">name</span> <span class="o">=</span> <span class="s2">&quot;&quot;</span>
+                    <span class="n">l2</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s2">&quot;_&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">l2</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+                        <span class="n">name</span> <span class="o">+=</span> <span class="nb">str</span><span class="p">(</span><span class="n">l2</span><span class="p">[</span><span class="n">j</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+                    <span class="n">time_data</span><span class="p">[</span><span class="n">name</span><span class="p">]</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="n">header_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">name</span><span class="p">)</span>
+                <span class="n">look_for_header</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">l</span><span class="p">)):</span>
+                    <span class="n">time_data</span><span class="p">[</span><span class="n">header_list</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">l</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    <span class="k">return</span> <span class="n">exp_id</span><span class="p">,</span> <span class="n">header</span><span class="p">,</span> <span class="n">fid_list</span><span class="p">,</span> <span class="n">time_data</span></div>
+
+
+<div class="viewcode-block" id="read_binary_fid"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.read_binary_fid">[docs]</a><span class="k">def</span> <span class="nf">read_binary_fid</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Read in a binary Blackchirp FID file. This is based on the original code by Kyle Crabtree, with some minor</span>
+<span class="sd">    perfomance improvements by Kelvin Lee. The only difference is most of the for loops for reading the points</span>
+<span class="sd">    have been replaced by numpy broadcasts.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filepath - str</span>
+<span class="sd">        Filepath to the Blackchirp .fid file</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    param_dict - dict</span>
+<span class="sd">        Contains header information about the FID, such as the number of shots, point spacing, etc.</span>
+<span class="sd">    xy_data - 2-tuple of numpy 1D array</span>
+<span class="sd">        Contains two columns; xy_data[0] is the time data in microseconds, and xy_data[1] is the</span>
+<span class="sd">        signal.</span>
+<span class="sd">    raw_data - numpy 1D array</span>
+<span class="sd">        Contains the raw, uncorrected ADC sums. The signal data is converted from this by scaling</span>
+<span class="sd">        it with the multiplication factor v_mult.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="n">read_str</span> <span class="o">=</span> <span class="s2">&quot;&gt;3dqHbI&quot;</span>
+        <span class="n">d</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span><span class="n">read_str</span><span class="p">,</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">read_str</span><span class="p">)))</span>
+        <span class="n">spacing</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mf">1e6</span>
+        <span class="n">probe_freq</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+        <span class="n">v_mult</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+        <span class="n">shots</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">d</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">sideband</span> <span class="o">=</span> <span class="o">-</span><span class="mf">1.0</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sideband</span> <span class="o">=</span> <span class="mf">1.0</span>
+        <span class="n">point_size</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">5</span><span class="p">]</span>
+        <span class="n">size</span> <span class="o">=</span> <span class="n">d</span><span class="p">[</span><span class="mi">6</span><span class="p">]</span>
+
+        <span class="n">param_dict</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s2">&quot;spacing&quot;</span><span class="p">:</span> <span class="n">spacing</span><span class="p">,</span>
+            <span class="s2">&quot;probe_freq&quot;</span><span class="p">:</span> <span class="n">probe_freq</span><span class="p">,</span>
+            <span class="s2">&quot;v_mult&quot;</span><span class="p">:</span> <span class="n">v_mult</span><span class="p">,</span>
+            <span class="s2">&quot;shots&quot;</span><span class="p">:</span> <span class="n">shots</span><span class="p">,</span>
+            <span class="s2">&quot;point_size&quot;</span><span class="p">:</span> <span class="n">point_size</span><span class="p">,</span>
+            <span class="s2">&quot;size&quot;</span><span class="p">:</span> <span class="n">size</span><span class="p">,</span>
+            <span class="s2">&quot;sideband&quot;</span><span class="p">:</span> <span class="n">sideband</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="k">if</span> <span class="n">point_size</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">read_string</span> <span class="o">=</span> <span class="s2">&quot;&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;h&quot;</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
+                <span class="n">read_string</span><span class="p">,</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">read_string</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">point_size</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="n">size</span><span class="p">):</span>
+                <span class="n">chunk</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">3</span><span class="p">)</span>
+                <span class="n">dat</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
+                    <span class="s2">&quot;&gt;i&quot;</span><span class="p">,</span> <span class="p">(</span><span class="sa">b</span><span class="s2">&quot;</span><span class="se">\0</span><span class="s2">&quot;</span> <span class="k">if</span> <span class="n">chunk</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">128</span> <span class="k">else</span> <span class="sa">b</span><span class="s2">&quot;</span><span class="se">\xff</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">chunk</span>
+                <span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="n">point_size</span> <span class="o">==</span> <span class="mi">4</span><span class="p">:</span>
+            <span class="n">read_string</span> <span class="o">=</span> <span class="s2">&quot;&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;i&quot;</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
+                <span class="n">read_string</span><span class="p">,</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">read_string</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="k">elif</span> <span class="n">point_size</span> <span class="o">==</span> <span class="mi">8</span><span class="p">:</span>
+            <span class="n">read_string</span> <span class="o">=</span> <span class="s2">&quot;&gt;&quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">size</span><span class="p">)</span> <span class="o">+</span> <span class="s2">&quot;q&quot;</span>
+            <span class="n">dat</span> <span class="o">=</span> <span class="n">struct</span><span class="o">.</span><span class="n">unpack</span><span class="p">(</span>
+                <span class="n">read_string</span><span class="p">,</span> <span class="n">read_file</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="n">struct</span><span class="o">.</span><span class="n">calcsize</span><span class="p">(</span><span class="n">read_string</span><span class="p">))</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid point size: &quot;</span> <span class="o">+</span> <span class="nb">str</span><span class="p">(</span><span class="n">point_size</span><span class="p">))</span>
+        <span class="c1"># Now read in the data with broadcasting</span>
+        <span class="n">raw_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">dat</span><span class="p">[:</span><span class="n">size</span><span class="p">])</span>
+        <span class="n">data</span> <span class="o">=</span> <span class="n">raw_data</span> <span class="o">*</span> <span class="n">v_mult</span> <span class="o">/</span> <span class="n">shots</span>
+        <span class="n">x_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">size</span> <span class="o">*</span> <span class="n">spacing</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="n">size</span><span class="p">))</span>
+        <span class="n">xy_data</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">vstack</span><span class="p">((</span><span class="n">x_data</span><span class="p">,</span> <span class="n">data</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">param_dict</span><span class="p">,</span> <span class="n">xy_data</span><span class="p">,</span> <span class="n">raw_data</span></div>
+
+
+<div class="viewcode-block" id="parse_fit"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.parsers.parse_fit">[docs]</a><span class="k">def</span> <span class="nf">parse_fit</span><span class="p">(</span><span class="n">filepath</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Function to parse the output of an SPFIT .fit file. This version of the code is barebones compared to the</span>
+<span class="sd">    previous iteration, which provides more feedback. This version simply returns a dictionary containing the</span>
+<span class="sd">    obs - calc for each line, the fitted parameters, and the microwave RMS.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    filepath: str</span>
+<span class="sd">        Filepath to the .fit file to parse.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    fit_dict: dict</span>
+<span class="sd">        Dictionary containing the parsed data.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">fit_dict</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;o-c&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;parameters&quot;</span><span class="p">:</span> <span class="p">{},</span> <span class="s2">&quot;rms&quot;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+    <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">read_file</span><span class="p">:</span>
+        <span class="n">lines</span> <span class="o">=</span> <span class="n">read_file</span><span class="o">.</span><span class="n">readlines</span><span class="p">()</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">line</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">lines</span><span class="p">):</span>
+        <span class="c1"># Read the obs - calc on individual lines</span>
+        <span class="k">if</span> <span class="s2">&quot;EXP.FREQ.&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">stop_flag</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">entry_index</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">line_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">while</span> <span class="n">stop_flag</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="n">entry_index</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;NORMALIZED&quot;</span> <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Fit&quot;</span><span class="p">:</span>
+                    <span class="n">stop_flag</span> <span class="o">=</span> <span class="kc">True</span>
+                <span class="k">elif</span> <span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;NEXT&quot;</span> <span class="ow">or</span> <span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;Lines&quot;</span><span class="p">:</span>
+                    <span class="n">entry_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                    <span class="k">pass</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="c1"># Read in the line information</span>
+                    <span class="n">line_dict</span><span class="p">[</span><span class="n">entry_index</span><span class="p">]</span> <span class="o">=</span> <span class="p">{</span>
+                        <span class="s2">&quot;o-c&quot;</span><span class="p">:</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">]),</span>
+                        <span class="s2">&quot;qnos&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">:</span><span class="o">-</span><span class="mi">5</span><span class="p">],</span>
+                        <span class="s2">&quot;frequency&quot;</span><span class="p">:</span> <span class="n">entry</span><span class="p">[</span><span class="o">-</span><span class="mi">5</span><span class="p">],</span>
+                    <span class="p">}</span>
+                    <span class="n">entry_index</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="s2">&quot;NEW PARAMETER&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">stop_flag</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="n">entry_index</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">param_dict</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+            <span class="k">while</span> <span class="n">stop_flag</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">lines</span><span class="p">[</span><span class="n">index</span> <span class="o">+</span> <span class="n">entry_index</span><span class="p">]</span>
+                <span class="k">for</span> <span class="n">bracket</span> <span class="ow">in</span> <span class="p">[</span><span class="s2">&quot;&quot;&quot;(&quot;&quot;&quot;</span><span class="p">,</span> <span class="s2">&quot;&quot;&quot;)&quot;&quot;&quot;</span><span class="p">]:</span>
+                    <span class="n">entry</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">bracket</span><span class="p">,</span> <span class="s2">&quot; &quot;</span><span class="p">)</span>
+                <span class="n">entry</span> <span class="o">=</span> <span class="n">entry</span><span class="o">.</span><span class="n">split</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">entry</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">!=</span> <span class="s2">&quot;MICROWAVE&quot;</span><span class="p">:</span>
+                    <span class="n">coding</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+                    <span class="n">param_dict</span><span class="p">[</span><span class="n">coding</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="o">-</span><span class="mi">3</span><span class="p">])</span>
+                    <span class="n">entry_index</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">stop_flag</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">if</span> <span class="s2">&quot;MICROWAVE RMS&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;microwave_rms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="mi">3</span><span class="p">])</span>
+        <span class="k">if</span> <span class="s2">&quot;NEW RMS ERROR&quot;</span> <span class="ow">in</span> <span class="n">line</span><span class="p">:</span>
+            <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;rms&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">line</span><span class="o">.</span><span class="n">split</span><span class="p">()[</span><span class="o">-</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;o-c&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">line_dict</span>
+    <span class="n">fit_dict</span><span class="p">[</span><span class="s2">&quot;parameters&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">param_dict</span>
+    <span class="k">return</span> <span class="n">fit_dict</span></div>
+</pre></div>
+
+        </div>
+      </div>
+
+      <div id="side-menu-container">
+
+        <div id="search" role="search">
+        <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+            <input type="text" name="q" placeholder="Search..." />
+            <input type="hidden" name="check_keywords" value="yes" />
+            <input type="hidden" name="area" value="default" />
+        </form>
+</div>
+
+        <div id="side-menu" role="navigation">
+
+          
+  
+    
+  
+  
+    <p class="caption"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../pyspectools.spectra.html">pyspectools.spectra package</a></li>
+</ul>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">PySpecTools</a></li>
+</ul>
+
+  
+
+
+        </div>
+
+        
+
+      </div>
+
+    </div>
+
+<footer>
+    <div id="footer-info">
+        <ul id="build-details">
+            
+
+            
+
+            
+        </ul>
+        <div id="credit">
+            created with <a href="http://sphinx-doc.org/">Sphinx</a> and <a href="https://github.com/Autophagy/insegel">Insegel</a>
+
+        </div>
+    </div>
+
+    <a id="menu-toggle" class="fa fa-bars" aria-hidden="true"></a>
+
+    <script type="text/javascript">
+      $("#menu-toggle").click(function() {
+        $("#menu-toggle").toggleClass("toggled");
+        $("#side-menu-container").slideToggle(300);
+      });
+    </script>
+
+</footer> 
+
+</div>
+
+</body>
+</html>

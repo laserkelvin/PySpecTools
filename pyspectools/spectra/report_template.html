@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<link rel="stylesheet" type="text/css" href="https://codepen.io/chriddyp/pen/bWLwgP.css" />
+<link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.19/css/jquery.dataTables.min.css" />
+<script src="https://code.jquery.com/jquery-3.3.1.js" type="text/javascript"></script>
+<script src="https://cdn.datatables.net/1.10.20/js/jquery.dataTables.min.js" type="text/javascript"></script>
+<script type="text/javascript">
+    $(document).ready(function() {
+        $('table.data-table').DataTable(
+            {
+                scrollY:        '50vh',
+                scrollCollapse: true,
+                paging:         false
+            }
+        );
+    });
+</script>
+<head>
+    <meta charset="UTF_8">
+    <title>Analysis summary for experiment {{ session.experiment }}</title>
+</head>
+<body>
+<div>
+    <h1> Analysis summary for experiment {{ session.experiment }} </h1>
+    <h2> Session details </h2>
+    <hr>
+    <p> Experiment ID: {{ session.experiment }}</p>
+    <p> Elemental composition: {{ session.composition }}</p>
+    <p> Temperature: {{ session.temperature }} K</p>
+</div>
+
+<div>
+    <h2> Peak statistics </h2>
+    <p> Peak detection threshold (in signal units) was set to {{ peak_threshold }}. </p>
+    <hr>
+    {{ plotly_breakdown }}
+</div>
+
+<div>
+    <h2> Interactive spectrum overview </h2>
+    {{ plotly_figure}}
+</div>
+
+<div>
+    <h3> Assignments </h3>
+    {{ assignments_table }}
+    <hr>
+</div>
+
+<div>
+    <h2> Unidentified lines </h2>
+    {{ uline_table }}
+</div>
+
+</body>
+</html>
