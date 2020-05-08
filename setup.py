@@ -198,12 +198,12 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.3.3",
+    version="4.4.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
     packages=find_packages(),
     include_package_data=True,
-    author_email="kin_long_kelvin.lee@cfa.harvard.edu",
+    author_email="kin.long.kelvin.lee@gmail.com",
     install_requires=[
         "numpy>=1.16",
         "pandas",
@@ -226,7 +226,8 @@ setup(
         "tqdm",
         "tinydb",
         "networkx",
-        "monsterurl"
+        "monsterurl",
+        "torch"
     ],
     cmdclass=cmdclass,
     ext_modules=ext_modules

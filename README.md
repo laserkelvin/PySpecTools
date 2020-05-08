@@ -27,6 +27,10 @@ spectroscopy data. The main functions of this library are:
    reproducibly; astronomical and laboratory broadband spectra are supported.
 5. Autofit routines are available for a set of special cases, like linear/prolate
    molecules. Eventually, SPFIT will be a backend option.
+6. Molecule identity inference (NEW!)—this uses a pre-trained probabilistic deep
+   learning model that allows users to perform inference on experimental constants
+   and expected composition to predict the most likely molecular formula and possible
+   functional groups present. See [our paper on the development of the first generation of this model](https://pubs.acs.org/doi/10.1021/acs.jpca.0c01376).
 
 The documentation for PySpecTools can be found [here](https://laserkelvin.github.io/PySpecTools).
 

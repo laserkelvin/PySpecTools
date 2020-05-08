@@ -10,3 +10,4 @@ cython/lineshapes\.html
 
 tests/test-spectrum.csv
 tests/spectrum-parameters.yml
+tests/inference.html

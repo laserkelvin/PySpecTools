@@ -2,4 +2,5 @@ include pyspectools/parameters.json
 include pyspectools/templates/*.json
 include pyspectools/spectra/report_template.html
 include mpl_stylesheets/bokeh.yml
+include pyspectools/models/*.pt
 recursive-include cython *
