@@ -86,7 +86,7 @@ class SpecConstants:
             self.__dict__.update(**kwargs)
     
     def __repr__(self):
-        return pprint.PrettyPrinter(indent=4).print(self.__dict__)
+        return pprint.PrettyPrinter(indent=4).pformat(self.__dict__)
     
     def __call__(self, N=1000):
         return self.generate_samples(N)
@@ -285,12 +285,12 @@ class MoleculeDetective:
         # convert to GHz
         samples[:,:3] /= 1000.
         if composition is None:
-            composition = np.random.randint(low=0, high=4, size=N)
-            compositions = np.zeros((N, 4))
+            composition = np.random.randint(low=0, high=4, size=len(samples))
+            compositions = np.zeros((len(samples), 4))
             compositions[:,composition] = 1
         else:
             # generate one-hot encoding for the composition
-            compositions = np.zeros((N, max(4, composition)))
+            compositions = np.zeros((len(samples), max(4, composition)))
             compositions[:, composition] = 1
         # Type cast Tensors into float32 from NumPy arrays, and move to
         # CPU or GPU

@@ -153,9 +153,9 @@ class VariationalSpecDecoder(GenericModel):
 
     def __init__(
         self,
-        latent_dim=24,
+        latent_dim=14,
         output_dim=30,
-        alpha=0.05,
+        alpha=0.8,
         dropout=0.2,
         optimizer=None,
         loss_func=None,
@@ -245,10 +245,10 @@ class VariationalDecoder(GenericModel):
     
     def __init__(
         self,
-        latent_dim=24,
+        latent_dim=14,
         eigen_length=30,
         nclasses=23,
-        alpha=0.05,
+        alpha=0.8,
         dropout=0.2,
         loss_func=None,
         param_transform=None,
@@ -361,9 +361,9 @@ class VarMolDetect(GenericModel):
     def __init__(
         self,
         eigen_length=30,
-        latent_dim=24,
+        latent_dim=14,
         nclasses=23,
-        alpha=0.0005,
+        alpha=0.8,
         dropout=0.2,
         tracker=True,
     ):
@@ -386,6 +386,19 @@ class VarMolDetect(GenericModel):
                 nn.init.ones_(parameter)
 
     def forward(self, constants: torch.Tensor, composition: torch.Tensor):
+        # This mask ensures that predictions of formulae are appropriate
+        # for the specified composition. The conditional estimation alone
+        # was okay, but could sometimes still predict formulae it shouldn't
+        comp_mask = torch.FloatTensor(
+            [
+                [1, 1, 0, 0],
+                [1, 1, 1, 0],
+                [1, 1, 0, 1],
+                [1, 1, 1, 1]
+            ]
+        ).to(constants.device)
+        comp_encoding = composition.argmax(dim=-1)
+        masks = torch.autograd.Variable(comp_mask[comp_encoding], requires_grad=True)
         # Run batch norm on A,B,C
         constants = self.input_dropout(self.norm(constants))
         # concatenate the inputs
@@ -397,6 +410,8 @@ class VarMolDetect(GenericModel):
         formula, functionals, decode_mu, decode_logvar = self.joint_decoder(
             eigen_composition
         )
+        # Remove predictions of atoms that don't belong
+        formula = formula * masks
         return (
             (eigen, formula, functionals),
             (eigen_mu, eigen_logvar, decode_mu, decode_logvar),

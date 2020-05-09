@@ -12,9 +12,11 @@ Reproducible, automated, and interactive analysis for rotational spectroscopy
 
    install
    faq
+   examples
    pyspectools.spectra
+   api
 
-.. image:: _static/pst_logo_landscape.png
+.. image:: _images/pst_logo_landscape.png
 
 
 Introduction
@@ -40,14 +42,6 @@ some of the tasks you may wish to carry out but not sure how.
 
 If there is a feature/analysis you would like to do but don't know how, please
 raise an issue on Github!
-
-API Reference
-~~~~~~~~~~~~~
-
-.. toctree::
-   :maxdepth: 4
-
-   modules 
 
 .. _Jupyter: https://jupyter.org
 .. _FAQ: faq
