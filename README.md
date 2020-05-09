@@ -8,7 +8,7 @@
 
 [![DOI](https://zenodo.org/badge/90773952.svg)](https://zenodo.org/badge/latestdoi/90773952)
 
-![pst-logo](docs/source/pst_logo_landscape.png)
+![pst-logo](docs/source/_images/pst_logo_landscape.png)
 
 `PySpecTools` is a library written to help with analyzing rotational
 spectroscopy data. The main functions of this library are:
@@ -30,7 +30,8 @@ spectroscopy data. The main functions of this library are:
 6. Molecule identity inference (NEW!)—this uses a pre-trained probabilistic deep
    learning model that allows users to perform inference on experimental constants
    and expected composition to predict the most likely molecular formula and possible
-   functional groups present. See [our paper on the development of the first generation of this model](https://pubs.acs.org/doi/10.1021/acs.jpca.0c01376).
+   functional groups present. See [our paper on the development of the first generation of this model](https://pubs.acs.org/doi/10.1021/acs.jpca.0c01376). An example of how to run this analysis
+   can be found [here.](https://laserkelvin.github.io/PySpecTools/examples/identifying_molecules.html)
 
 The documentation for PySpecTools can be found [here](https://laserkelvin.github.io/PySpecTools).
 
