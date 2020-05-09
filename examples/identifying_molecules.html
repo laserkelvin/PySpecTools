@@ -61,9 +61,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">PySpecTools FAQ</a></li>
 <li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../modules.html">PySpecTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
 </ul>
 </ul>
 </li>
@@ -80,6 +78,7 @@
 <li><a class="reference internal" href="#">Identifying Molecules using Probabilistic Deep Learning</a><ul>
 <li><a class="reference internal" href="#SpecConstants"><code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code></a></li>
 <li><a class="reference internal" href="#MoleculeDetective"><code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code></a></li>
+<li><a class="reference internal" href="#Conclusions">Conclusions</a></li>
 </ul>
 </li>
 </ul>
@@ -396,7 +395,10 @@ parameters that originate from a single set of constants: in other words, <em>wh
 describes all possible molecule space: this is somewhat of an abstract concept, but the idea is that this term represents the identity of every possible molecule ever. In fact, you could rephrase the equation above to this:</p>
 <div class="math notranslate nohighlight">
 \[p(M \vert A, B, C) = \frac{p(A, B, C \vert M) p(A, B, C)}{\int_m^M p(A_m, B_m, C_m \vert m)p(A_m, B_m, C_m)\,dM}\]</div>
-<p>where the denominator is now an integral of <span class="math notranslate nohighlight">\(A, B, C\)</span> for molecule <span class="math notranslate nohighlight">\(m\)</span> that is a subset of all possible molecules <span class="math notranslate nohighlight">\(M\)</span>. This is not so tractable. Enter probabilistic deep learning! The idea is to parametrize the equation, such that a neural network—when trained properly—encapsulates structure space in a highly compressed manner.</p>
+<p>where the denominator is now an integral of <span class="math notranslate nohighlight">\(A, B, C\)</span> for molecule <span class="math notranslate nohighlight">\(m\)</span> that is a subset of all possible molecules <span class="math notranslate nohighlight">\(M\)</span>. This is not so tractable. Enter probabilistic deep learning! The idea is to parametrize the equation, such that a neural network—when trained properly—encapsulates molecule space in a highly compressed manner. In doing so, we’re replacing the abstract concept of <span class="math notranslate nohighlight">\(M\)</span> with the model parameters, <span class="math notranslate nohighlight">\(\theta\)</span> in our Bayesian neural network:</p>
+<div class="math notranslate nohighlight">
+\[p(\theta \vert A, B, C) = \frac{p(A, B, C \vert \theta) p(A, B, C)}{p(\theta)}\]</div>
+<p>For a given training set of molecules—which we try to be as encompassing as possible—<span class="math notranslate nohighlight">\(\theta\)</span> will learn to approximate <span class="math notranslate nohighlight">\(M\)</span> as neural networks have a nifty part of them being universal function approximators.</p>
 <p>The routines now implemented in <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> provide the user a high-level interface for performing inference. There are currently two main classes that we’re concerned with, <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code>, and <code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code>. This notebook will explore usage and provide insight into how these classes could be used in your own case.</p>
 <hr class="docutils" />
 <div class="section" id="SpecConstants">
@@ -431,7 +433,7 @@ describes all possible molecule space: this is somewhat of an abstract concept, 
 {   &#39;A&#39;: 5702.472251+/-1e-05,
     &#39;B&#39;: 5702.472251+/-5.2e-05,
     &#39;C&#39;: 2721.312512+/-0.000602,
-    &#39;__name__&#39;: &#39;UnevenEssentialShamblingMound&#39;,
+    &#39;__name__&#39;: &#39;LoyalIndolentViperSnake&#39;,
     &#39;delta&#39;: 8.462402523799186+/-4.109074024806016e-05,
     &#39;kappa&#39;: 1.0+/-3.552497270559369e-08,
     &#39;u_a&#39;: 0.0+/-3.0,
@@ -442,20 +444,20 @@ describes all possible molecule space: this is somewhat of an abstract concept, 
 <p>The <code class="docutils literal notranslate"><span class="pre">SpecConstants</span></code> class keeps track of the experimentally relevant parameters: the rotational constants, derived parameters <span class="math notranslate nohighlight">\(\Delta\)</span> (the inertial defect) and <span class="math notranslate nohighlight">\(\kappa\)</span> (the asymmetry parameter), and the dipole moments along each principle axis. The derived parameters are calculated automatically once you initialize the object, and you can see how every parameter has a <code class="docutils literal notranslate"><span class="pre">+/-</span></code> corresponding to its nominal uncertainty. One important thing to note is that the dipole moments are by
 default all centered around zero with large uncertainties: we assume that you haven’t actually measured the dipole moment (not such an easy thing to do well). If you want to provide dipole moments, you will need to provide a <code class="docutils literal notranslate"><span class="pre">uncertainties.ufloat</span></code> value like so:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[73]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">uncertainties</span> <span class="kn">import</span> <span class="n">ufloat</span>
 
-<span class="n">unknown_molecule</span> <span class="o">=</span> <span class="n">SpecConstants</span><span class="p">(</span><span class="n">A</span><span class="o">=</span><span class="s2">&quot;5702.472251(10)&quot;</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="s2">&quot;5702.472251(52)&quot;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="s2">&quot;2721.312512(602)&quot;</span><span class="p">,</span> <span class="n">u_a</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">u_b</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">u_c</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">))</span>
+<span class="n">unknown_molecule</span> <span class="o">=</span> <span class="n">SpecConstants</span><span class="p">(</span><span class="n">A</span><span class="o">=</span><span class="s2">&quot;20340(100)&quot;</span><span class="p">,</span> <span class="n">B</span><span class="o">=</span><span class="s2">&quot;1702.472251(52)&quot;</span><span class="p">,</span> <span class="n">C</span><span class="o">=</span><span class="s2">&quot;1321.312512(602)&quot;</span><span class="p">,</span> <span class="n">u_a</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">2.</span><span class="p">,</span> <span class="mf">1.</span><span class="p">),</span> <span class="n">u_b</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">),</span> <span class="n">u_c</span><span class="o">=</span><span class="n">ufloat</span><span class="p">(</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">))</span>
 </pre></div>
 </div>
 </div>
-<p>In this case, I’m confident that there is an <span class="math notranslate nohighlight">\(a-\)</span>type spectrum, but I don’t know what the magntiude of the dipole moment is and so I set a nominal value and a large uncertainty to it. I did not observe any transitions along <span class="math notranslate nohighlight">\(b\)</span> and <span class="math notranslate nohighlight">\(c-\)</span>axes, and so I’m turning them off by setting them to zero with no uncertainty. This kind of mindset is global for all of this analysis, and may not come intuitively for some: <em>everything has uncertainty, and this framework will take it all
-into account!</em>. The uncertainties are used by the class to generate samples, which you can call by running <code class="docutils literal notranslate"><span class="pre">SpecConstants.generate_samples(N)</span></code>, or simply <code class="docutils literal notranslate"><span class="pre">SpecConstants(N)</span></code>:</p>
+<p>In this case, I’m confident that there is an <span class="math notranslate nohighlight">\(a-\)</span>type spectrum, but I don’t know what the magntiude of the dipole moment is and so I set a nominal value and a large uncertainty to it. I did not observe any transitions along <span class="math notranslate nohighlight">\(b\)</span> and <span class="math notranslate nohighlight">\(c-\)</span>axes, and so I’m turning them off by setting them to zero with no uncertainty. Also, because only <span class="math notranslate nohighlight">\(a\)</span>-type transitions are observed, the <span class="math notranslate nohighlight">\(A\)</span> constant is only determined to $:nbsphinx-math:<cite>pm`$100 MHz. *Everything has
+uncertainty, and this framework will take it all into account!*. The uncertainties are used by the class to generate samples, which you can call by running ``SpecConstants.generate_samples(N)`</cite>, or simply <code class="docutils literal notranslate"><span class="pre">SpecConstants(N)</span></code>:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[74]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[5]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -465,7 +467,7 @@ into account!</em>. The uncertainties are used by the class to generate samples,
 </div>
 </div>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[75]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -474,19 +476,41 @@ into account!</em>. The uncertainties are used by the class to generate samples,
 </div>
 </div>
 <div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[75]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
 </pre></div>
 </div>
 <div class="output_area docutils container">
 <div class="highlight"><pre>
-array([[5.70247227e+03, 5.70247226e+03, 2.72131303e+03, 9.99999993e-01,
-        8.46236792e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
-       [5.70247226e+03, 5.70247221e+03, 2.72131313e+03, 9.99999967e-01,
-        8.46235988e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
-       [5.70247225e+03, 5.70247219e+03, 2.72131194e+03, 9.99999959e-01,
-        8.46244067e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00],
-       [5.70247226e+03, 5.70247224e+03, 2.72131219e+03, 9.99999991e-01,
-        8.46242453e+00, 0.00000000e+00, 0.00000000e+00, 0.00000000e+00]])
+array([[ 2.02753602e+04,  1.70247220e+03,  1.32131320e+03,
+        -9.59780726e-01,  6.07065213e+01,  2.00181407e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.03497067e+04,  1.70247221e+03,  1.32131159e+03,
+        -9.59937702e-01,  6.07980516e+01,  1.34500523e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.02079049e+04,  1.70247224e+03,  1.32131305e+03,
+        -9.59637060e-01,  6.06233669e+01,  1.48251780e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.03602970e+04,  1.70247220e+03,  1.32131207e+03,
+        -9.59960037e-01,  6.08108304e+01,  4.55151766e-01,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.05556346e+04,  1.70247227e+03,  1.32131267e+03,
+        -9.60366724e-01,  6.10465461e+01,  2.08265664e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.03267296e+04,  1.70247227e+03,  1.32131283e+03,
+        -9.59889389e-01,  6.07696309e+01,  2.43033941e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.02419227e+04,  1.70247227e+03,  1.32131300e+03,
+        -9.59709621e-01,  6.06654158e+01,  1.55213573e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.03497633e+04,  1.70247216e+03,  1.32131375e+03,
+        -9.59938048e-01,  6.07974889e+01,  1.13604348e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.03583602e+04,  1.70247227e+03,  1.32131267e+03,
+        -9.59956017e-01,  6.08083075e+01,  4.01200724e+00,
+         0.00000000e+00,  0.00000000e+00],
+       [ 2.03989352e+04,  1.70247228e+03,  1.32131251e+03,
+        -9.60041167e-01,  6.08577313e+01,  1.20541280e+00,
+         0.00000000e+00,  0.00000000e+00]])
 </pre></div></div>
 </div>
 <p>This function returns an array where each row corresponds to “an observation”, generated by sampling independent Gaussians with centers/widths based on the parameter value and uncertainty. The last three columns of each row are the dipole moments, and contrasted with our “well-determined” rotational constants, are actually all over the shop, and correspond with the fact that we have no clue what the dipole moments are, but we measured our experimental constants precisely. The same thing could be
@@ -497,7 +521,7 @@ done for the rotational constants: if a parameter is poorly determined, just asc
 <h2><code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code><a class="headerlink" href="#MoleculeDetective" title="Permalink to this headline">¶</a></h2>
 <p>Now comes the cool bit: doing the actual inference using our pre-trained deep learning model. This is handled by the <code class="docutils literal notranslate"><span class="pre">MoleculeDetective</span></code> class, which can be instantiated just like so:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[76]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
@@ -534,50 +558,38 @@ it contains oxygen, for example. The <code class="docutils literal notranslate">
 </table>
 <p>Alternatively, if you have no idea what the composition is, then the default will be random compositions. This is helpful if you just want to see what the range of possible formulae are. You can perform inference by calling <code class="docutils literal notranslate"><span class="pre">run_inference</span></code>, or by using the object like a function:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[86]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="c1"># Run our unknown, using a pure hydrocarbon composition</span>
-<span class="n">results</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">unknown_molecule</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">5000</span><span class="p">)</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">unknown_molecule</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
-<div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[87]:
-</pre></div>
-</div>
-<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">results</span>
-</pre></div>
-</div>
-</div>
-<div class="nboutput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[87]:
-</pre></div>
-</div>
-<div class="output_area docutils container">
-<div class="highlight"><pre>
-&lt;pyspectools.models.classes.MoleculeResult at 0x7f93208e2990&gt;
-</pre></div></div>
-</div>
-<p>This returns a <code class="docutils literal notranslate"><span class="pre">MoleculeResult</span></code> object, which holds the prediction results and implements some convenience functions for analysis, namely <code class="docutils literal notranslate"><span class="pre">analyze()</span></code>. More will be implemented soon!</p>
+<p>This returns a <code class="docutils literal notranslate"><span class="pre">MoleculeResult</span></code> object, which holds the prediction results and implements some convenience functions for analysis, namely <code class="docutils literal notranslate"><span class="pre">analyze()</span></code>. More will be implemented soon! The three (well, two that you’d normally be interested in) results are stored as attributes in the <code class="docutils literal notranslate"><span class="pre">MoleculeResult</span></code> object. These are just straight NumPy arrays, and you can use violin plots to visualize the distribution of whatever parameter you’re interested in:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[88]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">results_dict</span> <span class="o">=</span> <span class="n">results</span><span class="o">.</span><span class="n">analyze</span><span class="p">()</span>
+<span></span><span class="c1"># Formula sampling</span>
+<span class="n">results</span><span class="o">.</span><span class="n">formulas</span><span class="p">;</span>
+<span class="c1"># Functional groups</span>
+<span class="n">results</span><span class="o">.</span><span class="n">functional_groups</span><span class="p">;</span>
 </pre></div>
 </div>
 </div>
+<p>Each row of these results corresponds to an “observation”—basically, what you asked the neural network to predict as the formula/functional group given the corresponding set of rotational constants and the composition. If you call <code class="docutils literal notranslate"><span class="pre">results.analyze()</span></code>, it returns a Plotly <code class="docutils literal notranslate"><span class="pre">Figure</span></code> object which provides some interactivity; this is still in development and I hope to make this more streamlined soon. The thing that the function returns is a dictionary containing summary statistics of the run. We
+can also use <code class="docutils literal notranslate"><span class="pre">matplotlib</span></code> to make violin plots to visualize the results:</p>
 <div class="nbinput docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[89]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
 <span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
 
+<span class="c1"># Take the transpose of the array; matplotlib expects observations as columns...</span>
 <span class="n">ax</span><span class="o">.</span><span class="n">violinplot</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">formulas</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
 
 <span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Predicted formulas&quot;</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,],</span> <span class="n">xticklabels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;H&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">,</span> <span class="s2">&quot;N&quot;</span><span class="p">],</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Number of atoms&quot;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Atom&quot;</span><span class="p">);</span>
@@ -591,15 +603,48 @@ it contains oxygen, for example. The <code class="docutils literal notranslate">
 <img alt="../_images/examples_identifying_molecules_16_0.png" src="../_images/examples_identifying_molecules_16_0.png" />
 </div>
 </div>
+<p>The way you interpret these plots is that the width of the “violin” tells you the likelihood/probability density of the corresponding <span class="math notranslate nohighlight">\(y\)</span>-axis value. In this case, it suggests our molecule has the approximate formula <span class="math notranslate nohighlight">\(\mathrm{H_8C_{5/6}}\)</span>. Notice that the number of hydrogens is the most uncertain—because hydrogen is so light, it doesn’t contribute significantly to the determination of the spectroscopic constants, and is appropriately reflected in our prediction!</p>
+<p>Say if we found out that the molecule contained oxygen, we can then set <code class="docutils literal notranslate"><span class="pre">composition=1</span></code> in our inference call:</p>
 <div class="nbinput nblast docutils container">
-<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[11]:
 </pre></div>
 </div>
 <div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
-<span></span>
+<span></span><span class="c1"># Run our unknown, using a pure hydrocarbon composition</span>
+<span class="n">results</span> <span class="o">=</span> <span class="n">model</span><span class="p">(</span><span class="n">unknown_molecule</span><span class="p">,</span> <span class="n">composition</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">N</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
 </pre></div>
 </div>
 </div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[12]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">()</span>
+
+<span class="c1"># Take the transpose of the array; matplotlib expects observations as columns...</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">violinplot</span><span class="p">(</span><span class="n">results</span><span class="o">.</span><span class="n">formulas</span><span class="o">.</span><span class="n">T</span><span class="p">)</span>
+
+<span class="n">ax</span><span class="o">.</span><span class="n">set</span><span class="p">(</span><span class="n">title</span><span class="o">=</span><span class="s2">&quot;Predicted formulas&quot;</span><span class="p">,</span> <span class="n">xticks</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">4</span><span class="p">,],</span> <span class="n">xticklabels</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;H&quot;</span><span class="p">,</span> <span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">,</span> <span class="s2">&quot;N&quot;</span><span class="p">],</span> <span class="n">ylabel</span><span class="o">=</span><span class="s2">&quot;Number of atoms&quot;</span><span class="p">,</span> <span class="n">xlabel</span><span class="o">=</span><span class="s2">&quot;Atom&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<img alt="../_images/examples_identifying_molecules_19_0.png" src="../_images/examples_identifying_molecules_19_0.png" />
+</div>
+</div>
+<p>You’ll notice that now oxygen is predicted with some likelihood. One thing to keep in mind, however, that these results tend to be overconfident: the current state-of-the-art Bayesian neural networks tend to underestimate its uncertainty, as we’re only approximating the true posterior. The significant improvement to this version of the model compared to the one described in our paper is that only one set of weights are used for every composition: the same model is used to predict each
+composition. The idea behind this is to try and capture two separate aspects of the problem: (1) the distribution of mass is a physical property, and does not “change” persay between different compositions, and (2) compositions impose structural differences, for example <span class="math notranslate nohighlight">\(sp^3\)</span> nitrogen (e.g. amines) bond significantly differently from <span class="math notranslate nohighlight">\(sp\)</span> (e.g. nitrile) groups. In other words, the model was fine-tuned to strike a balance between accuracy and generalizability: we want it to be
+sufficiently accurate to make reliable predictions, but it should differ enough for vastly different compositions and constants. <em>There is no perfect model, or a free lunch!</em></p>
+</div>
+<hr class="docutils" />
+<div class="section" id="Conclusions">
+<h2>Conclusions<a class="headerlink" href="#Conclusions" title="Permalink to this headline">¶</a></h2>
+<p>…And that’s how you perform inference! The idea is that once you have a gauge of what the size of the molecule, and what the potential functional groups are you can kind of start piecing things together and come up with viable candidates for your unknown molecule. As we get more and more sophisticated models, the plan is to hopefully make this process increasingly streamlined, ultimately getting to the point of a model generating structures directly from your parameters.</p>
+<p>For more details about how the models were trained—although the process was modified for PySpecTools usage—please refer to <a class="reference external" href="https://pubs.acs.org/doi/10.1021/acs.jpca.0c01376">our latest paper on the matter</a>. If you use these models or PySpectools in general for your work, please let me know!</p>
 </div>
 </div>
 

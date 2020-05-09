@@ -59,9 +59,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../../../faq.html">PySpecTools FAQ</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../examples.html">Example Notebooks</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../../../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
-</ul>
-<ul>
-<li class="toctree-l1"><a class="reference internal" href="../../../modules.html">PySpecTools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../../api.html">API Reference</a></li>
 </ul>
 </ul>
 </li>
@@ -264,9 +262,9 @@
 
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
         <span class="n">output_dim</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
-        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
         <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">optimizer</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">loss_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -356,10 +354,10 @@
     
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
-        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
         <span class="n">eigen_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
         <span class="n">nclasses</span><span class="o">=</span><span class="mi">23</span><span class="p">,</span>
-        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.05</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
         <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">loss_func</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">param_transform</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
@@ -472,9 +470,9 @@
     <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span>
         <span class="bp">self</span><span class="p">,</span>
         <span class="n">eigen_length</span><span class="o">=</span><span class="mi">30</span><span class="p">,</span>
-        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">24</span><span class="p">,</span>
+        <span class="n">latent_dim</span><span class="o">=</span><span class="mi">14</span><span class="p">,</span>
         <span class="n">nclasses</span><span class="o">=</span><span class="mi">23</span><span class="p">,</span>
-        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.0005</span><span class="p">,</span>
+        <span class="n">alpha</span><span class="o">=</span><span class="mf">0.8</span><span class="p">,</span>
         <span class="n">dropout</span><span class="o">=</span><span class="mf">0.2</span><span class="p">,</span>
         <span class="n">tracker</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
@@ -497,6 +495,19 @@
                 <span class="n">nn</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">ones_</span><span class="p">(</span><span class="n">parameter</span><span class="p">)</span>
 
 <div class="viewcode-block" id="VarMolDetect.forward"><a class="viewcode-back" href="../../../pyspectools.models.html#pyspectools.models.torch_models.VarMolDetect.forward">[docs]</a>    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">constants</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">,</span> <span class="n">composition</span><span class="p">:</span> <span class="n">torch</span><span class="o">.</span><span class="n">Tensor</span><span class="p">):</span>
+        <span class="c1"># This mask ensures that predictions of formulae are appropriate</span>
+        <span class="c1"># for the specified composition. The conditional estimation alone</span>
+        <span class="c1"># was okay, but could sometimes still predict formulae it shouldn&#39;t</span>
+        <span class="n">comp_mask</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">FloatTensor</span><span class="p">(</span>
+            <span class="p">[</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">],</span>
+                <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">]</span>
+            <span class="p">]</span>
+        <span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">constants</span><span class="o">.</span><span class="n">device</span><span class="p">)</span>
+        <span class="n">comp_encoding</span> <span class="o">=</span> <span class="n">composition</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">masks</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">autograd</span><span class="o">.</span><span class="n">Variable</span><span class="p">(</span><span class="n">comp_mask</span><span class="p">[</span><span class="n">comp_encoding</span><span class="p">],</span> <span class="n">requires_grad</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
         <span class="c1"># Run batch norm on A,B,C</span>
         <span class="n">constants</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">input_dropout</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">norm</span><span class="p">(</span><span class="n">constants</span><span class="p">))</span>
         <span class="c1"># concatenate the inputs</span>
@@ -508,6 +519,8 @@
         <span class="n">formula</span><span class="p">,</span> <span class="n">functionals</span><span class="p">,</span> <span class="n">decode_mu</span><span class="p">,</span> <span class="n">decode_logvar</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">joint_decoder</span><span class="p">(</span>
             <span class="n">eigen_composition</span>
         <span class="p">)</span>
+        <span class="c1"># Remove predictions of atoms that don&#39;t belong</span>
+        <span class="n">formula</span> <span class="o">=</span> <span class="n">formula</span> <span class="o">*</span> <span class="n">masks</span>
         <span class="k">return</span> <span class="p">(</span>
             <span class="p">(</span><span class="n">eigen</span><span class="p">,</span> <span class="n">formula</span><span class="p">,</span> <span class="n">functionals</span><span class="p">),</span>
             <span class="p">(</span><span class="n">eigen_mu</span><span class="p">,</span> <span class="n">eigen_logvar</span><span class="p">,</span> <span class="n">decode_mu</span><span class="p">,</span> <span class="n">decode_logvar</span><span class="p">),</span>
