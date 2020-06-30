@@ -1,0 +1,70 @@
+
+@import url("https://fonts.googleapis.com/css?family=Roboto|Noto+Sans");
+
+h1, h2, h3, h4 {
+  font-family: "Roboto"
+}
+
+body {
+  background-color: #202040;
+  color: #ffbd69;
+  font-family: "Noto Sans";
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: #ff6363;
+}
+
+/* This is for the cell number */
+
+div.nbinput.container div.prompt pre {
+  color: #ffbd69;
+}
+
+/* This is for the code/Jupyter cell block */
+
+.input_area.highlight-ipython3.notranslate > div.nbinput.container div.input_area {
+  background: #fbe6d4;
+}
+
+tr:nth-child(even) {
+  background: #fecb89;
+}
+
+tr:nth-child(odd) {
+  background: #ffa931;
+}
+
+thead {
+  background: #ffa931;
+}
+
+.nav li {
+  color: #ffbd69;
+}
+
+.navbar-default {
+  background-image: linear-gradient(to bottom,#543864 0,#202040 100%);
+}
+
+pre {
+  color: #ffbd69;
+}
+
+.navbar-default .navbar-nav > li > a {
+  color: #fecb89;
+}
+
+.navbar-default .navbar-brand {
+  color: #ffa931;
+}
+
+.container {
+  width: 90%;
+  padding-top: 20px;
+}
+
+div.body {
+  max-width: 90%; 
+}
