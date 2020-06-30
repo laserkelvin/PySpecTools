@@ -1,0 +1,2774 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Analyzing Broadband Spectra with the assignment Module &#8212; PySpecTools 4.4.0 documentation</title>
+    <link rel="stylesheet" href="../_static/bootstrap-sphinx.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    <script id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+    <script src="../_static/jquery.js"></script>
+    <script src="../_static/underscore.js"></script>
+    <script src="../_static/doctools.js"></script>
+    <script src="../_static/language_data.js"></script>
+    <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Identifying Molecules using Probabilistic Deep Learning" href="identifying_molecules.html" />
+    <link rel="prev" title="Example Notebooks" href="../examples.html" />
+<meta charset='utf-8'>
+<meta http-equiv='X-UA-Compatible' content='IE=edge,chrome=1'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1'>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<script type="text/javascript" src="../_static/js/jquery-1.11.0.min.js "></script>
+<script type="text/javascript" src="../_static/js/jquery-fix.js "></script>
+<script type="text/javascript" src="../_static/bootstrap-3.3.7/js/bootstrap.min.js "></script>
+<script type="text/javascript" src="../_static/bootstrap-sphinx.js "></script>
+
+  </head><body>
+
+  <div id="navbar" class="navbar navbar-default navbar-fixed-top">
+    <div class="container">
+      <div class="navbar-header">
+        <!-- .btn-navbar is used as the toggle for collapsed navbar content -->
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".nav-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+        <a class="navbar-brand" href="../index.html">
+          PySpecTools</a>
+        <span class="navbar-text navbar-version pull-left"><b></b></span>
+      </div>
+
+        <div class="collapse navbar-collapse nav-collapse">
+          <ul class="nav navbar-nav">
+            
+            
+              <li class="dropdown globaltoc-container">
+  <a role="button"
+     id="dLabelGlobalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="../index.html">Site <b class="caret"></b></a>
+  <ul class="dropdown-menu globaltoc"
+      role="menu"
+      aria-labelledby="dLabelGlobalToc"><p class="caption"><span class="caption-text">Contents:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">PySpecTools FAQ</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../examples.html">Example Notebooks</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../pyspectools.spectra.html"><cite>Spectra</cite> Module</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api.html">API Reference</a></li>
+</ul>
+</ul>
+</li>
+              
+                <li class="dropdown">
+  <a role="button"
+     id="dLabelLocalToc"
+     data-toggle="dropdown"
+     data-target="#"
+     href="#">Page <b class="caret"></b></a>
+  <ul class="dropdown-menu localtoc"
+      role="menu"
+      aria-labelledby="dLabelLocalToc"><ul>
+<li><a class="reference internal" href="#">Analyzing Broadband Spectra with the <code class="docutils literal notranslate"><span class="pre">assignment</span></code> Module</a><ul>
+<li><a class="reference internal" href="#Introduction">Introduction</a></li>
+<li><a class="reference internal" href="#Running-assignments">Running assignments</a></li>
+<li><a class="reference internal" href="#Finishing-the-analysis">Finishing the analysis</a></li>
+<li><a class="reference internal" href="#Conclusions">Conclusions</a></li>
+</ul>
+</li>
+</ul>
+</ul>
+</li>
+              
+            
+            
+              
+                
+  <li>
+    <a href="../examples.html" title="Previous Chapter: Example Notebooks"><span class="glyphicon glyphicon-chevron-left visible-sm"></span><span class="hidden-sm hidden-tablet">&laquo; Example Notebooks</span>
+    </a>
+  </li>
+  <li>
+    <a href="identifying_molecules.html" title="Next Chapter: Identifying Molecules using Probabilistic Deep Learning"><span class="glyphicon glyphicon-chevron-right visible-sm"></span><span class="hidden-sm hidden-tablet">Identifying M... &raquo;</span>
+    </a>
+  </li>
+              
+            
+            
+            
+            
+              <li class="hidden-sm">
+<div id="sourcelink">
+  <a href="../_sources/examples/experiment_example.ipynb.txt"
+     rel="nofollow">Source</a>
+</div></li>
+            
+          </ul>
+
+          
+            
+<form class="navbar-form navbar-right" action="../search.html" method="get">
+ <div class="form-group">
+  <input type="text" name="q" class="form-control" placeholder="Search" />
+ </div>
+  <input type="hidden" name="check_keywords" value="yes" />
+  <input type="hidden" name="area" value="default" />
+</form>
+          
+        </div>
+    </div>
+  </div>
+
+<div class="container">
+  <div class="row">
+    <div class="body col-md-12 content" role="main">
+      
+  
+<style>
+/* CSS for nbsphinx extension */
+
+/* remove conflicting styling from Sphinx themes */
+div.nbinput.container,
+div.nbinput.container div.prompt,
+div.nbinput.container div.input_area,
+div.nbinput.container div[class*=highlight],
+div.nbinput.container div[class*=highlight] pre,
+div.nboutput.container,
+div.nboutput.container div.prompt,
+div.nboutput.container div.output_area,
+div.nboutput.container div[class*=highlight],
+div.nboutput.container div[class*=highlight] pre {
+    background: none;
+    border: none;
+    padding: 0 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+/* avoid gaps between output lines */
+div.nboutput.container div[class*=highlight] pre {
+    line-height: normal;
+}
+
+/* input/output containers */
+div.nbinput.container,
+div.nboutput.container {
+    display: -webkit-flex;
+    display: flex;
+    align-items: flex-start;
+    margin: 0;
+    width: 100%;
+}
+@media (max-width: 540px) {
+    div.nbinput.container,
+    div.nboutput.container {
+        flex-direction: column;
+    }
+}
+
+/* input container */
+div.nbinput.container {
+    padding-top: 5px;
+}
+
+/* last container */
+div.nblast.container {
+    padding-bottom: 5px;
+}
+
+/* input prompt */
+div.nbinput.container div.prompt pre {
+    color: #307FC1;
+}
+
+/* output prompt */
+div.nboutput.container div.prompt pre {
+    color: #BF5B3D;
+}
+
+/* all prompts */
+div.nbinput.container div.prompt,
+div.nboutput.container div.prompt {
+    width: 4.5ex;
+    padding-top: 5px;
+    position: relative;
+    user-select: none;
+}
+
+div.nbinput.container div.prompt > div,
+div.nboutput.container div.prompt > div {
+    position: absolute;
+    right: 0;
+    margin-right: 0.3ex;
+}
+
+@media (max-width: 540px) {
+    div.nbinput.container div.prompt,
+    div.nboutput.container div.prompt {
+        width: unset;
+        text-align: left;
+        padding: 0.4em;
+    }
+    div.nboutput.container div.prompt.empty {
+        padding: 0;
+    }
+
+    div.nbinput.container div.prompt > div,
+    div.nboutput.container div.prompt > div {
+        position: unset;
+    }
+}
+
+/* disable scrollbars on prompts */
+div.nbinput.container div.prompt pre,
+div.nboutput.container div.prompt pre {
+    overflow: hidden;
+}
+
+/* input/output area */
+div.nbinput.container div.input_area,
+div.nboutput.container div.output_area {
+    -webkit-flex: 1;
+    flex: 1;
+    overflow: auto;
+}
+@media (max-width: 540px) {
+    div.nbinput.container div.input_area,
+    div.nboutput.container div.output_area {
+        width: 100%;
+    }
+}
+
+/* input area */
+div.nbinput.container div.input_area {
+    border: 1px solid #e0e0e0;
+    border-radius: 2px;
+    background: #f5f5f5;
+}
+
+/* override MathJax center alignment in output cells */
+div.nboutput.container div[class*=MathJax] {
+    text-align: left !important;
+}
+
+/* override sphinx.ext.imgmath center alignment in output cells */
+div.nboutput.container div.math p {
+    text-align: left;
+}
+
+/* standard error */
+div.nboutput.container div.output_area.stderr {
+    background: #fdd;
+}
+
+/* ANSI colors */
+.ansi-black-fg { color: #3E424D; }
+.ansi-black-bg { background-color: #3E424D; }
+.ansi-black-intense-fg { color: #282C36; }
+.ansi-black-intense-bg { background-color: #282C36; }
+.ansi-red-fg { color: #E75C58; }
+.ansi-red-bg { background-color: #E75C58; }
+.ansi-red-intense-fg { color: #B22B31; }
+.ansi-red-intense-bg { background-color: #B22B31; }
+.ansi-green-fg { color: #00A250; }
+.ansi-green-bg { background-color: #00A250; }
+.ansi-green-intense-fg { color: #007427; }
+.ansi-green-intense-bg { background-color: #007427; }
+.ansi-yellow-fg { color: #DDB62B; }
+.ansi-yellow-bg { background-color: #DDB62B; }
+.ansi-yellow-intense-fg { color: #B27D12; }
+.ansi-yellow-intense-bg { background-color: #B27D12; }
+.ansi-blue-fg { color: #208FFB; }
+.ansi-blue-bg { background-color: #208FFB; }
+.ansi-blue-intense-fg { color: #0065CA; }
+.ansi-blue-intense-bg { background-color: #0065CA; }
+.ansi-magenta-fg { color: #D160C4; }
+.ansi-magenta-bg { background-color: #D160C4; }
+.ansi-magenta-intense-fg { color: #A03196; }
+.ansi-magenta-intense-bg { background-color: #A03196; }
+.ansi-cyan-fg { color: #60C6C8; }
+.ansi-cyan-bg { background-color: #60C6C8; }
+.ansi-cyan-intense-fg { color: #258F8F; }
+.ansi-cyan-intense-bg { background-color: #258F8F; }
+.ansi-white-fg { color: #C5C1B4; }
+.ansi-white-bg { background-color: #C5C1B4; }
+.ansi-white-intense-fg { color: #A1A6B2; }
+.ansi-white-intense-bg { background-color: #A1A6B2; }
+
+.ansi-default-inverse-fg { color: #FFFFFF; }
+.ansi-default-inverse-bg { background-color: #000000; }
+
+.ansi-bold { font-weight: bold; }
+.ansi-underline { text-decoration: underline; }
+
+
+div.nbinput.container div.input_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight] > pre,
+div.nboutput.container div.output_area div[class*=highlight].math,
+div.nboutput.container div.output_area.rendered_html,
+div.nboutput.container div.output_area > div.output_javascript,
+div.nboutput.container div.output_area:not(.rendered_html) > img{
+    padding: 5px;
+}
+
+/* fix copybtn overflow problem in chromium (needed for 'sphinx_copybutton') */
+div.nbinput.container div.input_area > div[class^='highlight'],
+div.nboutput.container div.output_area > div[class^='highlight']{
+    overflow-y: hidden;
+}
+
+/* hide copybtn icon on prompts (needed for 'sphinx_copybutton') */
+.prompt a.copybtn {
+    display: none;
+}
+
+/* Some additional styling taken form the Jupyter notebook CSS */
+div.rendered_html table {
+  border: none;
+  border-collapse: collapse;
+  border-spacing: 0;
+  color: black;
+  font-size: 12px;
+  table-layout: fixed;
+}
+div.rendered_html thead {
+  border-bottom: 1px solid black;
+  vertical-align: bottom;
+}
+div.rendered_html tr,
+div.rendered_html th,
+div.rendered_html td {
+  text-align: right;
+  vertical-align: middle;
+  padding: 0.5em 0.5em;
+  line-height: normal;
+  white-space: normal;
+  max-width: none;
+  border: none;
+}
+div.rendered_html th {
+  font-weight: bold;
+}
+div.rendered_html tbody tr:nth-child(odd) {
+  background: #f5f5f5;
+}
+div.rendered_html tbody tr:hover {
+  background: rgba(66, 165, 245, 0.2);
+}
+</style>
+<div class="section" id="Analyzing-Broadband-Spectra-with-the-assignment-Module">
+<h1>Analyzing Broadband Spectra with the <code class="docutils literal notranslate"><span class="pre">assignment</span></code> Module<a class="headerlink" href="#Analyzing-Broadband-Spectra-with-the-assignment-Module" title="Permalink to this headline">¶</a></h1>
+<div class="section" id="Introduction">
+<h2>Introduction<a class="headerlink" href="#Introduction" title="Permalink to this headline">¶</a></h2>
+<p>In this notebook, we’re going to work through how the core functionality of <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> can be used to streamline and automate your spectral analysis. It’s worth noting that <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> and Python provide enough flexibility for you to adjust to your needs; whatever can’t be done with <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> natively could be automated with Python (e.g. <code class="docutils literal notranslate"><span class="pre">for</span></code> loops) and to a large extent <code class="docutils literal notranslate"><span class="pre">pandas</span></code> as well. In the latter case, particularly when you’re analyzing the assignments, and looking to
+filter out certain molecules, etc. This may be left for a subsequent notebook as the focus of this notebook is to demonstrate how automated assignment is performed.</p>
+<p>The core functionality of assigning spectra revolves around the <code class="docutils literal notranslate"><span class="pre">pyspectools.spectra.assignment</span></code> module, and contains three main abstractions:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code></p>
+<ul class="simple">
+<li><p>This is your main interface: holds the spectral data, and allows you to interact (plot, assign, etc) with the data.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">Transition</span></code></p>
+<ul class="simple">
+<li><p>Represents every type of spectral feature: every peak in an experiment, and every catalog entry.</p></li>
+</ul>
+</li>
+<li><p><code class="docutils literal notranslate"><span class="pre">LineList</span></code></p>
+<ul class="simple">
+<li><p>A collection of spectral features: the peaks in an experiment (which in themselves are <code class="docutils literal notranslate"><span class="pre">Transition</span></code> objects), and catalogs.</p></li>
+</ul>
+</li>
+</ol>
+<p>We will demonstrate how these pieces come together by looking at some of our published data: this notebook was used to analyze the Benzene discharge experiments reported in these two papers:</p>
+<p>McCarthy, M. C.; Lee, K. L. K.; Carroll, P. B.; Porterfield, J. P.; Changala, P. B.; Thorpe, J. H.; Stanton, J. F. Exhaustive Product Analysis of Three Benzene Discharges by Microwave Spectroscopy. J. Phys. Chem. A 2020, 124 (25), 5170–5181. <a class="reference external" href="https://doi.org/10.1021/acs.jpca.0c02919">https://doi.org/10.1021/acs.jpca.0c02919</a>.</p>
+<p>Lee, K. L. K.; McCarthy, M. Study of Benzene Fragmentation, Isomerization, and Growth Using Microwave Spectroscopy. J. Phys. Chem. Lett. 2019, 10 (10), 2408–2413. <a class="reference external" href="https://doi.org/10.1021/acs.jpclett.9b00586">https://doi.org/10.1021/acs.jpclett.9b00586</a>.</p>
+<p>The full dataset can also be found on our <a class="reference external" href="https://zenodo.org/record/3827742">Zenodo repository</a>; notebook “4000” most closely resembles this (this is a much more heavily marked up version).</p>
+<p>We should stress that, while this is mostly automated, it does not change the fact that spectral analysis is <em>very much an iterative process</em>. You will make modifications to the way you do your analysis, and many things you won’t know until you’ve run it at least once. The point of having this notebook is so that it is reproducible and transparent: you can always modify the code and re-run the whole notebook with the latest analysis.</p>
+<p>To begin the analysis, we will construct an <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code> object using the class method, <code class="docutils literal notranslate"><span class="pre">AssignmentSession.from_ascii(...)</span></code>. This method will take your ASCII spectrum containing frequency and intensity information, and parse it using <code class="docutils literal notranslate"><span class="pre">pandas</span></code> and store it as a <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code>. With all Python routines, you can call the function/method with a question mark at the end to pull up the documentation associated with that function/method:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="kn">from</span> <span class="nn">pyspectools.spectra.assignment</span> <span class="kn">import</span> <span class="n">AssignmentSession</span><span class="p">,</span> <span class="n">LineList</span>
+</pre></div>
+</div>
+</div>
+<p>In this case, we’re setting up the session based on the Benzene data, which is a tab-delimited text file with a header. We ignore the header with <code class="docutils literal notranslate"><span class="pre">skiprows=</span></code>, and provide our own column names with the <code class="docutils literal notranslate"><span class="pre">col_names</span></code> argument. Additionally, we’re going to specify the composition we expect for the experiment with the <code class="docutils literal notranslate"><span class="pre">composition</span></code> kwarg: ideally we would only include <code class="docutils literal notranslate"><span class="pre">[&quot;C&quot;,</span> <span class="pre">&quot;H&quot;]</span></code>, however we know there are atmospheric impurities like nitrogen and oxygen that get incorporated in the discharge
+products. This keyword <em>will affect Splatalogue assignments</em>, and exclude catalogs that contain irrelevant compositions like metal-bearing molecules.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[2]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span> <span class="o">=</span> <span class="n">AssignmentSession</span><span class="o">.</span><span class="n">from_ascii</span><span class="p">(</span>
+    <span class="s2">&quot;chirp_data/ft2632_hanning_620.txt&quot;</span><span class="p">,</span>
+    <span class="n">experiment</span><span class="o">=</span><span class="mi">4000</span><span class="p">,</span>
+    <span class="n">col_names</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;Frequency&quot;</span><span class="p">,</span> <span class="s2">&quot;Intensity&quot;</span><span class="p">],</span>
+    <span class="n">skiprows</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">composition</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;C&quot;</span><span class="p">,</span> <span class="s2">&quot;H&quot;</span><span class="p">,</span> <span class="s2">&quot;N&quot;</span><span class="p">,</span> <span class="s2">&quot;O&quot;</span><span class="p">],</span>
+    <span class="n">verbose</span><span class="o">=</span><span class="kc">False</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>You can also adjust many of these settings after the fact, which are stored as attributes of the <code class="docutils literal notranslate"><span class="pre">Session</span></code> object within an <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code>. For example, the <code class="docutils literal notranslate"><span class="pre">temperature</span></code> attribute will set an upper limit to the lower state energies of states assignable: we will ignore all features that are double this specified energy. This isn’t the direct threshold, because it nominally corresponds to what your experimental temperature is, and depending on how prominent molecule is, you may see
+higher temperature transitions. Another useful thing to set is the maximum tolerance for uncertainty in catalog entries: we would like to reject assignments based on poorly predicted lines, which is set by the <code class="docutils literal notranslate"><span class="pre">max_uncertainty</span></code> attribute.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[ ]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># temperature in K</span>
+<span class="n">session</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">temperature</span> <span class="o">=</span> <span class="mf">10.</span>
+
+<span class="c1"># uncertainty in MHz</span>
+<span class="n">session</span><span class="o">.</span><span class="n">session</span><span class="o">.</span><span class="n">max_uncertainty</span> <span class="o">=</span> <span class="mf">0.2</span>
+</pre></div>
+</div>
+</div>
+<p>Note that frequency units are in MHz, and temperature in kelvin.</p>
+<p>The next step is to pre-process the spectrum. Our chirped-pulse data are collected using Kyle Crabtree’s <code class="docutils literal notranslate"><span class="pre">blackchirp</span></code> program, and often we apply a window function to the data. If you are looking at raw FFT data, <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> provides access to window functions defined in <code class="docutils literal notranslate"><span class="pre">scipy.signal</span></code>, which you can access in a syntax like this:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">session</span><span class="o">.</span><span class="n">apply_filter</span><span class="p">(</span><span class="s2">&quot;hanning&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>The full list of filters can be found <a class="reference external" href="https://docs.scipy.org/doc/scipy/reference/signal.windows.html#module-scipy.signal.windows">in the SciPy documentation</a>.</p>
+<p>After pre-processing, we will perform peak detection and baseline correction. This is done using the <code class="docutils literal notranslate"><span class="pre">session.find_peaks</span></code> functionality, which automates several steps based on the keyword arguments. All of the analysis in <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> is done preferably in units of signal-to-noise ratio (SNR), which is established by fitting a baseline (a <em>vector</em>, not scalar), and dividing the entire spectrum element-wise. SNR is definitely more meaningful than a raw voltage scale typically reported.</p>
+<p>In the default way of peak finding, we use the asymmetric least-squares (ALS) method to fit a baseline (<code class="docutils literal notranslate"><span class="pre">als=True</span></code>). Essentially this can be thought of as a penalized least-squares method, with additional parameters that define how quickly the baseline can respond (you don’t want to over-subtract signal). These parameters can be accessed by providing <code class="docutils literal notranslate"><span class="pre">find_peaks</span></code> with keywords arguments (<a class="reference external" href="https://laserkelvin.github.io/PySpecTools/pyspectools.spectra.html#pyspectools.spectra.assignment.AssignmentSession.find_peaks">see
+documentation</a>). The <code class="docutils literal notranslate"><span class="pre">sigma</span></code> keyword then specifies the minimum SNR value to use for peak finding; note that if <code class="docutils literal notranslate"><span class="pre">als=False</span></code>, <code class="docutils literal notranslate"><span class="pre">threshold</span></code> and <code class="docutils literal notranslate"><span class="pre">sigma</span></code> are equivalent. The former specifies the absolute intensity scale to use for peak finding.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[3]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Returns a pandas DataFrame containing frequency/intensity of</span>
+<span class="c1"># every peak detected. This is also stored as an attribute;</span>
+<span class="c1"># `AssignmentSession.peaks`</span>
+<span class="n">peaks</span> <span class="o">=</span> <span class="n">session</span><span class="o">.</span><span class="n">find_peaks</span><span class="p">(</span><span class="n">sigma</span><span class="o">=</span><span class="mi">6</span><span class="p">,</span> <span class="n">als</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="c1"># Use the `describe` method of a `DataFrame` to summarize the</span>
+<span class="c1"># peaks information</span>
+<span class="n">peaks</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[4]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Frequency</th>
+      <th>Peak Frequencies</th>
+      <th>Intensity</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>count</td>
+      <td>447.000000</td>
+      <td>447.000000</td>
+      <td>447.000000</td>
+    </tr>
+    <tr>
+      <td>mean</td>
+      <td>12300.347573</td>
+      <td>12300.342431</td>
+      <td>28.373735</td>
+    </tr>
+    <tr>
+      <td>std</td>
+      <td>3365.905814</td>
+      <td>3365.901388</td>
+      <td>41.156217</td>
+    </tr>
+    <tr>
+      <td>min</td>
+      <td>6385.075006</td>
+      <td>6385.066667</td>
+      <td>6.002450</td>
+    </tr>
+    <tr>
+      <td>25%</td>
+      <td>9542.620545</td>
+      <td>9542.666667</td>
+      <td>8.248862</td>
+    </tr>
+    <tr>
+      <td>50%</td>
+      <td>12215.902539</td>
+      <td>12215.911111</td>
+      <td>14.821400</td>
+    </tr>
+    <tr>
+      <td>75%</td>
+      <td>14753.087387</td>
+      <td>14753.155555</td>
+      <td>32.619844</td>
+    </tr>
+    <tr>
+      <td>max</td>
+      <td>19845.175891</td>
+      <td>19845.155556</td>
+      <td>499.347482</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+</div>
+<p>In the cell below, we actually manually add some lines. Automated peak detection can never be perfect, especially with blended features. You can add frequency/intensity information by providing a list of 2-tuples as an argument to the <code class="docutils literal notranslate"><span class="pre">add_ulines</span></code> method:</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[6]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">add_ulines</span><span class="p">(</span>
+    <span class="p">[</span>
+        <span class="p">(</span><span class="mf">7483.911</span><span class="p">,</span> <span class="mf">9.390</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">8773.866</span><span class="p">,</span> <span class="mf">12.523</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">9200.000</span><span class="p">,</span> <span class="mf">9.116</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">9200.888</span><span class="p">,</span> <span class="mf">9.442</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10258.311</span><span class="p">,</span> <span class="mf">6.850</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10259.111</span><span class="p">,</span> <span class="mf">6.948</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10262.044</span><span class="p">,</span> <span class="mf">15.061</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10843.111</span><span class="p">,</span> <span class="mf">9.215</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10928.266</span><span class="p">,</span> <span class="mf">12.748</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10959.38</span><span class="p">,</span> <span class="mf">14.302</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10978.93</span><span class="p">,</span> <span class="mf">8.527</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">10979.73</span><span class="p">,</span> <span class="mf">7.273</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">11454.844</span><span class="p">,</span> <span class="mf">7.216</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">11547.555</span><span class="p">,</span> <span class="mf">7.485</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">11548.000</span><span class="p">,</span> <span class="mf">8.370</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">11550.49</span><span class="p">,</span> <span class="mf">7.134</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">11561.51</span><span class="p">,</span> <span class="mf">7.720</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">11940.00</span><span class="p">,</span> <span class="mf">6.039</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">12476.444</span><span class="p">,</span> <span class="mf">14.628</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">12475.911</span><span class="p">,</span> <span class="mf">13.628</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">13558.40</span><span class="p">,</span> <span class="mf">7.472</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">13609.07</span><span class="p">,</span> <span class="mf">6.087</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">13751.378</span><span class="p">,</span> <span class="mf">6.745</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">13792.80</span><span class="p">,</span> <span class="mf">9.937</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">14839.64</span><span class="p">,</span> <span class="mf">6.485</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">14919.555</span><span class="p">,</span> <span class="mf">17.971</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">15248.177</span><span class="p">,</span> <span class="mf">13.216</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">15249.067</span><span class="p">,</span> <span class="mf">15.414</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">15557.60</span><span class="p">,</span> <span class="mf">6.572</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">16581.07</span><span class="p">,</span> <span class="mf">7.550</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">16706.76</span><span class="p">,</span> <span class="mf">70.758</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">16707.47</span><span class="p">,</span> <span class="mf">49.851</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">16710.67</span><span class="p">,</span> <span class="mf">70.43661</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">16711.47</span><span class="p">,</span> <span class="mf">48.40109</span><span class="p">),</span>
+        <span class="p">(</span><span class="mf">17115.02</span><span class="p">,</span> <span class="mf">9.315</span><span class="p">)</span>
+    <span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="Running-assignments">
+<h2>Running assignments<a class="headerlink" href="#Running-assignments" title="Permalink to this headline">¶</a></h2>
+<p>With all the peaks found, we can start doing some assignments of the features! The main way this is done is by creating <code class="docutils literal notranslate"><span class="pre">LineList</span></code> objects, which are then fed to the <code class="docutils literal notranslate"><span class="pre">session.process_linelist</span></code> method as we shall see later.</p>
+<p>There are different types of <code class="docutils literal notranslate"><span class="pre">LineList</span></code> objects, depending on the source of data:</p>
+<ol class="arabic simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">from_artifacts</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_clock</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_catalog</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_pgopher</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_dataframe</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_lin</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_splatalogue_query</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">from_list</span></code></p></li>
+</ol>
+<p><code class="docutils literal notranslate"><span class="pre">from_artifacts</span></code> will create a specialized <code class="docutils literal notranslate"><span class="pre">LineList</span></code> that flags <code class="docutils literal notranslate"><span class="pre">Transitions</span></code> as non-molecular for book-keeping. <code class="docutils literal notranslate"><span class="pre">from_clock</span></code> is a special variant of this, where we have found that radio interference arising from arbitrary waveform generators often bleed into the resulting chirped-pulse spectrum, and exhaustively generates combinations/harmonics of the clock frequency as artifacts.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[7]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">artifacts</span> <span class="o">=</span> <span class="n">LineList</span><span class="o">.</span><span class="n">from_artifacts</span><span class="p">(</span>
+    <span class="p">[</span><span class="mf">8000.</span><span class="p">,</span> <span class="mf">16000.</span><span class="p">,</span> <span class="mf">8125.</span><span class="p">,</span><span class="mf">16250.</span><span class="p">,</span> <span class="mf">7065.7778</span><span class="p">,</span> <span class="mf">7147.3778</span><span class="p">,</span> <span class="mf">8574.9022</span><span class="p">]</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>With the <code class="docutils literal notranslate"><span class="pre">artifacts</span></code> variable/object, you can then pass it to the <code class="docutils literal notranslate"><span class="pre">process_linelist</span></code> method of our <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code>, and it will automatically cross-correlate every unassigned (U-line) with entries contained in your <code class="docutils literal notranslate"><span class="pre">LineList</span></code>:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[8]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">process_linelist</span><span class="p">(</span><span class="n">linelist</span><span class="o">=</span><span class="n">artifacts</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1f60dd2939884e7398c9ed7b74889f04", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
+</div>
+<p>For molecular assignments, you could of course repeat this process and manually create individual <code class="docutils literal notranslate"><span class="pre">LineList</span></code>s; in this example, we’ll take an SPCAT catalog and generate the <code class="docutils literal notranslate"><span class="pre">LineList</span></code>:</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">formaldehyde</span> <span class="o">=</span> <span class="n">LineList</span><span class="o">.</span><span class="n">from_catalog</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s2">&quot;formaldehyde&quot;</span><span class="p">,</span> <span class="n">formula</span><span class="o">=</span><span class="s2">&quot;H2CO&quot;</span><span class="p">,</span> <span class="s2">&quot;catalogs/h2co.cat&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>However, this is incredibly time consuming, and not pretty to look at (not to mention a nightmare to update). Instead, we recommend you set up a directory containing all of your catalogs, and create an input file that stores all of the metadata for the catalogs and “batch” process all of the catalogs. In the cell below, we automated the analysis of hydrocarbon molecules (separated oxygen- and nitrogen-bearing species) with a YAML file called <code class="docutils literal notranslate"><span class="pre">hydrocarbons_cat.yml</span></code>. YAML is a simple markup
+syntax that is both machine and human read/writeable. Below is a small excerpt of our file:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="l l-Scalar l-Scalar-Plain">ethynylbenzene,v23</span><span class="p p-Indicator">:</span>
+  <span class="nt">formula</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">c8h6</span>
+  <span class="nt">filepath</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">h_catalogs/phenylacetylene_v23.cat</span>
+
+<span class="l l-Scalar l-Scalar-Plain">ethynylbenzene,2v23</span><span class="p p-Indicator">:</span>
+  <span class="nt">formula</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">c8h6</span>
+  <span class="nt">filepath</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">h_catalogs/phenylacetylene_2v23.cat</span>
+
+<span class="l l-Scalar l-Scalar-Plain">ethynylbenzene,v16</span><span class="p p-Indicator">:</span>
+  <span class="nt">formula</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">c8h6</span>
+  <span class="nt">filepath</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">h_catalogs/phenylacetylene_v16.cat</span>
+
+<span class="l l-Scalar l-Scalar-Plain">buta-1,3-diynylbenzene</span><span class="p p-Indicator">:</span>
+  <span class="nt">formula</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">c10h6</span>
+  <span class="nt">filepath</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">h_catalogs/phenyldiacetylene.cat</span>
+
+<span class="l l-Scalar l-Scalar-Plain">hexa-1,3,5-triynylbenzene</span><span class="p p-Indicator">:</span>
+  <span class="nt">formula</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">c12h6</span>
+  <span class="nt">filepath</span><span class="p">:</span> <span class="l l-Scalar l-Scalar-Plain">h_catalogs/phenyltriacetylene.cat</span>
+</pre></div>
+</div>
+<p>You can actually provide the <code class="docutils literal notranslate"><span class="pre">source</span></code> keyword as well, and include a BibTeX citekey. When it comes to automatic report generation, the citation will be automatically used to streamline LaTeX table generation.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">molecule_name</span><span class="p">:</span>
+  <span class="n">formula</span><span class="p">:</span> <span class="n">C12H6</span>                    <span class="c1"># formula</span>
+  <span class="n">source</span><span class="p">:</span> <span class="n">mccarthy_benzene_2020</span>     <span class="c1"># citekey</span>
+  <span class="n">filepath</span><span class="p">:</span> <span class="n">catalog</span><span class="o">/</span><span class="n">molecule</span><span class="o">.</span><span class="n">cat</span>    <span class="c1"># filepath to the SPCAT catalog</span>
+</pre></div>
+</div>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[9]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">process_linelist_batch</span><span class="p">(</span><span class="n">yml_path</span><span class="o">=</span><span class="s2">&quot;hydrocarbons_cat.yml&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Line list for: cyclopropa-1,2-diene,gs Formula: c3h2, Number of entries: 80
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "05d29edb49c9469f8848c35e1917ec94", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene Formula: c8h6, Number of entries: 144
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5ab9b524b4a346cf9d35e94243724585", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: umol-1850 Formula: cxhy, Number of entries: 150
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "bff89c71b74a4ce680a0fe21ef973b6e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene,v23 Formula: c8h6, Number of entries: 374
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6136dadfc7104d56a8ae970dac93fb08", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene,2v23 Formula: c8h6, Number of entries: 374
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4a5ee7196e9a476bb123f2f04bb9dd28", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene,v16 Formula: c8h6, Number of entries: 374
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "de817f49db3b44b883922cd8d4c150f5", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: buta-1,3-diynylbenzene Formula: c10h6, Number of entries: 745
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "74af4902c2164e1b92d98950c89a81f3", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hexa-1,3,5-triynylbenzene Formula: c12h6, Number of entries: 229
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3f548535b9e34b0494e7dde87ae8a629", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 5-ethylenecyclopenta-1,3-diene Formula: c6h6, Number of entries: 82
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d1264190efe74378aea42b94ad7b26f0", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 1-ethynylcyclopenta-1,3-diene Formula: c7h6, Number of entries: 355
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "9e0c0f4312554573a55e495a7b1cc4c8", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 2-ethynylcyclopenta-1,3-diene Formula: c7h6, Number of entries: 462
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "85ec196e67eb4d2f80d98af22a2a4e72", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclohexa-1,3-dien-5-yne Formula: c6h4, Number of entries: 187
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ac0e0c201cee4ca19b09d2c406e4d028", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclohexa-1,3-dien-5-yne,2v16 Formula: c6h4, Number of entries: 77
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8867ddabb41e4c22b48c00b643346910", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclohexa-1,3-dien-5-yne,v16 Formula: c6h4, Number of entries: 77
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "00b07a38d1dc4b489d2ffc5cc375fbe0", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclohexa-1,3-dien-5-yne,v15 Formula: c6h4, Number of entries: 77
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "b6048698b44f4810b60f825a1c00e26b", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: prop-1-yne Formula: c3h4, Number of entries: 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ade02283b8b442ecba72c6eed9d1eb7f", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: prop-1-yne,1v9 Formula: c3h4, Number of entries: 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "aa0e02f77799472cbedcda60ef579f2a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: prop-1-yne,1v10 Formula: c3h4, Number of entries: 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6bea025f37d24eeeb5f5e74dfec092c5", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: prop-1-yne,2v10 Formula: c3h4, Number of entries: 4
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "0df578d198dd44808f2b3921e7de9f92", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne Formula: c5h4, Number of entries: 28
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1a6c560cef1d466ea44dad779986f74c", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne,1v11 Formula: c5h4, Number of entries: 16
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e5658d40421644cc9e68e80b6a5dd564", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne,1v12 Formula: c5h4, Number of entries: 16
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "75c88cd118b24d94983d155f55a5a065", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne,1v13 Formula: c5h4, Number of entries: 16
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "0d992f0679de42ed9288e51b60ac0ebd", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne,ve1 Formula: c5h4, Number of entries: 28
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2e81ae9c9cdf46b0a81349b60c9b90db", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hepta-1,3,5-triyne Formula: c7h4, Number of entries: 79
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "76630034d2f3423988b638dc6a4ba5db", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (2Z)-hexa-1,3-dien-5-yne (anti) Formula: c6h6, Number of entries: 308
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "c4f3719244f6499985b69bd5717c75d3", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (2E)-hexa-1,3-dien-5-yne (anti) Formula: c6h6, Number of entries: 155
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "8571b324b9c34ee7a211a81aa0593d3c", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: but-1-en-3-yne Formula: c4h4, Number of entries: 23
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f5d10c7ad6a84fd988055fb6ebb8431b", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hex-1-ene-3,5-diyne Formula: c6h4, Number of entries: 97
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f0c0f5eeb08c4a1b82dce66da2d9efee", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: vinyl_triacetylene Formula: c8h4, Number of entries: 93
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "bff4b989bc7a4edc92478d71eefc0e8e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 5-ethenylidenecyclopenta-1,3-diene Formula: c7h6, Number of entries: 226
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ecc0b7430883413586cf55146220a10e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 5-ethenylidenecyclopenta-1,3-diene,v22 Formula: c7h6, Number of entries: 202
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d053e5a9e25d432c87c3cc226defef4a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopenta-1,3-diene Formula: c5h6, Number of entries: 88
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5f73f334e6724e2c99dc75bfbc06cb3f", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (Z)-3-penten-1-yne, A state Formula: c5h6, Number of entries: 172
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1db7edbef46544e2b4bab28922db3e32", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,2-dien-4-yne Formula: c5h4, Number of entries: 71
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "9fe530f545e54cdfa38015f07bc62267", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hepta-1,2,3,4,5-pentaene-6-yne Formula: c7h4, Number of entries: 209
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "c303fa28682f4036891bca8060187106", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cis-hex-ene-diyene Formula: c6h4, Number of entries: 273
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a9f8930fa04c49ce9a52ae0f12075d22", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hexa-1,2,3-trien-5-yne Formula: c6h4, Number of entries: 232
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f7fbd46fb7474b438c8cec56c098c9de", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hepta-1,2-dien-4,6-diyne Formula: c7h4, Number of entries: 271
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d9d174667f87402dae6b367438b7d81a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa_1_yne_3_yl_radical Formula: c3h, Number of entries: 1119
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4381583617fa46f5938cf8dc1f069a3b", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1-yne-3-yl_radical,ve1 Formula: c3h, Number of entries: 621
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d40f31bff2f84a969084e97785db41a9", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1-yne-3-yl_radical,ve2 Formula: c3h, Number of entries: 299
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "29520fdc395c405e98fa402410af4059", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1-yne-3-yl_radical,ve3 Formula: c3h, Number of entries: 301
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "002f5311f6ab4352ab746eea2800d335", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: buta-1,3-diynyl radical Formula: c4h, Number of entries: 102
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "00039e24c7844b9ebd9c4f2d1eecdf6f", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 1,2,3,4-pentatetraene-1,1,5-trienyl radical Formula: c5h, Number of entries: 93
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "31f9b54b8f9f44d2ad967390a8d6c6cd", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hexa-1,3,5-triynyl radical Formula: c6h, Number of entries: 176
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "619ac5da3a674697acc606c1262d4421", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 1,2,3,4,5,6-heptahexaene-1,1,7-trienyl radical Formula: c7h, Number of entries: 154
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a0cc6a06cf5c44d0bb20610b23b8234e", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: propadienylidene Formula: c3h2, Number of entries: 10
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "37cc8b27e3374adca62950e28476de67", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: butatrienylidene Formula: c4h2, Number of entries: 14
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "36418c5296854227b2b8d681e5d2c84d", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: pentatetraenylidene Formula: c5h2, Number of entries: 28
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "dff6ea70cea641d2a67c2f57928d22d6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 1-ethynyl-cycloprop-1-en-2-ylidene Formula: c5h2, Number of entries: 70
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "95fdc7e7cce04c349cfc81fd16f369ca", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,2-dien-4-yne-1-ylidene Formula: c5h2, Number of entries: 92
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4ca79c8597c24d6ca1cceb6f4255667b", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cylcohexadiene Formula: c6h8, Number of entries: 69
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e687882568654240b5d9aa60ee33f924", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (4Z)-hepta-1,2,4-trien-6-yne (anti) Formula: c7h6, Number of entries: 492
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "327d4c5cb024404bb77e9edb2b316029", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (E)-3-penten-1-yne, A state Formula: c5h6, Number of entries: 87
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a2345828f63247a1a1e113682901dbdf", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
+</div>
+<p>We repreat the same procedure for a <code class="docutils literal notranslate"><span class="pre">.lin</span></code> file, which also follows SPFIT formatting. The <code class="docutils literal notranslate"><span class="pre">from_XXX</span></code> parser is chosen based on the extension of the referenced file.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[10]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">process_linelist_batch</span><span class="p">(</span><span class="n">yml_path</span><span class="o">=</span><span class="s2">&quot;hydrocarbons_lin.yml&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+Line list for: cyclopropa-1,2-diene,gs Formula: c3h2, Number of entries: 406
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "744a364ad20e487787858692a15d2b4b", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: umol-1850 Formula: cxhy, Number of entries: 24
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "34f1fdbfe33141c1b8d6633a53f11b4a", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene (HC13CCH) Formula: c3h2, Number of entries: 6
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d88c8aeb78b149d0963640e5d1b9d3e0", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene (H13CCCH) Formula: c3h2, Number of entries: 12
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "08a3189c3c1d40bfa1f552396b975b19", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,1v2 Formula: c3h2, Number of entries: 37
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "36244789387541d3981ddc3fce5a61ab", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,1v3 Formula: c3h2, Number of entries: 35
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4918727d0366460685aff92efa7a2047", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,1v5 Formula: c3h2, Number of entries: 28
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e240c3a611da4ad09b5e5bd3a23d4b92", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,1v6 Formula: c3h2, Number of entries: 38
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7ade7747cf284ad2ac4c97da1c129bb5", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,2v6 Formula: c3h2, Number of entries: 17
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7f89c743605c4088b9d442518837cf65", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,3v6 Formula: c3h2, Number of entries: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d17f0ab365e945eb973ece518c615661", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,4v6 Formula: c3h2, Number of entries: 2
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "33a5ca6a56e74443a61a198d3fc28985", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1,2-diene,1v5+1v6 Formula: c3h2, Number of entries: 2
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5bc504df6d874feaab593962b735c85c", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1-yne-3-yl_radical,ve1 Formula: c3h, Number of entries: 22
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "a66d316a00d3456c8cf8581fa588525d", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1-yne-3-yl_radical,ve2 Formula: c3h, Number of entries: 5
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "9013cb889ac443e8919b0748c5414ef5", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopropa-1-yne-3-yl_radical,ve3 Formula: c3h, Number of entries: 11
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "b0e20cd44dc24f368bb18605cd131687", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne,ve2 Formula: c5h4, Number of entries: 9
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "1401074b99024f98b4ca838954b485a1", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,3-diyne,ve3 Formula: c5h4, Number of entries: 9
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6ad5bcc802cb453eb0eb100154f3c2ab", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene Formula: c8h6, Number of entries: 58
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "d30224c6833b4e1fbbbbec5f77032bf9", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene,v23 Formula: c8h6, Number of entries: 35
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5a905e37cb42496f85872a2ab27e5739", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene,2v23 Formula: c8h6, Number of entries: 11
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4dd9aedaab894963a7deae117766bb66", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: ethynylbenzene,v16 Formula: c8h6, Number of entries: 16
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "50e1cacecf4544698e878a734abacbcc", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: buta_1,3_diynylbenzene Formula: c10h6, Number of entries: 86
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "3567cc3889dc4c539e0aecf1f1e10596", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hexa_1,3,5_triynylbenzene Formula: c12h6, Number of entries: 25
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "bfd6a70a93d443d299b35340b4a3627f", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 5-ethylenecyclopenta-1,3-diene Formula: c6h6, Number of entries: 28
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "baaaff8778bd466d885cf2dc00bd208c", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 1-ethynylcyclopenta-1,3-diene Formula: c7h6, Number of entries: 30
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "7ec126b9b56a42dabe1c733368548584", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 2-ethynylcyclopenta-1,3-diene Formula: c7h6, Number of entries: 39
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "263ae0deafd546b2a195074eba68dfc8", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hepta-1,3,5-triyne Formula: c7h4, Number of entries: 16
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "2307b719edce473babcac7923c226db2", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (2Z)-hexa-1,3-dien-5-yne (anti) Formula: c6h6, Number of entries: 29
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "feab45ce63a8410eab6627d6f6e2a1a3", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (2E)-hexa-1,3-dien-5-yne (anti) Formula: c6h6, Number of entries: 32
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "bec32f3102744ce79713d25e8ca1e1c5", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hex-1-ene-3,5-diyne Formula: c6h4, Number of entries: 22
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e0be38f2351e424eb6b75f39b394e64b", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 5-ethenylidenecyclopenta-1,3-diene Formula: c7h6, Number of entries: 26
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "b79d2a0f323542b09cb22488c95080f0", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 5-ethenylidenecyclopenta-1,3-diene,v22 Formula: c7h6, Number of entries: 18
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "36be1dbe1eba42fd95569ea7c7d53176", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: cyclopenta-1,3-diene Formula: c5h6, Number of entries: 19
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "f96086b4597f441eadf9106482c95f9f", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,2-dien-4-yne Formula: c5h4, Number of entries: 14
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5a6732ac650e45fcb25db3276ef9c28c", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hepta-1,2,3,4,5-pentaene-6-yne Formula: c7h4, Number of entries: 16
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "0e64d7e958cd451fbe4646a7d10bd96f", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hexa-1,2,3-trien-5-yne Formula: c6h4, Number of entries: 23
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "86517069e7944b58ae949dd339bc0711", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: hepta-1,2-dien-4,6-diyne Formula: c7h4, Number of entries: 45
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "01728f1906a146f9a22e6fd7a63f5f58", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: 1-ethynyl-cycloprop-1-en-2-ylidene Formula: c5h2, Number of entries: 13
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "031b902d3b7b4d7aa3e7b672c708d9ab", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: penta-1,2-dien-4-yne-1-ylidene Formula: c5h2, Number of entries: 13
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "e19b613ef9a34c8cbfb97bfbd9056a81", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (4Z)-hepta-1,2,4-trien-6-yne (anti) Formula: c7h6, Number of entries: 34
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "ebf907db755a47bf9e2f10d598b38054", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: l_ccch,ve Formula: c3h, Number of entries: 32
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4bb692b171aa4eec8903cee46b6d9f9d", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: prop-1-yne,ve1 Formula: c3h4, Number of entries: 9
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6722eef76bb04cc3aecda6c03db82262", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: prop-1-yne,ve2 Formula: c3h4, Number of entries: 9
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "9c5ef194d6934d03b44a109316c2f159", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (E)-3-penten-1-yne, A state Formula: c5h6, Number of entries: 20
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "4f50c76f0a964cf2811aff83f04aa8d6", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (E)-3-penten-1-yne, E state Formula: c5h6, Number of entries: 18
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "6b746f0e95234e7f956c8ca16e2415f2", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (Z)-3-penten-1-yne, A state Formula: c5h6, Number of entries: 13
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "5be57a70c5c24b17a4f14497015ecc06", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+Line list for: (Z)-3-penten-1-yne, E state Formula: c5h6, Number of entries: 9
+</pre></div></div>
+</div>
+<div class="nboutput docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "41f8746e96674667b75e93ead7f614a9", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+
+</pre></div></div>
+</div>
+</div>
+<div class="section" id="Finishing-the-analysis">
+<h2>Finishing the analysis<a class="headerlink" href="#Finishing-the-analysis" title="Permalink to this headline">¶</a></h2>
+<p>This basically completes the assignment process! We just have a few more steps to take to save the analysis; a <code class="docutils literal notranslate"><span class="pre">Pickle</span></code> file is saved to disk, which is then used for all the subsequent analysis (e.g. line profile, statistics). The <code class="docutils literal notranslate"><span class="pre">session.finalize_assignments()</span></code> is currently not as final as it sounds: it just prompts all the report and table generation to happen, as well as export all of the identified and unidentified data into respective folders.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[15]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">finalize_assignments</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">save_session</span></code> function below then dumps the entire analysis into the folder <code class="docutils literal notranslate"><span class="pre">sessions/{experiment_ID}.pkl</span></code>, where <code class="docutils literal notranslate"><span class="pre">{experiment_ID}</span></code> is the number assigned to the experiment all the way at the beginning (<code class="docutils literal notranslate"><span class="pre">experiment=4000</span></code>).</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[25]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">save_session</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>You can then load this session back in in a separate notebook with <code class="docutils literal notranslate"><span class="pre">AssignmentSession.load_session(&quot;sessions/{experiment_ID}.pkl&quot;)</span></code></p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[26]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span> <span class="o">=</span> <span class="n">AssignmentSession</span><span class="o">.</span><span class="n">load_session</span><span class="p">(</span><span class="s2">&quot;sessions/4000.pkl&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<p>This loads in all of the information from before, including the results generated with <code class="docutils literal notranslate"><span class="pre">finalize_assignments()</span></code>. For example, the <code class="docutils literal notranslate"><span class="pre">identifications</span></code> attribute stores a <code class="docutils literal notranslate"><span class="pre">dict</span></code> which tracks each distinct species as keys, with the number of assigned lines as values:</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">identifications</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[27]:
+</pre></div>
+</div>
+<div class="output_area docutils container">
+<div class="highlight"><pre>
+{&#39;buta-1,3-diynylbenzene&#39;: 51,
+ &#39;umol-1999&#39;: 1,
+ &#39;2-ethynylcyclopenta-1,3-diene&#39;: 17,
+ &#39;5-ethenylidenecyclopenta-1,3-diene&#39;: 16,
+ &#39;1-ethynyl-cycloprop-1-en-2-ylidene&#39;: 6,
+ &#39;1-ethynylcyclopenta-1,3-diene&#39;: 18,
+ &#39;5-ethenylidenecyclopenta-1,3-diene,v22&#39;: 8,
+ &#39;(2Z)-hexa-1,3-dien-5-yne (anti)&#39;: 10,
+ &#39;umol-1850&#39;: 5,
+ &#39;1,2,3,4-pentatetraene-1,1,5-trienyl radical&#39;: 9,
+ &#39;hepta-1,2,3,4,5-pentaene-6-yne&#39;: 10,
+ &#39;hepta-1,2-dien-4,6-diyne&#39;: 13,
+ &#39;hexa-1,3,5-triynylbenzene&#39;: 3,
+ &#39;ethynylbenzene&#39;: 19,
+ &#39;ethynylbenzene,v23&#39;: 18,
+ &#39;benzonitrile, v21&#39;: 7,
+ &#39;hepta-1,3,5-triyne&#39;: 5,
+ &#39;1,2,3,4,5,6-heptahexaene-1,1,7-trienyl radical&#39;: 5,
+ &#39;2-phenylacetonitrile&#39;: 2,
+ &#39;vinyl_triacetylene&#39;: 1,
+ &#39;hex-1-ene-3,5-diyne&#39;: 10,
+ &#39;cyclohexa-1,3-dien-5-yne&#39;: 4,
+ &#39;cyclohexa-2,4-dien-1-one&#39;: 9,
+ &#39;Artifact&#39;: 2,
+ &#39;ethynylbenzene,v16&#39;: 6,
+ &#39;ethynylbenzene,2v23&#39;: 5,
+ &#39;penta-1,3-diyne&#39;: 3,
+ &#39;penta-1,3-diyne,1v12&#39;: 6,
+ &#39;penta-1,3-diyne,ve2&#39;: 3,
+ &#39;(2E)-hexa-1,3-dien-5-yne (anti)&#39;: 13,
+ &#39;(4Z)-hepta-1,2,4-trien-6-yne (anti)&#39;: 9,
+ &#39;(E)-pent-2-en-4-ynenitrile&#39;: 1,
+ &#39;benzonitrile&#39;: 7,
+ &#39;hexa-1,2,3-trien-5-yne&#39;: 3,
+ &#39;butatrienylidene&#39;: 4,
+ &#39;but-1-en-3-yne&#39;: 2,
+ &#39;prop-2-ynenitrile&#39;: 2,
+ &#39;hexa-4,5-dien-2-ynenitrile&#39;: 2,
+ &#39;pentatetraenylidene&#39;: 6,
+ &#39;prop-2-ynal&#39;: 2,
+ &#39;prop-2-enenitrile&#39;: 2,
+ &#39;buta-1,3-diynyl radical&#39;: 3,
+ &#39;3-phenylprop-2-ynenitrile&#39;: 1,
+ &#39;3-oxo-1,2-propadienylidene&#39;: 2,
+ &#39;cyclohexa-2,5-dien-1-one&#39;: 11,
+ &#39;penta-1,2-dien-4-yne&#39;: 6,
+ &#39;cyclohexa-1,3-dien-5-yne,2v16&#39;: 2,
+ &#39;cyanoprop-1,2-dien-1,3-diyl&#39;: 1,
+ &#39;cyanoacetyl-cycloprop-1-ene-2,2-diyl&#39;: 1,
+ &#39;penta-2,4-diynal&#39;: 3,
+ &#39;penta-2,4-diynenitrile&#39;: 3,
+ &#39;5-ethylenecyclopenta-1,3-diene&#39;: 3,
+ &#39;cyclopenta-2,4-dien-1-one&#39;: 2,
+ &#39;penta-1,3-diyne,1v11&#39;: 2,
+ &#39;penta-1,3-diyne,ve1&#39;: 1,
+ &#39;penta-1,3-diyne,ve3&#39;: 1,
+ &#39;penta-1,3-diyne,1v13&#39;: 1,
+ &#39;(Z)-3-penten-1-yne, A state&#39;: 1,
+ &#39;(Z)-3-penten-1-yne, E state&#39;: 1,
+ &#39;cyclopenta-2,4-dien-1-one, ve1&#39;: 1,
+ &#39;cis-hex-ene-diyene&#39;: 1,
+ &#39;cylcohexadiene&#39;: 1,
+ &#39;(E)-3-penten-1-yne, A state&#39;: 1,
+ &#39;buta-2,3-dien-1-imine (syn)&#39;: 1,
+ &#39;cyclopenta-1,3-diene-1-carbonitrile&#39;: 1,
+ &#39;cyclopenta-2,4-diene-1-carbonitrile&#39;: 1,
+ &#39;benzonitrile, v12&#39;: 1,
+ &#39;cyclopropa-1-yne-3-yl_radical,ve2&#39;: 2,
+ &#39;cyclopropa_1_yne_3_yl_radical&#39;: 12,
+ &#39;cyclopropa-1-yne-3-yl_radical,ve1&#39;: 4,
+ &#39;cyclohexa-1,3-dien-5-yne,v15&#39;: 1,
+ &#39;cyclohexa-1,3-dien-5-yne,v16&#39;: 1,
+ &#39;cyclopropa-1-yne-3-yl_radical,ve3&#39;: 2,
+ &#39;buta-2,3-dienenitrile&#39;: 1,
+ &#39;cyclopropa-1,2-diene,4v6&#39;: 1,
+ &#39;cyclopropa-1,2-diene,3v6&#39;: 1,
+ &#39;but-3-enenitrile (cis)&#39;: 1,
+ &#39;penta-1,2-dien-4-yne-1-ylidene&#39;: 2,
+ &#39;cyclopropa-1,2-diene,2v6&#39;: 1,
+ &#39;cyclopropa-1,2-diene (HC13CCH)&#39;: 1,
+ &#39;prop-1-yne,ve1&#39;: 1,
+ &#39;(E)-but-2-enal (anti)&#39;: 1,
+ &#39;prop-1-yne&#39;: 1,
+ &#39;prop-1-yne,1v9&#39;: 1,
+ &#39;cyclopropa-1,2-diene,1v5+1v6&#39;: 1,
+ &#39;cyclopropa-1,2-diene,1v6&#39;: 1,
+ &#39;penta-1,2-dien-1-one-3-yl radical&#39;: 1,
+ &#39;cyclopropa-1,2-diene,1v3&#39;: 1,
+ &#39;cyclopropa-1,2-diene,1v2&#39;: 1,
+ &#39;cyclopropa-1,2-diene,gs&#39;: 1,
+ &#39;cyclopropa-1,2-diene (H13CCCH)&#39;: 1,
+ &#39;benzonitrile, v15&#39;: 1,
+ &#39;(2E)-2,4-pentadienal (syn)&#39;: 1,
+ &#39;cyanopenta-2,4-diyne-2,2-diyl&#39;: 1,
+ &#39;c3s&#39;: 1,
+ &#39;hexa-1,3,5-triynyl radical&#39;: 4,
+ &#39;prop-1-yne,ve2&#39;: 1}
+</pre></div></div>
+</div>
+<p>You can also view all of the assignment information by accessing the <code class="docutils literal notranslate"><span class="pre">DataFrame</span></code> stored as the <code class="docutils literal notranslate"><span class="pre">table</span></code> attribute. Below, we also demonstrate how we can sort columns based on their values, for example looking at the transitions with the highest catalog uncertainty first.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">table</span><span class="o">.</span><span class="n">sort_values</span><span class="p">([</span><span class="s2">&quot;uncertainty&quot;</span><span class="p">],</span> <span class="n">ascending</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[28]:
+</pre></div>
+</div>
+<div class="output_area rendered_html docutils container">
+<div>
+<style scoped>
+    .dataframe tbody tr th:only-of-type {
+        vertical-align: middle;
+    }
+
+    .dataframe tbody tr th {
+        vertical-align: top;
+    }
+
+    .dataframe thead th {
+        text-align: right;
+    }
+</style>
+<table border="1" class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>name</th>
+      <th>smiles</th>
+      <th>formula</th>
+      <th>frequency</th>
+      <th>catalog_frequency</th>
+      <th>catalog_intensity</th>
+      <th>deviation</th>
+      <th>intensity</th>
+      <th>uncertainty</th>
+      <th>S</th>
+      <th>...</th>
+      <th>lstate_energy</th>
+      <th>interference</th>
+      <th>weighting</th>
+      <th>source</th>
+      <th>public</th>
+      <th>velocity</th>
+      <th>discharge</th>
+      <th>magnet</th>
+      <th>multiple</th>
+      <th>final</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>40</td>
+      <td>2-phenylacetonitrile</td>
+      <td></td>
+      <td>c8h7n</td>
+      <td>7946.962728</td>
+      <td>7947.1695</td>
+      <td>-5.3480</td>
+      <td>0.206772</td>
+      <td>7.765701</td>
+      <td>0.1409</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>6.2021</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[penta-2,4-diynal, 7,947.0717]</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>385</td>
+      <td>benzonitrile, v15</td>
+      <td></td>
+      <td>c7h5n</td>
+      <td>18425.935412</td>
+      <td>18426.1108</td>
+      <td>-5.6658</td>
+      <td>0.175388</td>
+      <td>6.628221</td>
+      <td>0.1065</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>3.9995</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[cyanoprop-1,2-dien-1,3-diyl, 18,426.1726, 3-p...</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>353</td>
+      <td>but-3-enenitrile (cis)</td>
+      <td></td>
+      <td>c4h5n</td>
+      <td>16331.429075</td>
+      <td>16331.4637</td>
+      <td>-5.3417</td>
+      <td>0.034625</td>
+      <td>38.524312</td>
+      <td>0.0772</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>10.8664</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[cyclohexa-2,4-dien-1-one, 16,331.4332, ethyny...</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>126</td>
+      <td>cyanoacetyl-cycloprop-1-ene-2,2-diyl</td>
+      <td></td>
+      <td>c6hn</td>
+      <td>10379.895776</td>
+      <td>10379.8652</td>
+      <td>-3.6143</td>
+      <td>-0.030576</td>
+      <td>8.086545</td>
+      <td>0.0344</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>1.7845</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[]</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>179</td>
+      <td>hexa-1,3,5-triynylbenzene</td>
+      <td></td>
+      <td>c12h6</td>
+      <td>11803.740216</td>
+      <td>11803.8139</td>
+      <td>-3.8298</td>
+      <td>0.073684</td>
+      <td>18.036535</td>
+      <td>0.0279</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>5.7546</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[hexa-1,2,3-trien-5-yne, 11,803.7367, (Z)-but-...</td>
+      <td>False</td>
+    </tr>
+    <tr>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+      <td>...</td>
+    </tr>
+    <tr>
+      <td>43</td>
+      <td>cyclohexa-1,3-dien-5-yne</td>
+      <td></td>
+      <td>c6h4</td>
+      <td>8073.195789</td>
+      <td>8073.1768</td>
+      <td>-2.7170</td>
+      <td>-0.018989</td>
+      <td>14.487425</td>
+      <td>0.0000</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>0.8300</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[]</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>39</td>
+      <td>vinyl_triacetylene</td>
+      <td></td>
+      <td>c8h4</td>
+      <td>7924.848564</td>
+      <td>7924.8884</td>
+      <td>-2.7370</td>
+      <td>0.039836</td>
+      <td>7.026208</td>
+      <td>0.0000</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>0.7930</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[]</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>367</td>
+      <td>prop-1-yne</td>
+      <td></td>
+      <td>c3h4</td>
+      <td>17091.744758</td>
+      <td>17091.7420</td>
+      <td>-1.5739</td>
+      <td>-0.002758</td>
+      <td>140.717850</td>
+      <td>0.0000</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>0.0000</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[]</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>368</td>
+      <td>prop-1-yne,1v9</td>
+      <td></td>
+      <td>c3h4</td>
+      <td>17102.103117</td>
+      <td>17102.0765</td>
+      <td>-1.5722</td>
+      <td>-0.026617</td>
+      <td>31.469987</td>
+      <td>0.0000</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>0.0000</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[benzonitrile, v15, 17,101.9416]</td>
+      <td>True</td>
+    </tr>
+    <tr>
+      <td>314</td>
+      <td>cyclopropa_1_yne_3_yl_radical</td>
+      <td></td>
+      <td>c3h</td>
+      <td>14893.034757</td>
+      <td>14893.0554</td>
+      <td>-1.6790</td>
+      <td>0.020643</td>
+      <td>123.717808</td>
+      <td>0.0000</td>
+      <td>0.0</td>
+      <td>...</td>
+      <td>0.6391</td>
+      <td>False</td>
+      <td>0.0</td>
+      <td>Catalog</td>
+      <td>True</td>
+      <td>0.0</td>
+      <td>False</td>
+      <td>False</td>
+      <td>[]</td>
+      <td>True</td>
+    </tr>
+  </tbody>
+</table>
+<p>428 rows × 28 columns</p>
+</div></div>
+</div>
+<p>When it comes to making plots, we might also be interested in removing the features that have already been assigned from X/Y; the <code class="docutils literal notranslate"><span class="pre">clean_spectral_assignments()</span></code> function replaces regions of the spectrum that have been assigned with white noise, to make it look natural.</p>
+<div class="nbinput nblast docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[32]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">clean_spectral_assignments</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<p>You can then plot the cleaned spectrum, where all of the assigned features are removed from the spectrum with <code class="docutils literal notranslate"><span class="pre">plot_assigned()</span></code>. This creates a <code class="docutils literal notranslate"><span class="pre">plotly</span></code> figure which is interactive!</p>
+<p>Note that the <code class="docutils literal notranslate"><span class="pre">plot_assigned()</span></code> function can be used at any point of notebook too; the latest spectrum with assignments overlaid will be shown.</p>
+<div class="nbinput docutils container">
+<div class="prompt highlight-none notranslate"><div class="highlight"><pre><span></span>[33]:
+</pre></div>
+</div>
+<div class="input_area highlight-ipython3 notranslate"><div class="highlight"><pre>
+<span></span><span class="n">session</span><span class="o">.</span><span class="n">plot_assigned</span><span class="p">()</span>
+</pre></div>
+</div>
+</div>
+<div class="nboutput nblast docutils container">
+<div class="prompt empty docutils container">
+</div>
+<div class="output_area docutils container">
+<script type="application/vnd.jupyter.widget-view+json">{"model_id": "61037225608946b7b67acf23b2c08cab", "version_major": 2, "version_minor": 0}</script></div>
+</div>
+</div>
+<div class="section" id="Conclusions">
+<h2>Conclusions<a class="headerlink" href="#Conclusions" title="Permalink to this headline">¶</a></h2>
+<p>This notebook completes the first analysis step, which is often the most tedious: assigning and keeping track of every spectral feature, and translating that into something that is publishable. We went through how a spectrum can be loaded and interfaced with the <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code> class in <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code>, followed by peak finding. We then created <code class="docutils literal notranslate"><span class="pre">LineList</span></code> objects based on SPCAT catalogs, and fed them to the <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code> to process, and showed that you could do this <em>en masse</em>.
+Finally, the results of the analysis are saved to disk, and generating an interactive report.</p>
+<p>In a future notebook, we’ll take a look at what kind of things we can do with the saved <code class="docutils literal notranslate"><span class="pre">AssignmentSession</span></code>, for example chemical composition analysis, and making plots of the data for publication.</p>
+</div>
+</div>
+
+
+    </div>
+      
+  </div>
+</div>
+<footer class="footer">
+  <div class="container">
+    <p class="pull-right">
+      <a href="#">Back to top</a>
+      
+    </p>
+    <p>
+        &copy; Copyright 2017—2020, Kelvin Lee.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+    </p>
+  </div>
+</footer>
+  </body>
+</html>

@@ -75,7 +75,17 @@
   <ul class="dropdown-menu localtoc"
       role="menu"
       aria-labelledby="dLabelLocalToc"><ul>
-<li><a class="reference internal" href="#">Installation</a></li>
+<li><a class="reference internal" href="#">Installation</a><ul>
+<li><a class="reference internal" href="#os-specific-instructions">OS-specific instructions</a><ul>
+<li><a class="reference internal" href="#linux-and-mac">Linux and Mac</a></li>
+<li><a class="reference internal" href="#windows">Windows</a></li>
+<li><a class="reference internal" href="#all-platforms">All platforms</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#jupyter-notebooks">Jupyter notebooks</a></li>
+<li><a class="reference internal" href="#final-notes">Final notes</a></li>
+</ul>
+</li>
 </ul>
 </ul>
 </li>
@@ -125,20 +135,74 @@
       
   <div class="section" id="installation">
 <h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h1>
-<p><code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> can be installed with any version of Python 3.7+ simply with
-<code class="docutils literal notranslate"><span class="pre">pip</span></code>.  After cloning the git repository, you can install it via command line
-by navigating to where you cloned the repository, and running:</p>
-<p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">.</span></code></p>
-<p>Updates of the routines can be downloaded by running <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span></code> in the top
-directory, followed by <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">.</span></code>.</p>
+<p>It is recommended to use the provided <code class="docutils literal notranslate"><span class="pre">conda.yml</span></code> in the root directory to
+set up a clean Python environment. This ensures that all the packages are
+built and linked in the way that your platform expects prior to installing
+<code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code>, and create a <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment called <code class="docutils literal notranslate"><span class="pre">pst</span></code>.</p>
+<div class="section" id="os-specific-instructions">
+<h2>OS-specific instructions<a class="headerlink" href="#os-specific-instructions" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="linux-and-mac">
+<h3>Linux and Mac<a class="headerlink" href="#linux-and-mac" title="Permalink to this headline">¶</a></h3>
+<p>The following instructions assume you will be working in terminal, which is the
+preferred way of installing things on Linux/Mac.</p>
+<ol class="arabic simple">
+<li><p>Download and install <code class="docutils literal notranslate"><span class="pre">conda</span></code> through the standard download; make sure you install Python 3.</p></li>
+</ol>
+<p>2. Clone the <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> git repository:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">laserkelvin</span><span class="o">/</span><span class="n">PySpecTools</span><span class="o">.</span><span class="n">git</span>
+<span class="n">cd</span> <span class="n">PySpecTools</span>
+<span class="n">conda</span> <span class="n">env</span> <span class="n">create</span> <span class="o">-</span><span class="n">f</span> <span class="n">conda</span><span class="o">.</span><span class="n">yml</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="windows">
+<h3>Windows<a class="headerlink" href="#windows" title="Permalink to this headline">¶</a></h3>
+<p>Installation on Windows is trickier for two reasons: PyTorch and Cython do not
+play nearly as nicely as they should.</p>
 <p>For Windows machines, you will need to include Visual Studio C++ libraries, as
 they are needed by Cython for compilation. Installation for Linux systems
 should automatically include the math library <code class="docutils literal notranslate"><span class="pre">m</span></code>, whereas Mac OS this is not
 required.</p>
+<ol class="arabic simple">
+<li><p>Download and install Anaconda through the usual means; make sure you install Python 3.</p></li>
+<li><p>Download the github repository as a ZIP (through the Clone tab), and unpack it somewhere you’ll find.</p></li>
+<li><p>Open Anaconda Navigator in your start menu, and navigate to “Environments” to find the screen below</p></li>
+</ol>
+<a class="reference internal image-reference" href="https://docs.anaconda.com/_images/nav-env-tab.png"><img alt="https://docs.anaconda.com/_images/nav-env-tab.png" src="https://docs.anaconda.com/_images/nav-env-tab.png" style="width: 700px;" /></a>
+<p>4. Click on “Import” at the bottom left, and direct it to the <code class="docutils literal notranslate"><span class="pre">conda.yml</span></code> provided in the <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> directory.
+This should build the <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment named <code class="docutils literal notranslate"><span class="pre">pst</span></code>.
+5. Open an Anaconda command line through your start menu, and navigate to the <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> directory.</p>
+</div>
+<div class="section" id="all-platforms">
+<h3>All platforms<a class="headerlink" href="#all-platforms" title="Permalink to this headline">¶</a></h3>
+<p>1. When <code class="docutils literal notranslate"><span class="pre">conda</span></code> has finished working its magic, you can then proceed to install PySpecTools with <code class="docutils literal notranslate"><span class="pre">pip</span></code>:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">.</span>
+</pre></div>
+</div>
+<p>2. When updating, you can also use the github repository directly:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">U</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">laserkelvin</span><span class="o">/</span><span class="n">PySpecTools</span>
+</pre></div>
+</div>
+<p>or by running <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">pull</span></code> followed by <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">.</span></code></p>
+</div>
+</div>
+<div class="section" id="jupyter-notebooks">
+<h2>Jupyter notebooks<a class="headerlink" href="#jupyter-notebooks" title="Permalink to this headline">¶</a></h2>
 <p>While not a requirement, much of the analysis workflow was designed with Jupyter
 notebooks as a front-end for interactivity. Most base anaconda distributions
 should already include Jupyter notebook in the installation, but if it does not
 you can request it by running <code class="docutils literal notranslate"><span class="pre">conda</span> <span class="pre">install</span> <span class="pre">jupyter</span></code>.</p>
+<p>The default <code class="docutils literal notranslate"><span class="pre">conda</span></code> environment is <code class="docutils literal notranslate"><span class="pre">base</span></code>, and typically this is the
+environment you will be running Jupyter notebooks in without much thought.
+To make sure the IPython kernel installed in the <code class="docutils literal notranslate"><span class="pre">pst</span></code> environment is
+included in your <code class="docutils literal notranslate"><span class="pre">base</span></code> installation of Jupyter notebooks/lab, you will
+need to follow the instructions found <a class="reference external" href="https://queirozf.com/entries/jupyter-kernels-how-to-add-change-remove">here</a>.</p>
+</div>
+<div class="section" id="final-notes">
+<h2>Final notes<a class="headerlink" href="#final-notes" title="Permalink to this headline">¶</a></h2>
+<p>You can test to make sure <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> is installed correctly either by running the provided
+tests, or at a lower level by trying to import <a href="#id1"><span class="problematic" id="id2">``</span></a>PySpecTools` in a Python session.</p>
+</div>
 </div>
 
 
