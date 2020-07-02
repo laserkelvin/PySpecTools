@@ -5,4 +5,3 @@ PySpecTools
    :maxdepth: 4
 
    pyspectools
-   setup

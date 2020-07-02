@@ -25,7 +25,7 @@ pyspectools.autofit module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.database module
+Builtin database module
 ---------------------------
 
 .. automodule:: pyspectools.database
@@ -33,7 +33,7 @@ pyspectools.database module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.doubleresonance module
+Double resonance analysis
 ----------------------------------
 
 .. automodule:: pyspectools.doubleresonance
@@ -41,7 +41,7 @@ pyspectools.doubleresonance module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.figurefactory module
+Figure factory module
 --------------------------------
 
 .. automodule:: pyspectools.figurefactory
@@ -49,7 +49,7 @@ pyspectools.figurefactory module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.fitting module
+Fitting routines
 --------------------------
 
 .. automodule:: pyspectools.fitting
@@ -57,15 +57,7 @@ pyspectools.fitting module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.formatting module
------------------------------
-
-.. automodule:: pyspectools.formatting
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pyspectools.ftmw\_analysis module
+Cavity FTMW module
 ---------------------------------
 
 .. automodule:: pyspectools.ftmw_analysis
@@ -73,7 +65,7 @@ pyspectools.ftmw\_analysis module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.lineshapes module
+Spectroscopic lineshapes module
 -----------------------------
 
 .. automodule:: pyspectools.lineshapes
@@ -81,7 +73,7 @@ pyspectools.lineshapes module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.parsers module
+Standard parsers module
 --------------------------
 
 .. automodule:: pyspectools.parsers
@@ -89,7 +81,7 @@ pyspectools.parsers module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.pypickett module
+PyPickett module
 ----------------------------
 
 .. automodule:: pyspectools.pypickett
@@ -97,7 +89,7 @@ pyspectools.pypickett module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.routines module
+Generic routines module
 ---------------------------
 
 .. automodule:: pyspectools.routines
@@ -105,15 +97,7 @@ pyspectools.routines module
    :undoc-members:
    :show-inheritance:
 
-pyspectools.spcat module
-------------------------
-
-.. automodule:: pyspectools.spcat
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-pyspectools.units module
+Unit conversions
 ------------------------
 
 .. automodule:: pyspectools.units
