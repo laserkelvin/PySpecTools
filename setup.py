@@ -1,3 +1,4 @@
+import re
 import os
 import shutil
 import stat
@@ -12,6 +13,15 @@ from glob import glob
 import numpy as np
 from setuptools import setup, find_packages
 from setuptools.command.install import install
+
+VERSIONFILE="pyspectools/_version.py"
+verstrline = open(VERSIONFILE, "rt").read()
+VSRE = r"^__version__ = ['\"]([^'\"]*)['\"]"
+mo = re.search(VSRE, verstrline, re.M)
+if mo:
+    verstr = mo.group(1)
+else:
+    raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
 """
     This recipe for including Cython in the setup.py was shamelessly
@@ -198,9 +208,9 @@ cmdclass.update(
 
 setup(
     name="pyspectools",
-    version="4.4.0",
     description="A set of Python tools/routines for spectroscopy",
     author="Kelvin Lee",
+    version=verstr,
     packages=find_packages(),
     include_package_data=True,
     author_email="kin.long.kelvin.lee@gmail.com",
