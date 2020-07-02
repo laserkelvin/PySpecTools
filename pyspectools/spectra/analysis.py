@@ -158,7 +158,7 @@ def peak_find(spec_df: pd.DataFrame, freq_col="Frequency", int_col="Intensity",
     intensities = spec_df.iloc[peak_indices][int_col].values
     peak_df = pd.DataFrame(
         data=list(zip(frequencies, direct_freqs, intensities)),
-        columns=["Frequency", "Peak Frequencies", "Intensity"]
+        columns=["Frequency", "Peak Frequencies", int_col]
         )
     # Take the indexed frequencies if the fit exploded
     # and deviates significantly from the original prediction
@@ -167,7 +167,7 @@ def peak_find(spec_df: pd.DataFrame, freq_col="Frequency", int_col="Intensity",
         )
     # Use 1sigma as the detection threshold; remove everything else!
     peak_df = peak_df.loc[
-        peak_df["Intensity"] >= thres
+        peak_df[int_col] >= thres
         ]
     peak_df.reset_index(drop=True, inplace=True)
     return peak_df
@@ -1289,4 +1289,3 @@ def average_spectra(*arrays, **options) -> np.ndarray:
     if time_domain is True:
         averaged_spectra = irfft(averaged_spectra)            
     return averaged_spectra
-    
