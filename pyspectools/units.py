@@ -89,27 +89,51 @@ def rotcon2pmi(rotational_constant: float):
 
 def hartree2wavenumber(hartree: float):
     """
-    Convert Hartrees to wavenumbers.
-    :param hartree: float
-    :return: corresponding value in 1/cm
+    Convert energy in hartrees to wavenumbers
+
+    Parameters
+    ----------
+    hartree : float
+        Energy in hartree
+
+    Returns
+    -------
+    float
+        Energy in wavenumber
     """
     return hartree * (harm / 100.0)
 
 
 def kjmol2wavenumber(kj: float):
     """
-    Convert kJ/mol to wavenumbers
-    :param kj: float
-    :return: corresponding value in 1/cm
+    Convert energy in kJ/mol to wavenumbers
+
+    Parameters
+    ----------
+    kj : float
+        Energy in kJ/mol
+
+    Returns
+    -------
+    float
+        Energy in 1/cm
     """
     return kj * (jm / 100.0) / (avo * 1000.0)
 
 
 def MHz2cm(frequency: float):
     """
-    Convert MHz to wavenumbers
-    :param frequency: float
-    :return: corresponding value in 1/cm
+    Convert a frequency in MHz to energy in wavenumbers.
+
+    Parameters
+    ----------
+    frequency : float
+        Frequency in MHz
+
+    Returns
+    -------
+    float
+        Energy in 1/cm
     """
     return (frequency / 1000.0) / (constants.c / 1e7)
 
@@ -167,27 +191,51 @@ def hartree2K(hartree: float):
 
 def wavenumber2kjmol(wavenumber: float):
     """
-    Convert wavenumbers to kJ/mol.
-    :param wavenumber: float
-    :return: converted value in kJ/mol
+    Convert energy in wavenumbers to kJ/mol
+
+    Parameters
+    ----------
+    wavenumber : float
+        Energy in wavenumbers
+
+    Returns
+    -------
+    float
+        Energy in kJ/mol
     """
     return wavenumber / (jm / 100.0) / (avo * 1000.0)
 
 
 def T2wavenumber(T: float):
     """
-    Convert temperature in Kelvin to wavenumbers.
-    :param T: float
-    :return: corresponding value in 1/cm
+    Convert a temperature in kelvin to wavenumbers
+
+    Parameters
+    ----------
+    T : float
+        Temperature in kelvin
+
+    Returns
+    -------
+    float
+        Energy in wavenumbers
     """
     return T * kbcm
 
 
 def wavenumber2T(wavenumber: float):
     """
-    Convert wavenumbers to Kelvin
-    :param wavenumber: float
-    :return: corresponding value in K
+    Convert energy in wavenumbers to temperature in kelvin
+
+    Parameters
+    ----------
+    wavenumber : float
+        Energy in wavenumbers
+
+    Returns
+    -------
+    float
+        Temperature in kelvin
     """
     return wavenumber / kbcm
 
@@ -277,34 +325,40 @@ def freq2vel(frequency: float, offset: float):
 
 def gaussian_fwhm(sigma: float):
     """
-        Calculate the full-width half maximum
-        value assuming a Gaussian function.
+    Calculate the full-width half maximum
+    value assuming a Gaussian function.
 
-        parameters:
-        --------------
-        sigma - float for width
+    Parameters
+    ----------
+    sigma - float 
+        Width of the Gaussian
 
-        returns:
-        --------------
-        fwhm - float value for full-width at half-max
+    Returns
+    ----------
+    fwhm - float 
+        Value for full-width at half-max
     """
     return 2.0 * np.sqrt(2.0 * np.log(2.0)) * sigma
 
 
 def gaussian_height(amplitude: float, sigma: float):
     """
-        Calculate the height of a Gaussian distribution,
-        based on the amplitude and sigma. This value
-        corresponds to the peak height at the centroid.
+    Calculate the height of a Gaussian distribution,
+    based on the amplitude and sigma. This value
+    corresponds to the peak height at the centroid.
 
-        parameters:
-        ----------------
-        amplitude - float
-        sigma - float
+    Parameters
+    ----------
+    amplitude - float
+        Value of the Gaussian amplitude
+    
+    sigma - float
+        Value of the Gaussian width
 
-        returns:
-        ----------------
-        h - float
+    Returns
+    ----------
+    float
+        Height of the Gaussian
     """
     h = amplitude / (np.sqrt(2.0 * np.pi) * sigma)
     return h
@@ -312,11 +366,20 @@ def gaussian_height(amplitude: float, sigma: float):
 
 def gaussian_integral(amplitude: float, sigma: float):
     """
-    Calculate the integral of a Gaussian analytically using
-    the amplitude and sigma.
-    :param amplitude: amplitude of the Gaussian
-    :param sigma: width of the Gaussian
-    :return: integrated area of the Gaussian
+    Analytic integration of a Gaussian lineprofile for a given
+    value of the amplitude and the width.
+
+    Parameters
+    ----------
+    amplitude : float
+        Amplitude of the Gaussian
+    sigma : float
+        Width of the Gaussian
+
+    Returns
+    -------
+    float
+        Integral of the Gaussian
     """
     integral = amplitude * np.sqrt(2.0 * np.pi ** 2.0 * sigma)
     return integral
