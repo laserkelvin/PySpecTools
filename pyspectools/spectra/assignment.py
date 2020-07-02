@@ -1948,6 +1948,14 @@ class AssignmentSession:
             peaks_df : dataframe
                 Pandas dataframe with Frequency/Intensity columns, corresponding to peaks
         """
+        if self.int_col == "SNR":
+            # if we run peak find again, the int_col is incorrectly
+            # going to be set to SNR giving us bad results. Use the
+            # last column instead.
+            columns = self.data.columns.to_list()
+            columns = [col for col in columns if col != "SNR"]
+            self.int_col = columns[-1]
+            self.logger.info(f"SNR set as int_col and is invalid for peak finding. Using {self.int_col} instead.")
         if threshold is None and als is False:
             # Use a quasi-intelligent method of determining the noise floor
             # and ultimately using noise + 1 sigma
@@ -1955,13 +1963,13 @@ class AssignmentSession:
             threshold = baseline + (rms * sigma)
             # Convert threshold into SNR units
             threshold /= baseline
-            self.data["SNR"] = self.data[self.int_col] / baseline
+            self.data["SNR"] = self.data[self.int_col] / np.abs(baseline)
             self.int_col = "SNR"
             self.logger.info("Now using SNR as primary intensity unit.")
         elif threshold is None and als is True:
             baseline, _ = self.detect_noise_floor(als=True, **kwargs)
             # Convert to SNR, and start using this instead
-            self.data["SNR"] = self.data[self.int_col] / baseline
+            self.data["SNR"] = self.data[self.int_col] / np.abs(baseline)
             self.int_col = "SNR"
             self.logger.info("Now using SNR as primary intensity unit.")
             # If using ALS, the sigma argument becomes the threshold value in SNR units
@@ -1978,13 +1986,13 @@ class AssignmentSession:
         # Shift the peak intensities down by the noise baseline
         if als is False:
             baseline = getattr(self.session, "baseline", 0.0)
-            peaks_df.loc[:, "Intensity"] = peaks_df["Intensity"] - baseline
+            peaks_df.loc[:, self.int_col] = peaks_df[self.int_col] - baseline
         self.logger.info(f"Found {len(peaks_df)} peaks in total.")
         # Reindex the peaks
         peaks_df.reset_index(drop=True, inplace=True)
         if len(peaks_df) != 0:
             # Generate U-lines
-            self.df2ulines(peaks_df, self.freq_col, "Intensity")
+            self.df2ulines(peaks_df, self.freq_col, self.int_col)
             # Assign attribute
             self.peaks = peaks_df
             self.peaks.to_csv(
