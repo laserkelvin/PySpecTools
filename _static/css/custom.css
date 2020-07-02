@@ -68,3 +68,7 @@ pre {
 div.body {
   max-width: 90%; 
 }
+
+img {
+  padding: 15px
+}

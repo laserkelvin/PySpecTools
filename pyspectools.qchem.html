@@ -3,6 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>pyspectools.qchem package &#8212; PySpecTools 4.4.0 documentation</title>
     <link rel="stylesheet" href="_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -13,7 +14,7 @@
     <script src="_static/doctools.js"></script>
     <script src="_static/language_data.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -179,7 +180,7 @@ handling the data that get parsed out by specific program parsers defined in qch
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.G3">
-<code class="sig-name descname">G3</code><em class="property">: Dict</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.G3" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">G3</code><em class="property">: Dict</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.G3" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -199,22 +200,22 @@ handling the data that get parsed out by specific program parsers defined in qch
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.alphas">
-<code class="sig-name descname">alphas</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.alphas" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">alphas</code><em class="property">: List<span class="p">[</span>float<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.alphas" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.anharm_dipole">
-<code class="sig-name descname">anharm_dipole</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_dipole" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">anharm_dipole</code><em class="property">: List<span class="p">[</span>float<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_dipole" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.anharm_freq">
-<code class="sig-name descname">anharm_freq</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_freq" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">anharm_freq</code><em class="property">: List<span class="p">[</span>float<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_freq" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.anharm_int">
-<code class="sig-name descname">anharm_int</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_int" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">anharm_int</code><em class="property">: List<span class="p">[</span>float<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.anharm_int" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -323,17 +324,17 @@ handling the data that get parsed out by specific program parsers defined in qch
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.harm_freq">
-<code class="sig-name descname">harm_freq</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_freq" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">harm_freq</code><em class="property">: List<span class="p">[</span>float<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_freq" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.harm_int">
-<code class="sig-name descname">harm_int</code><em class="property">: List[float]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_int" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">harm_int</code><em class="property">: List<span class="p">[</span>float<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_int" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.harm_sym">
-<code class="sig-name descname">harm_sym</code><em class="property">: List[str]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_sym" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">harm_sym</code><em class="property">: List<span class="p">[</span>str<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.harm_sym" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -398,7 +399,7 @@ handling the data that get parsed out by specific program parsers defined in qch
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationResult.thermo_corrections">
-<code class="sig-name descname">thermo_corrections</code><em class="property">: Dict</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.thermo_corrections" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">thermo_corrections</code><em class="property">: Dict</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationResult.thermo_corrections" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -493,7 +494,7 @@ composite value.</p>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationSet.calculations">
-<code class="sig-name descname">calculations</code><em class="property">: Dict</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.calculations" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">calculations</code><em class="property">: Dict</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.calculations" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -572,17 +573,17 @@ to show the images inline in a Jupyter notebook.</p>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationSet.paths">
-<code class="sig-name descname">paths</code><em class="property">: List[str]</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.paths" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">paths</code><em class="property">: List<span class="p">[</span>str<span class="p">]</span></em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.paths" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationSet.products">
-<code class="sig-name descname">products</code><em class="property">: List</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.products" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">products</code><em class="property">: List</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.products" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationSet.reactants">
-<code class="sig-name descname">reactants</code><em class="property">: List</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.reactants" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">reactants</code><em class="property">: List</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.reactants" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py attribute">
@@ -603,7 +604,7 @@ to show the images inline in a Jupyter notebook.</p>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.analysis.CalculationSet.species">
-<code class="sig-name descname">species</code><em class="property">: List</em><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.species" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">species</code><em class="property">: List</em><a class="headerlink" href="#pyspectools.qchem.analysis.CalculationSet.species" title="Permalink to this definition">¶</a></dt>
 <dd></dd></dl>
 
 <dl class="py method">
@@ -895,7 +896,7 @@ produces ktools input file format strings</p>
 
 <dl class="py attribute">
 <dt id="pyspectools.qchem.multiwell.Vtst.temps">
-<code class="sig-name descname">temps</code><em class="property"> = None</em><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.temps" title="Permalink to this definition">¶</a></dt>
+<code class="sig-name descname">temps</code><a class="headerlink" href="#pyspectools.qchem.multiwell.Vtst.temps" title="Permalink to this definition">¶</a></dt>
 <dd><p>Set up paths management</p>
 </dd></dl>
 
@@ -1118,7 +1119,7 @@ that obabel linked to libcairo, and will dump the image in the current working d
     </p>
     <p>
         &copy; Copyright 2017—2020, Kelvin Lee.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.1.1.<br/>
     </p>
   </div>
 </footer>

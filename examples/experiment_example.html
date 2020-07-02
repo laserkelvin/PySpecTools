@@ -3,6 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analyzing Broadband Spectra with the assignment Module &#8212; PySpecTools 4.4.0 documentation</title>
     <link rel="stylesheet" href="../_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -13,7 +14,7 @@
     <script src="../_static/doctools.js"></script>
     <script src="../_static/language_data.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -367,7 +368,7 @@ div.rendered_html tbody tr:hover {
 <h1>Analyzing Broadband Spectra with the <code class="docutils literal notranslate"><span class="pre">assignment</span></code> Module<a class="headerlink" href="#Analyzing-Broadband-Spectra-with-the-assignment-Module" title="Permalink to this headline">¶</a></h1>
 <div class="section" id="Introduction">
 <h2>Introduction<a class="headerlink" href="#Introduction" title="Permalink to this headline">¶</a></h2>
-<p>In this notebook, we’re going to work through how the core functionality of <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> can be used to streamline and automate your spectral analysis. It’s worth noting that <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> and Python provide enough flexibility for you to adjust to your needs; whatever can’t be done with <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> natively could be automated with Python (e.g. <code class="docutils literal notranslate"><span class="pre">for</span></code> loops) and to a large extent <code class="docutils literal notranslate"><span class="pre">pandas</span></code> as well. In the latter case, particularly when you’re analyzing the assignments, and looking to
+<p>In this notebook, we’re going to work through how the core functionality of <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> can be used to streamline and automate your spectral analysis. It’s worth noting that <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> and Python provide enough flexibility for you to adjust to your needs; whatever can’t be done with <code class="docutils literal notranslate"><span class="pre">PySpecTools</span></code> natively could be automated with Python (e.g. <code class="docutils literal notranslate"><span class="pre">for</span></code> loops) and to a large extent <code class="docutils literal notranslate"><span class="pre">pandas</span></code> as well. In the latter case, particularly when you’re analyzing the assignments, and looking to
 filter out certain molecules, etc. This may be left for a subsequent notebook as the focus of this notebook is to demonstrate how automated assignment is performed.</p>
 <p>The core functionality of assigning spectra revolves around the <code class="docutils literal notranslate"><span class="pre">pyspectools.spectra.assignment</span></code> module, and contains three main abstractions:</p>
 <ol class="arabic simple">
@@ -2767,7 +2768,7 @@ Finally, the results of the analysis are saved to disk, and generating an intera
     </p>
     <p>
         &copy; Copyright 2017—2020, Kelvin Lee.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.1.1.<br/>
     </p>
   </div>
 </footer>

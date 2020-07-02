@@ -3,6 +3,7 @@
 <html>
   <head>
     <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>pyspectools.lineshapes &#8212; PySpecTools 4.4.0 documentation</title>
     <link rel="stylesheet" href="../../_static/bootstrap-sphinx.css" type="text/css" />
     <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
@@ -13,7 +14,7 @@
     <script src="../../_static/doctools.js"></script>
     <script src="../../_static/language_data.js"></script>
     <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
-    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <script async="async" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/latest.js?config=TeX-AMS-MML_HTMLorMML"></script>
     <script type="text/x-mathjax-config">MathJax.Hub.Config({"tex2jax": {"inlineMath": [["$", "$"], ["\\(", "\\)"]], "processEscapes": true, "ignoreClass": "document", "processClass": "math|output_area"}})</script>
     <link rel="index" title="Index" href="../../genindex.html" />
     <link rel="search" title="Search" href="../../search.html" />
@@ -109,6 +110,7 @@
       
   <h1>Source code for pyspectools.lineshapes</h1><div class="highlight"><pre>
 <span></span><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+<span class="kn">import</span> <span class="nn">numba</span>
 
 <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    lineshapes.py</span>
@@ -123,28 +125,64 @@
 <span class="sd">&quot;&quot;&quot;</span>
 
 
-<div class="viewcode-block" id="gaussian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.gaussian">[docs]</a><span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">A</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">w</span><span class="p">):</span>
-    <span class="c1"># stock Gaussian distribution. The sign of A is such that the function</span>
-    <span class="c1"># is flipped upside down.</span>
+<div class="viewcode-block" id="gaussian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.gaussian">[docs]</a><span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A</span><span class="o">=</span><span class="mf">1.</span><span class="p">,</span> <span class="n">x0</span><span class="o">=</span><span class="mf">0.</span><span class="p">,</span> <span class="n">w</span><span class="o">=</span><span class="mf">1.</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Vectorized implementation of a single Gaussian lineshape. For a given</span>
+<span class="sd">    array of `x` values, we compute the corresponding amplitude of a</span>
+<span class="sd">    Gaussian for a set of amplitude, center, and widths.</span>
+<span class="sd">    </span>
+<span class="sd">    Uses JIT compilation with Numba, and should be reasonably fast.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : np.ndarray</span>
+<span class="sd">        NumPy 1D array containing x values to evaluate over.</span>
+<span class="sd">    A : float</span>
+<span class="sd">        Scaling of the Gaussian; actually corresponds to the area.</span>
+<span class="sd">    x0 : float</span>
+<span class="sd">        Center of the Gaussian</span>
+<span class="sd">    w : float</span>
+<span class="sd">        Width of the Gaussian.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    NumPy 1D array</span>
+<span class="sd">        Array of amplitude values of the specified Gaussian</span>
+<span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">A</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">w</span> <span class="o">**</span> <span class="mf">2.0</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="pair_gaussian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.pair_gaussian">[docs]</a><span class="k">def</span> <span class="nf">pair_gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">A1</span><span class="p">,</span> <span class="n">A2</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">xsep</span><span class="p">):</span>
+<div class="viewcode-block" id="pair_gaussian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.pair_gaussian">[docs]</a><span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">pair_gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A1</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">A2</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">w</span><span class="p">:</span> <span class="nb">float</span><span class="p">,</span> <span class="n">xsep</span><span class="p">:</span> <span class="nb">float</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Paired Gaussian lineshape. The function allows for the amplitudes to be</span>
 <span class="sd">    floated, however the two Gaussians are locked in width and center</span>
 <span class="sd">    frequency.</span>
-<span class="sd">    :param x: np.array to evaluate the pair gaussians on</span>
-<span class="sd">    :param A1, A2: float amplitude of the gaussians</span>
-<span class="sd">    :param x0: float center-of-mass value for the two gaussian centers</span>
-<span class="sd">    :param w: float width of the gaussians</span>
-<span class="sd">    :param xsep: float seperation expected for the gaussian centers</span>
-<span class="sd">    :return: np.array y values of the gaussian</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : np.ndarray</span>
+<span class="sd">        [description]</span>
+<span class="sd">    A1, A2 : float</span>
+<span class="sd">        Amplitude of the two Gaussians</span>
+<span class="sd">    x0 : float</span>
+<span class="sd">        Centroid of the two Gaussians</span>
+<span class="sd">    w : float</span>
+<span class="sd">        Width of the two Gaussians</span>
+<span class="sd">    xsep : float</span>
+<span class="sd">        Distance from the centroid and a Gaussian center</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    NumPy 1D array</span>
+<span class="sd">        Array of amplitude values of the pair of Gaussians</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="k">return</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">A1</span><span class="p">,</span> <span class="n">x0</span> <span class="o">-</span> <span class="n">xsep</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span> <span class="o">+</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">A2</span><span class="p">,</span> <span class="n">x0</span> <span class="o">+</span> <span class="n">xsep</span><span class="p">,</span> <span class="n">w</span><span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="lorentzian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.lorentzian">[docs]</a><span class="k">def</span> <span class="nf">lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
+<div class="viewcode-block" id="lorentzian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.lorentzian">[docs]</a><span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Function to evaluate a Lorentzian lineshape function.</span>
 <span class="sd">    </span>
@@ -167,7 +205,8 @@
     <span class="k">return</span> <span class="n">I</span> <span class="o">*</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="p">((</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="n">gamma</span> <span class="o">**</span> <span class="mf">2.0</span><span class="p">))</span></div>
 
 
-<div class="viewcode-block" id="first_deriv_lorentzian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.first_deriv_lorentzian">[docs]</a><span class="k">def</span> <span class="nf">first_deriv_lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
+<div class="viewcode-block" id="first_deriv_lorentzian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.first_deriv_lorentzian">[docs]</a><span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">first_deriv_lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Function to evaluate the first derivative of a Lorentzian lineshape function.</span>
 <span class="sd">    </span>
@@ -196,7 +235,8 @@
     <span class="p">)</span></div>
 
 
-<div class="viewcode-block" id="sec_deriv_lorentzian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.sec_deriv_lorentzian">[docs]</a><span class="k">def</span> <span class="nf">sec_deriv_lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
+<div class="viewcode-block" id="sec_deriv_lorentzian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.sec_deriv_lorentzian">[docs]</a><span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">sec_deriv_lorentzian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">gamma</span><span class="p">,</span> <span class="n">I</span><span class="p">):</span>
     <span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">    Function to evaluate the second derivative of a Lorentzian lineshape function.</span>
 <span class="sd">    This was evaluated analytically with SymPy by differentiation of the</span>
@@ -224,6 +264,47 @@
         <span class="o">*</span> <span class="p">(</span><span class="mf">2.0</span> <span class="o">-</span> <span class="mf">8.0</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">/</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span><span class="p">))</span>
         <span class="o">/</span> <span class="p">(</span><span class="n">gamma</span> <span class="o">**</span> <span class="mf">2.0</span> <span class="o">+</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x0</span><span class="p">)</span> <span class="o">**</span> <span class="mf">2.0</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span>
     <span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="fast_multi_gaussian"><a class="viewcode-back" href="../../pyspectools.html#pyspectools.lineshapes.fast_multi_gaussian">[docs]</a><span class="nd">@numba</span><span class="o">.</span><span class="n">jit</span><span class="p">(</span><span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nopython</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">nogil</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span> <span class="nf">fast_multi_gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">A</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">x0</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">w</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+    <span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Fast, parallel implementation of a mixture of Gaussian lineshapes.</span>
+<span class="sd">    Uses the `gaussian` function defined in this module, which itself is</span>
+<span class="sd">    also JIT&#39;d, and uses parallel loops to evaluate multiple Gaussians.</span>
+<span class="sd">    </span>
+<span class="sd">    The result is a NumPy 2D array of shape N x D, where N is the length</span>
+<span class="sd">    of the frequency array, and D is the number of Gaussians.</span>
+<span class="sd">    </span>
+<span class="sd">    The inputs are expected to all be NumPy arrays, where A, x0, and w</span>
+<span class="sd">    all equal in length and contain parameters for each respective Gaussian.</span>
+<span class="sd">    </span>
+<span class="sd">    With a 200,000 length frequency array and about 70 Gaussians, this code</span>
+<span class="sd">    takes ~70 ms to compute; about four times faster than the unJIT&#39;d version.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : np.ndarray</span>
+<span class="sd">        [description]</span>
+<span class="sd">    A : np.ndarray</span>
+<span class="sd">        [description]</span>
+<span class="sd">    x0 : np.ndarray</span>
+<span class="sd">        [description]</span>
+<span class="sd">    w : np.ndarray</span>
+<span class="sd">        [description]</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    [type]</span>
+<span class="sd">        [description]</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">assert</span> <span class="n">A</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">x0</span><span class="o">.</span><span class="n">size</span> <span class="o">==</span> <span class="n">w</span><span class="o">.</span><span class="n">size</span>
+    <span class="n">ngaussians</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">A</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">size</span><span class="p">,</span> <span class="n">ngaussians</span><span class="p">))</span>
+    <span class="c1"># parallelize the loop over number of Gaussians</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">numba</span><span class="o">.</span><span class="n">prange</span><span class="p">(</span><span class="n">ngaussians</span><span class="p">):</span>
+        <span class="n">y</span><span class="p">[:,</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">gaussian</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">A</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">x0</span><span class="p">[</span><span class="n">i</span><span class="p">],</span> <span class="n">w</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">y</span></div>
 </pre></div>
 
     </div>
@@ -238,7 +319,7 @@
     </p>
     <p>
         &copy; Copyright 2017—2020, Kelvin Lee.<br/>
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.0.3.<br/>
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 3.1.1.<br/>
     </p>
   </div>
 </footer>
