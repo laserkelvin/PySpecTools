@@ -57,14 +57,6 @@ Fitting routines
    :undoc-members:
    :show-inheritance:
 
-Text formatting module
------------------------------
-
-.. automodule:: pyspectools.formatting
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
 Cavity FTMW module
 ---------------------------------
 
@@ -101,14 +93,6 @@ Generic routines module
 ---------------------------
 
 .. automodule:: pyspectools.routines
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-SPCAT module
-------------------------
-
-.. automodule:: pyspectools.spcat
    :members:
    :undoc-members:
    :show-inheritance:

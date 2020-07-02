@@ -49,7 +49,7 @@ thead {
 }
 
 pre {
-  color: #ffbd69;
+  background-color: #543864;
 }
 
 .navbar-default .navbar-nav > li > a {
@@ -71,4 +71,12 @@ div.body {
 
 img {
   padding: 15px
+}
+
+code {
+  background: rgba(0,0,0,0.2);
+}
+
+.highlight .n {
+  color: #ffa931;
 }

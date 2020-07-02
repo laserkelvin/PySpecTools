@@ -85,13 +85,11 @@
 <li><a class="reference internal" href="#module-pyspectools.doubleresonance">Double resonance analysis</a></li>
 <li><a class="reference internal" href="#module-pyspectools.figurefactory">Figure factory module</a></li>
 <li><a class="reference internal" href="#module-pyspectools.fitting">Fitting routines</a></li>
-<li><a class="reference internal" href="#module-pyspectools.formatting">Text formatting module</a></li>
 <li><a class="reference internal" href="#module-pyspectools.ftmw_analysis">Cavity FTMW module</a></li>
 <li><a class="reference internal" href="#spectroscopic-lineshapes-module">Spectroscopic lineshapes module</a></li>
 <li><a class="reference internal" href="#module-pyspectools.parsers">Standard parsers module</a></li>
 <li><a class="reference internal" href="#module-pyspectools.pypickett">PyPickett module</a></li>
 <li><a class="reference internal" href="#module-pyspectools.routines">Generic routines module</a></li>
-<li><a class="reference internal" href="#module-pyspectools.spcat">SPCAT module</a></li>
 <li><a class="reference internal" href="#module-pyspectools.units">Unit conversions</a></li>
 <li><a class="reference internal" href="#module-pyspectools">Module contents</a></li>
 </ul>
@@ -881,52 +879,6 @@ centrifugal distortion.</p>
 B - rotational constant in MHz
 D - CD term in MHz</p>
 <p>state energy in MHz</p>
-</dd></dl>
-
-</div>
-<div class="section" id="module-pyspectools.formatting">
-<span id="text-formatting-module"></span><h2>Text formatting module<a class="headerlink" href="#module-pyspectools.formatting" title="Permalink to this headline">¶</a></h2>
-<p>formatting.py</p>
-<p>Routines for formatting output/data into publication
-ready tables and whatnot.</p>
-<dl class="py function">
-<dt id="pyspectools.formatting.generate_labels">
-<code class="sig-prename descclassname">pyspectools.formatting.</code><code class="sig-name descname">generate_labels</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">labels</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/formatting.html#generate_labels"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.formatting.generate_labels" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that will generate the quantum number
-labelling for upper and lower states.</p>
-<p>labels - tuple-like containing quantum number labels
-without indication of upper or lower state</p>
-<p>grouped, upper, lower - lists corresponding to the
-labels groups by quantum number (rather than upper/lower),
-and the upper and lower state quantum numbers respectively.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="pyspectools.formatting.lin2latex">
-<code class="sig-prename descclassname">pyspectools.formatting.</code><code class="sig-name descname">lin2latex</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">dataframe</span></em>, <em class="sig-param"><span class="n">labels</span><span class="o">=</span><span class="default_value">None</span></em>, <em class="sig-param"><span class="n">deluxe</span><span class="o">=</span><span class="default_value">False</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/formatting.html#lin2latex"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.formatting.lin2latex" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that will convert a dataframe into a LaTeX
-formatted table. Optionally, you can select specific
-quantum numbers to include in the table.</p>
-<p>The formatting follows the “house style”,
-which groups rows by J, followed by N and F.</p>
-<p>The labels should be supplied without indication of
-upper or lower state, i.e. J and not J’’. Also, labels
-should be in the order you want them!!!</p>
-<p>dataframe - dataframe read in the format from <cite>read_lin</cite>
-labels - optional tuple-like which lists out which quantum
-numbers to include. Defaults to printing all the quantum
-numbers.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="pyspectools.formatting.read_lin">
-<code class="sig-prename descclassname">pyspectools.formatting.</code><code class="sig-name descname">read_lin</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em>, <em class="sig-param"><span class="n">labels</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/formatting.html#read_lin"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.formatting.read_lin" title="Permalink to this definition">¶</a></dt>
-<dd><p>Function that will read in a .lin file and quantum number
-labeling, and return a formatted LaTeX table.</p>
-<p>The labels should be supplied without indication of
-upper or lower state, i.e. J and not J’’.</p>
-<p>filepath - path to the .lin file
-labels - tuple-like, lists the quantum number labels</p>
 </dd></dl>
 
 </div>
@@ -3073,41 +3025,6 @@ the last chunk will finish the remaining elements.</p>
 be compression parameters, etc.</p>
 <p>obj - instance of object to be serialized
 filepath - filepath to save to</p>
-</dd></dl>
-
-</div>
-<div class="section" id="module-pyspectools.spcat">
-<span id="spcat-module"></span><h2>SPCAT module<a class="headerlink" href="#module-pyspectools.spcat" title="Permalink to this headline">¶</a></h2>
-<dl class="py function">
-<dt id="pyspectools.spcat.clean_cat">
-<code class="sig-prename descclassname">pyspectools.spcat.</code><code class="sig-name descname">clean_cat</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">filepath</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spcat.html#clean_cat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spcat.clean_cat" title="Permalink to this definition">¶</a></dt>
-<dd><p>This function will clean up a .cat file; due to the formatting
-nightmare that is SPCAT, I have to resort to cheap and dirty ways
-of fixing the uncertainties that get spit out.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="pyspectools.spcat.extract_experimental_lines">
-<code class="sig-prename descclassname">pyspectools.spcat.</code><code class="sig-name descname">extract_experimental_lines</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">thresholded_df</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spcat.html#extract_experimental_lines"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spcat.extract_experimental_lines" title="Permalink to this definition">¶</a></dt>
-<dd><p>Lines that are experimental are denoted by a negative sign. This
-function just checks the sign, and returns two dataframes that correspond
-to the experimental and theoretical lines respectively.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt id="pyspectools.spcat.join_function">
-<code class="sig-prename descclassname">pyspectools.spcat.</code><code class="sig-name descname">join_function</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">x</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spcat.html#join_function"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spcat.join_function" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="pyspectools.spcat.peak2cat">
-<code class="sig-prename descclassname">pyspectools.spcat.</code><code class="sig-name descname">peak2cat</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">peaks_df</span></em>, <em class="sig-param"><span class="n">outputname</span><span class="o">=</span><span class="default_value">'generated_batch.ftb'</span></em>, <em class="sig-param"><span class="n">sortby</span><span class="o">=</span><span class="default_value">'Intensity'</span></em>, <em class="sig-param"><span class="n">ascending</span><span class="o">=</span><span class="default_value">True</span></em>, <em class="sig-param"><span class="n">nshots</span><span class="o">=</span><span class="default_value">100</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spcat.html#peak2cat"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spcat.peak2cat" title="Permalink to this definition">¶</a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt id="pyspectools.spcat.plot_pickett">
-<code class="sig-prename descclassname">pyspectools.spcat.</code><code class="sig-name descname">plot_pickett</code><span class="sig-paren">(</span><em class="sig-param"><span class="n">cat_dataframe</span></em>, <em class="sig-param"><span class="n">verbose</span><span class="o">=</span><span class="default_value">True</span></em><span class="sig-paren">)</span><a class="reference internal" href="_modules/pyspectools/spcat.html#plot_pickett"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#pyspectools.spcat.plot_pickett" title="Permalink to this definition">¶</a></dt>
-<dd><p>Plotting function that will make a plot of the .cat file spectrum</p>
 </dd></dl>
 
 </div>
