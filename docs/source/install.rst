@@ -42,8 +42,7 @@ required.
 .. image:: https://docs.anaconda.com/_images/nav-env-tab.png
    :width: 700
 
-4. Click on "Import" at the bottom left, and direct it to the ``conda.yml`` provided in the ``PySpecTools`` directory.
-This should build the ``conda`` environment named ``pst``.
+4. Click on "Import" at the bottom left, and direct it to the ``conda.yml`` provided in the ``PySpecTools`` directory. This should build the ``conda`` environment named ``pst``.
 5. Open an Anaconda command line through your start menu, and navigate to the ``PySpecTools`` directory.
 
 All platforms
