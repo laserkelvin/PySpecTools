@@ -1,7 +1,6 @@
 from pyspectools import fitting
 from pyspectools import doubleresonance
 from pyspectools import ftmw_analysis
-from pyspectools import spcat
 from pyspectools import pypickett
 from pyspectools import routines
 from pyspectools import mmw

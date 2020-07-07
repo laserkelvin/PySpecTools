@@ -18,7 +18,6 @@ import joblib
 from tqdm.autonotebook import tqdm
 
 from pyspectools import routines
-from pyspectools.spcat import *
 from pyspectools import parsers
 from pyspectools.spectra.assignment import LineList
 
