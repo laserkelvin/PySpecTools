@@ -11,7 +11,7 @@ Every peak is grouped together using random integers; these
 will be used later to test the `assignment` module mechanisms.
 """
 
-from pyspectools.fast.lineshapes import gaussian
+from pyspectools.lineshapes import gaussian
 import numpy as np
 import pandas as pd
 import yaml
