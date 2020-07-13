@@ -1,4 +1,5 @@
-language: python
+# Python not supported on Windows or OSX
+language: generic
 os:
   - linux
   - osx
@@ -12,7 +13,7 @@ install:
   - conda update -q conda
   # Useful for debugging any issues with conda
   - conda info -a
-  - conda env create -f conda.yml python=$TRAVIS_PYTHON_VERSION
+  - conda env create -f conda.yml
   - conda activate pst
   - pip install .
   - pip install pytest
