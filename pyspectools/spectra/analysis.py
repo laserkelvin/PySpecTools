@@ -24,7 +24,6 @@ from pyspectools import fitting
 from pyspectools import lineshapes
 from pyspectools import routines
 from pyspectools import ftmw_analysis as fa
-from pyspectools.fast import routines as fr
 from pyspectools import figurefactory
 
 
@@ -967,6 +966,8 @@ def correlate_experiments(experiments, thres_prox=0.2, index=0):
 
     A copy of the base experiment is returned, along with a dictionary with
     frequencies of correlations between a given experiment and the base.
+    
+    TODO: fix this in light of missing fast routines
 
     Parameters
     ----------
@@ -999,12 +1000,12 @@ def correlate_experiments(experiments, thres_prox=0.2, index=0):
                 comp_freqs = np.array(
                     experiment.line_lists["Peaks"].frequencies
                 )
-                mask = fr.isin_array(base_freqs, comp_freqs, thres_prox)
+                mask = isin_array(base_freqs, comp_freqs, thres_prox)
                 # Convert to boolean mask
                 mask.dtype = bool
                 # Work out a correlation matrix to find indices where the two
                 # arrays are matched
-                correlations = fr.hot_match_arrays(
+                correlations = hot_match_arrays(
                     base_freqs,
                     comp_freqs,
                     thres_prox
