@@ -39,6 +39,7 @@ from IPython.display import display, HTML
 from periodictable import formula
 from plotly.offline import plot
 from plotly import graph_objs as go
+from plotly.subplots import make_subplots
 from uncertainties import ufloat
 from jinja2 import Template
 from monsterurl import get_monster
@@ -3442,22 +3443,82 @@ class AssignmentSession:
         }
         return return_dict
 
-    def plot_spectrum(self, simulate=False):
+    def plot_spectrum(self, simulate=False, inttype=None):
         """
-            Generates a Plotly figure of the spectrum. If U-lines are
-            present, it will plot the simulated spectrum also.
+        Generates a Plotly figure of the spectrum. If U-lines are
+        present, it will plot the simulated spectrum also.
+
+        Parameters
+        ----------
+        inttype: str, optional
+            Selects which intensity data type is plotted.
+            Note: before peak-finding has been conducted, can only plot "Intensity".
+
+            Options:
+                None
+                    Replicates function's previous functionality.
+                "Intensity"
+                    Plots intensity.
+                    Before peak-finding has been conducted, can only plot "Intensity".
+                    Currently, peak finding is set to matching "SNR" and so may not
+                    behave properly with this option.
+                "SNR"
+                    Plots signal-to-noise ratio.
+                "Both"
+                    Both "Intensity" and "SNR" are plotted as seperate traces.
+                    Given the difference in magnitudes of "Intensity" and "SNR", consider using
+                    .plot_spectrum2() function instead.
         """
         fig = go.FigureWidget()
 
         fig.layout["xaxis"]["title"] = "Frequency (MHz)"
         fig.layout["xaxis"]["tickformat"] = ".,"
 
-        fig.add_scattergl(
-            x=self.data[self.freq_col],
-            y=self.data[self.int_col],
-            name="Experiment",
-            opacity=0.6,
-        )
+        #If inttype not specified, reproduce previous functionality.
+        if inttype == None:
+            if "SNR" in self.data.columns:
+                inttype = "SNR"
+            else:
+                inttype = "Intensity"
+        #For "SNR", need to check if it's available.
+        if inttype == "SNR":
+            if "SNR" in self.data.columns:
+                intdata = self.data["SNR"]
+                ylabel = "Signal-to-Noise Ratio"
+            else:
+                print('SNR intensity data not found.\nNeed to run .find_peaks first, or use `inttype = "Intensity"` ')
+                return
+        elif inttype == "Intensity":
+            intdata = self.data["Intensity"]
+            ylabel = "Intensity"
+        elif inttype.lower() != "both":
+            print('`inttype` option not recognized. Available options are None, "SNR", "Intensity", or "Both".')
+            return
+
+        if inttype.lower() != "both":
+            fig.layout["yaxis"]["title"] = ylabel
+            fig.add_scattergl(
+                x=self.data[self.freq_col],
+                y=intdata,
+                name="Experiment",
+                opacity=0.6,
+            )
+        elif (inttype.lower() == "both") and ("SNR" in self.data.columns):
+            fig.add_scattergl(
+                x=self.data[self.freq_col],
+                y=self.data["Intensity"],
+                name="Intensity",
+                opacity=0.6
+            )
+            fig.add_scattergl(
+                x=self.data[self.freq_col],
+                y=self.data["SNR"],
+                name="Signal-to-Noise Ratio",
+                opacity=0.6
+            )
+        else:
+            print('SNR intensity data not found.\nNeed to run .find_peaks first, or use `inttype = "Intensity"` ')
+            return
 
         if "Peaks" in self.line_lists:
             ulines = self.line_lists["Peaks"].get_ulines()
@@ -3490,6 +3551,372 @@ class AssignmentSession:
                     y=self.simulated["Intensity"],
                     name="Simulated spectrum",
                 )
+
+        return fig
+    def plot_spectrum2(
+            self,
+            simulate=False,
+            compareto=None,
+            xsync=True,
+            xsync_all=False,
+            ysync=False,
+            horizontal=False
+        ):
+        """
+        Generates a Plotly figure of the spectrum. If U-lines are present, it will plot the
+        simulated spectrum also. Default is two subplots, the upper one plotting the SNR and
+        the lower one plotting the intensity. Alternatively, can generate a duplicate set of
+        subplots for easy comparison of spectra, either the same spectra or two different spectra.
+
+        Parameters
+        ----------
+        compareto: var, optional
+            Options:
+                None
+                    Generates only the two subplots. Default.
+                "Self"
+                    Generates four subplots for comparison to self.
+                AssignmentSession
+                    If an AssignmentSession object is passed, generates four subplots for comparison
+                    of different spectra. If name provided is that of the current AssignmentSession,
+                    behaves like "Self". Else, need to have created second AssignmentSession object
+                    for comparison.
+        xsync: bool, optional
+            Synchronizes the x axes of matching SNR and Intensity subplots (True)
+            or else does not (False).
+        xsync_all: bool, optional
+            Used in conjuction with `compareto`, mostly for comparing different spectra. Syncs all
+            x axes to enable comparison across spectra (True).
+        ysync: bool, optional
+            For use with `compareto` - syncs y axes for matching data types, i.e.
+            first "SNR" y axis matches second "SNR" y axis (True). ysync_all is a bad idea, and is
+            not implemented.
+        horizontal: bool, optional
+            Matching SNR and Intensity plots are stacked vertically (False) and any comparison
+            subplots are added to the adjacent column. If True, matching SNR and Intensity plots are
+            stacked horizontally and comparison subplots are added to the row below.
+
+        """
+        if compareto == None:
+            if horizontal == True:
+                figure = make_subplots(
+                    rows=1,
+                    cols=2,
+                    subplot_titles=[
+                        'Signal-to-Noise Ratio '+str(self.session.experiment),
+                        'Intensity '+str(self.session.experiment)
+                    ]
+                )
+                figure.update_yaxes(title_text="SNR", row=1, col=1)
+                figure.update_yaxes(title_text="Intensity", row=1, col=2)
+                figure.update_xaxes(title_text="Frequency (MHz)", row=1, col=1)
+                figure.update_xaxes(title_text="Frequency (MHz)", row=1, col=2)
+                if "SNR" in self.data.columns:
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['SNR'],
+                        name='SNR '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=1
+                    )
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['Intensity'],
+                        name='Intensity '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=2
+                    )
+                    if (xsync == True) or (xsync_all == True):
+                        figure.update_xaxes(matches='x', row=1, col=2)
+                else:
+                    print('SNR intensity data not found.')
+                    return
+            else:
+                figure = make_subplots(
+                    rows=2,
+                    cols=1,
+                    subplot_titles=[
+                        'Signal-to-Noise Ratio '+str(self.session.experiment),
+                        'Intensity '+str(self.session.experiment)
+                    ]
+                )
+                figure.update_yaxes(title_text="SNR", row=1, col=1)
+                figure.update_yaxes(title_text="Intensity", row=2, col=1)
+                figure.update_xaxes(title_text="Frequency (MHz)", row=1, col=1)
+                figure.update_xaxes(title_text="Frequency (MHz)", row=2, col=1)
+                if "SNR" in self.data.columns:
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['SNR'],
+                        name='SNR '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=1
+                    )
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['Intensity'],
+                        name='Intensity '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=2,
+                        col=1
+                    )
+                    if (xsync == True) or (xsync_all == True):
+                        figure.update_xaxes(matches='x', row=2, col=1)
+                else:
+                    print('SNR intensity data not found.')
+                    return
+        else:
+            if compareto == "Self":
+                sessioncompare = self
+            else:
+                try:
+                    comparetoname = str(compareto.session.experiment)
+                    sessioncompare = compareto
+                except NameError:
+                    print('AssignmentSession object specified by `compareto` does not exist.')
+                    return
+            if horizontal == True:
+                figure = make_subplots(
+                    rows=2,
+                    cols=2,
+                    subplot_titles=[
+                        'Signal-to-Noise '+str(self.session.experiment),
+                        'Intensity '+str(self.session.experiment),
+                        'Signal-to-Noise '+str(sessioncompare.session.experiment),
+                        'Intensity '+str(sessioncompare.session.experiment)
+                    ]
+                )
+                figure.update_yaxes(title_text="SNR "+str(self.session.experiment), row=1, col=1)
+                figure.update_yaxes(
+                    title_text="SNR "+str(sessioncompare.session.experiment),
+                    row=2,
+                    col=1
+                )
+                figure.update_yaxes(
+                    title_text="Intensity "+str(self.session.experiment),
+                    row=1,
+                    col=2
+                )
+                figure.update_yaxes(
+                    title_text="Intensity "+str(sessioncompare.session.experiment),
+                    row=2,
+                    col=2
+                )
+                for xrow in [1,2]:
+                    for xcol in [1,2]:
+                        figure.update_xaxes(title_text="Frequency (MHz)", row=xrow, col=xcol)
+                if ("SNR" in self.data.columns) and ("SNR" in sessioncompare.data.columns):
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['SNR'],
+                        name='SNR '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=1
+                    )
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['Intensity'],
+                        name='Inten. '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=2
+                    )
+                    figure.add_scattergl(
+                        x=sessioncompare.data[sessioncompare.freq_col],
+                        y=sessioncompare.data['SNR'],
+                        name='SNR '+str(sessioncompare.session.experiment),
+                        opacity=0.6,
+                        row=2,
+                        col=1
+                    )
+                    figure.add_scattergl(
+                        x=sessioncompare.data[sessioncompare.freq_col],
+                        y=sessioncompare.data['Intensity'],
+                        name='Inten. '+str(sessioncompare.session.experiment),
+                        opacity=0.6,
+                        row=2,
+                        col=2
+                    )
+                    if xsync_all == True:
+                        figure.update_xaxes(matches='x', row=1, col=2)
+                        figure.update_xaxes(matches='x', row=2, col=1)
+                        figure.update_xaxes(matches='x', row=2, col=2)
+                    elif xsync == True:
+                        figure.update_xaxes(matches='x1', row=1, col=2)
+                        figure.update_xaxes(matches='x3', row=2, col=2)
+                    if ysync == True:
+                        figure.update_yaxes(matches='y1', row=2, col=1)
+                        figure.update_yaxes(matches='y2', row=2, col=2)
+                else:
+                    print('SNR intensity data not found.')
+                    return
+            else:
+                figure = make_subplots(
+                    rows=2,
+                    cols=2,
+                    subplot_titles=[
+                        'Signal-to-Noise '+str(self.session.experiment),
+                        'Signal-to-Noise '+str(sessioncompare.session.experiment),
+                        'Intensity '+str(self.session.experiment),
+                        'Intensity '+str(sessioncompare.session.experiment)
+                    ]
+                )
+                figure.update_yaxes(title_text="SNR "+str(self.session.experiment), row=1, col=1)
+                figure.update_yaxes(
+                    title_text="SNR "+str(sessioncompare.session.experiment),
+                    row=1,
+                    col=2
+                )
+                figure.update_yaxes(
+                    title_text="Intensity "+str(self.session.experiment),
+                    row=2,
+                    col=1
+                )
+                figure.update_yaxes(
+                    title_text="Intensity "+str(sessioncompare.session.experiment),
+                    row=2,
+                    col=2
+                )
+                for xrow in [1,2]:
+                    for xcol in [1,2]:
+                        figure.update_xaxes(title_text="Frequency (MHz)", row=xrow, col=xcol)
+                if ("SNR" in self.data.columns) and ("SNR" in sessioncompare.data.columns):
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['SNR'],
+                        name='SNR '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=1
+                    )
+                    figure.add_scattergl(
+                        x=self.data[self.freq_col],
+                        y=self.data['Intensity'],
+                        name='Inten. '+str(self.session.experiment),
+                        opacity=0.6,
+                        row=2,
+                        col=1
+                    )
+                    figure.add_scattergl(
+                        x=sessioncompare.data[sessioncompare.freq_col],
+                        y=sessioncompare.data['SNR'],
+                        name='SNR '+str(sessioncompare.session.experiment),
+                        opacity=0.6,
+                        row=1,
+                        col=2
+                    )
+                    figure.add_scattergl(
+                        x=sessioncompare.data[sessioncompare.freq_col],
+                        y=sessioncompare.data['Intensity'],
+                        name='Inten. '+str(sessioncompare.session.experiment),
+                        opacity=0.6,
+                        row=2,
+                        col=2
+                    )
+                    if xsync_all == True:
+                        figure.update_xaxes(matches='x', row=1, col=2)
+                        figure.update_xaxes(matches='x', row=2, col=1)
+                        figure.update_xaxes(matches='x', row=2, col=2)
+                    elif xsync == True:
+                        figure.update_xaxes(matches='x1', row=2, col=1)
+                        figure.update_xaxes(matches='x2', row=2, col=2)
+                    if ysync == True:
+                        figure.update_yaxes(matches='y1', row=1, col=2)
+                        figure.update_yaxes(matches='y3', row=2, col=2)
+                else:
+                    print('SNR intensity data not found.')
+                    return
+
+        fig = go.FigureWidget(figure)
+
+        if "Peaks" in self.line_lists:
+            ulines = self.line_lists["Peaks"].get_ulines()
+            labels = list(range(len(ulines)))
+            amplitudes = np.array([uline.intensity for uline in ulines])
+            centers = np.array([uline.frequency for uline in ulines])
+            # Add sticks for U-lines
+            fig.add_bar(
+                x=centers, y=amplitudes, hoverinfo="text", text=labels,
+                name="Peaks "+str(self.session.experiment), row=1, col=1
+            )
+
+            if simulate is True:
+                widths = units.dop2freq(self.session.doppler, centers)
+
+                simulated = self.simulate_spectrum(
+                    self.data[self.freq_col].values,
+                    centers,
+                    widths,
+                    amplitudes,
+                    fake=True,
+                )
+
+                self.simulated = pd.DataFrame(
+                    data=list(zip(self.data[self.freq_col].values, simulated)),
+                    columns=["Frequency", "Intensity"],
+                )
+                if horizontal == True:
+                    fig.add_scattergl(
+                        x=self.simulated["Frequency"],
+                        y=self.simulated["Intensity"],
+                        name="Simulated "+str(self.session.experiment),
+                        row=1,
+                        col=2
+                    )
+                else:
+                    fig.add_scattergl(
+                        x=self.simulated["Frequency"],
+                        y=self.simulated["Intensity"],
+                        name="Simulated "+str(self.session.experiment),
+                        row=2,
+                        col=1
+                    )
+
+        if compareto != None:
+            if "Peaks" in sessioncompare.line_lists:
+                ulines = sessioncompare.line_lists["Peaks"].get_ulines()
+                labels = list(range(len(ulines)))
+                amplitudes = np.array([uline.intensity for uline in ulines])
+                centers = np.array([uline.frequency for uline in ulines])
+                # Add sticks for U-lines
+                if horizontal == True:
+                    fig.add_bar(
+                        x=centers, y=amplitudes, hoverinfo="text", text=labels,
+                        name="Peaks "+str(sessioncompare.session.experiment), row=2, col=1
+                    )
+                else:
+                    fig.add_bar(
+                        x=centers, y=amplitudes, hoverinfo="text", text=labels,
+                        name="Peaks "+str(sessioncompare.session.experiment), row=1, col=2
+                    )
+
+                if simulate is True:
+                    widths = units.dop2freq(sessioncompare.session.doppler, centers)
+
+                    simulated = sessioncompare.simulate_spectrum(
+                        sessioncompare.data[sessioncompare.freq_col].values,
+                        centers,
+                        widths,
+                        amplitudes,
+                        fake=True,
+                    )
+
+                    sessioncompare.simulated = pd.DataFrame(
+                        data=list(zip(sessioncompare.data[self.freq_col].values, simulated)),
+                        columns=["Frequency", "Intensity"],
+                    )
+
+                    fig.add_scattergl(
+                        x=sessioncompare.simulated["Frequency"],
+                        y=sessioncompare.simulated["Intensity"],
+                        name="Simulated "+str(sessioncompare.session.experiment),
+                        row=2,
+                        col=2
+                    )
 
         return fig
 
