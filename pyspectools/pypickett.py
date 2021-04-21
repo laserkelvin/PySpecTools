@@ -1,4 +1,8 @@
 import os
+from abc import ABC, abstractmethod
+from typing import Dict, List, Union, Type
+from warnings import warn
+from functools import wraps
 from pathlib import Path
 from glob import glob
 from dataclasses import dataclass, field
@@ -20,6 +24,299 @@ from tqdm.autonotebook import tqdm
 from pyspectools import routines
 from pyspectools import parsers
 from pyspectools.spectra.assignment import LineList
+
+
+def hyperfine_nuclei(method):
+    """
+    Defines a decorator that dynamically generates hyperfine
+    nuclei coding, which returns the coding mapping based on
+    what the user provides with respect to "chi_xx" parameters.
+    """
+    @wraps(method)
+    def reparameterize(molecule_obj):
+        coding = method(molecule_obj)
+        hyperfine_names = ["chi_aa", "chi_bb", "chi_cc"]
+        # only operate when there are nuclei
+        if molecule_obj.num_nuclei != 0:
+            for nucleus in molecule_obj.nuclei:
+                for index, name in enumerate(hyperfine_names):
+                    hf_code = f"{nucleus}100{index+1}0000"
+                    coding[f"{name}_{nucleus}"] = hf_code
+        return coding
+    return reparameterize
+
+
+class Parameter(object):
+    def __init__(self, name: str, value: float, unc: float = 0.):
+        self.name = name
+        self._value = value
+        self._unc = unc
+
+    @property
+    def value(self) -> float:
+        return self._value
+
+    @value.setter
+    def value(self, value: float):
+        self._value = value
+
+    @property
+    def unc(self) -> float:
+        return self._unc
+
+    @unc.setter
+    def unc(self, value: float):
+        self._unc = value
+
+    def __repr__(self) -> str:
+        return f"{self.name}: {self.value:.4e}+/-{self.unc:.4e}"
+
+
+class AbstractMolecule(ABC):
+    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+        self._nuclei = list()
+        self._custom_coding = custom_coding
+        for key, value in params.items():
+            try:
+                # if the input is iterable, unpack
+                param = Parameter(key, *value)
+            except:
+                # otherwise just set the value to single number
+                param = Parameter(key, value)
+            # check for hyperfine spins by looking for chi
+            if "chi" in key.lower():
+                number = int(key.split("_")[-1])
+                if number not in self._nuclei:
+                    self._nuclei.append(number)
+            setattr(self, key, param)
+        self.param_names = list(params.keys())
+
+    @property
+    def params(self) -> Dict[str, Type[Parameter]]:
+        params = {key: getattr(self, key) for key in self.param_names}
+        return params
+
+    @property
+    def nuclei(self) -> List[int]:
+        return self._nuclei
+
+    @property
+    def num_nuclei(self) -> int:
+        return len(self._nuclei)
+
+    @property
+    @abstractmethod
+    @hyperfine_nuclei
+    def param_coding(self) -> Dict[str, Union[str, int]]:
+        """
+        Implement a dictionary mapping between string names of
+        Hamiltonian parameters to Fourier coding, for a particular
+        class of molecule
+
+        Returns
+        -------
+        Dict[str]
+            key corresponds to string name, value is the Fourier
+            coding
+        """
+        pass
+
+    def __repr__(self) -> str:
+        combined = list()
+        for key, value in self.params.items():
+            coding = self.param_coding.get(key)
+            if not coding:
+                warn(f"{key} has not been implemented in {self.__class__.__name__}; skipped.")
+            else:
+                combined.append(
+                    f"{coding:>14}  {value.value:>22e} {value.unc:>15e} /{key}"
+                )
+        return "\n".join(combined)
+
+
+class LinearMolecule(AbstractMolecule):
+    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+        super().__init__(custom_coding, **params)
+
+    @property
+    @hyperfine_nuclei
+    def param_coding(self) -> Dict[str, Union[str, int]]:
+        coding = {
+            "B": 100,
+            "D": 200,
+            "H": 300,
+            "L": 400
+        }
+        return coding
+
+
+class SymmetricTop(LinearMolecule):
+    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+        super().__init__(custom_coding, **params)
+
+    @property
+    @hyperfine_nuclei
+    def param_coding(self) -> Dict[str, Union[str, int]]:
+        # inherit coding from the linear molecule
+        coding = super().param_coding
+        coding.update(
+            {
+                "A-B": 1000,
+                # main differences are in the quartic terms
+                "DK": 2000,
+                "DJK": 1100,
+                "DJ": coding.get("D"),
+                "deltaJ": 40100,
+                "deltaK": 41000,
+                "d1": 40100,
+                "d2": 50000,
+                # sextic constants
+                "HK": 3000,
+                "HJK": 1200,
+                "HKJ": 2100,
+                "HJ": coding.get("H"),
+            }
+        )
+        return coding
+
+
+class AsymmetricTop(SymmetricTop):
+    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+        super().__init__(custom_coding, **params)
+        # parameter checking making sure that things make sense
+        A, B, C = [params.get(key, 0.) for key in ["A", "B", "C"]]
+        assert A >= B >= C
+
+    @property
+    @hyperfine_nuclei
+    def param_coding(self) -> Dict[str, Union[str, int]]:
+        # inherit coding from symmetric tops
+        coding = super().param_coding
+        coding.update(
+            {
+                "A": 10000,
+                "B": 20000,
+                "C": 30000,
+            }
+        )
+        return coding
+
+
+class AbstractSimulation(ABC):
+    def __init__(self):
+        super().__init__()
+
+    @property
+    @abstractmethod
+    def T(self) -> float:
+        """
+        Returns the temperature in kelvin used for
+        the spectral simulation.
+
+        Returns
+        -------
+        float
+            Temperature in kelvin
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def int_limits(self) -> List[float]:
+        """
+        Returns the intensity limits of the simulation,
+        ordered as [min, max] in units appropriate for
+        the backend.
+
+        Returns
+        -------
+        List[float]
+            Intensity limits considered in the simulation
+            as [`min_int`, `max_int`]
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def freq_limits(self) -> List[float]:
+        """
+        Returns the frequency limits of the simulation,
+        ordered as [min, max] in units of MHz.
+
+        Returns
+        -------
+        List[float]
+            Frequency limits considered in the simulation
+            as [`min_freq`, `max_freq`]
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def j_limit(self) -> int:
+        """
+        Returns the maximum value of J considered in the
+        simulation.
+
+        Returns
+        -------
+        int
+            J max
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def k_limit(self) -> int:
+        """
+        Returns the maximum value of K considered in the
+        simulation.
+
+        Returns
+        -------
+        int
+            K max
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def mu(self) -> List[int]:
+        """
+        Returns the three dipole moments in debye, ordered
+        along a, b, c axes.
+
+        Returns
+        -------
+        List[int]
+            Three-element list corresponding to the
+            dipole moments along a, b, c axes in debye.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def s_reduced(self) -> bool:
+        """
+        Returns whether or not the simulation is in the
+        S-reduced Watson Hamiltonian. A-reduction is
+        implied if `False`.
+
+        Returns
+        -------
+        bool
+            Returns `True` if in S-reduction
+        """
+        pass
+
+    @abstractmethod
+    def run(self):
+        """
+        Abstract interface for calling an external executable
+        to run the simulation.
+        """
+        pass
+
 
 
 class MoleculeFit:
