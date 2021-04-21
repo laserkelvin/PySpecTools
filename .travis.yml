@@ -17,4 +17,5 @@ install:
   - pip install .
   - pip install pytest
   - cd tests
+  - python generate_test_spectrum.py
   - pytest
