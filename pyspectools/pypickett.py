@@ -26,6 +26,13 @@ from pyspectools import parsers
 from pyspectools.spectra.assignment import LineList
 
 
+spcat_template = """PySpecTools SPCAT input
+ 100  255    1    0    0.0000E+000    1.0000E+003    1.0000E+000 1.0000000000
+{reduction}   {quanta}    {top}    0   {k_max}    0    {weight_axis}    {even_weight}    {odd_weight}     0   1   0
+{parameters}
+"""
+
+
 def hyperfine_nuclei(method):
     """
     Defines a decorator that dynamically generates hyperfine
@@ -42,6 +49,8 @@ def hyperfine_nuclei(method):
                 for index, name in enumerate(hyperfine_names):
                     hf_code = f"{nucleus}100{index+1}0000"
                     coding[f"{name}_{nucleus}"] = hf_code
+        # override with the user specified terms at the end
+        coding.update(molecule_obj.custom_coding)
         return coding
     return reparameterize
 
@@ -75,7 +84,7 @@ class Parameter(object):
 class AbstractMolecule(ABC):
     def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
         self._nuclei = list()
-        self._custom_coding = custom_coding
+        self._custom_coding = dict() if not custom_coding else custom_coding
         for key, value in params.items():
             try:
                 # if the input is iterable, unpack
@@ -105,8 +114,36 @@ class AbstractMolecule(ABC):
         return len(self._nuclei)
 
     @property
+    def custom_coding(self) -> Dict[str, Union[str, int]]:
+        return self._custom_coding
+    
+    @custom_coding.setter
+    def custom_coding(self, value: Union[None, Dict[str, Union[str, int]]]):
+        """
+        Update the custom coding stored in the instance. If the
+        user tries to set the value to `None`, the coding is reset
+        to an empty dictionary. If a dictionary is passed, assuming
+        keys are the Hamiltonian parameters and values are the SPCAT
+        coding, then the coding dictionary is updated. For example:
+        
+        ```
+        obj.custom_coding = {"B": 100}     # updates the coding
+        obj.custom_coding = None           # resets the coding
+        ```
+
+        Parameters
+        ----------
+        value : Union[None, Dict[str, Union[str, int]]]
+            If `None`, reset any custom coding prior. Otherwise,
+            a dictionary will be used to update the coding.
+        """
+        if not value:
+            self._custom_coding = dict()
+        else:
+            self._custom_coding.update(value)
+
+    @property
     @abstractmethod
-    @hyperfine_nuclei
     def param_coding(self) -> Dict[str, Union[str, int]]:
         """
         Implement a dictionary mapping between string names of
@@ -125,6 +162,7 @@ class AbstractMolecule(ABC):
         combined = list()
         for key, value in self.params.items():
             coding = self.param_coding.get(key)
+            # this ensures that only "real" parameters are exported
             if not coding:
                 warn(f"{key} has not been implemented in {self.__class__.__name__}; skipped.")
             else:
@@ -132,6 +170,15 @@ class AbstractMolecule(ABC):
                     f"{coding:>14}  {value.value:>22e} {value.unc:>15e} /{key}"
                 )
         return "\n".join(combined)
+
+    def to_yaml(self, filepath: Union[str, Type[Path]]) -> None:
+        output = {key: (value.value, value.unc) for key, value in self.params.items()}
+        routines.dump_yaml(filepath, output)
+
+    @classmethod
+    def from_yml(cls, filepath: Union[str, Type[Path]]) -> Type[AbstractMolecule]:
+        data = routines.read_yaml(filepath)
+        return cls(**data)
 
 
 class LinearMolecule(AbstractMolecule):
@@ -165,7 +212,7 @@ class SymmetricTop(LinearMolecule):
                 # main differences are in the quartic terms
                 "DK": 2000,
                 "DJK": 1100,
-                "DJ": coding.get("D"),
+                "DJ": coding.get("D"),    # this basically sets up an alias
                 "deltaJ": 40100,
                 "deltaK": 41000,
                 "d1": 40100,
@@ -202,12 +249,43 @@ class AsymmetricTop(SymmetricTop):
         return coding
 
 
-class AbstractSimulation(ABC):
-    def __init__(self):
+class SPCAT:
+
+    __quanta_map__ = {
+        "AsymmetricTop": 1,
+        "SymmetricTop": -1,
+        "LinearMolecule": -1
+    }
+
+    __reduction_map__ = {
+        True: "s",
+        False: "a"
+    }
+
+    def __init__(self, T: float = 300., 
+    int_limits: List[float] = [-10., -20.], 
+    freq_limits: List[float] = [0., 500.],
+    k_limit: int = 100,
+    mu: List[float] = [1., 0., 0.],
+    prolate: bool = True,
+    s_reduced: bool = True,
+    q: float = 1000.,
+    weight_axis: int = 1,
+    weights: List[int] = [1, 1],
+    ):
         super().__init__()
+        assert len(mu) == 3             # we need exactly three dipole moments
+        self.T = T
+        self._int_limits = int_limits
+        self.freq_limits = freq_limits  # this forces the setter method
+        self.k_limit = k_limit
+        self.s_reduced = s_reduced
+        self._mu = mu
+        self.q = q
+        self.weight_axis = weight_axis
+        self._weights = weights
 
     @property
-    @abstractmethod
     def T(self) -> float:
         """
         Returns the temperature in kelvin used for
@@ -218,10 +296,14 @@ class AbstractSimulation(ABC):
         float
             Temperature in kelvin
         """
-        pass
+        return self._T
+
+    @T.setter
+    def T(self, value: float) -> None:
+        assert value >= 0.
+        self._T = value
 
     @property
-    @abstractmethod
     def int_limits(self) -> List[float]:
         """
         Returns the intensity limits of the simulation,
@@ -234,14 +316,13 @@ class AbstractSimulation(ABC):
             Intensity limits considered in the simulation
             as [`min_int`, `max_int`]
         """
-        pass
+        return self._int_limits
 
     @property
-    @abstractmethod
     def freq_limits(self) -> List[float]:
         """
         Returns the frequency limits of the simulation,
-        ordered as [min, max] in units of MHz.
+        ordered as [min, max] in units of GHz.
 
         Returns
         -------
@@ -249,24 +330,13 @@ class AbstractSimulation(ABC):
             Frequency limits considered in the simulation
             as [`min_freq`, `max_freq`]
         """
-        pass
+        return self._freq_limits
+
+    @freq_limits.setter
+    def freq_limits(self, value: List[float]) -> None:
+        self._freq_limits = sorted(value)
 
     @property
-    @abstractmethod
-    def j_limit(self) -> int:
-        """
-        Returns the maximum value of J considered in the
-        simulation.
-
-        Returns
-        -------
-        int
-            J max
-        """
-        pass
-
-    @property
-    @abstractmethod
     def k_limit(self) -> int:
         """
         Returns the maximum value of K considered in the
@@ -277,10 +347,14 @@ class AbstractSimulation(ABC):
         int
             K max
         """
-        pass
+        return self._k_limit
+
+    @k_limit.setter
+    def k_limit(self, value: int) -> None:
+        assert 0 <= value
+        self._k_limit = value
 
     @property
-    @abstractmethod
     def mu(self) -> List[int]:
         """
         Returns the three dipole moments in debye, ordered
@@ -292,30 +366,79 @@ class AbstractSimulation(ABC):
             Three-element list corresponding to the
             dipole moments along a, b, c axes in debye.
         """
-        pass
+        return self._mu
 
     @property
-    @abstractmethod
-    def s_reduced(self) -> bool:
+    def reduction(self) -> str:
         """
-        Returns whether or not the simulation is in the
-        S-reduced Watson Hamiltonian. A-reduction is
-        implied if `False`.
+        Returns the Watson reduction used for the simulation.
+        This is set by the `SPCAT._s_reduced` flag, which
+        is `True` is using S-reduction. 
 
         Returns
         -------
-        bool
-            Returns `True` if in S-reduction
+        str
+            Returns "s" if `_s_reduced` is set to `True`, otherwise
+            "a" for A-reduced Hamiltonian.
         """
-        pass
+        return "s" if self.s_reduced else "a"
 
-    @abstractmethod
-    def run(self):
+    @property
+    def s_reduced(self) -> bool:
+        return self._s_reduced
+
+    @s_reduced.setter
+    def s_reduced(self, value: bool) -> None:
+        self._s_reduced = value
+
+    @property
+    def q(self) -> float:
+        return self._q
+
+    @q.setter
+    def q(self, value: float) -> float:
+        assert value > 0.
+        self._q = value
+
+    @property
+    def weight_axis(self) -> int:
+        __doc__ = SPCAT.weight_axis.setter.__doc__
+        return self._weight_axis
+    
+    @weight_axis.setter
+    def weight_axis(self, value: int) -> None:
+        """
+        Set the axis for statistical weighting, called IAX. According to Herb
+        Pickett's documentation, the magnitude of this value corresponds to:
+
+        1=a; 2=b; 3=c; 4= A, 2-fold top; 5=Bz, 2-fold top; 6= 3-fold top; 
+        7=A, E, 4-fold top; 8=B, 4-fold top; 9=5-fold top; 
+        10=A, E2, 6-fold top; 11=B, E1, 6-fold top). 
+        
+        > For mag IAX > 3, axis is b. (See Special Considerations for Symmetric Tops)
+
+        For the sign of this parameter:
+        > If negative, use Itot basis in which the last n spins are summed to give Itot,
+        > which is then combined with the other spins to give F.
+
+        Parameters
+        ----------
+        value : int
+            Axis used for statistical weight definition
+        """
+        assert abs(value) < 12
+        self._weight_axis = value
+
+    @property
+    def weights(self) -> List[int]:
+        return self._weight_axis
+
+    def run(self, molecule: Type[AbstractMolecule]):
         """
         Abstract interface for calling an external executable
         to run the simulation.
         """
-        pass
+        raise NotImplementedError
 
 
 
