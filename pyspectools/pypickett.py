@@ -6,8 +6,7 @@ from functools import wraps
 from pathlib import Path
 from typing import List, Dict
 from subprocess import run, PIPE
-
-from tqdm.autonotebook import tqdm
+from difflib import get_close_matches
 
 from pyspectools import routines
 
@@ -75,7 +74,7 @@ class AbstractMolecule(ABC):
             try:
                 # if the input is iterable, unpack
                 param = Parameter(key, *value)
-            except:
+            except TypeError:
                 # otherwise just set the value to single number
                 param = Parameter(key, value)
             # check for hyperfine spins by looking for chi
@@ -150,7 +149,10 @@ class AbstractMolecule(ABC):
             coding = self.param_coding.get(key)
             # this ensures that only "real" parameters are exported
             if not coding:
-                warn(f"{key} has not been implemented in {self.__class__.__name__}; skipped.")
+                valid_keys = self.param_coding.keys()
+                # get up to three of the closest matches
+                close = get_close_matches(key, valid_keys, n=3)
+                warn(f"{key} has not been implemented in {self.__class__.__name__} and was ignored.\nCloset matches are {close}")
             else:
                 combined.append(
                     f"{coding:>14}  {value.value:>22e} {value.unc:>15e} /{key}"
@@ -162,9 +164,13 @@ class AbstractMolecule(ABC):
         routines.dump_yaml(filepath, output)
 
     @classmethod
-    def from_yml(cls, filepath: Union[str, Type[Path]]) -> Type[AbstractMolecule]:
+    def from_yml(cls, filepath: Union[str, Type[Path]]):
         data = routines.read_yaml(filepath)
         return cls(**data)
+
+    @property
+    def type(self) -> str:
+        return self.__class__.__name__
 
 
 class LinearMolecule(AbstractMolecule):
@@ -264,12 +270,13 @@ class SPCAT:
         self.T = T
         self._int_limits = int_limits
         self.freq_limits = freq_limits  # this forces the setter method
-        self.k_limit = k_limit
+        self.k_max = k_limit
         self.s_reduced = s_reduced
         self._mu = mu
         self.q = q
         self.weight_axis = weight_axis
         self._weights = weights
+        self.prolate = prolate
 
     @property
     def T(self) -> float:
@@ -323,7 +330,7 @@ class SPCAT:
         self._freq_limits = sorted(value)
 
     @property
-    def k_limit(self) -> int:
+    def k_max(self) -> int:
         """
         Returns the maximum value of K considered in the
         simulation.
@@ -333,12 +340,12 @@ class SPCAT:
         int
             K max
         """
-        return self._k_limit
+        return self._k_max
 
-    @k_limit.setter
-    def k_limit(self, value: int) -> None:
+    @k_max.setter
+    def k_max(self, value: int) -> None:
         assert 0 <= value
-        self._k_limit = value
+        self._k_max = value
 
     @property
     def mu(self) -> List[int]:
@@ -417,7 +424,18 @@ class SPCAT:
 
     @property
     def weights(self) -> List[int]:
-        return self._weight_axis
+        return self._weights
+
+    def format_input(self, molecule: Type[AbstractMolecule]) -> str:
+        data = {key: getattr(self, key) for key in ["k_max", "weight_axis"]}
+        for key, value in zip(["even_weight", "odd_weight"], self.weights):
+            data[key] = value
+        mol_type = molecule.type
+        data["quanta"] = self.__quanta_map__.get(mol_type)
+        data["reduction"] = self.reduction
+        data["top"] = 99 if self.prolate else -99
+        data["parameters"] = str(molecule)
+        return spcat_template.format_map(data)
 
     def run(self, molecule: Type[AbstractMolecule]):
         """

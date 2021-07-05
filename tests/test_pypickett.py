@@ -29,3 +29,10 @@ def test_asymtop():
      110010000           -4.025000e+02    0.000000e+00 /chi_aa_1
      110020000           -2.145100e+02    0.000000e+00 /chi_bb_1"""
     assert test.strip() == str(molecule).strip()
+
+
+def test_generate_spcat():
+    molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1268.6236)
+    spcat = pypickett.SPCAT(prolate=False)
+    output = spcat.format_input(molecule)
+    
