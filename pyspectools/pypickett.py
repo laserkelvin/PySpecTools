@@ -11,10 +11,15 @@ from difflib import get_close_matches
 from pyspectools import routines
 
 
-spcat_template = """PySpecTools SPCAT input
+par_template = """PySpecTools SPCAT input
  100  255    1    0    0.0000E+000    1.0000E+003    1.0000E+000 1.0000000000
 {reduction}   {quanta}    {top}    0   {k_max}    0    {weight_axis}    {even_weight}    {odd_weight}     0   1   0
 {parameters}
+"""
+
+int_template = """PySpecTools SPCAT input
+ 0  {mol_id}   {q:.4f}   0   {max_f_qno}  {int_min:.1f}  {int_max:.1f}   {freq_limit:.4f}  {T:.2f}
+{dipole_moments}
 """
 
 
@@ -255,8 +260,8 @@ class SPCAT:
     }
 
     def __init__(self, T: float = 300., 
-    int_limits: List[float] = [-10., -20.], 
-    freq_limits: List[float] = [0., 500.],
+    int_limits: List[float] = [-20., -5.], 
+    freq_limit: float = 300.,
     k_limit: int = 100,
     mu: List[float] = [1., 0., 0.],
     prolate: bool = True,
@@ -264,12 +269,14 @@ class SPCAT:
     q: float = 1000.,
     weight_axis: int = 1,
     weights: List[int] = [1, 1],
+    max_f_qno: int = 99,
+    mol_id: int = 42
     ):
         super().__init__()
         assert len(mu) == 3             # we need exactly three dipole moments
         self.T = T
         self._int_limits = int_limits
-        self.freq_limits = freq_limits  # this forces the setter method
+        self.freq_limit = freq_limit  # this forces the setter method
         self.k_max = k_limit
         self.s_reduced = s_reduced
         self._mu = mu
@@ -277,6 +284,37 @@ class SPCAT:
         self.weight_axis = weight_axis
         self._weights = weights
         self.prolate = prolate
+        self.max_f_qno = max_f_qno
+        self.mol_id = mol_id
+
+    @property
+    def int_limits(self) -> List[float]:
+        """
+        The intensity limits of the simulation in log units.
+        The values are always sorted, such that the lower limit
+        is the first of the pair.
+
+        Returns
+        -------
+        List[float]
+            2-tuple containing the log intensity cutoffs,
+            in ascending order (min, max).
+        """
+        return self._int_limits
+
+    @int_limits.setter
+    def int_limits(self, value: List[float]):
+        value = sorted(value)
+        self._int_limits = value
+
+    @property
+    def mol_id(self) -> int:
+        return self._mol_id
+
+    @mol_id.setter
+    def mol_id(self, value: int):
+        assert isinstance(value, int)
+        self._mol_id = value
 
     @property
     def T(self) -> float:
@@ -293,8 +331,17 @@ class SPCAT:
 
     @T.setter
     def T(self, value: float) -> None:
-        assert value >= 0.
+        assert value > 0.
         self._T = value
+
+    @property
+    def max_f_qno(self) -> int:
+        return self._max_f_qno
+
+    @max_f_qno.setter
+    def max_f_qno(self, value: int):
+        assert value > 0
+        self._max_f_qno = value
 
     @property
     def int_limits(self) -> List[float]:
@@ -312,7 +359,7 @@ class SPCAT:
         return self._int_limits
 
     @property
-    def freq_limits(self) -> List[float]:
+    def freq_limit(self) -> float:
         """
         Returns the frequency limits of the simulation,
         ordered as [min, max] in units of GHz.
@@ -323,11 +370,12 @@ class SPCAT:
             Frequency limits considered in the simulation
             as [`min_freq`, `max_freq`]
         """
-        return self._freq_limits
+        return self._freq_limit
 
-    @freq_limits.setter
-    def freq_limits(self, value: List[float]) -> None:
-        self._freq_limits = sorted(value)
+    @freq_limit.setter
+    def freq_limit(self, value: float):
+        assert value > 0.
+        self._freq_limit = value
 
     @property
     def k_max(self) -> int:
@@ -426,7 +474,23 @@ class SPCAT:
     def weights(self) -> List[int]:
         return self._weights
 
-    def format_input(self, molecule: Type[AbstractMolecule]) -> str:
+    def format_var(self, molecule: Type[AbstractMolecule]) -> str:
+        """
+        Formats a string containing the .var/.par file information.
+        Takes an `AbstractMolecule` as input, as it is required to
+        identify the type of quantum numbers used (e.g. asymmetric top),
+        as well as all the Hamiltonian encodings.
+
+        Parameters
+        ----------
+        molecule : Type[AbstractMolecule]
+            An instance of an `AbstractMolecule`
+
+        Returns
+        -------
+        str
+            Formatted string for an SPCAT .par/.var file.
+        """
         data = {key: getattr(self, key) for key in ["k_max", "weight_axis"]}
         for key, value in zip(["even_weight", "odd_weight"], self.weights):
             data[key] = value
@@ -435,7 +499,25 @@ class SPCAT:
         data["reduction"] = self.reduction
         data["top"] = 99 if self.prolate else -99
         data["parameters"] = str(molecule)
-        return spcat_template.format_map(data)
+        return par_template.format_map(data)
+
+    def format_int(self) -> str:
+        """
+        Formats a string containing the .int file information.
+
+        Returns
+        -------
+        str
+            SPCAT .int file contents
+        """
+        data = {key: getattr(self, key) for key in ["mol_id", "q", "max_f_qno", "freq_limit", "T"]}
+        dipole_moments = ""
+        for index, value in enumerate(self.mu):
+            dipole_moments += f"{index + 1}  {value:.3f}"
+        data["dipole_moments"] = dipole_moments
+        for key, value in zip(["int_min", "int_max"], self.int_limits):
+            data[key] = value
+        return int_template.format_map(data)
 
     def run(self, molecule: Type[AbstractMolecule]):
         """

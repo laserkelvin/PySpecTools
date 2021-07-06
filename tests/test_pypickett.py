@@ -34,5 +34,7 @@ def test_asymtop():
 def test_generate_spcat():
     molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1268.6236)
     spcat = pypickett.SPCAT(prolate=False)
-    output = spcat.format_input(molecule)
-    
+    par = spcat.format_var(molecule)
+    int_file = spcat.format_int()
+    print(int_file)
+    assert False
