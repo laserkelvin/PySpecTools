@@ -101,6 +101,29 @@ def run_spcat(filename: str, read_Q: bool = False, debug: bool = False):
     return (initial_q, q_array)
 
 
+def write_qpart_file(filepath: Union[str, Path], q_array: np.ndarray):
+    """
+    Write the partition function out in the `molsim` format.
+
+    Parameters
+    ----------
+    filepath : str
+        [description]
+    q_array : np.ndarray
+        [description]
+    """
+    # if the filepath is a string, convert to a Path object
+    if isinstance(filepath, str):
+        filepath = Path(filepath)
+    # if there's no file extension, add .qpart
+    if filepath.suffix == "":
+        filepath = filepath.with_suffix(".qpart")
+    with open(filepath, "w+") as write_file:
+        write_file.write("# form : interpolation\n")
+        for row in q_array:
+            write_file.write(f"{row[0]:.1f} {row[1]:.4f}\n")
+
+
 def hyperfine_nuclei(method):
     """
     Defines a decorator that dynamically generates hyperfine
@@ -285,18 +308,18 @@ class SymmetricTop(LinearMolecule):
             {
                 "A-B": 1000,
                 # main differences are in the quartic terms
-                "DK": 2000,
-                "DJK": 1100,
-                "DJ": coding.get("D"),    # this basically sets up an alias
+                "D_K": 2000,
+                "D_JK": 1100,
+                "D_J": coding.get("D"),    # this basically sets up an alias
                 "deltaJ": 40100,
                 "deltaK": 41000,
                 "d1": 40100,
                 "d2": 50000,
                 # sextic constants
-                "HK": 3000,
-                "HJK": 1200,
-                "HKJ": 2100,
-                "HJ": coding.get("H"),
+                "H_K": 3000,
+                "H_JK": 1200,
+                "H_KJ": 2100,
+                "H_J": coding.get("H"),
             }
         )
         return coding
@@ -618,5 +641,5 @@ class SPCAT:
                 for ext, contents in zip([".var", ".int"], [var_file, int_file]):
                     with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
                         write_file.write(contents)
-                initial_q, _ = run_spcat(f"temp_{self.mol_id}", False, debug)
+                initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
         return initial_q, q_array
