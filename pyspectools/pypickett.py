@@ -1,4 +1,6 @@
 
+import contextlib
+import os
 from abc import ABC, abstractmethod
 from typing import Dict, List, Union, Type
 from warnings import warn
@@ -24,6 +26,79 @@ int_template = """PySpecTools SPCAT input
  0  {mol_id}   {q:.4f}   0   {max_f_qno}  {int_min:.1f}  {int_max:.1f}   {freq_limit:.4f}  {T:.2f}
 {dipole_moments}
 """
+
+@contextlib.contextmanager
+def work_in_temp():
+    """
+    Context manager for working in a temporary directory. This
+    simply uses the `tempfile.TemporaryDirectory` to create and
+    destroy the folder after using, and manages moving in and
+    out of the folder.
+    """
+    cwd = os.getcwd()
+    try:
+        with TemporaryDirectory() as temp_dir:
+            os.chdir(temp_dir)
+            yield
+    finally:
+        os.chdir(cwd)
+
+
+def run_spcat(filename: str, read_Q: bool = False, debug: bool = False):
+    """
+    Run SPCAT, and optionally parse the partition functions.
+
+    Parameters
+    ----------
+    filename : str
+        Name of the SPCAT file, without file extensions
+    read_Q : bool, optional
+        [description], by default False
+
+    Returns
+    -------
+    List[float, np.ndarray]
+        Returns the value used for Q, and if `read_Q` then
+        a 2D NumPy array containing the temperature, Q, and log Q.
+        Otherwise, `q_array` is returned as `None`.
+    """
+    # get rid of the stuff at the end
+    filename = Path(filename)
+    if filename.suffix != "":
+        filename = filename.stem
+    else:
+        filename = str(filename)
+    proc = run(["spcat", filename], stdout=PIPE)
+    if debug:
+        for ext in [".var", ".int"]:
+            with open(f"{filename}{ext}", "r") as read_file:
+                print("".join(read_file.readlines()[:10]))
+    spcat_out = proc.stdout.decode("utf-8")
+    if debug and Path(f"{filename}.cat").exists():
+        with open(f"{filename}.cat") as read_file:
+            print("".join(read_file.readlines()[:10]))
+    q_array = list() if read_Q else None
+    # get the initial Q value used
+    for line in spcat_out.split("\n"):
+        if "INITIAL Q" in line:
+            line = line.replace(",", " ")
+            initial_q = float(line.split()[3])
+            # if we're not reading the partition function,
+            # we stop here
+            if not read_Q:
+                break
+        else:
+            try:
+                # for lines that actually have Q(T)
+                if line.strip()[0].isdigit():
+                    # t, q, log_q
+                    values = [float(value) for value in line.split()]
+                    q_array.append(values)
+            except IndexError:
+                pass
+    if q_array is not None:
+        q_array = np.vstack(q_array).T
+    return (initial_q, q_array)
 
 
 def hyperfine_nuclei(method):
@@ -269,7 +344,7 @@ class SPCAT:
     mu: List[float] = [1., 0., 0.],
     prolate: bool = True,
     s_reduced: bool = True,
-    q: float = 1000.,
+    q: float = 2.2415,
     weight_axis: int = 1,
     weights: List[int] = [1, 1],
     max_f_qno: int = 99,
@@ -500,7 +575,7 @@ class SPCAT:
         mol_type = molecule.type
         data["quanta"] = self.__quanta_map__.get(mol_type)
         data["reduction"] = self.reduction
-        data["top"] = 99 if self.prolate else -99
+        data["top"] = 1 if self.prolate else -1
         data["parameters"] = str(molecule)
         return par_template.format_map(data)
 
@@ -522,56 +597,26 @@ class SPCAT:
             data[key] = value
         return int_template.format_map(data)
 
-    def run(self, molecule: Type[AbstractMolecule]):
+    def run(self, molecule: Type[AbstractMolecule], debug: bool = False):
         """
         Abstract interface for calling an external executable
         to run the simulation.
         """
-        raise NotImplementedError
-
-    @staticmethod
-    def _run_spcat(filename: str, read_Q: bool = False):
-        """
-        Run SPCAT, and optionally parse the partition functions.
-
-        Parameters
-        ----------
-        filename : str
-            Name of the SPCAT file, without file extensions
-        read_Q : bool, optional
-            [description], by default False
-
-        Returns
-        -------
-        List[float, np.ndarray]
-            Returns the value used for Q, and if `read_Q` then
-            a 2D NumPy array containing the temperature, Q, and log Q.
-            Otherwise, `q_array` is returned as `None`.
-        """
-        # get rid of the stuff at the end
-        filename = Path(filename)
-        if filename.suffix != "":
-            filename = filename.stem
-        else:
-            filename = str(filename)
-        proc = run(["spcat", filename], stdout=PIPE)
-        spcat_out = proc.stdout.decode("utf-8")
-        q_array = list() if read_Q else None
-        # get the initial Q value used
-        for line in spcat_out.split("\n"):
-            if "INITIAL Q" in line:
-                line = line.replace(",", " ")
-                initial_q = float(line.split()[3])
-                # if we're not reading the partition function,
-                # we stop here
-                if not read_Q:
-                    break
-            else:
-                # for lines that actually have Q(T)
-                if line.strip()[0].isdigit():
-                    # t, q, log_q
-                    values = [float(value) for value in line.split()]
-                    q_array.append(values)
-        if q_array is not None:
-            q_array = np.vstack(q_array)
-        return (initial_q, q_array)
+        with work_in_temp():
+            var_file = self.format_var(molecule)
+            int_file = self.format_int()
+            for ext, contents in zip([".var", ".int"], [var_file, int_file]):
+                with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
+                    write_file.write(contents)
+            initial_q, q_array = run_spcat(f"temp_{self.mol_id}", True, debug)
+        index = np.searchsorted(q_array[0], self.T)
+        if q_array[1,index] != initial_q:
+            self.q = q_array[1,index]
+            with work_in_temp():
+                var_file = self.format_var(molecule)
+                int_file = self.format_int()
+                for ext, contents in zip([".var", ".int"], [var_file, int_file]):
+                    with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
+                        write_file.write(contents)
+                initial_q, _ = run_spcat(f"temp_{self.mol_id}", False, debug)
+        return initial_q, q_array
