@@ -7,6 +7,9 @@ from pathlib import Path
 from typing import List, Dict
 from subprocess import run, PIPE
 from difflib import get_close_matches
+from tempfile import TemporaryDirectory
+
+import numpy as np
 
 from pyspectools import routines
 
@@ -525,3 +528,50 @@ class SPCAT:
         to run the simulation.
         """
         raise NotImplementedError
+
+    @staticmethod
+    def _run_spcat(filename: str, read_Q: bool = False):
+        """
+        Run SPCAT, and optionally parse the partition functions.
+
+        Parameters
+        ----------
+        filename : str
+            Name of the SPCAT file, without file extensions
+        read_Q : bool, optional
+            [description], by default False
+
+        Returns
+        -------
+        List[float, np.ndarray]
+            Returns the value used for Q, and if `read_Q` then
+            a 2D NumPy array containing the temperature, Q, and log Q.
+            Otherwise, `q_array` is returned as `None`.
+        """
+        # get rid of the stuff at the end
+        filename = Path(filename)
+        if filename.suffix != "":
+            filename = filename.stem
+        else:
+            filename = str(filename)
+        proc = run(["spcat", filename], stdout=PIPE)
+        spcat_out = proc.stdout.decode("utf-8")
+        q_array = list() if read_Q else None
+        # get the initial Q value used
+        for line in spcat_out.split("\n"):
+            if "INITIAL Q" in line:
+                line = line.replace(",", " ")
+                initial_q = float(line.split()[3])
+                # if we're not reading the partition function,
+                # we stop here
+                if not read_Q:
+                    break
+            else:
+                # for lines that actually have Q(T)
+                if line.strip()[0].isdigit():
+                    # t, q, log_q
+                    values = [float(value) for value in line.split()]
+                    q_array.append(values)
+        if q_array is not None:
+            q_array = np.vstack(q_array)
+        return (initial_q, q_array)
