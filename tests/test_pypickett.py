@@ -35,6 +35,15 @@ def test_generate_spcat():
     molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1268.6236)
     spcat = pypickett.SPCAT(prolate=False)
     par = spcat.format_var(molecule)
+    static_par = """PySpecTools SPCAT input
+ 100  255    1    0    0.0000E+000    1.0000E+003    1.0000E+000 1.0000000000
+s   1    -99    0   100    0    1    1    1     0   1   0
+         10000            2.151626e+04    0.000000e+00 /A
+         20000            2.162260e+03    0.000000e+00 /B
+         30000            1.268624e+03    0.000000e+00 /C"""
+    assert par.strip() == static_par.strip()
     int_file = spcat.format_int()
-    print(int_file)
-    assert False
+    static_int = """PySpecTools SPCAT input
+ 0  42   1000.0000   0   99  -20.0  -5.0   300.0000  300.00
+1  1.0002  0.0003  0.000"""
+    assert static_int.strip() == int_file.strip()
