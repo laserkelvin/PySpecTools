@@ -53,6 +53,8 @@ except ImportError:
     print("Not building cython!")
     use_cython = False
 
+use_cython = False
+
 # Determine if the system is Linux, which makes Cython
 # require additional library args
 if platform.system() == "Linux":
@@ -106,6 +108,8 @@ else:
         )
     ]
 
+# hack to ignore ext_modules for now
+ext_modules = []
 
 class PostInstallCommand(install):
     """

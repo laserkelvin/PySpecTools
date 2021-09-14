@@ -8,5 +8,4 @@ from pyspectools import units
 from pyspectools import spectra
 from pyspectools import lineshapes
 from pyspectools import database
-from pyspectools import fast
 from pyspectools._version import __version__

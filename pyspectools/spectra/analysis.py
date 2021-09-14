@@ -24,7 +24,6 @@ from pyspectools import fitting
 from pyspectools import lineshapes
 from pyspectools import routines
 from pyspectools import ftmw_analysis as fa
-from pyspectools.fast import routines as fr
 from pyspectools import figurefactory
 
 
@@ -955,98 +954,6 @@ def copy_assignments(A, B, corr_mat):
         b_dict = b_trans.__dict__
         _ = b_dict.pop("frequency")
         a_trans.update(**b_dict)
-
-
-def correlate_experiments(experiments, thres_prox=0.2, index=0):
-    """
-    Function to find correlations between experiments, looking for common
-    peaks detected in every provided experiment. This function uses by the first
-    experiment as the base for comparison by default. Coincidences are searched
-    for between this base and the other provided experiment, and ultimately combined
-    to determine the common peaks.
-
-    A copy of the base experiment is returned, along with a dictionary with
-    frequencies of correlations between a given experiment and the base.
-
-    Parameters
-    ----------
-    experiments : tuple-like
-        Iterable list/tuple of AssignmentSession objects.
-    thres_prox : float, optional
-        Proximity in frequency units for determining if peaks are the same.
-        If thres-abs is False, this value is treated as a percentage of the
-        center frequency.
-    index : int, optional
-        Index for the experiment to use as a base for comparisons.
-
-    Returns
-    -------
-    base_exp : AssignmentSession object
-        A deep copy of the first experiment, with the updated spectra.
-    return_dict : dict
-        Dictionary where keys correspond to the experiment number and
-        values are 1D arrays of frequencies that are coincident
-    """
-    # Use the a selected experiment as a base comparison
-    base_exp = deepcopy(experiments[index])
-    base_freqs = np.array(base_exp.line_lists["Peaks"].frequencies)
-    indices = dict()
-    masks = list()
-    for index, experiment in enumerate(experiments):
-        # Ignore the base experiment
-        if index != 0:
-            try:
-                comp_freqs = np.array(
-                    experiment.line_lists["Peaks"].frequencies
-                )
-                mask = fr.isin_array(base_freqs, comp_freqs, thres_prox)
-                # Convert to boolean mask
-                mask.dtype = bool
-                # Work out a correlation matrix to find indices where the two
-                # arrays are matched
-                correlations = fr.hot_match_arrays(
-                    base_freqs,
-                    comp_freqs,
-                    thres_prox
-                )
-                indices[experiment.session.experiment] = [mask, correlations]
-                masks.append(mask)
-            except AttributeError:
-                warnings.warn(f"Experiment {index} is missing peaks!")
-    # Take the product column-wise, which gives only peaks which are common
-    # to all experiments
-    if index > 1:
-        all_index = np.product(masks, axis=0, dtype=bool)
-    else:
-        # If there's only one comparison being made
-        all_index = masks[0]
-    # Mask frequencies such that we are keeping on transitions that are common
-    # across all experiments
-    uncommon_freqs = base_freqs[all_index]
-    common_freqs = base_freqs[~all_index]
-    # Get spectra that show only coincidences and only unique peaks.
-    common_int = blank_spectrum(
-        base_exp.data,
-        common_freqs,
-        base_exp.session.baseline,
-        base_exp.session.noise_rms / 4.,
-        base_exp.freq_col,
-        base_exp.int_col,
-        df=False
-    )
-    uncommon_int = blank_spectrum(
-        base_exp.data,
-        uncommon_freqs,
-        base_exp.session.baseline,
-        base_exp.session.noise_rms / 4.,
-        base_exp.freq_col,
-        base_exp.int_col,
-        df=False
-    )
-    # Set the new intensity columns
-    base_exp.data["Coincidence Spectrum"] = common_int
-    base_exp.data["Unique Spectrum"] = uncommon_int
-    return base_exp, indices
 
 
 def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
