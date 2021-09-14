@@ -2106,7 +2106,7 @@ class AssignmentSession:
             self.logger.info("Found assignments.")
             return slice_df
 
-    def apply_filter(self, window: Union[str, List[str]], sigma=0.5, int_col=None):
+    def apply_filter(self, window: Union[str, List[str], np.ndarray], sigma=0.5, int_col=None):
         """
         Applies a filter to the spectral signal. If multiple window functions
         are to be used, a list of windows can be provided, which will then
@@ -2140,17 +2140,13 @@ class AssignmentSession:
             self.logger.info("Copied signal to Ref column.")
         intensity = self.data[int_col].values
         self.logger.info(f"Applying {window} to column {int_col}.")
-        # Try to see if the window variable is an iterable
-        try:
-            assert type(window) == list
-            for function in iter(window):
+        # If we have a lis
+        if isinstance(window, List):
+            for function in window:
                 intensity = analysis.filter_spectrum(intensity, function, sigma)
-        except AssertionError:
-            # In the event that window is not a list, just apply the filter
+        else:
             intensity = analysis.filter_spectrum(intensity, window, sigma)
-        # Windowed signal is usually too small for float printing in the html
-        # report
-        self.data[int_col] = intensity * 1000.0
+        self.data[int_col] = intensity
 
     def splat_assign_spectrum(self, auto=False):
         """

@@ -1,7 +1,7 @@
 
 from itertools import combinations, chain, compress
 from copy import deepcopy
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Union
 import warnings
 
 import numpy as np
@@ -1113,7 +1113,7 @@ def line_weighting(frequency: float, catalog_frequency: float, intensity=None):
     return weighting
 
 
-def filter_spectrum(intensity: float, window="hanning", sigma=0.5):
+def filter_spectrum(intensity: float, window: Union[str, np.ndarray] = "hanning", sigma=0.5):
     """
     Apply a specified window function to a signal. The window functions are
     taken from the `signal.windows` module of SciPy, so check what is available
@@ -1142,23 +1142,23 @@ def filter_spectrum(intensity: float, window="hanning", sigma=0.5):
     new_y: array_like
         Numpy 1D array containing the convolved signal
     """
-    if window not in dir(windows):
-        raise Exception("Specified window not available in SciPy.")
-    data_length = len(intensity)
-    if window == "gaussian":
-        x = np.arange(data_length)
-        window = lineshapes.gaussian(
-            x, 1., 0., sigma
-        )
+    if isinstance(window, str):
+        if window not in dir(windows):
+            raise Exception("Specified window not available in SciPy.")
+        data_length = len(intensity)
+        if window == "gaussian":
+            x = np.arange(data_length)
+            window = lineshapes.gaussian(
+                x, 1., 0., sigma
+            )
+        else:
+            window = windows.get_window(window, data_length)
+    elif isinstance(window, np.ndarray):
+        pass
     else:
-        window = windows.get_window(window, data_length)
-    fft_y = np.fft.fft(intensity)
-    # Convolve the signal with the window function
-    new_y = np.fft.ifft(
-        window * fft_y
-    )
-    # Return only the real part of the FFT
-    new_y = np.abs(new_y)
+        raise Exception("Specified window not recognized.")
+    # use Numpy function for cross-correlation
+    new_y = np.correlate(intensity, window, mode="same")
     return new_y
 
 
