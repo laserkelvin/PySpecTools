@@ -205,6 +205,7 @@ def search_molecule(species: str, freq_range=[0., 40e3], **kwargs):
         chemical_name=species,
         **default_param
     ).to_pandas()
+    print(splat_df)
     if len(splat_df)> 0:
         # These are the columns wanted
         columns = [
@@ -289,9 +290,10 @@ def search_center_frequency(frequency: float, width=0.5):
             "E_L (K)"
             ]
         # Now we combine the frequency measurements
-        splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
-        # Replace missing experimental data with calculated
-        splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+        splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values.astype(float)
+        if splat_df.isna().any().sum():
+            # Replace missing experimental data with calculated
+            splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
         # Convert to MHz
         splat_df["Frequency"] *= 1000.
         return splat_df
