@@ -36,8 +36,7 @@ spectroscopy data. The main functions of this library are:
 
 The documentation for PySpecTools can be found [here](https://laserkelvin.github.io/PySpecTools).
 
-If you use PySpecTools for research, please cite use the DOI badge below to cite the version
-of the package; this is not to track adoption, but rather for the sake of reproducibility!
+If you use PySpecTools for research, please cite use the Zenodo DOI badge above to cite the version of the package; this is not to track adoption, but rather for the sake of reproducibility!
 
 ## PyPickett
 
@@ -71,10 +70,11 @@ Currently, `PySpecTools` is under the MIT license, which allows anyone to freely
 ## Planned features
 
 1. Integration of deep learning tools for molecule identifiction and spectral assignment
-2. Probability-based assignment routines - rather than single assignments.
+2. Probability-based assignment routines - rather than single assignments. First thing to implement would be a greedy algorithm.
 3. Revamp of codebase - needs a substantial re-organization that will likely result in backwards compatibility breaking.
-4. Additional Cython routines - many functions within `PySpecTools` are fast enough, but we can always go faster 😀
-5. Better abstraction in the `spectra.assignment` modules - need to move a lot of the complicated routines into subclasses (especially for transitions and line lists), although there is a case to be made for a simpler user interface (only have to deal with `LineList`, instead of three subclasses of `LineList`)
+4. Better abstraction in the `spectra.assignment` modules - need to move a lot of the complicated routines into subclasses (especially for transitions and line lists), although there is a case to be made for a simpler user interface (only have to deal with `LineList`, instead of three subclasses of `LineList`)
+5. Improve test coverage.
+6. Add RTD support instead of building docs by hand.
 
 ## Contributing
 

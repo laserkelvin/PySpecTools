@@ -4,78 +4,16 @@
 """
 
 import os
-import subprocess
 import shutil
 import json
 import types
 from typing import List, Any, Union, Dict, Tuple
 from glob import glob
-from warnings import warn
 
 import ruamel.yaml as yaml
 import numpy as np
 import joblib
 import paramiko
-
-
-def run_spcat(filename: str, temperature=None):
-    # Run SPCAT
-    parameter_file = filename + ".var"
-    if os.path.isfile(filename + ".var") is False:
-        print("VAR file unavailable. Attempting to run with PAR file.")
-        if os.path.isfile(filename + ".par") is False:
-            raise FileNotFoundError("No .var or .par file found.")
-        else:
-            shutil.copy2(filename + ".par", parameter_file)
-    process = subprocess.Popen(
-        ["spcat", filename + ".int", parameter_file],
-        stdout=subprocess.PIPE,  # suppress stdout
-    )
-    process.wait()
-    # Extract the partition function at the specified temperature
-    if temperature is not None:
-        # Read in the piped standard output, and format into a list
-        stdout = str(process.communicate()[0]).split("\\n")
-        for line in stdout:
-            if temperature in line:
-                # If the specified temperature is found, get the partition
-                # function
-                Q = float(line.split()[1])
-        return Q
-
-
-def run_calbak(filename: str):
-    """ Runs the calbak routine, which generates a .lin file from the .cat """
-    if os.path.isfile(filename + ".cat") is False:
-        raise FileNotFoundError(filename + ".cat is missing; cannot run calbak.")
-    process = subprocess.Popen(
-        ["calbak", filename + ".cat", filename + ".lin"], stdout=subprocess.DEVNULL
-    )
-    process.wait()
-    with open(filename + ".lin") as read_file:
-        lin_length = read_file.readlines()
-    if lin_length == 0:
-        raise RuntimeError("No lines produced in calbak! Check .cat file.")
-
-
-def run_spfit(filename: str):
-    """
-
-    Parameters
-    ----------
-    filename
-
-    Returns
-    -------
-
-    """
-    process = subprocess.run(
-        ["spfit", filename + ".lin", filename + ".par"],
-        timeout=20.0,
-        capture_output=True,
-    )
-    if process.returncode != 0:
-        raise OSError("SPFIT failed to run.")
 
 
 def list_chunks(target: List[Any], n: int):
@@ -97,36 +35,6 @@ def list_chunks(target: List[Any], n: int):
     """
     split_list = [target[i : i + n] for i in range(0, len(target), n)]
     return split_list
-
-
-def human2pickett(name: str, reduction="A", linear=True, nuclei=0):
-    """ Function for translating a Hamiltonian parameter to a Pickett
-        identifier.
-
-        An alternative way of doing this is to programmatically
-        generate the Pickett identifiers, and just use format string
-        to output the identifier.
-    """
-    pickett_parameters = read_yaml(
-        os.path.expanduser("~") + "/.pyspectools/pickett_terms.yml"
-    )
-    if name is "B" and linear is True:
-        # Haven't thought of a clever way of doing this yet...
-        identifier = 100
-    elif name is "B" and linear is False:
-        identifier = 20000
-    else:
-        # Hyperfine terms
-        if name in ["eQq", "eQq/2"]:
-            identifier = str(pickett_parameters[name]).format(nuclei)
-        elif "D_" in name or "del" in name:
-            identifier = str(pickett_parameters[name][reduction])
-        else:
-            try:
-                identifier = pickett_parameters[name]
-            except KeyError:
-                print("Parameter name unknown!")
-    return identifier
 
 
 def read_json(json_filepath: str) -> Dict[Any, Any]:
@@ -291,17 +199,6 @@ def flatten_list(input_list: List[List[Any]]):
 
 def list_directories():
     return [directory for directory in os.listdir() if os.path.isdir(directory)]
-
-
-def backup_files(molecule_name, save_location):
-    extensions = [".cat", ".var", ".par", ".int", ".json", ".lin"]
-    filenames = [molecule_name + ext for ext in extensions]
-    for filename in filenames:
-        if os.path.isfile(filename) is True:
-            shutil.copy2(filename, save_location)
-            print("Backing up " + filename + " to " + save_location)
-        else:
-            pass
 
 
 def isnotebook():

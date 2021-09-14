@@ -1,6 +1,7 @@
 
 import contextlib
 import os
+import re
 from abc import ABC, abstractmethod
 from typing import Dict, List, Union, Type
 from warnings import warn
@@ -129,6 +130,9 @@ def hyperfine_nuclei(method):
     Defines a decorator that dynamically generates hyperfine
     nuclei coding, which returns the coding mapping based on
     what the user provides with respect to "chi_xx" parameters.
+
+    The off-diagonal elements are hardcoded because they're
+    not particularly programmatic.
     """
     @wraps(method)
     def reparameterize(molecule_obj):
@@ -140,6 +144,11 @@ def hyperfine_nuclei(method):
                 for index, name in enumerate(hyperfine_names):
                     hf_code = f"{nucleus}100{index+1}0000"
                     coding[f"{name}_{nucleus}"] = hf_code
+                # add some extra ones
+                coding[f"chi_bb-chi_cc_{nucleus}"] = f"{nucleus}10040000"
+                coding[f"chi_ab_{nucleus}"] = f"{nucleus}10610000"
+                coding[f"chi_bc_{nucleus}"] = f"{nucleus}10210000"
+                coding[f"chi_ac_{nucleus}"] = f"{nucleus}10410000"
         # override with the user specified terms at the end
         coding.update(molecule_obj.custom_coding)
         return coding
@@ -311,15 +320,57 @@ class SymmetricTop(LinearMolecule):
                 "D_K": 2000,
                 "D_JK": 1100,
                 "D_J": coding.get("D"),    # this basically sets up an alias
-                "deltaJ": 40100,
-                "deltaK": 41000,
-                "d1": 40100,
-                "d2": 50000,
+                "Delta_J": coding.get("D"),
+                "Delta_JK": 1100,
+                "Delta_K":  2000,
+                "del_J": 40100,
+                "del_K": 41000,
+                "d_1": 40100,
+                "d_2": 50000,
                 # sextic constants
                 "H_K": 3000,
                 "H_JK": 1200,
                 "H_KJ": 2100,
                 "H_J": coding.get("H"),
+                "h_1": 40200,
+                "h_2": 50100,
+                "h_3": 60000,
+                "Phi_J": coding.get("H"),
+                "Phi_JK": 1200,
+                "Phi_KJ": 2100,
+                "Phi_K": 3000,
+                "phi_J": 40200,
+                "phi_JK": 41100,
+                "phi_K": 42000,
+                "L_J": coding.get("L"),   # octic terms
+                "L_JJK": 1300,
+                "L_JK": 2200,
+                "L_KKJ": 3100,
+                "L_K": 4000,
+                "l_J": 40300, # A-reduced, octic
+                "l_JK": 41200,
+                "l_KJ": 42100,
+                "l_K": 43000,
+                "l_1": 40300, # S-reduced, octic
+                "l_2": 50200,
+                "l_3": 60100,
+                "l_4": 70000,
+                "P_J": 500,   # decadic terms
+                "P_JJK": 1400,
+                "P_JK": 2300,
+                "P_KJ": 3200,
+                "P_KKJ": 4100,
+                "P_K": 5000,
+                "p_J": 40400,  # A-reduced, decadic
+                "p_JJK": 41300,
+                "p_JK": 42200,
+                "p_KKJ": 43100,
+                "p_K": 44000,
+                "p_1": 40400,  # S-reduced, decadic
+                "p_2": 50300,
+                "p_3": 60200,
+                "p_4": 70100,
+                "p_5": 80000
             }
         )
         return coding
@@ -643,3 +694,40 @@ class SPCAT:
                         write_file.write(contents)
                 initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
         return initial_q, q_array
+
+
+def sanitize_keys(data: Dict[str, Union[str, float]]):
+    new_data = data.copy()
+    for key, value in data.items():
+        if "chi" in key:
+            # for times where the digit is omitted, tack it on
+            if not key[-1].isdigit():
+                new_key = f"{key}_1"
+            else:
+                new_key = key
+            # if this is a diagonal element, we need to multiply
+            # by 3/2 because SPCAT
+            if re.match(r"chi_(\w)\1_\d", new_key):
+                value *= 1.5
+            new_data[new_key] = value
+            if new_key != key:
+                del new_data[key]
+        # negate the value because SPCAT CD terms are negative
+        elif "delta_" in key.lower() or "D_" in key:
+            new_data[key] = -value
+        # standardize mu_ with u_
+        elif "mu_" in key:
+            axis = key.split("_")[-1]
+            new_data[f"u_{axis}"] = value
+            del new_data[key]
+        else:
+            new_data[key] = value
+    return new_data
+
+
+def load_catalog_yaml(filepath: Union[str, Path]):
+    if isinstance(filepath, str):
+        filepath = Path(filepath)
+    data = routines.read_yaml(filepath)
+    # standardize the key/values for SPCAT
+    data = sanitize_keys(data)

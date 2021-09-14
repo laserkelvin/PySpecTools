@@ -15,20 +15,21 @@ def test_linear():
 
 
 def test_asymtop():
-    molecule = pypickett.AsymmetricTop(**{"A": 10215., "B": 6024., "C": 2035.24, "DJ": 1e-3, "DJK": 1e-5})
+    molecule = pypickett.AsymmetricTop(**{"A": 10215., "B": 6024., "C": 2035.24, "D_J": 1e-3, "D_JK": 1e-5})
     test = """         10000            1.021500e+04    0.000000e+00 /A
          20000            6.024000e+03    0.000000e+00 /B
          30000            2.035240e+03    0.000000e+00 /C
-           200            1.000000e-03    0.000000e+00 /DJ
-          1100            1.000000e-05    0.000000e+00 /DJK"""
+           200            1.000000e-03    0.000000e+00 /D_J
+          1100            1.000000e-05    0.000000e+00 /D_JK"""
     assert test.strip() == str(molecule).strip()
     # now test hyperfine splitting
-    molecule = pypickett.AsymmetricTop(**{"A": 10215., "B": 6024., "C": 2035.24, "chi_aa_1": -402.5, "chi_bb_1": -214.51})
+    molecule = pypickett.AsymmetricTop(**{"A": 10215., "B": 6024., "C": 2035.24, "chi_aa_1": -402.5, "chi_bb_1": -214.51, "chi_ac_1": -1.15})
     test = """         10000            1.021500e+04    0.000000e+00 /A
          20000            6.024000e+03    0.000000e+00 /B
          30000            2.035240e+03    0.000000e+00 /C
      110010000           -4.025000e+02    0.000000e+00 /chi_aa_1
-     110020000           -2.145100e+02    0.000000e+00 /chi_bb_1"""
+     110020000           -2.145100e+02    0.000000e+00 /chi_bb_1
+     110410000           -1.150000e+00    0.000000e+00 /chi_ac_1"""
     assert test.strip() == str(molecule).strip()
 
 
@@ -54,3 +55,17 @@ def test_run_spcat():
     molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1862.6236)
     spcat = pypickett.SPCAT(T=30., prolate=True)
     initial_q, q_array = spcat.run(molecule, debug=True)
+
+
+def test_key_sanitization():
+    data = {
+        "chi_aa": 1.,
+        "chi_bb_1": 1.,
+        "chi_ac": 1.,
+        "chi_bb-chi_cc": 1.,
+    }
+    new_data = pypickett.sanitize_keys(data)
+    new_keys = sorted(list(new_data.keys()))
+    assert new_keys == sorted(["chi_aa_1", "chi_bb_1", "chi_ac_1", "chi_bb-chi_cc_1"])
+    assert new_data["chi_aa_1"] == 1.5
+    assert new_data["chi_ac_1"] == 1.
