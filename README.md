@@ -7,6 +7,7 @@
 ## Introduction
 
 [![DOI](https://zenodo.org/badge/90773952.svg)](https://zenodo.org/badge/latestdoi/90773952)
+[![Build Status](https://travis-ci.com/laserkelvin/PySpecTools.svg?branch=master)](https://travis-ci.com/laserkelvin/PySpecTools)
 
 ![pst-logo](docs/source/_images/pst_logo_landscape.png)
 

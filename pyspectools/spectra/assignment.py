@@ -3447,6 +3447,7 @@ class AssignmentSession:
 
         fig.layout["xaxis"]["title"] = "Frequency (MHz)"
         fig.layout["xaxis"]["tickformat"] = ".,"
+        fig.layout["yaxis"]["title"] = str(self.int_col)
 
         fig.add_scattergl(
             x=self.data[self.freq_col],
