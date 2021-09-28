@@ -291,14 +291,18 @@ def search_center_frequency(frequency: float, width=0.5):
             ]
         # Now we combine the frequency measurements
         splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values.astype(float)
-        if splat_df.isna().any().sum():
-            # Replace missing experimental data with calculated
-            splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+        if splat_df["Frequency"].isna().any():
+            try:
+                # Replace missing experimental data with calculated
+                splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+            except ValueError as exception:
+                warnings.warn(f"Problem with merging measured/predicted frequencies at {frequency:.4f}")
+                warnings.warn(f"{exception}")
         # Convert to MHz
         splat_df["Frequency"] *= 1000.
         return splat_df
     except IndexError:
-        print("Could not parse Splatalogue table at {:,.4f}".format(frequency))
+        warnings.warn("Could not parse Splatalogue table at {:,.4f}".format(frequency))
         return None
 
 
