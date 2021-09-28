@@ -1,7 +1,7 @@
 
 from itertools import combinations, chain, compress
 from copy import deepcopy
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Union
 import warnings
 
 import numpy as np
@@ -205,6 +205,7 @@ def search_molecule(species: str, freq_range=[0., 40e3], **kwargs):
         chemical_name=species,
         **default_param
     ).to_pandas()
+    print(splat_df)
     if len(splat_df)> 0:
         # These are the columns wanted
         columns = [
@@ -289,14 +290,19 @@ def search_center_frequency(frequency: float, width=0.5):
             "E_L (K)"
             ]
         # Now we combine the frequency measurements
-        splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values
-        # Replace missing experimental data with calculated
-        splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+        splat_df["Frequency"] = splat_df["Meas Freq-GHz"].values.astype(float)
+        if splat_df["Frequency"].isna().any():
+            try:
+                # Replace missing experimental data with calculated
+                splat_df["Frequency"].fillna(splat_df["Freq-GHz"], inplace=True)
+            except ValueError as exception:
+                warnings.warn(f"Problem with merging measured/predicted frequencies at {frequency:.4f}")
+                warnings.warn(f"{exception}")
         # Convert to MHz
         splat_df["Frequency"] *= 1000.
         return splat_df
     except IndexError:
-        print("Could not parse Splatalogue table at {:,.4f}".format(frequency))
+        warnings.warn("Could not parse Splatalogue table at {:,.4f}".format(frequency))
         return None
 
 
@@ -956,100 +962,6 @@ def copy_assignments(A, B, corr_mat):
         a_trans.update(**b_dict)
 
 
-def correlate_experiments(experiments, thres_prox=0.2, index=0):
-    """
-    Function to find correlations between experiments, looking for common
-    peaks detected in every provided experiment. This function uses by the first
-    experiment as the base for comparison by default. Coincidences are searched
-    for between this base and the other provided experiment, and ultimately combined
-    to determine the common peaks.
-
-    A copy of the base experiment is returned, along with a dictionary with
-    frequencies of correlations between a given experiment and the base.
-    
-    TODO: fix this in light of missing fast routines
-
-    Parameters
-    ----------
-    experiments : tuple-like
-        Iterable list/tuple of AssignmentSession objects.
-    thres_prox : float, optional
-        Proximity in frequency units for determining if peaks are the same.
-        If thres-abs is False, this value is treated as a percentage of the
-        center frequency.
-    index : int, optional
-        Index for the experiment to use as a base for comparisons.
-
-    Returns
-    -------
-    base_exp : AssignmentSession object
-        A deep copy of the first experiment, with the updated spectra.
-    return_dict : dict
-        Dictionary where keys correspond to the experiment number and
-        values are 1D arrays of frequencies that are coincident
-    """
-    # Use the a selected experiment as a base comparison
-    base_exp = deepcopy(experiments[index])
-    base_freqs = np.array(base_exp.line_lists["Peaks"].frequencies)
-    indices = dict()
-    masks = list()
-    for index, experiment in enumerate(experiments):
-        # Ignore the base experiment
-        if index != 0:
-            try:
-                comp_freqs = np.array(
-                    experiment.line_lists["Peaks"].frequencies
-                )
-                mask = isin_array(base_freqs, comp_freqs, thres_prox)
-                # Convert to boolean mask
-                mask.dtype = bool
-                # Work out a correlation matrix to find indices where the two
-                # arrays are matched
-                correlations = hot_match_arrays(
-                    base_freqs,
-                    comp_freqs,
-                    thres_prox
-                )
-                indices[experiment.session.experiment] = [mask, correlations]
-                masks.append(mask)
-            except AttributeError:
-                warnings.warn(f"Experiment {index} is missing peaks!")
-    # Take the product column-wise, which gives only peaks which are common
-    # to all experiments
-    if index > 1:
-        all_index = np.product(masks, axis=0, dtype=bool)
-    else:
-        # If there's only one comparison being made
-        all_index = masks[0]
-    # Mask frequencies such that we are keeping on transitions that are common
-    # across all experiments
-    uncommon_freqs = base_freqs[all_index]
-    common_freqs = base_freqs[~all_index]
-    # Get spectra that show only coincidences and only unique peaks.
-    common_int = blank_spectrum(
-        base_exp.data,
-        common_freqs,
-        base_exp.session.baseline,
-        base_exp.session.noise_rms / 4.,
-        base_exp.freq_col,
-        base_exp.int_col,
-        df=False
-    )
-    uncommon_int = blank_spectrum(
-        base_exp.data,
-        uncommon_freqs,
-        base_exp.session.baseline,
-        base_exp.session.noise_rms / 4.,
-        base_exp.freq_col,
-        base_exp.int_col,
-        df=False
-    )
-    # Set the new intensity columns
-    base_exp.data["Coincidence Spectrum"] = common_int
-    base_exp.data["Unique Spectrum"] = uncommon_int
-    return base_exp, indices
-
-
 def match_artifacts(on_exp, off_exp, thres=0.05, freq_col="Frequency"):
     """
     Function to remove a set of artifacts found in a blank spectrum.
@@ -1114,7 +1026,7 @@ def line_weighting(frequency: float, catalog_frequency: float, intensity=None):
     return weighting
 
 
-def filter_spectrum(intensity: float, window="hanning", sigma=0.5):
+def filter_spectrum(intensity: float, window: Union[str, np.ndarray] = "hanning", sigma=0.5):
     """
     Apply a specified window function to a signal. The window functions are
     taken from the `signal.windows` module of SciPy, so check what is available
@@ -1143,23 +1055,23 @@ def filter_spectrum(intensity: float, window="hanning", sigma=0.5):
     new_y: array_like
         Numpy 1D array containing the convolved signal
     """
-    if window not in dir(windows):
-        raise Exception("Specified window not available in SciPy.")
-    data_length = len(intensity)
-    if window == "gaussian":
-        x = np.arange(data_length)
-        window = lineshapes.gaussian(
-            x, 1., 0., sigma
-        )
+    if isinstance(window, str):
+        if window not in dir(windows):
+            raise Exception("Specified window not available in SciPy.")
+        data_length = len(intensity)
+        if window == "gaussian":
+            x = np.arange(data_length)
+            window = lineshapes.gaussian(
+                x, 1., 0., sigma
+            )
+        else:
+            window = windows.get_window(window, data_length)
+    elif isinstance(window, np.ndarray):
+        pass
     else:
-        window = windows.get_window(window, data_length)
-    fft_y = np.fft.fft(intensity)
-    # Convolve the signal with the window function
-    new_y = np.fft.ifft(
-        window * fft_y
-    )
-    # Return only the real part of the FFT
-    new_y = np.abs(new_y)
+        raise Exception("Specified window not recognized.")
+    # use Numpy function for cross-correlation
+    new_y = np.correlate(intensity, window, mode="same")
     return new_y
 
 

@@ -23,6 +23,67 @@ if mo:
 else:
     raise RuntimeError("Unable to find version string in %s." % (VERSIONFILE,))
 
+class PostInstallCommand(install):
+    """
+    This class defines the functions to be run after running pip install.
+    The routines to run are:
+    1. Checking if SPFIT/SPCAT are installed
+    """
+
+    def check_pickett(self):
+        for executable in ["spcat", "spfit", "calbak"]:
+            if find_executable(executable) is None:
+                warn(executable + " not found in PATH.")
+
+    def setup_folders(self):
+        """
+        Sets up the dot folders that are utilized by the routines. If the matplotlib
+        user folder doesn't exist, this function will make one.
+        """
+        folders = [
+            ".pyspectools",
+            ".pyspectools/templates",
+            ".config/matplotlib/stylelib"
+        ]
+        folders = [
+            os.path.join(os.path.expanduser("~"), folder) for folder in folders
+        ]
+        for folder in folders:
+            os.makedirs(folder, exist_ok=True)
+
+    def setup_files(self):
+        try:
+            # Copy over matplotlib stylesheets
+            home_dir = os.path.expanduser("~")
+            if os.path.exists(
+                home_dir + "/.config/matplotlib/stylelib"
+            ) is False:
+                os.mkdir(home_dir + "/.config/matplotlib/stylelib")
+            for sheet in os.listdir("./pyspectools/mpl_stylesheets"):
+                if ".yml" not in sheet:
+                    path = os.path.expanduser("~") + \
+                           "/.config/matplotlib/stylelib" + sheet
+                else:
+                    path = os.path.expanduser("~") + \
+                        "/.pyspectools/" + sheet
+                shutil.copy(sheet, path)
+        except FileExistsError:
+            pass
+
+    def run(self):
+        # Check for SPFIT/SPCAT executables in PATH
+        self.check_pickett()
+        install.run(self)
+
+cmdclass = dict()
+
+cmdclass.update(
+    **{
+        "develop": PostInstallCommand,
+        "install": PostInstallCommand
+    }
+)
+
 setup(
     name="pyspectools",
     description="A set of Python tools/routines for spectroscopy",
@@ -36,8 +97,8 @@ setup(
         "pandas",
         "scipy",
         "matplotlib",
-        "astroquery==0.3.8",
-        "astropy==3.0.5",
+        "astroquery==0.4.3",
+        "astropy==4.3.1",
         "lmfit",
         "peakutils>=1.3.2",
         "sklearn",
@@ -56,4 +117,5 @@ setup(
         "monsterurl",
         "torch"
     ],
+    cmdclass=cmdclass,
 )
