@@ -32,6 +32,7 @@ networkx = "^2.6.3"
 torch = "^1.9.1"
 numba = "^0.54.0"
 ipython = "^7.28.0"
+ipywidgets = "^7.6.5"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
