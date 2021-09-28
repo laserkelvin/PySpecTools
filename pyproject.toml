@@ -30,3 +30,9 @@ tqdm = "^4.62.3"
 tinydb = "^4.5.2"
 networkx = "^2.6.3"
 torch = "^1.9.1"
+numba = "^0.54.0"
+ipython = "^7.28.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^6.2.5"
+black = "^21.9b0"
