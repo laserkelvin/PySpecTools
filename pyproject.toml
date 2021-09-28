@@ -33,6 +33,7 @@ torch = "^1.9.1"
 numba = "^0.54.0"
 ipython = "^7.28.0"
 ipywidgets = "^7.6.5"
+bokeh = "^2.4.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.5"
