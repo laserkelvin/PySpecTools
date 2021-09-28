@@ -2,7 +2,7 @@
 import contextlib
 import os
 import re
-from abc import ABC, abstractmethod
+from abc import ABC, abstractmethod, abstractproperty
 from typing import Dict, List, Union, Type
 from warnings import warn
 from functools import wraps
@@ -242,8 +242,7 @@ class AbstractMolecule(ABC):
         else:
             self._custom_coding.update(value)
 
-    @property
-    @abstractmethod
+    @abstractproperty
     def param_coding(self) -> Dict[str, Union[str, int]]:
         """
         Implement a dictionary mapping between string names of
