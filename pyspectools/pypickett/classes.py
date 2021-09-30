@@ -542,6 +542,7 @@ class SPCAT:
             data[key] = value
         mol_type = molecule.type
         data["quanta"] = self.__quanta_map__.get(mol_type)
+        data["quanta"] *= (molecule.num_nuclei * 3)
         data["reduction"] = self.reduction
         data["top"] = 1 if self.prolate else -1
         data["parameters"] = str(molecule)
