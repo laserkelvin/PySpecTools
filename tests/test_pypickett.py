@@ -86,3 +86,8 @@ def test_key_sanitization():
     assert new_keys == sorted(["chi_aa_1", "chi_bb_1", "chi_ac_1", "chi_bb-chi_cc_1"])
     assert new_data["chi_aa_1"] == 1.5
     assert new_data["chi_ac_1"] == 1.
+
+
+def test_molecule_load():
+    (mol, metadata) = pypickett.classes.load_molecule_yaml("test_mol.yml")
+    assert metadata.get("md5") == "974be231958e5d4b2faf664bfec57a26"

@@ -1,0 +1,20 @@
+# test molecule 
+A: 9447.12422
+B: 9246.74472
+C: 4670.82631
+D_J: 3.33763e-3
+D_JK: -5.26342e-3
+D_K: 2.28150e-3
+d_1: -51.379e-6
+d_2: 43.10e-6
+H_J: 3.64e-9
+H_JK: -6.099e-9
+H_KJ: 8.04e-9
+H_K: -3.99e-9
+u_a: 0.661
+name: "test"
+formula: "C4H4O"
+smiles: "C1=COC=C1"
+author: "PBC"
+notes: "Private communication - Tim Barnum"
+doi: ["private", "10.1063/1.1748135"]
