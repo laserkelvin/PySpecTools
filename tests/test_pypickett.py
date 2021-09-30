@@ -52,11 +52,18 @@ s   1    -1    0   100    0    1    1    1     0   1   0
     assert static_int.strip() == int_file.strip()
 
 
-def test_run_spcat():
+def test_asymtop():
     molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1862.6236)
     spcat = pypickett.SPCAT(T=30., prolate=True)
     initial_q, q_array = spcat.run(molecule, debug=True)
     assert initial_q == pytest.approx(342874.6662, 1e-4)
+
+
+def test_hyperfine():
+    molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1862.6236, chi_aa_1=-4.2156)
+    spcat = pypickett.SPCAT(T=10., prolate=True)
+    initial_q, q_array = spcat.run(molecule, debug=True)
+    assert initial_q == pytest.approx(1028494.7694, 1e-4)
 
 
 def test_key_sanitization():
