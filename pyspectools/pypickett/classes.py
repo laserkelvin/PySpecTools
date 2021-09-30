@@ -179,7 +179,7 @@ class AbstractMolecule(ABC):
                 # get up to three of the closest matches
                 close = get_close_matches(key, valid_keys, n=3)
                 warn(
-                    f"{key} has not been implemented in {self.__class__.__name__} and was ignored.\nCloset matches are {close}"
+                    f"{key} has not been implemented in {self.__class__.__name__} and was ignored.\nClosest matches are {close}"
                 )
             else:
                 combined.append(
