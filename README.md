@@ -38,6 +38,17 @@ The documentation for PySpecTools can be found [here](https://laserkelvin.github
 
 If you use PySpecTools for research, please cite use the Zenodo DOI badge above to cite the version of the package; this is not to track adoption, but rather for the sake of reproducibility!
 
+## Installation
+
+`conda` is the preferred way of maintaining software environments, and `poetry` is used to manage Python package dependencies.
+
+PySpecTools is designed to work with Python 3.7+, and so starting from scratch:
+
+1. `conda create -n pst python=3.7`
+2. `conda activate pst`
+3. `pip install poetry`
+4. `poetry install`
+
 ## PyPickett
 
 `PySpecTools` includes a set of routines for wrapping SPFIT/SPCAT. The design
