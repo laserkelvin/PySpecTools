@@ -120,7 +120,7 @@ class AbstractMolecule(ABC):
     @property
     def multiplicity(self) -> int:
         if len(self.nuclei) != 0:
-            return sum([lambda s: 2 * s + 1 for s in self.nuclei.values()])
+            return sum([2 * s + 1 for s in self.nuclei.values()])
         else:
             return 1
 
