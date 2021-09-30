@@ -4,9 +4,11 @@ import os
 from pathlib import Path
 from subprocess import run, PIPE
 from tempfile import TemporaryDirectory
-from typing import Union
+from typing import Union, Dict
 
 import numpy as np
+
+from pyspectools import routines
 
 
 par_template = """PySpecTools SPCAT input
@@ -115,3 +117,40 @@ def write_qpart_file(filepath: Union[str, Path], q_array: np.ndarray):
         write_file.write("# form : interpolation\n")
         for row in q_array:
             write_file.write(f"{row[0]:.1f} {row[1]:.4f}\n")
+
+
+def sanitize_keys(data: Dict[str, Union[str, float]]) -> Dict[str, Union[str, float]]:
+    new_data = data.copy()
+    for key, value in data.items():
+        if "chi" in key:
+            # for times where the digit is omitted, tack it on
+            if not key[-1].isdigit():
+                new_key = f"{key}_1"
+            else:
+                new_key = key
+            # if this is a diagonal element, we need to multiply
+            # by 3/2 because SPCAT
+            if re.match(r"chi_(\w)\1_\d", new_key):
+                value *= 1.5
+            new_data[new_key] = value
+            if new_key != key:
+                del new_data[key]
+        # negate the value because SPCAT CD terms are negative
+        elif "delta_" in key.lower() or "D_" in key:
+            new_data[key] = -value
+        # standardize mu_ with u_
+        elif "mu_" in key:
+            axis = key.split("_")[-1]
+            new_data[f"u_{axis}"] = value
+            del new_data[key]
+        else:
+            new_data[key] = value
+    return new_data
+
+
+def load_catalog_yaml(filepath: Union[str, Path]):
+    if isinstance(filepath, str):
+        filepath = Path(filepath)
+    data = routines.read_yaml(filepath)
+    # standardize the key/values for SPCAT
+    data = sanitize_keys(data)
