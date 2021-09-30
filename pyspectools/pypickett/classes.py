@@ -557,6 +557,7 @@ class SPCAT:
             data[key] = value
         mol_type = molecule.type
         data["quanta"] = self.__quanta_map__.get(mol_type)
+        # this key is used to calculate hyperfine splitting as well
         data["quanta"] *= molecule.multiplicity
         data["reduction"] = self.reduction
         data["top"] = 1 if self.prolate else -1
