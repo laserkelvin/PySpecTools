@@ -655,13 +655,27 @@ def load_molecule_yaml(
     filepath: Union[str, Path]
 ) -> Tuple[Type[AbstractMolecule], Dict[str, str], List[float]]:
     """
-    Parses a YAML file that contains standardized molecule
-    parameter specifications, as well as associated metadata.
+    Load in the molecule specification based on a
+    standardized YAML input. This function parses
+    out the metadata fields and dipole moments for
+    subsequent use, and returns a molecule object
+    constructed with the rotational parameters.
 
     Parameters
     ----------
     filepath : Union[str, Path]
         Path to the YAML file
+        
+    Returns
+    ----------
+    molecule : Type[AbstractMolecule]
+        Appropriate rotor object
+    
+    metadata : Dict[str, str]
+        Metadata associated with the entry
+
+    mu : List[float]
+        Three dipole moments to be passed to `SPCAT`
     """
     if isinstance(filepath, str):
         filepath = Path(filepath)
