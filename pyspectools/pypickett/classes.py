@@ -651,7 +651,9 @@ def infer_molecule(parameters: Dict[str, Union[str, float]]) -> Type[AbstractMol
         return LinearMolecule
 
 
-def load_molecule_yaml(filepath: Union[str, Path]) -> Tuple[Type[AbstractMolecule], Dict[str, str], List[float]]:
+def load_molecule_yaml(
+    filepath: Union[str, Path]
+) -> Tuple[Type[AbstractMolecule], Dict[str, str], List[float]]:
     """
     Parses a YAML file that contains standardized molecule
     parameter specifications, as well as associated metadata.
@@ -684,8 +686,12 @@ def load_molecule_yaml(filepath: Union[str, Path]) -> Tuple[Type[AbstractMolecul
         mu.append(data.get(key, 0))
         if key in data:
             del data[key]
-    unsupported = list(filter(lambda x: any([key in x for key in ["eps", "V", "theta"]]), data.keys()))
+    unsupported = list(
+        filter(lambda x: any([key in x for key in ["eps", "V", "theta"]]), data.keys())
+    )
     if len(unsupported) != 0:
-        raise KeyError(f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}""")
+        raise KeyError(
+            f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}"""
+        )
     molecule = mol_type(**data)
     return (molecule, metadata, mu)
