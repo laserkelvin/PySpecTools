@@ -64,6 +64,14 @@ def test_hyperfine():
     spcat = pypickett.SPCAT(T=10., prolate=True)
     initial_q, q_array = spcat.run(molecule, debug=True)
     assert initial_q == pytest.approx(1028494.7694, 1e-4)
+    # rerun using a list argument for spins
+    molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1862.6236, chi_aa_1=-4.2156, spins=[1,])
+    initial_q, q_array = spcat.run(molecule, debug=True)
+    assert initial_q == pytest.approx(1028494.7694, 1e-4)
+    # rerun with dict for spins
+    molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1862.6236, chi_aa_1=-4.2156, spins={1: 1})
+    initial_q, q_array = spcat.run(molecule, debug=True)
+    assert initial_q == pytest.approx(1028494.7694, 1e-4)
 
 
 def test_key_sanitization():
