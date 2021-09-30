@@ -78,9 +78,9 @@ class Parameter(object):
 
 class AbstractMolecule(ABC):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
     ):
-        self._nuclei = list()
+        self._nuclei = dict()
         self._custom_coding = dict() if not custom_coding else custom_coding
         for key, value in params.items():
             try:
@@ -92,8 +92,15 @@ class AbstractMolecule(ABC):
             # check for hyperfine spins by looking for chi
             if "chi" in key.lower():
                 number = int(key.split("_")[-1])
+                if spins is None:
+                    spin = 1.5
+                elif isinstance(spins, list):
+                    spin = spins[number - 1]
+                elif isinstance(spins, dict):
+                    spin = spins.get(number)
+                # if no spins are provided, assume it's nitrogen
                 if number not in self._nuclei:
-                    self._nuclei.append(number)
+                    self._nuclei[number] = spin
             setattr(self, key, param)
         self.param_names = list(params.keys())
 
