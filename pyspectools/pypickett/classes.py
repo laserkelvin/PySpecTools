@@ -92,13 +92,14 @@ class AbstractMolecule(ABC):
             # check for hyperfine spins by looking for chi
             if "chi" in key.lower():
                 number = int(key.split("_")[-1])
+                # if no spins are provided, assume it's nitrogen
                 if spins is None:
-                    spin = 1.5
+                    spin = 1
+                # deal with the other cases
                 elif isinstance(spins, list):
                     spin = spins[number - 1]
                 elif isinstance(spins, dict):
                     spin = spins.get(number)
-                # if no spins are provided, assume it's nitrogen
                 if number not in self._nuclei:
                     self._nuclei[number] = spin
             setattr(self, key, param)
