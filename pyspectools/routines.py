@@ -9,6 +9,7 @@ import json
 import types
 from typing import List, Any, Union, Dict, Tuple
 from glob import glob
+from hashlib import md5
 
 import ruamel.yaml as yaml
 import numpy as np
@@ -406,3 +407,31 @@ def group_consecutives(vals: List[float], step=1):
             result.append(run)
         expect = v + step
     return result
+
+
+def hash_file(filepath: str) -> str:
+    """
+    Hashes a target file with MD5. The file streamed
+    in as binary, taking 64 MB chunks at a time to
+    make sure we don't bite off more than we can
+    chew.
+
+    Parameters
+    ----------
+    filepath : str
+        Path to file to be hashed
+
+    Returns
+    -------
+    str
+        MD5 hash
+    """
+    hasher = md5()
+    BUF_SIZE = 65536 * 1000
+    with open(filepath, "rb") as read_file:
+        while True:
+            data = read_file.read(BUF_SIZE)
+            if not data:
+                break
+            hasher.update(data)
+    return hasher.hexdigest()
