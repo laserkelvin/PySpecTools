@@ -64,7 +64,7 @@ def test_key_sanitization():
         "chi_ac": 1.,
         "chi_bb-chi_cc": 1.,
     }
-    new_data = pypickett.sanitize_keys(data)
+    new_data = pypickett.utils.sanitize_keys(data)
     new_keys = sorted(list(new_data.keys()))
     assert new_keys == sorted(["chi_aa_1", "chi_bb_1", "chi_ac_1", "chi_bb-chi_cc_1"])
     assert new_data["chi_aa_1"] == 1.5
