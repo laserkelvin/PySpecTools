@@ -15,6 +15,7 @@ from pyspectools.pypickett.utils import (
     int_template,
     work_in_temp,
     run_spcat,
+    sanitize_keys,
 )
 
 
@@ -78,7 +79,10 @@ class Parameter(object):
 
 class AbstractMolecule(ABC):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
+        self,
+        custom_coding: Union[None, Dict[str, Union[str, int]]] = None,
+        spins: Union[None, List[int], Dict[int, int]] = None,
+        **params,
     ):
         self._nuclei = dict()
         self._custom_coding = dict() if not custom_coding else custom_coding
@@ -203,7 +207,10 @@ class AbstractMolecule(ABC):
 
 class LinearMolecule(AbstractMolecule):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
+        self,
+        custom_coding: Union[None, Dict[str, Union[str, int]]] = None,
+        spins: Union[None, List[int], Dict[int, int]] = None,
+        **params,
     ):
         super().__init__(custom_coding, spins, **params)
 
@@ -216,7 +223,10 @@ class LinearMolecule(AbstractMolecule):
 
 class SymmetricTop(LinearMolecule):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
+        self,
+        custom_coding: Union[None, Dict[str, Union[str, int]]] = None,
+        spins: Union[None, List[int], Dict[int, int]] = None,
+        **params,
     ):
         super().__init__(custom_coding, spins, **params)
 
@@ -290,7 +300,10 @@ class SymmetricTop(LinearMolecule):
 
 class AsymmetricTop(SymmetricTop):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
+        self,
+        custom_coding: Union[None, Dict[str, Union[str, int]]] = None,
+        spins: Union[None, List[int], Dict[int, int]] = None,
+        **params,
     ):
         super().__init__(custom_coding, spins, **params)
         # parameter checking making sure that things make sense
@@ -610,3 +623,63 @@ class SPCAT:
                         write_file.write(contents)
                 initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
         return initial_q, q_array
+
+
+def infer_molecule(parameters: Dict[str, Union[str, float]]) -> Type[AbstractMolecule]:
+    """
+    Infers what rotor type to use based on what parameters
+    have been provided. If the A, B, C rotational constant is present,
+    we're looking at an asymmetric top. If only A and B are given,
+    then it's a symmetric top. Finally, anything else is treated as
+    a linear molecule.
+
+    Parameters
+    ----------
+    parameters : Dict[str, Union[str, Number]]
+        Rotational parameters for a molecule
+
+    Returns
+    -------
+    Type[AbstractMolecule]
+        Class reference to the rotor type
+    """
+    if all([key in parameters.keys() for key in ["A", "B", "C"]]):
+        return AsymmetricTop
+    elif all([key in parameters.keys() for key in ["A", "B"]]):
+        return SymmetricTop
+    else:
+        return LinearMolecule
+
+
+def load_molecule_yaml(filepath: Union[str, Path]):
+    """
+    Parses a YAML file that contains standardized molecule
+    parameter specifications, as well as associated metadata.
+
+    Parameters
+    ----------
+    filepath : Union[str, Path]
+        Path to the YAML file
+    """
+    if isinstance(filepath, str):
+        filepath = Path(filepath)
+    data = routines.read_yaml(filepath)
+    # standardize the key/values for SPCAT
+    data = sanitize_keys(data)
+    hash = routines.hash_file(filepath)
+    meta_keys = ["name", "doi", "notes", "smiles", "formula", "author"]
+    metadata = {"md5": hash}
+    # extract out the metadata
+    for key in meta_keys:
+        value = data.get(key)
+        if value:
+            metadata[key] = value
+        # the data dict is exclusively for molecular parameters
+        del data[key]
+    # now we pick which molecule to use
+    mol_type = infer_molecule(data)
+    unsupported = list(filter(lambda x: any([key in x for key in ["eps", "V", "theta"]]), data.keys()))
+    if len(unsupported) != 0:
+        raise KeyError(f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}""")
+    molecule = mol_type(**data)
+    return (molecule, metadata)

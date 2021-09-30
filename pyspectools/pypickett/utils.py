@@ -4,12 +4,11 @@ import re
 from pathlib import Path
 from subprocess import run, PIPE
 from tempfile import TemporaryDirectory
-from typing import Union, Dict, Number, Type
+from typing import Union, Dict, Type
 
 import numpy as np
 
 from pyspectools import routines
-from pyspectools.pypickett.classes import AsymmetricTop, SymmetricTop, LinearMolecule, AbstractMolecule
 
 
 par_template = """PySpecTools SPCAT input
@@ -148,60 +147,3 @@ def sanitize_keys(data: Dict[str, Union[str, float]]) -> Dict[str, Union[str, fl
         else:
             new_data[key] = value
     return new_data
-
-
-def infer_molecule(parameters: Dict[str, Union[str, Number]]) -> Type[AbstractMolecule]:
-    """
-    Infers what rotor type to use based on what parameters
-    have been provided. If the A, B, C rotational constant is present,
-    we're looking at an asymmetric top. If only A and B are given,
-    then it's a symmetric top. Finally, anything else is treated as
-    a linear molecule.
-
-    Parameters
-    ----------
-    parameters : Dict[str, Union[str, Number]]
-        Rotational parameters for a molecule
-
-    Returns
-    -------
-    Type[AbstractMolecule]
-        Class reference to the rotor type
-    """
-    if all([key in parameters.keys() for key in ["A", "B", "C"]]):
-        return AsymmetricTop
-    elif all([key in parameters.keys() for key in ["A", "B"]]):
-        return SymmetricTop
-    else:
-        return LinearMolecule
-
-
-def load_molecule_yaml(filepath: Union[str, Path]):
-    """
-    Parses a YAML file that contains standardized molecule
-    parameter specifications, as well as associated metadata.
-
-    Parameters
-    ----------
-    filepath : Union[str, Path]
-        Path to the YAML file
-    """
-    if isinstance(filepath, str):
-        filepath = Path(filepath)
-    data = routines.read_yaml(filepath)
-    # standardize the key/values for SPCAT
-    data = sanitize_keys(data)
-    hash = routines.hash_file(filepath)
-    meta_keys = ["name", "doi", "notes", "smiles", "formula", "author"]
-    metadata = {"md5": hash}
-    # extract out the metadata
-    for key in meta_keys:
-        value = data.get(key)
-        if value:
-            metadata[key] = value
-        # the data dict is exclusively for molecular parameters
-        del data[key]
-    # now we pick which molecule to use
-    mol_type = infer_molecule(data)
-    molecule = mol_type(**data)
-    return (molecule, metadata)
