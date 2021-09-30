@@ -6,36 +6,12 @@ from warnings import warn
 from functools import wraps
 from pathlib import Path
 from typing import List, Dict
-from subprocess import run, PIPE
 from difflib import get_close_matches
 
 import numpy as np
 
 from pyspectools import routines
 from pyspectools.pypickett.utils import par_template, int_template, work_in_temp
-
-
-def write_qpart_file(filepath: Union[str, Path], q_array: np.ndarray):
-    """
-    Write the partition function out in the `molsim` format.
-
-    Parameters
-    ----------
-    filepath : str
-        [description]
-    q_array : np.ndarray
-        [description]
-    """
-    # if the filepath is a string, convert to a Path object
-    if isinstance(filepath, str):
-        filepath = Path(filepath)
-    # if there's no file extension, add .qpart
-    if filepath.suffix == "":
-        filepath = filepath.with_suffix(".qpart")
-    with open(filepath, "w+") as write_file:
-        write_file.write("# form : interpolation\n")
-        for row in q_array:
-            write_file.write(f"{row[0]:.1f} {row[1]:.4f}\n")
 
 
 def hyperfine_nuclei(method):
