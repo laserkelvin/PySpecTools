@@ -195,9 +195,9 @@ class AbstractMolecule(ABC):
 
 class LinearMolecule(AbstractMolecule):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
     ):
-        super().__init__(custom_coding, **params)
+        super().__init__(custom_coding, spins, **params)
 
     @property
     @hyperfine_nuclei
@@ -208,9 +208,9 @@ class LinearMolecule(AbstractMolecule):
 
 class SymmetricTop(LinearMolecule):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
     ):
-        super().__init__(custom_coding, **params)
+        super().__init__(custom_coding, spins, **params)
 
     @property
     @hyperfine_nuclei
@@ -282,9 +282,9 @@ class SymmetricTop(LinearMolecule):
 
 class AsymmetricTop(SymmetricTop):
     def __init__(
-        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, spins: Union[None, List[int], Dict[int, int]] = None, **params
     ):
-        super().__init__(custom_coding, **params)
+        super().__init__(custom_coding, spins, **params)
         # parameter checking making sure that things make sense
         A, B, C = [params.get(key, 0.0) for key in ["A", "B", "C"]]
         assert A >= B >= C
