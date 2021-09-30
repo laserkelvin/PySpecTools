@@ -1,4 +1,5 @@
 
+import pytest
 from tempfile import NamedTemporaryFile
 from pyspectools import pypickett
 
@@ -55,6 +56,7 @@ def test_run_spcat():
     molecule = pypickett.AsymmetricTop(A=21516.262, B=2162.26, C=1862.6236)
     spcat = pypickett.SPCAT(T=30., prolate=True)
     initial_q, q_array = spcat.run(molecule, debug=True)
+    assert initial_q == pytest.approx(342874.6662, 1e-4)
 
 
 def test_key_sanitization():
