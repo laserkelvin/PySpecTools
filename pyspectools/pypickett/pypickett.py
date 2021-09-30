@@ -15,63 +15,6 @@ from pyspectools import routines
 from pyspectools.pypickett.utils import par_template, int_template, work_in_temp
 
 
-def run_spcat(filename: str, read_Q: bool = False, debug: bool = False):
-    """
-    Run SPCAT, and optionally parse the partition functions.
-
-    Parameters
-    ----------
-    filename : str
-        Name of the SPCAT file, without file extensions
-    read_Q : bool, optional
-        [description], by default False
-
-    Returns
-    -------
-    List[float, np.ndarray]
-        Returns the value used for Q, and if `read_Q` then
-        a 2D NumPy array containing the temperature, Q, and log Q.
-        Otherwise, `q_array` is returned as `None`.
-    """
-    # get rid of the stuff at the end
-    filename = Path(filename)
-    if filename.suffix != "":
-        filename = filename.stem
-    else:
-        filename = str(filename)
-    proc = run(["spcat", filename], stdout=PIPE)
-    if debug:
-        for ext in [".var", ".int"]:
-            with open(f"{filename}{ext}", "r") as read_file:
-                print("".join(read_file.readlines()[:10]))
-    spcat_out = proc.stdout.decode("utf-8")
-    if debug and Path(f"{filename}.cat").exists():
-        with open(f"{filename}.cat") as read_file:
-            print("".join(read_file.readlines()[:10]))
-    q_array = list() if read_Q else None
-    # get the initial Q value used
-    for line in spcat_out.split("\n"):
-        if "INITIAL Q" in line:
-            line = line.replace(",", " ")
-            initial_q = float(line.split()[3])
-            # if we're not reading the partition function,
-            # we stop here
-            if not read_Q:
-                break
-        else:
-            try:
-                # for lines that actually have Q(T)
-                if line.strip()[0].isdigit():
-                    # t, q, log_q
-                    values = [float(value) for value in line.split()]
-                    q_array.append(values)
-            except IndexError:
-                pass
-    if q_array is not None:
-        q_array = np.vstack(q_array).T
-    return (initial_q, q_array)
-
-
 def write_qpart_file(filepath: Union[str, Path], q_array: np.ndarray):
     """
     Write the partition function out in the `molsim` format.
