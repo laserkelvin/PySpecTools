@@ -11,7 +11,7 @@ from difflib import get_close_matches
 import numpy as np
 
 from pyspectools import routines
-from pyspectools.pypickett.utils import par_template, int_template, work_in_temp
+from pyspectools.pypickett.utils import par_template, int_template, work_in_temp, run_spcat
 
 
 def hyperfine_nuclei(method):
