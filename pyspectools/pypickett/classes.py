@@ -110,12 +110,19 @@ class AbstractMolecule(ABC):
         return params
 
     @property
-    def nuclei(self) -> List[int]:
+    def nuclei(self) -> Dict[str, int]:
         return self._nuclei
 
     @property
     def num_nuclei(self) -> int:
         return len(self._nuclei)
+
+    @property
+    def multiplicity(self) -> int:
+        if len(self.nuclei) != 0:
+            return sum([lambda s: 2 * s + 1 for s in self.nuclei.values()])
+        else:
+            return 1
 
     @property
     def custom_coding(self) -> Dict[str, Union[str, int]]:
@@ -549,7 +556,7 @@ class SPCAT:
             data[key] = value
         mol_type = molecule.type
         data["quanta"] = self.__quanta_map__.get(mol_type)
-        data["quanta"] *= (molecule.num_nuclei * 3)
+        data["quanta"] *= molecule.multiplicity
         data["reduction"] = self.reduction
         data["top"] = 1 if self.prolate else -1
         data["parameters"] = str(molecule)
