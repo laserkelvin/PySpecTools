@@ -678,6 +678,12 @@ def load_molecule_yaml(filepath: Union[str, Path]):
         del data[key]
     # now we pick which molecule to use
     mol_type = infer_molecule(data)
+    mu = []
+    # extract the dipoles
+    for key in ["u_a", "u_b", "u_c"]:
+        mu.append(data.get(key, 0))
+        if key in data:
+            del data[key]
     unsupported = list(filter(lambda x: any([key in x for key in ["eps", "V", "theta"]]), data.keys()))
     if len(unsupported) != 0:
         raise KeyError(f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}""")
