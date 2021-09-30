@@ -1,4 +1,3 @@
-
 import contextlib
 import os
 import re
@@ -22,6 +21,7 @@ int_template = """PySpecTools SPCAT input
  0  {mol_id}   {q:.4f}   0   {max_f_qno}  {int_min:.1f}  {int_max:.1f}   {freq_limit:.4f}  {T:.2f}
 {dipole_moments}
 """
+
 
 @contextlib.contextmanager
 def work_in_temp():

@@ -1,4 +1,3 @@
-
 import re
 from abc import ABC, abstractproperty
 from typing import Dict, List, Union, Type
@@ -11,7 +10,12 @@ from difflib import get_close_matches
 import numpy as np
 
 from pyspectools import routines
-from pyspectools.pypickett.utils import par_template, int_template, work_in_temp, run_spcat
+from pyspectools.pypickett.utils import (
+    par_template,
+    int_template,
+    work_in_temp,
+    run_spcat,
+)
 
 
 def hyperfine_nuclei(method):
@@ -23,6 +27,7 @@ def hyperfine_nuclei(method):
     The off-diagonal elements are hardcoded because they're
     not particularly programmatic.
     """
+
     @wraps(method)
     def reparameterize(molecule_obj):
         coding = method(molecule_obj)
@@ -41,11 +46,12 @@ def hyperfine_nuclei(method):
         # override with the user specified terms at the end
         coding.update(molecule_obj.custom_coding)
         return coding
+
     return reparameterize
 
 
 class Parameter(object):
-    def __init__(self, name: str, value: float, unc: float = 0.):
+    def __init__(self, name: str, value: float, unc: float = 0.0):
         self.name = name
         self._value = value
         self._unc = unc
@@ -71,7 +77,9 @@ class Parameter(object):
 
 
 class AbstractMolecule(ABC):
-    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+    def __init__(
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+    ):
         self._nuclei = list()
         self._custom_coding = dict() if not custom_coding else custom_coding
         for key, value in params.items():
@@ -105,7 +113,7 @@ class AbstractMolecule(ABC):
     @property
     def custom_coding(self) -> Dict[str, Union[str, int]]:
         return self._custom_coding
-    
+
     @custom_coding.setter
     def custom_coding(self, value: Union[None, Dict[str, Union[str, int]]]):
         """
@@ -114,7 +122,7 @@ class AbstractMolecule(ABC):
         to an empty dictionary. If a dictionary is passed, assuming
         keys are the Hamiltonian parameters and values are the SPCAT
         coding, then the coding dictionary is updated. For example:
-        
+
         ```
         obj.custom_coding = {"B": 100}     # updates the coding
         obj.custom_coding = None           # resets the coding
@@ -155,7 +163,9 @@ class AbstractMolecule(ABC):
                 valid_keys = self.param_coding.keys()
                 # get up to three of the closest matches
                 close = get_close_matches(key, valid_keys, n=3)
-                warn(f"{key} has not been implemented in {self.__class__.__name__} and was ignored.\nCloset matches are {close}")
+                warn(
+                    f"{key} has not been implemented in {self.__class__.__name__} and was ignored.\nCloset matches are {close}"
+                )
             else:
                 combined.append(
                     f"{coding:>14}  {value.value:>22e} {value.unc:>15e} /{key}"
@@ -177,23 +187,22 @@ class AbstractMolecule(ABC):
 
 
 class LinearMolecule(AbstractMolecule):
-    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+    def __init__(
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+    ):
         super().__init__(custom_coding, **params)
 
     @property
     @hyperfine_nuclei
     def param_coding(self) -> Dict[str, Union[str, int]]:
-        coding = {
-            "B": 100,
-            "D": 200,
-            "H": 300,
-            "L": 400
-        }
+        coding = {"B": 100, "D": 200, "H": 300, "L": 400}
         return coding
 
 
 class SymmetricTop(LinearMolecule):
-    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+    def __init__(
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+    ):
         super().__init__(custom_coding, **params)
 
     @property
@@ -207,10 +216,10 @@ class SymmetricTop(LinearMolecule):
                 # main differences are in the quartic terms
                 "D_K": 2000,
                 "D_JK": 1100,
-                "D_J": coding.get("D"),    # this basically sets up an alias
+                "D_J": coding.get("D"),  # this basically sets up an alias
                 "Delta_J": coding.get("D"),
                 "Delta_JK": 1100,
-                "Delta_K":  2000,
+                "Delta_K": 2000,
                 "del_J": 40100,
                 "del_K": 41000,
                 "d_1": 40100,
@@ -230,20 +239,20 @@ class SymmetricTop(LinearMolecule):
                 "phi_J": 40200,
                 "phi_JK": 41100,
                 "phi_K": 42000,
-                "L_J": coding.get("L"),   # octic terms
+                "L_J": coding.get("L"),  # octic terms
                 "L_JJK": 1300,
                 "L_JK": 2200,
                 "L_KKJ": 3100,
                 "L_K": 4000,
-                "l_J": 40300, # A-reduced, octic
+                "l_J": 40300,  # A-reduced, octic
                 "l_JK": 41200,
                 "l_KJ": 42100,
                 "l_K": 43000,
-                "l_1": 40300, # S-reduced, octic
+                "l_1": 40300,  # S-reduced, octic
                 "l_2": 50200,
                 "l_3": 60100,
                 "l_4": 70000,
-                "P_J": 500,   # decadic terms
+                "P_J": 500,  # decadic terms
                 "P_JJK": 1400,
                 "P_JK": 2300,
                 "P_KJ": 3200,
@@ -258,17 +267,19 @@ class SymmetricTop(LinearMolecule):
                 "p_2": 50300,
                 "p_3": 60200,
                 "p_4": 70100,
-                "p_5": 80000
+                "p_5": 80000,
             }
         )
         return coding
 
 
 class AsymmetricTop(SymmetricTop):
-    def __init__(self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params):
+    def __init__(
+        self, custom_coding: Union[None, Dict[str, Union[str, int]]] = None, **params
+    ):
         super().__init__(custom_coding, **params)
         # parameter checking making sure that things make sense
-        A, B, C = [params.get(key, 0.) for key in ["A", "B", "C"]]
+        A, B, C = [params.get(key, 0.0) for key in ["A", "B", "C"]]
         assert A >= B >= C
 
     @property
@@ -288,32 +299,27 @@ class AsymmetricTop(SymmetricTop):
 
 class SPCAT:
 
-    __quanta_map__ = {
-        "AsymmetricTop": 1,
-        "SymmetricTop": -1,
-        "LinearMolecule": -1
-    }
+    __quanta_map__ = {"AsymmetricTop": 1, "SymmetricTop": -1, "LinearMolecule": -1}
 
-    __reduction_map__ = {
-        True: "s",
-        False: "a"
-    }
+    __reduction_map__ = {True: "s", False: "a"}
 
-    def __init__(self, T: float = 300., 
-    int_limits: List[float] = [-20., -5.], 
-    freq_limit: float = 300.,
-    k_limit: int = 100,
-    mu: List[float] = [1., 0., 0.],
-    prolate: bool = True,
-    s_reduced: bool = True,
-    q: float = 2.2415,
-    weight_axis: int = 1,
-    weights: List[int] = [1, 1],
-    max_f_qno: int = 99,
-    mol_id: int = 42
+    def __init__(
+        self,
+        T: float = 300.0,
+        int_limits: List[float] = [-20.0, -5.0],
+        freq_limit: float = 300.0,
+        k_limit: int = 100,
+        mu: List[float] = [1.0, 0.0, 0.0],
+        prolate: bool = True,
+        s_reduced: bool = True,
+        q: float = 2.2415,
+        weight_axis: int = 1,
+        weights: List[int] = [1, 1],
+        max_f_qno: int = 99,
+        mol_id: int = 42,
     ):
         super().__init__()
-        assert len(mu) == 3             # we need exactly three dipole moments
+        assert len(mu) == 3  # we need exactly three dipole moments
         self.T = T
         self._int_limits = int_limits
         self.freq_limit = freq_limit  # this forces the setter method
@@ -371,7 +377,7 @@ class SPCAT:
 
     @T.setter
     def T(self, value: float) -> None:
-        assert value > 0.
+        assert value > 0.0
         self._T = value
 
     @property
@@ -414,7 +420,7 @@ class SPCAT:
 
     @freq_limit.setter
     def freq_limit(self, value: float) -> None:
-        assert value > 0.
+        assert value > 0.0
         self._freq_limit = value
 
     @property
@@ -454,7 +460,7 @@ class SPCAT:
         """
         Returns the Watson reduction used for the simulation.
         This is set by the `SPCAT._s_reduced` flag, which
-        is `True` is using S-reduction. 
+        is `True` is using S-reduction.
 
         Returns
         -------
@@ -478,24 +484,24 @@ class SPCAT:
 
     @q.setter
     def q(self, value: float) -> float:
-        assert value > 0.
+        assert value > 0.0
         self._q = value
 
     @property
     def weight_axis(self) -> int:
         __doc__ = SPCAT.weight_axis.setter.__doc__
         return self._weight_axis
-    
+
     @weight_axis.setter
     def weight_axis(self, value: int) -> None:
         """
         Set the axis for statistical weighting, called IAX. According to Herb
         Pickett's documentation, the magnitude of this value corresponds to:
 
-        1=a; 2=b; 3=c; 4= A, 2-fold top; 5=Bz, 2-fold top; 6= 3-fold top; 
-        7=A, E, 4-fold top; 8=B, 4-fold top; 9=5-fold top; 
-        10=A, E2, 6-fold top; 11=B, E1, 6-fold top). 
-        
+        1=a; 2=b; 3=c; 4= A, 2-fold top; 5=Bz, 2-fold top; 6= 3-fold top;
+        7=A, E, 4-fold top; 8=B, 4-fold top; 9=5-fold top;
+        10=A, E2, 6-fold top; 11=B, E1, 6-fold top).
+
         > For mag IAX > 3, axis is b. (See Special Considerations for Symmetric Tops)
 
         For the sign of this parameter:
@@ -550,7 +556,10 @@ class SPCAT:
         str
             SPCAT .int file contents
         """
-        data = {key: getattr(self, key) for key in ["mol_id", "q", "max_f_qno", "freq_limit", "T"]}
+        data = {
+            key: getattr(self, key)
+            for key in ["mol_id", "q", "max_f_qno", "freq_limit", "T"]
+        }
         dipole_moments = ""
         for index, value in enumerate(self.mu):
             dipole_moments += f"{index + 1}  {value:.3f}"
@@ -574,8 +583,8 @@ class SPCAT:
         index = np.searchsorted(q_array[0], self.T)
         # check to see if the correct value of Q was used. If not,
         # rerun SPCAT with the correct value
-        if q_array[1,index] != initial_q:
-            self.q = q_array[1,index]
+        if q_array[1, index] != initial_q:
+            self.q = q_array[1, index]
             with work_in_temp():
                 var_file = self.format_var(molecule)
                 int_file = self.format_int()
@@ -584,4 +593,3 @@ class SPCAT:
                         write_file.write(contents)
                 initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
         return initial_q, q_array
-
