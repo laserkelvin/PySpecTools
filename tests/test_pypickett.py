@@ -89,5 +89,5 @@ def test_key_sanitization():
 
 
 def test_molecule_load():
-    (mol, metadata) = pypickett.classes.load_molecule_yaml("test_mol.yml")
+    (mol, metadata, mu) = pypickett.classes.load_molecule_yaml("test_mol.yml")
     assert metadata.get("md5") == "974be231958e5d4b2faf664bfec57a26"
