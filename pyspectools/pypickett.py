@@ -2,7 +2,7 @@
 import contextlib
 import os
 import re
-from abc import ABC, abstractmethod, abstractproperty
+from abc import ABC, abstractproperty
 from typing import Dict, List, Union, Type
 from warnings import warn
 from functools import wraps
@@ -524,7 +524,7 @@ class SPCAT:
         return self._freq_limit
 
     @freq_limit.setter
-    def freq_limit(self, value: float):
+    def freq_limit(self, value: float) -> None:
         assert value > 0.
         self._freq_limit = value
 
@@ -683,6 +683,8 @@ class SPCAT:
                     write_file.write(contents)
             initial_q, q_array = run_spcat(f"temp_{self.mol_id}", True, debug)
         index = np.searchsorted(q_array[0], self.T)
+        # check to see if the correct value of Q was used. If not,
+        # rerun SPCAT with the correct value
         if q_array[1,index] != initial_q:
             self.q = q_array[1,index]
             with work_in_temp():
@@ -695,7 +697,7 @@ class SPCAT:
         return initial_q, q_array
 
 
-def sanitize_keys(data: Dict[str, Union[str, float]]):
+def sanitize_keys(data: Dict[str, Union[str, float]]) -> Dict[str, Union[str, float]]:
     new_data = data.copy()
     for key, value in data.items():
         if "chi" in key:
