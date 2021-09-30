@@ -1,6 +1,6 @@
 import re
 from abc import ABC, abstractproperty
-from typing import Dict, List, Union, Type
+from typing import Dict, List, Union, Type, Tuple
 from warnings import warn
 from functools import wraps
 from pathlib import Path
@@ -651,7 +651,7 @@ def infer_molecule(parameters: Dict[str, Union[str, float]]) -> Type[AbstractMol
         return LinearMolecule
 
 
-def load_molecule_yaml(filepath: Union[str, Path]):
+def load_molecule_yaml(filepath: Union[str, Path]) -> Tuple[Type[AbstractMolecule], Dict[str, str], List[float]]:
     """
     Parses a YAML file that contains standardized molecule
     parameter specifications, as well as associated metadata.
@@ -688,4 +688,4 @@ def load_molecule_yaml(filepath: Union[str, Path]):
     if len(unsupported) != 0:
         raise KeyError(f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}""")
     molecule = mol_type(**data)
-    return (molecule, metadata)
+    return (molecule, metadata, mu)
