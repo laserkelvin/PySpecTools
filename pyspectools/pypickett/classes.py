@@ -348,6 +348,10 @@ class SPCAT:
     ):
         super().__init__()
         assert len(mu) == 3  # we need exactly three dipole moments
+        # convert all values to their absolute values
+        mu = list(map(abs, mu))
+        # make sure the dipoles are non-zero
+        assert sum(mu) != 0
         self.T = T
         self._int_limits = int_limits
         self.freq_limit = freq_limit  # this forces the setter method
