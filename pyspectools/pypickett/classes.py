@@ -684,7 +684,7 @@ def infer_molecule(parameters: Dict[str, Union[str, float]]) -> Type[AbstractMol
 
 
 def load_molecule_yaml(
-    filepath: Union[str, Path]
+    mol_yaml: Union[str, Path]
 ) -> Tuple[Type[AbstractMolecule], Dict[str, str], List[float]]:
     """
     Load in the molecule specification based on a
@@ -695,7 +695,7 @@ def load_molecule_yaml(
 
     Parameters
     ----------
-    filepath : Union[str, Path]
+    mol_yaml : Union[str, Path]
         Path to the YAML file
         
     Returns
@@ -709,12 +709,12 @@ def load_molecule_yaml(
     mu : List[float]
         Three dipole moments to be passed to `SPCAT`
     """
-    if isinstance(filepath, str):
-        filepath = Path(filepath)
-    data = routines.read_yaml(filepath)
+    if isinstance(mol_yaml, str):
+        mol_yaml = Path(mol_yaml)
+    data = routines.read_yaml(mol_yaml)
     # standardize the key/values for SPCAT
     data = sanitize_keys(data)
-    hash = routines.hash_file(filepath)
+    hash = routines.hash_file(mol_yaml)
     meta_keys = ["name", "doi", "notes", "smiles", "formula", "author"]
     metadata = {"md5": hash}
     # extract out the metadata
