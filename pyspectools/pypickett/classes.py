@@ -361,6 +361,33 @@ class SPCAT:
         self.max_f_qno = max_f_qno
         self.mol_id = mol_id
 
+    @classmethod
+    def from_yml(cls, mu: List[float], yml_path: str):
+        """
+        Class method to instantiate an `SPCAT` object, by
+        providing a list of dipole moments, and a YAML file
+        containing parameters for the simulation, i.e.
+        those contained in the `.int` file for SPCAT.
+
+        Parameters
+        ----------
+        mu : List[float]
+            [description]
+        yml_path : str
+            [description]
+
+        Returns
+        -------
+        [type]
+            [description]
+        """
+        var_dict = routines.read_yaml(yml_path)
+        # check that we're simulating something
+        assert len(mu) == 3
+        assert sum(mu) != 0
+        var_dict["mu"] = mu
+        return cls(**var_dict)
+
     @property
     def int_limits(self) -> List[float]:
         """
