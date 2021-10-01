@@ -372,6 +372,11 @@ class SPCAT:
         providing a list of dipole moments, and a YAML file
         containing parameters for the simulation, i.e.
         those contained in the `.int` file for SPCAT.
+        
+        In essence, this is a convenience method for automatically
+        generating many different catalogs of molecules, where
+        the only thing that really changes is the dipole
+        moment (and all the other settings are the same).
 
         Parameters
         ----------
@@ -387,8 +392,6 @@ class SPCAT:
         """
         var_dict = routines.read_yaml(yml_path)
         # check that we're simulating something
-        assert len(mu) == 3
-        assert sum(mu) != 0
         var_dict["mu"] = mu
         return cls(**var_dict)
 
