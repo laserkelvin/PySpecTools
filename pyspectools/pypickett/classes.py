@@ -329,8 +329,6 @@ class SPCAT:
 
     __quanta_map__ = {"AsymmetricTop": 1, "SymmetricTop": -1, "LinearMolecule": -1}
 
-    __reduction_map__ = {True: "s", False: "a"}
-
     def __init__(
         self,
         T: float = 300.0,
@@ -348,6 +346,10 @@ class SPCAT:
     ):
         super().__init__()
         assert len(mu) == 3  # we need exactly three dipole moments
+        # convert all values to their absolute values
+        mu = list(map(abs, mu))
+        # make sure the dipoles are non-zero
+        assert sum(mu) != 0
         self.T = T
         self._int_limits = int_limits
         self.freq_limit = freq_limit  # this forces the setter method
@@ -362,19 +364,25 @@ class SPCAT:
         self.mol_id = mol_id
 
     @classmethod
-    def from_yml(cls, mu: List[float], yml_path: str):
+    def from_yml(cls, yml_path: str, **kwargs):
         """
         Class method to instantiate an `SPCAT` object, by
         providing a list of dipole moments, and a YAML file
         containing parameters for the simulation, i.e.
         those contained in the `.int` file for SPCAT.
+        
+        In essence, this is a convenience method for automatically
+        generating many different catalogs of molecules, where
+        the only thing that really changes is the dipole
+        moment (and all the other settings are the same).
 
         Parameters
         ----------
-        mu : List[float]
-            [description]
         yml_path : str
             [description]
+        
+        Additional kwargs are used to override the loaded
+        YAML settings.
 
         Returns
         -------
@@ -382,10 +390,7 @@ class SPCAT:
             [description]
         """
         var_dict = routines.read_yaml(yml_path)
-        # check that we're simulating something
-        assert len(mu) == 3
-        assert sum(mu) != 0
-        var_dict["mu"] = mu
+        var_dict.update(kwargs)
         return cls(**var_dict)
 
     @property
@@ -679,7 +684,7 @@ def infer_molecule(parameters: Dict[str, Union[str, float]]) -> Type[AbstractMol
 
 
 def load_molecule_yaml(
-    filepath: Union[str, Path]
+    mol_yaml: Union[str, Path]
 ) -> Tuple[Type[AbstractMolecule], Dict[str, str], List[float]]:
     """
     Load in the molecule specification based on a
@@ -690,7 +695,7 @@ def load_molecule_yaml(
 
     Parameters
     ----------
-    filepath : Union[str, Path]
+    mol_yaml : Union[str, Path]
         Path to the YAML file
         
     Returns
@@ -704,12 +709,12 @@ def load_molecule_yaml(
     mu : List[float]
         Three dipole moments to be passed to `SPCAT`
     """
-    if isinstance(filepath, str):
-        filepath = Path(filepath)
-    data = routines.read_yaml(filepath)
+    if isinstance(mol_yaml, str):
+        mol_yaml = Path(mol_yaml)
+    data = routines.read_yaml(mol_yaml)
     # standardize the key/values for SPCAT
     data = sanitize_keys(data)
-    hash = routines.hash_file(filepath)
+    hash = routines.hash_file(mol_yaml)
     meta_keys = ["name", "doi", "notes", "smiles", "formula", "author"]
     metadata = {"md5": hash}
     # extract out the metadata
@@ -724,7 +729,7 @@ def load_molecule_yaml(
     mu = []
     # extract the dipoles
     for key in ["u_a", "u_b", "u_c"]:
-        mu.append(data.get(key, 0))
+        mu.append(abs(data.get(key, 0)))
         if key in data:
             del data[key]
     unsupported = list(
@@ -735,4 +740,10 @@ def load_molecule_yaml(
             f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}"""
         )
     molecule = mol_type(**data)
-    return (molecule, metadata, mu)
+    # infer the reduction from the keys specified
+    var_kwargs = {
+        "mu": mu,
+        "s_reduced": True if "DJ" in data else False,
+        "prolate": False if mol_type.__name__ == "AsymmetricTop" else True
+    }
+    return (molecule, metadata, var_kwargs)
