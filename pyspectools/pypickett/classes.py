@@ -329,8 +329,6 @@ class SPCAT:
 
     __quanta_map__ = {"AsymmetricTop": 1, "SymmetricTop": -1, "LinearMolecule": -1}
 
-    __reduction_map__ = {True: "s", False: "a"}
-
     def __init__(
         self,
         T: float = 300.0,
