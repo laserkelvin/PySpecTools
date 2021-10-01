@@ -717,8 +717,8 @@ def load_molecule_yaml(
         value = data.get(key)
         if value:
             metadata[key] = value
-        # the data dict is exclusively for molecular parameters
-        del data[key]
+            # the data dict is exclusively for molecular parameters
+            del data[key]
     # now we pick which molecule to use
     mol_type = infer_molecule(data)
     mu = []
