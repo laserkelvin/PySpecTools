@@ -364,7 +364,7 @@ class SPCAT:
         self.mol_id = mol_id
 
     @classmethod
-    def from_yml(cls, mu: List[float], yml_path: str):
+    def from_yml(cls, yml_path: str, **kwargs):
         """
         Class method to instantiate an `SPCAT` object, by
         providing a list of dipole moments, and a YAML file
@@ -378,10 +378,11 @@ class SPCAT:
 
         Parameters
         ----------
-        mu : List[float]
-            [description]
         yml_path : str
             [description]
+        
+        Additional kwargs are used to override the loaded
+        YAML settings.
 
         Returns
         -------
@@ -389,8 +390,7 @@ class SPCAT:
             [description]
         """
         var_dict = routines.read_yaml(yml_path)
-        # check that we're simulating something
-        var_dict["mu"] = mu
+        var_dict.update(kwargs)
         return cls(**var_dict)
 
     @property
