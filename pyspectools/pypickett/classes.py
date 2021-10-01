@@ -724,7 +724,7 @@ def load_molecule_yaml(
     mu = []
     # extract the dipoles
     for key in ["u_a", "u_b", "u_c"]:
-        mu.append(data.get(key, 0))
+        mu.append(abs(data.get(key, 0)))
         if key in data:
             del data[key]
     unsupported = list(
