@@ -76,6 +76,11 @@ class Parameter(object):
     def __repr__(self) -> str:
         return f"{self.name}: {self.value:.4e}+/-{self.unc:.4e}"
 
+    @classmethod
+    def from_dict(cls, **kwargs):
+        sanitized = {key.replace("_", ""): value for key, value in kwargs.items()}
+        return cls(**sanitized)
+
 
 class AbstractMolecule(ABC):
     def __init__(
@@ -108,6 +113,9 @@ class AbstractMolecule(ABC):
                     self._nuclei[number] = spin
             setattr(self, key, param)
         self.param_names = list(params.keys())
+
+    def to_dict(self) -> Dict[str, Dict[str, float]]:
+        return {name: param.__dict__ for name, param in self.params.items()}
 
     @property
     def params(self) -> Dict[str, Type[Parameter]]:

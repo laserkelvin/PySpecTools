@@ -8,7 +8,7 @@
 
 import os
 import warnings
-from typing import List, Dict, Union, Any
+from typing import List, Dict, Union, Any, Type
 from ast import literal_eval
 
 import tinydb
@@ -17,8 +17,7 @@ from tinydb.middlewares import CachingMiddleware
 from tinydb.storages import JSONStorage
 import pandas as pd
 
-from pyspectools import parsers
-from pyspectools import spectra
+from pyspectools import parsers, spectra, pypickett
 from pyspectools.routines import sanitize_formula
 from pyspectools.pypickett import load_molecule_yaml
 
@@ -323,7 +322,38 @@ class MoleculeDatabase(TinyDB):
 
     def add_molecule_yaml(self, yml_path: str) -> None:
         (mol, metadata, var_kwargs) = load_molecule_yaml(yml_path)
-        metadata["var_kwargs"] = var_kwargs
         if self.get_query("md5", metadata.get("md5")):
             raise KeyError(f"""Molecule with MD5 hash: {metadata.get("md5")} already exists.""")
+        # store the fields in each group for ease of unpacking later
+        meta_keys = list(metadata.keys())
+        var_keys = list(var_kwargs.keys())
+        mol_keys = list(mol.params.keys())
+        # merge the dictionaries into one for storage
+        metadata["parameters"] = mol.to_dict()
+        if mol.num_nuclei != 0:
+            metadata["spins"] = mol.nuclei
+        metadata["class"] = mol.__class__.__name__
+        metadata.update(**var_kwargs)
+        metadata["keys"] = {
+            "metadata": meta_keys,
+            "var_kwargs": var_keys,
+        }
         self.insert(metadata)
+
+    @staticmethod
+    def to_molecule(record: Dict[str, Any]) -> Type[pypickett.classes.AbstractMolecule]:
+        class_name = record.get("class")
+        target_class = getattr(pypickett.classes, class_name)
+        if not target_class:
+            raise KeyError(f"{target_class} is not a valid rotor type!")
+        parameters = record.get("parameters")
+        # check that spins are encoded
+        if "spins" in record:
+            spins = record.get("spins")
+        molecule = target_class(spins=spins)
+        molecule.param_names = []
+        for key, param_dict in parameters.items():
+            param = pypickett.classes.Parameter.from_dict(**param_dict)
+            setattr(molecule, key, param)
+            molecule.param_names.append(key)
+        return molecule
