@@ -8,8 +8,11 @@
 
 import os
 import warnings
+from typing import List, Dict, Union, Any
+from ast import literal_eval
 
 import tinydb
+from tinydb import TinyDB, Query
 from tinydb.middlewares import CachingMiddleware
 from tinydb.storages import JSONStorage
 import pandas as pd
@@ -18,7 +21,7 @@ from pyspectools import parsers
 from pyspectools import spectra
 
 
-class SpectralCatalog(tinydb.TinyDB):
+class SpectralCatalog(TinyDB):
     """
     Grand unified experimental catalog. Stores assignment and uline information
     across the board.
@@ -196,3 +199,111 @@ class TheoryCatalog(tinydb.TinyDB):
         if dbpath is None:
             dbpath = os.path.expanduser("~/.pyspectools/pyspec_theory.db")
         super().__init__(dbpath)
+
+
+class MoleculeDatabase(TinyDB):
+    """
+    Database for molecular parameters, intended for
+    use with the `pypickett` module interface.
+    
+    The main goal of this is for bookkeeping what
+    molecules are known, where the Hamiltonian parameters
+    come from (i.e. paper), and a simple interface to
+    retrieve and regenerate the catalog for that particular
+    molecule.
+    
+    TODO-extend to know what molecule is found in what
+    experiment
+    """
+    def __init__(self, dbpath=None):
+        if dbpath is None:
+            dbpath = os.path.expanduser("~/.pyspectools/molecules.db")
+        super().__init__(
+            dbpath,
+            sort_keys=True,
+            indent=4,
+            separators=(",", ": "),
+            storage=CachingMiddleware(JSONStorage),
+        )
+
+    def get_query(self, field: str, value: Any) -> Union[None, List[Dict[str, Union[str, float]]]]:
+        """
+        Generic method to retrieve entries in the database for 
+        a given field and specified value. This is a lower
+        level method, and unless you know what you're looking for,
+        it is recommended you use specialized functions like
+        `get_formula` and `get_smiles`.
+
+        Parameters
+        ----------
+        field : str
+            Name of the field to search for.
+        value : Any
+            Value to search a field for.
+
+        Returns
+        -------
+        Union[None, List[Dict[str, Union[str, float]]]]
+            Returns None if no records are found, otherwise
+            a list of records with a matching field/value.
+        """
+        query = getattr(Query(), field)
+        return self.get(query == value)
+
+    def get_formula(self, formula: str) -> Union[None, List[Dict[str, Union[str, float]]]]:
+        """
+        Search the database for a formula match. For better
+        specificity, it is recommended to use SMILES instead.
+
+        Parameters
+        ----------
+        formula : str
+            Formula
+
+        Returns
+        -------
+        Union[None, List[Dict[str, Union[str, float]]]]
+            [description]
+        """
+        return self.get_query("formula", formula)
+
+    def get_smiles(self, smiles: str) -> Union[None, List[Dict[str, Union[str, float]]]]:
+        return self.get_query("smiles", smiles)
+
+    def match_constants(self, percent_tol: float = 0.01, match_all: bool = True, **kwargs) -> Union[None, List[Dict[str, Union[str, float]]]]:
+        """
+        A generic function for searching the database for approximate
+        matches to an arbitrary number of constants. The matching
+        is done with a percentage tolerance, and returns records that
+        contain records with fields (constants) that are within `percent_tol`
+        of the specified value.
+        
+        A note on security: this method uses `literal_eval`, which executes arbitrary
+        code. Please validate all data to ensure there is no malicious code
+        before executing this function.
+
+        Parameters
+        ----------
+        percent_tol : float, optional
+            Percentage tolerance to match, by default 0.01
+
+        match_all : bool, optional
+            Flag to specify what comparison logic to use; if True,
+            all conditions must be satisified, otherwise logical OR.
+        
+        Kwargs are used to construct the field/value queries.
+        Example: `match_constants(percent_tol=0.1, A=10000.)`
+        will query the database for records where 9000 <= A <= 11000.
+
+        Returns
+        -------
+        Union[None, List[Dict[str, Union[str, float]]]]
+            [description]
+        """
+        query = Query()
+        commands = []
+        condition = " & " if match_all is True else " | "
+        for field, value in kwargs.items():
+            lower, upper = value * (1 - percent_tol), value * (1 + percent_tol)
+            commands.append(f"({lower} <= query.{field} <= {upper})")
+        return self.get(literal_eval(condition.join(commands)))
