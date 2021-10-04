@@ -19,6 +19,7 @@ import pandas as pd
 
 from pyspectools import parsers
 from pyspectools import spectra
+from pyspectools.routines import sanitize_formula
 
 
 class SpectralCatalog(TinyDB):
@@ -253,21 +254,29 @@ class MoleculeDatabase(TinyDB):
         query = getattr(Query(), field)
         return self.get(query == value)
 
-    def get_formula(self, formula: str) -> Union[None, List[Dict[str, Union[str, float]]]]:
+    def get_formula(self, formula: str, sanitize: bool = True) -> Union[None, List[Dict[str, Union[str, float]]]]:
         """
         Search the database for a formula match. For better
         specificity, it is recommended to use SMILES instead.
+        
+        This function will first 
 
         Parameters
         ----------
         formula : str
-            Formula
+            Chemical formula to query.
+    
+        sanitize : bool, optional
+            Whether or not to sanitize the formula before queries.
+            By default, True.
 
         Returns
         -------
         Union[None, List[Dict[str, Union[str, float]]]]
             [description]
         """
+        if sanitize:
+            formula = sanitize_formula(formula)
         return self.get_query("formula", formula)
 
     def get_smiles(self, smiles: str) -> Union[None, List[Dict[str, Union[str, float]]]]:
