@@ -20,6 +20,7 @@ import pandas as pd
 from pyspectools import parsers
 from pyspectools import spectra
 from pyspectools.routines import sanitize_formula
+from pyspectools.pypickett import load_molecule_yaml
 
 
 class SpectralCatalog(TinyDB):
@@ -226,8 +227,7 @@ class MoleculeDatabase(TinyDB):
             dbpath,
             sort_keys=True,
             indent=4,
-            separators=(",", ": "),
-            storage=CachingMiddleware(JSONStorage),
+            separators=(",", ": ")
         )
 
     def get_query(self, field: str, value: Any) -> Union[None, List[Dict[str, Union[str, float]]]]:
@@ -320,3 +320,10 @@ class MoleculeDatabase(TinyDB):
             lower, upper = value * (1 - percent_tol), value * (1 + percent_tol)
             commands.append(f"({lower} <= query.{field} <= {upper})")
         return self.get(literal_eval(condition.join(commands)))
+
+    def add_molecule_yaml(self, yml_path: str) -> None:
+        (mol, metadata, var_kwargs) = load_molecule_yaml(yml_path)
+        metadata["var_kwargs"] = var_kwargs
+        if self.get_query("md5", metadata.get("md5")):
+            raise KeyError(f"""Molecule with MD5 hash: {metadata.get("md5")} already exists.""")
+        self.insert(metadata)
