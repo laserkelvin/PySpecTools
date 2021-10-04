@@ -277,6 +277,7 @@ class MoleculeDatabase(TinyDB):
         """
         if sanitize:
             formula = sanitize_formula(formula)
+            warnings.warn(f"Formula sanitized to: {formula}. If results not working as intended, rerun with `sanitize=False`.")
         return self.get_query("formula", formula)
 
     def get_smiles(self, smiles: str) -> Union[None, List[Dict[str, Union[str, float]]]]:
