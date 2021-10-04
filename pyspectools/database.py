@@ -202,6 +202,9 @@ class TheoryCatalog(tinydb.TinyDB):
 
 
 class MoleculeDatabase(TinyDB):
+
+    default_table_name = "molecule_database"
+
     """
     Database for molecular parameters, intended for
     use with the `pypickett` module interface.
