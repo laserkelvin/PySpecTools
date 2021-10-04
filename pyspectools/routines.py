@@ -15,6 +15,7 @@ import ruamel.yaml as yaml
 import numpy as np
 import joblib
 import paramiko
+import periodictable as pt
 
 
 def list_chunks(target: List[Any], n: int):
@@ -435,3 +436,35 @@ def hash_file(filepath: str) -> str:
                 break
             hasher.update(data)
     return hasher.hexdigest()
+
+
+def sanitize_formula(formula: str) -> str:
+    """
+    Standardizes an input formula, mainly for the purpose
+    of bookkeeping to ensure all formulas are written out
+    in the same way.
+    
+    The function also acts as a way to catch invalid
+    formulae, which will raise a `ValueError`.
+
+    Parameters
+    ----------
+    formula : str
+        Formula to sanitize.
+
+    Returns
+    -------
+    str
+        Standardized chemical formula.
+
+    Raises
+    ------
+    ValueError
+        Invalid elements/formula.
+    """
+    try:
+        obj = pt.formula(formula)
+        clean_formula = "".join([f"{atom}{number}" for atom, number in obj.atoms.items()])
+    except ValueError as exception:
+        raise ValueError(f"{formula} is not a valid formula. {exception}")
+    return clean_formula
