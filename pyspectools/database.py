@@ -233,7 +233,7 @@ class MoleculeDatabase(TinyDB):
                 var_kwargs: ["mu", "int_limit"]    # stores the keys for SPCAT object
                 metadata: ["notes", "author"]      # stores metadata keys
             spins:    # optionally, spins stored as index/value pairs
-                0: 1.5
+                1: 1.5
     
     Additional features will need to make sure they conform
     to this general layout.
@@ -408,15 +408,10 @@ class MoleculeDatabase(TinyDB):
         if not target_class:
             raise KeyError(f"{target_class} is not a valid rotor type!")
         parameters = record.get("parameters")
+        parameters = {key: parameters[key].get("_value") for key in parameters.keys()}
         # check that spins are encoded
         spins = record.get("spins")
-        molecule = target_class(spins=spins)
-        # manually construct the class
-        molecule.param_names = []
-        for key, param_dict in parameters.items():
-            param = pypickett.classes.Parameter.from_dict(**param_dict)
-            setattr(molecule, key, param)
-            molecule.param_names.append(key)
+        molecule = target_class(spins=spins, **parameters)
         var_keys = record.get("keys").get("var_kwargs")
         var_kwargs = {key: record.get(key) for key in var_keys}
         if var_kwargs:
