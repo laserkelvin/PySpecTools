@@ -91,7 +91,9 @@ class SpectralCatalog(TinyDB):
         if exist_df is not None:
             # drop all of the entries that are already in the catalog
             exist_freqs = exist_df["frequency"].values
-            cat_df = cat_df.loc[~cat_df["Frequency"].isin(list(exist_freqs)),]
+            cat_df = cat_df.loc[
+                ~cat_df["Frequency"].isin(list(exist_freqs)),
+            ]
         assign_dict = {"name": name, "formula": formula}
         assign_dict.update(**kwargs)
         # slice out only the relevant information from the dataframe
@@ -239,19 +241,17 @@ class MoleculeDatabase(TinyDB):
     TODO-extend to know what molecule is found in what
     experiment
     """
+
     def __init__(self, dbpath=None):
         if dbpath is None:
             dbpath = os.path.expanduser("~/.pyspectools/molecules.db")
-        super().__init__(
-            dbpath,
-            sort_keys=True,
-            indent=4,
-            separators=(",", ": ")
-        )
+        super().__init__(dbpath, sort_keys=True, indent=4, separators=(",", ": "))
 
-    def get_query(self, field: str, value: Any) -> Union[None, List[Dict[str, Union[str, float]]]]:
+    def get_query(
+        self, field: str, value: Any
+    ) -> Union[None, List[Dict[str, Union[str, float]]]]:
         """
-        Generic method to retrieve entries in the database for 
+        Generic method to retrieve entries in the database for
         a given field and specified value. This is a lower
         level method, and unless you know what you're looking for,
         it is recommended you use specialized functions like
@@ -273,18 +273,20 @@ class MoleculeDatabase(TinyDB):
         query = getattr(Query(), field)
         return self.get(query == value)
 
-    def get_formula(self, formula: str, sanitize: bool = True) -> Union[None, List[Dict[str, Union[str, float]]]]:
+    def get_formula(
+        self, formula: str, sanitize: bool = True
+    ) -> Union[None, List[Dict[str, Union[str, float]]]]:
         """
         Search the database for a formula match. For better
         specificity, it is recommended to use SMILES instead.
-        
-        This function will first 
+
+        This function will first
 
         Parameters
         ----------
         formula : str
             Chemical formula to query.
-    
+
         sanitize : bool, optional
             Whether or not to sanitize the formula before queries.
             By default, True.
@@ -296,20 +298,26 @@ class MoleculeDatabase(TinyDB):
         """
         if sanitize:
             formula = sanitize_formula(formula)
-            warnings.warn(f"Formula sanitized to: {formula}. If results not working as intended, rerun with `sanitize=False`.")
+            warnings.warn(
+                f"Formula sanitized to: {formula}. If results not working as intended, rerun with `sanitize=False`."
+            )
         return self.get_query("formula", formula)
 
-    def get_smiles(self, smiles: str) -> Union[None, List[Dict[str, Union[str, float]]]]:
+    def get_smiles(
+        self, smiles: str
+    ) -> Union[None, List[Dict[str, Union[str, float]]]]:
         return self.get_query("smiles", smiles)
 
-    def match_constants(self, percent_tol: float = 0.01, match_all: bool = True, **kwargs) -> Union[None, List[Dict[str, Union[str, float]]]]:
+    def match_constants(
+        self, percent_tol: float = 0.01, match_all: bool = True, **kwargs
+    ) -> Union[None, List[Dict[str, Union[str, float]]]]:
         """
         A generic function for searching the database for approximate
         matches to an arbitrary number of constants. The matching
         is done with a percentage tolerance, and returns records that
         contain records with fields (constants) that are within `percent_tol`
         of the specified value.
-        
+
         A note on security: this method uses `literal_eval`, which executes arbitrary
         code. Please validate all data to ensure there is no malicious code
         before executing this function.
@@ -322,7 +330,7 @@ class MoleculeDatabase(TinyDB):
         match_all : bool, optional
             Flag to specify what comparison logic to use; if True,
             all conditions must be satisified, otherwise logical OR.
-        
+
         Kwargs are used to construct the field/value queries.
         Example: `match_constants(percent_tol=0.1, A=10000.)`
         will query the database for records where 9000 <= A <= 11000.
@@ -345,13 +353,15 @@ class MoleculeDatabase(TinyDB):
         Loads a molecule YAML file in the standard format, and
         will store all of the data associated with that particular
         molecule into a retrievable format.
-        
+
         This function will also lookup the MD5 hash of the YAML
         file in the database
         """
         (mol, metadata, var_kwargs) = load_molecule_yaml(yml_path)
         if self.get_query("md5", metadata.get("md5")):
-            raise KeyError(f"""Molecule with MD5 hash: {metadata.get("md5")} already exists.""")
+            raise KeyError(
+                f"""Molecule with MD5 hash: {metadata.get("md5")} already exists."""
+            )
         # store the fields in each group for ease of unpacking later
         meta_keys = list(metadata.keys())
         var_keys = list(var_kwargs.keys())
@@ -369,7 +379,9 @@ class MoleculeDatabase(TinyDB):
         self.insert(metadata)
 
     @staticmethod
-    def to_molecule(record: Dict[str, Any]) -> Tuple[Type[pypickett.classes.AbstractMolecule], Type[pypickett.classes.SPCAT]]:
+    def to_molecule(
+        record: Dict[str, Any]
+    ) -> Tuple[Type[pypickett.classes.AbstractMolecule], Type[pypickett.classes.SPCAT]]:
         """
         Convert a database entry into instances of molecule
         and SPCAT objects.
