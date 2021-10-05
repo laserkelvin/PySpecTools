@@ -411,6 +411,9 @@ class MoleculeDatabase(TinyDB):
         parameters = {key: parameters[key].get("_value") for key in parameters.keys()}
         # check that spins are encoded
         spins = record.get("spins")
+        # this makes sure that the keys are integers, otherwise they
+        # won't be picked up by the molecule class
+        spins = {int(key): value for key, value in spins.items()}
         molecule = target_class(spins=spins, **parameters)
         var_keys = record.get("keys").get("var_kwargs")
         var_kwargs = {key: record.get(key) for key in var_keys}
