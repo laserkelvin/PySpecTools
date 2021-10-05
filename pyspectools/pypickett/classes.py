@@ -661,7 +661,7 @@ class SPCAT:
                 for ext, contents in zip([".var", ".int"], [var_file, int_file]):
                     with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
                         write_file.write(contents)
-                initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
+                initial_q, _ = run_spcat(f"temp_{self.mol_id}", False, debug)
         return initial_q, q_array
 
 
