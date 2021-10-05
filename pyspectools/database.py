@@ -8,7 +8,7 @@
 
 import os
 import warnings
-from typing import List, Dict, Union, Any, Type
+from typing import List, Dict, Union, Any, Type, Tuple
 from ast import literal_eval
 
 import tinydb
@@ -321,6 +321,14 @@ class MoleculeDatabase(TinyDB):
         return self.get(literal_eval(condition.join(commands)))
 
     def add_molecule_yaml(self, yml_path: str) -> None:
+        """
+        Loads a molecule YAML file in the standard format, and
+        will store all of the data associated with that particular
+        molecule into a retrievable format.
+        
+        This function will also lookup the MD5 hash of the YAML
+        file in the database
+        """
         (mol, metadata, var_kwargs) = load_molecule_yaml(yml_path)
         if self.get_query("md5", metadata.get("md5")):
             raise KeyError(f"""Molecule with MD5 hash: {metadata.get("md5")} already exists.""")
@@ -341,19 +349,46 @@ class MoleculeDatabase(TinyDB):
         self.insert(metadata)
 
     @staticmethod
-    def to_molecule(record: Dict[str, Any]) -> Type[pypickett.classes.AbstractMolecule]:
+    def to_molecule(record: Dict[str, Any]) -> Tuple[Type[pypickett.classes.AbstractMolecule], Type[pypickett.classes.SPCAT]]:
+        """
+        Convert a database entry into instances of molecule
+        and SPCAT objects.
+
+        Parameters
+        ----------
+        record : Dict[str, Any]
+            A record entry from the database.
+
+        Returns
+        -------
+        Tuple[Type[pypickett.classes.AbstractMolecule], Type[pypickett.classes.SPCAT]]
+            A 2-tuple containing a molecule and an SPCAT object,
+            which can be used to simulate the spectrum.
+
+        Raises
+        ------
+        KeyError
+            If we are unable to determine the rotor type, the
+            function will raise a `KeyError`.
+        """
         class_name = record.get("class")
         target_class = getattr(pypickett.classes, class_name)
         if not target_class:
             raise KeyError(f"{target_class} is not a valid rotor type!")
         parameters = record.get("parameters")
         # check that spins are encoded
-        if "spins" in record:
-            spins = record.get("spins")
+        spins = record.get("spins")
         molecule = target_class(spins=spins)
+        # manually construct the class
         molecule.param_names = []
         for key, param_dict in parameters.items():
             param = pypickett.classes.Parameter.from_dict(**param_dict)
             setattr(molecule, key, param)
             molecule.param_names.append(key)
-        return molecule
+        var_keys = record.get("keys").get("var_kwargs")
+        var_kwargs = {key: record.get(key) for key in var_keys}
+        if var_kwargs:
+            spcat = pypickett.classes.SPCAT(**var_kwargs)
+        else:
+            spcat = None
+        return molecule, spcat
