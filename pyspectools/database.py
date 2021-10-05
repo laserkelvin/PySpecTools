@@ -216,6 +216,26 @@ class MoleculeDatabase(TinyDB):
     retrieve and regenerate the catalog for that particular
     molecule.
     
+    The layout of the storage corresponds to the default
+    "molecule_database" table, and within it, enumerated
+    entries, with all the associated metadata stored as
+    nested dictionaries like so:
+    
+    molecule_database:
+        0:
+            parameters:
+                A:
+                    value:
+                    unc:
+            keys:
+                var_kwargs: ["mu", "int_limit"]    # stores the keys for SPCAT object
+                metadata: ["notes", "author"]      # stores metadata keys
+            spins:    # optionally, spins stored as index/value pairs
+                0: 1.5
+    
+    Additional features will need to make sure they conform
+    to this general layout.
+    
     TODO-extend to know what molecule is found in what
     experiment
     """
