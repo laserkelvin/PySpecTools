@@ -1,4 +1,5 @@
 import re
+from shutil import copy2
 from abc import ABC, abstractproperty
 from typing import Dict, List, Union, Type, Tuple
 from warnings import warn
@@ -6,6 +7,7 @@ from functools import wraps
 from pathlib import Path
 from typing import List, Dict
 from difflib import get_close_matches
+from glob import glob
 
 import numpy as np
 
@@ -632,7 +634,7 @@ class SPCAT:
         }
         dipole_moments = ""
         for index, value in enumerate(self.mu):
-            dipole_moments += f"{index + 1}  {value:.3f}"
+            dipole_moments += f" {index + 1}  {value:.3f}\n"
         data["dipole_moments"] = dipole_moments
         for key, value in zip(["int_min", "int_max"], self.int_limits):
             data[key] = value
@@ -662,6 +664,8 @@ class SPCAT:
                     with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
                         write_file.write(contents)
                 initial_q, _ = run_spcat(f"temp_{self.mol_id}", False, debug)
+                for file in glob("*.cat") + glob("*.out"):
+                    copy2(file, "..")
         return initial_q, q_array
 
 
