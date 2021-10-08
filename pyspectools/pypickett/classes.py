@@ -634,7 +634,8 @@ class SPCAT:
         }
         dipole_moments = ""
         for index, value in enumerate(self.mu):
-            dipole_moments += f" {index + 1}  {value:.3f}\n"
+            if value > 0:
+                dipole_moments += f" {index + 1}  {value:.3f}\n"
         data["dipole_moments"] = dipole_moments
         for key, value in zip(["int_min", "int_max"], self.int_limits):
             data[key] = value
