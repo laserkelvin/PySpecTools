@@ -39,13 +39,13 @@ def hyperfine_nuclei(method):
         if molecule_obj.num_nuclei != 0:
             for nucleus in molecule_obj.nuclei:
                 for index, name in enumerate(hyperfine_names):
-                    hf_code = f"{nucleus}100{index+1}0000"
+                    hf_code = f"{nucleus}{nucleus}00{index+1}0000"
                     coding[f"{name}_{nucleus}"] = hf_code
                 # add some extra ones
-                coding[f"chi_bb-chi_cc_{nucleus}"] = f"{nucleus}10040000"
-                coding[f"chi_ab_{nucleus}"] = f"{nucleus}10610000"
-                coding[f"chi_bc_{nucleus}"] = f"{nucleus}10210000"
-                coding[f"chi_ac_{nucleus}"] = f"{nucleus}10410000"
+                coding[f"chi_bb-chi_cc_{nucleus}"] = f"{nucleus}{nucleus}0040000"
+                coding[f"chi_ab_{nucleus}"] = f"{nucleus}{nucleus}0610000"
+                coding[f"chi_bc_{nucleus}"] = f"{nucleus}{nucleus}0210000"
+                coding[f"chi_ac_{nucleus}"] = f"{nucleus}{nucleus}0410000"
         # override with the user specified terms at the end
         coding.update(molecule_obj.custom_coding)
         return coding
@@ -135,7 +135,7 @@ class AbstractMolecule(ABC):
     @property
     def multiplicity(self) -> int:
         if len(self.nuclei) != 0:
-            return sum([2 * s + 1 for s in self.nuclei.values()])
+            return "".join([str(2 * s + 1) for s in self.nuclei.values()])
         else:
             return 1
 
@@ -756,7 +756,7 @@ def load_molecule_yaml(
     # infer the reduction from the keys specified
     var_kwargs = {
         "mu": mu,
-        "s_reduced": True if "DJ" in data else False,
+        "s_reduced": True if "D_J" in data else False,
         "prolate": False if mol_type.__name__ == "AsymmetricTop" else True
     }
     return (molecule, metadata, var_kwargs)
