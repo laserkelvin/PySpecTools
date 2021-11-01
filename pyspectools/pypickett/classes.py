@@ -756,7 +756,7 @@ def load_molecule_yaml(
     # infer the reduction from the keys specified
     var_kwargs = {
         "mu": mu,
-        "s_reduced": True if "DJ" in data else False,
+        "s_reduced": True if "D_J" in data else False,
         "prolate": False if mol_type.__name__ == "AsymmetricTop" else True
     }
     return (molecule, metadata, var_kwargs)
