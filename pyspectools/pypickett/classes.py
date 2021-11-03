@@ -691,7 +691,7 @@ def infer_molecule(parameters: Dict[str, Union[str, float]]) -> Type[AbstractMol
     """
     if all([key in parameters.keys() for key in ["A", "B", "C"]]):
         return AsymmetricTop
-    elif all([key in parameters.keys() for key in ["A", "B"]]):
+    elif all([key in parameters.keys() for key in ["A-B", "B"]]) or all([key in parameters.keys() for key in ["B-C", "B"]]):
         return SymmetricTop
     else:
         return LinearMolecule
@@ -756,7 +756,7 @@ def load_molecule_yaml(
     # infer the reduction from the keys specified
     var_kwargs = {
         "mu": mu,
-        "s_reduced": True if "D_J" in data else False,
+        "s_reduced": False if "Delta_J" in data else True,
     }
     # look for the axis representation, if it does not appear as a parameter or
     # is not a supported representation, then choose one based on the value of 
