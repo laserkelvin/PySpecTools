@@ -13,7 +13,7 @@ from pyspectools import routines
 
 par_template = """PySpecTools SPCAT input
  100  255    1    0    0.0000E+000    1.0000E+003    1.0000E+000 1.0000000000
-{reduction}   {quanta}    {top}    0   {k_max}    0    {weight_axis}    {even_weight}    {odd_weight}     0   1   0
+{reduction}   {quanta}    {representation}    0   {k_max}    0    {weight_axis}    {even_weight}    {odd_weight}     0   1   0
 {parameters}
 """
 
