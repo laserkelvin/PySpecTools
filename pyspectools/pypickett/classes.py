@@ -12,6 +12,7 @@ from glob import glob
 import numpy as np
 
 from pyspectools import routines
+from pyspectools.units import kappa
 from pyspectools.pypickett.utils import (
     par_template,
     int_template,
@@ -346,7 +347,7 @@ class SPCAT:
         freq_limit: float = 300.0,
         k_limit: int = 100,
         mu: List[float] = [1.0, 0.0, 0.0],
-        prolate: bool = True,
+        rep: str = 'Ir',
         s_reduced: bool = True,
         q: float = 2.2415,
         weight_axis: int = 1,
@@ -369,7 +370,7 @@ class SPCAT:
         self.q = q
         self.weight_axis = weight_axis
         self._weights = weights
-        self.prolate = prolate
+        self.rep = rep
         self.max_f_qno = max_f_qno
         self.mol_id = mol_id
 
@@ -615,7 +616,7 @@ class SPCAT:
         # this key is used to calculate hyperfine splitting as well
         data["quanta"] *= molecule.multiplicity
         data["reduction"] = self.reduction
-        data["top"] = 1 if self.prolate else -1
+        data["representation"] = -1 if self.rep=="IIIl" else 1
         data["parameters"] = str(molecule)
         return par_template.format_map(data)
 
@@ -752,11 +753,31 @@ def load_molecule_yaml(
         raise KeyError(
             f"""Unsupported parameters in YAML; keys: {", ".join(unsupported)}"""
         )
-    molecule = mol_type(**data)
     # infer the reduction from the keys specified
     var_kwargs = {
         "mu": mu,
         "s_reduced": True if "D_J" in data else False,
-        "prolate": False if mol_type.__name__ == "AsymmetricTop" else True
     }
+    # look for the axis representation, if it does not appear as a parameter or
+    # is not a supported representation, then choose one based on the value of 
+    # Ray's asymmetry parameter
+    # Case 1: Linear molecule or prolate symmetric top
+    if mol_type.__name__ == "LinearMolecule" or "A-B" in data:
+        var_kwargs["rep"]="Ir"
+    # Case 2: Oblate symmetric top
+    elif "B-C" in data:
+        var_kwargs["rep"]="IIIl"
+    # Case 3: Asymmetric top in Ir or IIIl representation
+    elif "rep" in data and data.get("rep") in ["Ir","IIIl"]:
+        var_kwargs["rep"]=data.get("rep")
+        del data["rep"]
+    # Case 4: Asymmetric top in Il, IIr, IIl, or IIIr representation
+    elif "rep" in data:
+        del data["rep"]
+        var_kwargs["rep"]="IIIl" if kappa(data["A"],data["B"],data["C"])>0 else "Ir"
+    # Case 5: Asymmetric top, no representation specified
+    else:
+        var_kwargs["rep"]="IIIl" if kappa(data["A"],data["B"],data["C"])>0 else "Ir"
+    # choose the correct molecule type based on the molecular constants
+    molecule = mol_type(**data)
     return (molecule, metadata, var_kwargs)
