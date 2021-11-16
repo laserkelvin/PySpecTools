@@ -50,6 +50,19 @@ PySpecTools is designed to work with Python 3.7+, and so starting from scratch:
 3. `pip install poetry`
 4. `poetry install`
 
+Installation on Windows is less straightforward. The following instructions avoid
+issues originating from virtual environments created by poetry and include a workaround
+for a known issue with poetry in Windows.
+
+1. `conda create -n pst python=3.7`
+2. `conda activate pst`
+3. `pip install poetry`
+4. `poetry config virtualenvs.in-project false`
+5. `poetry config virtualenvs.create false`
+6. Navigate to the folder `C:\Users\user\AppData\Local\pypoetry\Cache` and delete all contents of this folder.
+7. Navigate to the folder containing PySpecTools
+8. `poetry install`
+
 ## PyPickett
 
 `PySpecTools` includes a set of routines for wrapping SPFIT/SPCAT. The design
