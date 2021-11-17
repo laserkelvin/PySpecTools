@@ -43,7 +43,13 @@ of the package; this is not to track adoption, but rather for the sake of reprod
 
 `conda` is the preferred way of maintaining software environments, and `poetry` is used to manage Python package dependencies.
 
-PySpecTools is designed to work with Python 3.7+, and so starting from scratch:
+As of PySpecTools 4.6.1, the installation is intended to be significantly more straightforward
+with PyPI releases; in a given Python environment, just run:
+
+`pip install PySpecTools`
+
+Alternatively, if you're having issues, we recommend creating a new Python environment
+within `conda`; with Python 3.7+:
 
 1. `conda create -n pst python=3.7`
 2. `conda activate pst`
