@@ -1,10 +1,18 @@
 [tool.poetry]
 name = "pyspectools"
 description = "A set of Python tools/routines for spectroscopy"
+homepage = "https://github.com/laserkelvin/PySpecTools"
+repository = "https://github.com/laserkelvin/PySpecTools"
+documentation = "https://laserkelvin.github.com/PySpecTools"
 authors = [
   "Kelvin Lee <kin.long.kelvin.lee@gmail.com>"
 ]
 version = "4.6.0"
+classifiers = [
+    "Programming Language :: Python :: 3.7.9",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+]
 
 [tool.poetry.dependencies]
 python = "^3.7.1, < 3.10.0"
