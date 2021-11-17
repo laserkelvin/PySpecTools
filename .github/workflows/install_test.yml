@@ -18,11 +18,12 @@ jobs:
   # This workflow contains a single job called "build"
   build:
     # The type of runner that the job will run on
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
 
     strategy:
       matrix:
-        python-version: [3.7.9, 3.8.11]
+        python-version: [3.7.9, "3.8", "3.9"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
     # Steps represent a sequence of tasks that will be executed as part of the job
     steps:
       # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
