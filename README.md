@@ -8,7 +8,7 @@
 
 [![DOI](https://zenodo.org/badge/90773952.svg)](https://zenodo.org/badge/latestdoi/90773952)
 [![Build Status](https://travis-ci.com/laserkelvin/PySpecTools.svg?branch=master)](https://travis-ci.com/laserkelvin/PySpecTools)
-[![PyPI](https://img.shields.io/pypi/v/PySpecTools.svg)]
+[![PyPI](https://img.shields.io/pypi/v/PySpecTools.svg)](https://pypi.org/project/pyspectools/)
 [![Installation CI](https://github.com/laserkelvin/PySpecTools/actions/workflows/install_test.yml/badge.svg)](https://github.com/laserkelvin/PySpecTools/actions/workflows/install_test.yml)
 
 ![pst-logo](docs/source/_images/pst_logo_landscape.png)
