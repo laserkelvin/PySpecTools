@@ -630,30 +630,49 @@ class SPCAT:
             data[key] = value
         return int_template.format_map(data)
 
+    def scratch_run(self, molecule: Type[AbstractMolecule], debug: bool = False):
+        """
+        Run SPCAT in a scratch directory that is deleted immediately after the function
+        finishes. The use case for this is if you only care about the partition
+        function, and not the catalog or other files.
+
+        Parameters
+        ----------
+            molecule : Abstract Molecule type
+            debug : bool flag to allow additional printing
+
+        Returns
+        -------
+            float, np.ndarray
+            Returns the initial Q value and the Q array
+
+        """
+        with work_in_temp():
+            initial_q, q_array = self.run(molecule, debug)
+        return initial_q, q_array
+
     def run(self, molecule: Type[AbstractMolecule], debug: bool = False):
         """
         Abstract interface for calling an external executable
         to run the simulation.
         """
-        with work_in_temp():
-            var_file = self.format_var(molecule)
-            int_file = self.format_int()
-            for ext, contents in zip([".var", ".int"], [var_file, int_file]):
-                with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
-                    write_file.write(contents)
-            initial_q, q_array = run_spcat(f"temp_{self.mol_id}", True, debug)
+        var_file = self.format_var(molecule)
+        int_file = self.format_int()
+        for ext, contents in zip([".var", ".int"], [var_file, int_file]):
+            with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
+                write_file.write(contents)
+        initial_q, q_array = run_spcat(f"temp_{self.mol_id}", True, debug)
         index = np.searchsorted(q_array[0], self.T)
         # check to see if the correct value of Q was used. If not,
         # rerun SPCAT with the correct value
         if q_array[1, index] != initial_q:
             self.q = q_array[1, index]
-            with work_in_temp():
-                var_file = self.format_var(molecule)
-                int_file = self.format_int()
-                for ext, contents in zip([".var", ".int"], [var_file, int_file]):
-                    with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
-                        write_file.write(contents)
-                initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
+            var_file = self.format_var(molecule)
+            int_file = self.format_int()
+            for ext, contents in zip([".var", ".int"], [var_file, int_file]):
+                with open(f"temp_{self.mol_id}{ext}", "w+") as write_file:
+                    write_file.write(contents)
+            initial_q, q_array = run_spcat(f"temp_{self.mol_id}", False, debug)
         return initial_q, q_array
 
 
